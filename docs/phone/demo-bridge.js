@@ -85,4 +85,24 @@
 
   // The demo never runs the first-run coach: it is a tour, not a setup.
   try { if (!localStorage.getItem("qc-coach-done")) localStorage.setItem("qc-coach-done", "1"); } catch (e) {}
+
+  // Taps stay inside the demo. A vertical drag is handed to the page: an
+  // iframe that merely sits there still eats touch scrolls, and the demo is
+  // the only part of the site where that would strand the visitor.
+  if (window.parent !== window) {
+    let lastY = null, dragging = false;
+    document.addEventListener("touchstart", (e) => {
+      if (e.touches.length === 1) { lastY = e.touches[0].clientY; dragging = false; }
+    }, { passive: true });
+    document.addEventListener("touchmove", (e) => {
+      if (lastY === null || e.touches.length !== 1) return;
+      const y = e.touches[0].clientY, dy = y - lastY;
+      if (!dragging && Math.abs(dy) > 8) dragging = true;
+      if (!dragging) return;
+      e.preventDefault();
+      window.parent.postMessage({ qcScroll: -dy }, "*");
+      lastY = y;
+    }, { passive: false });
+    document.addEventListener("touchend", () => { lastY = null; dragging = false; }, { passive: true });
+  }
 })();
