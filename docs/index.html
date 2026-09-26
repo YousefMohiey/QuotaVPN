@@ -138,7 +138,7 @@
   .sub{color:var(--txt2); font-size:13.5px; margin:0; max-width:72ch; text-wrap:pretty}
   section{padding:32px 0}
 
-  .wrap.hero{position:relative; padding:88px 0 30px; max-width:900px; overflow:hidden; text-align:center}
+  .wrap.hero{position:relative; padding:88px 24px 30px; max-width:900px; overflow:hidden; text-align:center}
   .hero{display:block}
   .hero > *{position:relative; z-index:1}
   .hero h1{font-size:clamp(31px, 4.6vw, 60px); line-height:1.05; letter-spacing:-.024em; font-weight:600; max-width:19ch; margin:14px auto 0; text-wrap:balance}
@@ -148,21 +148,11 @@
   .hero-note{margin:18px auto 0; font-size:12.5px; color:var(--txt3)}
   .btn.xl{padding:16px 26px; font-size:15px; border-radius:14px; gap:10px; min-height:54px}
   .btn.xl svg{width:18px; height:18px}
+  .btn.xl.second{min-height:46px; padding:11px 20px; font-size:14px; color:var(--txt2); border-color:var(--line)}
   .btn.primary.xl{position:relative; overflow:hidden; box-shadow:0 8px 20px -14px rgb(0 0 0 / .8)}
   .btn.primary.xl::after{content:""; position:absolute; inset:0 auto 0 -60%; width:45%; transform:skewX(-18deg);
     background:linear-gradient(90deg, transparent, rgb(255 255 255 / .22), transparent); transition:left .55s var(--ease-out)}
   .btn.primary.xl:hover::after{left:120%}
-  .flow{margin:38px auto 0; max-width:560px}
-  .flow-track{position:relative; display:block; height:2px; border-radius:2px; background:var(--line-strong); overflow:hidden}
-  .flow-track b{position:absolute; top:0; left:0; height:100%; background:linear-gradient(90deg, var(--brand), var(--brand-hi)); animation:flowfill 4.4s var(--ease-out) infinite}
-  @keyframes flowfill{0%{width:0; opacity:.35} 90%{width:100%; opacity:1} 100%{width:100%; opacity:0}}
-  .flow-track i{position:absolute; top:-3px; left:0; width:8px; height:8px; border-radius:50%; background:var(--brand-hi);
-    animation:flowmove 4.4s var(--ease-out) infinite}
-  @keyframes flowmove{0%{left:0; opacity:0} 10%{opacity:1} 90%{opacity:1} 100%{left:calc(100% - 8px); opacity:0}}
-  .flow-labels{display:grid; grid-template-columns:1fr 1fr 1fr; margin-top:10px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--txt3)}
-  .flow-labels span:nth-child(2){text-align:center}
-  .flow-labels span:nth-child(3){text-align:right}
-  .flow-labels .on{color:var(--txt); font-weight:600}
   .hero-copy > *{animation:rise .62s var(--ease-out) both}
   .hero-copy > *:nth-child(2){animation-delay:.06s}
   .hero-copy > *:nth-child(3){animation-delay:.12s}
@@ -359,12 +349,11 @@
   .hero{animation:rise .55s var(--ease-out) both}
 
   @media (max-width:860px){
-    .wrap.hero{padding:56px 0 18px}
+    .wrap.hero{padding:56px 18px 18px}
     .hero .cta{flex-direction:column; align-items:stretch}
     .hero .cta .btn{min-width:0; width:100%}
     .hero h1{font-size:clamp(28px, 8.2vw, 38px); max-width:20ch}
     .hero .lead{font-size:15px; margin-top:16px}
-    .flow{margin-top:30px}
     h1{font-size:26px; letter-spacing:-.4px}
     h2{font-size:18px}
     section{padding:24px 0}
@@ -406,7 +395,7 @@
   }
   @media (prefers-reduced-motion:reduce){
     html{scroll-behavior:auto}
-    .reveal,.reveal.in,.hero,.hero > *,.hero-copy > *,.flow-track i,.flow-track b{opacity:1; animation:none !important; transform:none}
+    .reveal,.reveal.in,.hero,.hero > *,.hero-copy > *{opacity:1; animation:none !important; transform:none}
     .btn,.row,.iconbtn,.dtab,.preset,.dialbtn{transition:none}
     .iconbtn:hover{transform:none}
   }
@@ -503,17 +492,13 @@
 <div class="wrap hero">
   <div class="hero-copy">
     <div class="eyebrow">Windows 10/11 and Android</div>
-    <h1>Your gaming and streaming packages, spent on the right quota.</h1>
-    <p class="lead">Your ISP reads the TLS handshake to decide which quota a session counts against. QuotaVPN puts a server name from the package you picked on it, so a game or a stream pays from the right bucket instead of your general quota.</p>
+    <h1>Play and stream on the quota you picked.</h1>
+    <p class="lead">Your ISP bills a connection against whichever quota its server name belongs to. QuotaVPN sets that name from the package you pick, so games and streams spend from that package instead of your general quota.</p>
     <div class="cta">
       <a class="btn primary xl" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v7.1H3V5.5Zm0 13 7.2 1v-7H3v6Zm8.4 1.2L21 21V12.6h-9.6v7.1ZM11.4 4.3 21 3v8.6h-9.6V4.3Z"/></svg><span>Download for Windows</span></a>
-      <a class="btn ghost xl" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg><span>Download for Android</span></a>
+      <a class="btn ghost xl second" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg><span>Download for Android</span></a>
     </div>
     <p class="hero-note">Free and open source, MIT licensed. No account, no sign up, nothing phoning home.</p>
-    <div class="flow" aria-hidden="true">
-      <span class="flow-track"><b></b><i></i></span>
-      <span class="flow-labels"><span>idle</span><span>connecting</span><span class="on">connected</span></span>
-    </div>
   </div>
 </div>
 
