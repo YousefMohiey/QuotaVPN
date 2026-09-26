@@ -103,7 +103,7 @@
     opacity:0; transform:translateY(8px); pointer-events:none; transition:opacity .3s var(--ease-out), transform .3s var(--ease-out), color .2s, border-color .2s}
   .totop.show{opacity:1; transform:none; pointer-events:auto}
   .totop:hover{color:var(--txt); border-color:var(--txt3)}
-  .scroll-cue{display:inline-flex; flex-direction:column; align-items:center; gap:6px; margin:40px auto 0; text-decoration:none;
+  .scroll-cue{display:inline-flex; flex-direction:column; align-items:center; gap:6px; margin:22px auto 0; text-decoration:none;
     color:var(--txt3); font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; transition:color .2s var(--ease-out)}
   .scroll-cue:hover{color:var(--txt)}
   .scroll-cue svg{animation:cue 2.8s var(--ease-out) infinite}
@@ -132,7 +132,6 @@
   ::-webkit-scrollbar-thumb{background:rgb(255 255 255 / .1); border-radius:999px; border:3px solid transparent; background-clip:content-box}
   ::-webkit-scrollbar-thumb:hover{background:rgb(255 255 255 / .18); background-clip:content-box}
   ::-webkit-scrollbar-track{background:transparent}
-  :focus-visible{outline:2px solid var(--brand-strong); outline-offset:2px}
   .wrap{max-width:1080px; margin:0 auto; padding:0 24px}
   section[id], .wrap[id]{scroll-margin-top:72px}
 
@@ -153,7 +152,7 @@
   .iconbtn:hover{color:var(--txt); border-color:var(--glass-line); background:rgb(255 255 255 / .06); transform:translateY(-1px)}
 
   .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; border-radius:var(--r-ctl);
-    padding:11px 18px; font-size:13.5px; font-weight:570; letter-spacing:-.05px; border:1px solid transparent; cursor:pointer;
+    padding:11px 18px; font-size:13.5px; font-weight:570; letter-spacing:-.05px; border:1px solid transparent; cursor:pointer; min-height:44px;
     transition:background .18s var(--ease-out), border-color .18s var(--ease-out), transform .18s var(--ease-out)}
   .btn:active{transform:translateY(1px)}
   .btn.primary{background:var(--brand); color:#fff}
@@ -164,12 +163,12 @@
   .btn.sm.nav{background:var(--brand); color:#fff; border-color:transparent}
   .btn.sm.nav:hover{background:var(--brand-hi)}
 
-  .eyebrow{font-size:11px; font-weight:500; letter-spacing:.07em; text-transform:uppercase; color:var(--txt3)}
-  h1{font-size:34px; line-height:1.16; letter-spacing:-.7px; font-weight:600; margin:0; text-wrap:balance}
-  h2{font-size:20px; letter-spacing:-.25px; font-weight:600; margin:0; text-wrap:balance}
-  .lead{color:var(--txt2); font-size:14.5px; line-height:1.6; margin:0; max-width:62ch; text-wrap:pretty}
-  .sub{color:var(--txt2); font-size:13.5px; margin:0; max-width:68ch; text-wrap:pretty}
-  section{padding:32px 0}
+  .eyebrow, .kicker{font-size:11.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--brand-strong)}
+  h1{font-size:clamp(36px, 5.2vw, 64px); line-height:1.1; letter-spacing:-.024em; font-weight:600; margin:0; text-wrap:balance}
+  h2{font-size:clamp(28px, 3.5vw, 42px); line-height:1.15; letter-spacing:-.015em; font-weight:600; margin:0; text-wrap:balance}
+  .lead{color:var(--txt2); font-size:clamp(16px, 1.25vw, 18px); line-height:1.65; margin:0; max-width:64ch; text-wrap:pretty}
+  .sub{color:var(--txt2); font-size:clamp(15px, 1.1vw, 16.5px); line-height:1.65; margin:0; max-width:64ch; text-wrap:pretty}
+  section{padding:0}
   /* one rhythm for the page: every chapter gets the same air, and the seam
      between two chapters is a single hairline instead of empty space. */
   .wrap.sec{padding:76px 0}
@@ -177,10 +176,10 @@
   .demo-sec{border-top:0; padding:8px 0 76px}
   .wrap.sec + .demo-sec{border-top:0}
   .demo-inner{max-width:1240px; margin:0 auto; padding:0 24px; text-align:center}
-  .demo-cap{margin-top:18px}
-  .demo-label{display:inline-flex; align-items:center; gap:9px; margin-bottom:26px; padding:8px 16px; border-radius:999px;
-    border:1px solid var(--line); background:var(--panel); font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--txt2)}
-  .demo-label i{width:7px; height:7px; border-radius:50%; background:var(--brand-hi)}
+  .demo-cap{margin-top:20px}
+  .demo-label{display:inline-flex; align-items:center; gap:9px; margin-bottom:28px; padding:8px 18px; border-radius:999px;
+    border:1px solid var(--glass-line); background:var(--panel); font-size:11.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--txt2)}
+  .demo-label i{width:7px; height:7px; border-radius:50%; background:var(--brand-strong)}
   .shot{display:block; width:100%; height:auto; opacity:1}
   .voice-actions{margin-top:24px; display:flex; justify-content:center}
   @media (max-width:760px){
@@ -189,20 +188,21 @@
     .demo-inner{padding:0 18px}
   }
 
-  .wrap.hero{position:relative; padding:92px 24px 72px; max-width:900px; overflow:hidden; text-align:center}
+  .wrap.hero{position:relative; padding:88px 24px 56px; max-width:900px; overflow:hidden; text-align:center}
   .brand-lockup{display:flex; flex-direction:column; align-items:center; gap:16px; margin-bottom:26px}
   .brand-lockup img{width:64px; height:64px; border-radius:18px; border:1px solid var(--glass-line); display:block}
   .brand-name{font-size:13px; letter-spacing:.2em; text-transform:uppercase; color:var(--txt2); font-weight:570}
   .hero{display:block}
   .hero > *{position:relative; z-index:1}
-  .hero h1{font-size:clamp(31px, 4.6vw, 60px); line-height:1.05; letter-spacing:-.024em; font-weight:600; max-width:19ch; margin:14px auto 0; text-wrap:balance}
-  .hero .lead{font-size:clamp(15px, 1.15vw, 17px); line-height:1.62; max-width:54ch; margin:20px auto 0; text-wrap:pretty}
+  .hero h1{max-width:19ch; margin:14px auto 14px}
+  .hero .lead{max-width:54ch; margin:20px auto 22px}
   .hero .cta{justify-content:center; gap:12px; margin-top:30px}
   .hero .cta .btn{min-width:232px; justify-content:center}
   .hero-note{margin:18px auto 0; font-size:12.5px; color:var(--txt3)}
   .btn.xl{padding:16px 26px; font-size:15px; border-radius:14px; gap:10px; min-height:54px}
   .btn.xl svg{width:18px; height:18px}
-  .btn.xl.second{min-height:46px; padding:11px 20px; font-size:14px; color:var(--txt2); border-color:var(--line)}
+  .btn.xl.second{color:var(--txt2); border-color:var(--glass-line)}
+  .btn.xl.second:hover{border-color:var(--line-strong); color:var(--txt)}
   .btn.primary.xl{position:relative; overflow:hidden; box-shadow:0 8px 20px -14px rgb(0 0 0 / .8)}
   .btn.primary.xl::after{content:""; position:absolute; inset:0 auto 0 -60%; width:45%; transform:skewX(-18deg);
     background:linear-gradient(90deg, transparent, rgb(255 255 255 / .22), transparent); transition:left .55s var(--ease-out)}
@@ -213,9 +213,6 @@
   .hero-copy > *:nth-child(4){animation-delay:.18s}
   .hero-copy > *:nth-child(5){animation-delay:.24s}
   .hero-copy > *:nth-child(6){animation-delay:.3s}
-  .hero .eyebrow{margin-bottom:12px}
-  .hero h1{margin-bottom:14px}
-  .hero .lead{margin-bottom:22px}
   .cta{display:flex; gap:10px; flex-wrap:wrap}
   .note{color:var(--txt3); font-size:12.5px; margin:14px 0 0}
 
@@ -224,14 +221,14 @@
   .row{display:flex; gap:20px; padding:14px 18px; border-bottom:1px solid var(--line); align-items:flex-start; transition:background .18s var(--ease-out)}
   .row:last-child{border-bottom:0}
   .row:hover{background:rgb(255 255 255 / .02)}
-  .row .k{flex:none; width:168px; color:var(--txt2); font-size:12.5px; padding-top:2px}
+  .row .k{flex:none; width:168px; color:var(--txt2); font-size:13.5px; padding-top:2px}
   .row .v{flex:1; min-width:0}
-  .row .v b{display:block; font-size:13.5px; font-weight:570; margin-bottom:3px}
-  .row .v p{margin:0; color:var(--txt2); font-size:13px; line-height:1.55}
+  .row .v b{display:block; font-size:15px; font-weight:600; margin-bottom:5px}
+  .row .v p{margin:0; color:var(--txt2); font-size:14px; line-height:1.6}
 
-  .seg{display:inline-flex; border:1px solid var(--line); background:rgb(255 255 255 / .02); border-radius:var(--r-ctl); padding:2px}
-  .seg button{appearance:none; border:0; background:transparent; color:var(--txt3); font:inherit; font-size:12.5px;
-    padding:6px 12px; border-radius:8px; cursor:pointer; transition:color .18s var(--ease-out), background .18s var(--ease-out)}
+  .seg{display:inline-flex; border:1px solid var(--line); background:rgb(255 255 255 / .02); border-radius:var(--r-ctl); padding:4px}
+  .seg button{appearance:none; border:0; background:transparent; color:var(--txt3); font:inherit; font-size:13.5px; font-weight:500;
+    padding:8px 16px; min-height:44px; border-radius:8px; cursor:pointer; transition:color .18s var(--ease-out), background .18s var(--ease-out)}
   .seg button[aria-pressed="true"]{background:rgb(255 255 255 / .1); color:var(--txt)}
   .seg button:not([aria-pressed="true"]):hover{color:var(--txt2)}
 
@@ -242,11 +239,12 @@
   details{border-bottom:1px solid var(--line); transition:background .18s var(--ease-out)}
   details:first-of-type{border-top:1px solid var(--line)}
   details:hover{background:rgb(255 255 255 / .02)}
-  summary{cursor:pointer; list-style:none; display:flex; justify-content:space-between; gap:16px; align-items:center; padding:15px 18px; font-size:13.5px; font-weight:570}
+  summary{cursor:pointer; list-style:none; display:flex; justify-content:space-between; gap:16px; align-items:center; padding:18px 20px; font-size:15px; font-weight:570}
   summary::-webkit-details-marker{display:none}
-  summary::after{content:"+"; color:var(--brand-strong); font-weight:600; font-size:16px; line-height:1; flex:none}
+  summary::after{content:"+"; color:var(--brand-strong); font-weight:600; font-size:18px; line-height:1; flex:none; transition:color .2s var(--ease-out)}
+  details:hover summary::after{color:var(--brand-hi)}
   details[open] summary::after{content:"\2212"}
-  details p{margin:0; padding:0 18px 16px; color:var(--txt2); font-size:13px; line-height:1.6; max-width:78ch}
+  details p{margin:0; padding:0 20px 20px; color:var(--txt2); font-size:14.5px; line-height:1.65; max-width:78ch}
 
   .dl-actions{display:flex; gap:10px; flex-wrap:wrap; padding:16px 18px; border-top:1px solid var(--line); background:rgb(255 255 255 / .015)}
 
@@ -393,8 +391,8 @@
   .setrow:last-child{border-bottom:0}
   .setrow .k{flex:none; width:118px; font-size:12.5px; color:var(--txt2)}
   .setrow .v{flex:1; min-width:0; font-size:12.5px; color:var(--txt)}
-  .demo-cap{display:flex; gap:14px; flex-wrap:wrap; align-items:center; justify-content:center; color:var(--txt3); font-size:12.5px; padding:12px 4px 0}
-  .demo-cap b{color:var(--txt2); font-weight:570}
+  .demo-cap{display:flex; gap:14px; flex-wrap:wrap; align-items:center; justify-content:center; color:var(--txt3); font-size:13.5px; padding:12px 4px 0}
+  .demo-cap b{color:var(--txt2); font-weight:600}
 
   @keyframes rise{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
   .reveal{opacity:0}
@@ -414,14 +412,10 @@
   .hero{animation:rise .55s var(--ease-out) both}
 
   @media (max-width:860px){
-    .wrap.hero{padding:58px 18px 46px}
+    .wrap.hero{padding:52px 18px 38px}
     .hero .cta{flex-direction:column; align-items:stretch}
     .hero .cta .btn{min-width:0; width:100%}
-    .hero h1{font-size:clamp(28px, 8.2vw, 38px); max-width:20ch}
-    .hero .lead{font-size:15px; margin-top:16px}
-    h1{font-size:26px; letter-spacing:-.4px}
-    h2{font-size:18px}
-    section{padding:24px 0}
+    section{padding:0}
     .row{flex-direction:column; gap:6px; padding:13px 16px}
     .row .k{width:auto}
     .gallery{grid-template-columns:1fr}
@@ -469,7 +463,6 @@
   .stage-head{display:flex; flex-direction:column; gap:10px; margin:0 0 16px}
   .dl-block{max-width:760px; margin:0 auto; text-align:center}
   .dl-block img{width:56px; height:56px; border-radius:16px; border:1px solid var(--glass-line); margin-bottom:20px}
-  .dl-block h2{font-size:clamp(24px, 2.6vw, 32px); letter-spacing:-.014em}
   .dl-block .sub{margin:12px auto 0; max-width:52ch}
   .dl-block .cta{justify-content:center; gap:12px; margin-top:28px}
   .dl-block .cta .btn{min-width:232px; justify-content:center}
@@ -480,45 +473,39 @@
   .steps::before{content:""; position:absolute; left:0; right:0; top:15px; height:1px; background:var(--line)}
   .steps li{position:relative; padding-top:44px}
   .steps .n{position:absolute; left:0; top:0; width:31px; height:31px; border-radius:50%; display:grid; place-items:center;
-    background:var(--bg); border:1px solid var(--brand-line); color:var(--brand-strong); font-size:12.5px; font-weight:600}
+    background:var(--bg); border:1px solid var(--brand-line); color:var(--brand-strong); font-size:12.5px; font-weight:600;
+    transition:background .2s var(--ease-out), color .2s var(--ease-out), border-color .2s var(--ease-out)}
+  @media (hover: hover){ .steps li:hover .n{background:var(--brand-bg); border-color:var(--brand-strong)} }
   .steps b{display:block; font-size:14.5px; font-weight:570; margin-bottom:7px}
   .steps p{margin:0; font-size:13px; line-height:1.6; color:var(--txt2)}
   @media (max-width:860px){ .steps{grid-template-columns:minmax(0,1fr); gap:18px} .steps::before{left:15px; right:auto; top:6px; bottom:6px; width:1px; height:auto} .steps li{padding:6px 0 6px 48px} .steps .n{left:0; top:2px} }
 
-  details{border-top:1px solid var(--line)}
-  details:last-child{border-bottom:1px solid var(--line)}
-  summary{cursor:pointer; list-style:none; padding:15px 30px 15px 0; position:relative; font-size:14.5px; font-weight:520; color:var(--txt)}
-  summary::-webkit-details-marker{display:none}
-  summary::after{content:"+"; position:absolute; right:4px; top:13px; font-size:16px; color:var(--txt3); font-weight:400}
-  details[open] summary::after{content:"\2013"}
-  details p{margin:0; padding:0 30px 17px 0; font-size:13.5px; line-height:1.66; color:var(--txt2); max-width:74ch}
+  /* FAQ details styles removed to use the ones defined above */
 
   .feat-grid{display:grid; grid-template-columns:minmax(0,.85fr) minmax(0,1.35fr); gap:64px; align-items:start}
   .feat-head{position:sticky; top:96px}
-  .feat-head h2{font-size:clamp(22px, 2.3vw, 29px); letter-spacing:-.012em}
-  .feat-head .sub{margin-top:12px; max-width:42ch}
+  .feat-head .sub{margin-top:16px; max-width:42ch}
   .feat-list .row{display:block; padding:26px 0; border-top:1px solid var(--line)}
   .feat-list .row:last-child{border-bottom:1px solid var(--line)}
-  .feat-list .row .k{font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--brand-strong); margin-bottom:9px}
-  .feat-list .row .v b{display:block; font-size:15.5px; font-weight:570; margin-bottom:7px}
-  .feat-list .row .v p{margin:0; font-size:13.5px; line-height:1.62; color:var(--txt2); max-width:60ch}
+  .feat-list .row .k{font-size:11.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--brand-strong); margin-bottom:9px}
+  .feat-list .row .v b{display:block; font-size:17px; font-weight:600; margin-bottom:7px}
+  .feat-list .row .v p{margin:0; font-size:15px; line-height:1.65; color:var(--txt2); max-width:60ch}
   @media (max-width:900px){ .feat-grid{grid-template-columns:minmax(0,1fr); gap:26px} .feat-head{position:static} }
 
   .exp-intro{max-width:62ch; margin:0 auto 54px; text-align:center}
-  .kicker{font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--brand-strong); margin-bottom:12px}
-  .exp-intro h2{font-size:clamp(22px, 2.4vw, 30px); line-height:1.25; letter-spacing:-.012em}
-  .exp-intro .sub{margin-top:12px}
-  .mini-facts{display:flex; justify-content:center; flex-wrap:wrap; gap:10px; margin-top:22px}
-  .mini-facts span{display:inline-flex; align-items:baseline; gap:7px; font-size:12.5px; color:var(--txt3);
-    border:1px solid var(--line); border-radius:999px; padding:7px 14px}
+  .kicker{margin-bottom:12px}
+  .exp-intro .sub{margin-top:16px}
+  .mini-facts{display:flex; justify-content:center; flex-wrap:wrap; gap:10px; margin-top:24px}
+  .mini-facts span{display:inline-flex; align-items:baseline; gap:7px; font-size:13px; font-weight:500; color:var(--txt3);
+    border:1px solid var(--glass-line); border-radius:999px; padding:8px 16px; transition:border-color .2s var(--ease-out), color .2s var(--ease-out)}
+  .mini-facts span:hover{border-color:var(--line-strong); color:var(--txt2)}
   .mini-facts b{color:var(--txt); font-weight:600}
   .app-stage{position:relative}
   .reveal[data-anim="app"].in{animation:appIn .82s var(--ease-out) both}
   @keyframes appIn{from{opacity:0; transform:translateY(38px) scale(.972)} to{opacity:1; transform:none}}
   .wrap#demo .stage-head, .wrap#android .stage-head{text-align:center; align-items:center}
   .wrap#demo .stage-head .sub, .wrap#android .stage-head .sub{margin:0 auto}
-  .win{background:var(--panel); border:1px solid var(--line-strong); border-radius:var(--r-panel); box-shadow:0 40px 90px -50px rgb(0 0 0 / .9); transition:transform .35s var(--ease-out), border-color .35s var(--ease-out);
-    box-shadow:var(--sh-panel); overflow:hidden; margin-top:16px}
+  .win{background:var(--panel); border:1px solid var(--glass-line); border-radius:var(--r-panel); box-shadow:var(--sh-panel); transition:transform .35s var(--ease-out), border-color .35s var(--ease-out), box-shadow .35s var(--ease-out); overflow:hidden; margin-top:20px}
   .win-body{position:relative; overflow:hidden; background:var(--bg); aspect-ratio:1060 / 700}
   .win-body iframe, .phone-screen iframe{opacity:0; transition:opacity .55s var(--ease-out)}
   .win-body.ready iframe, .phone-screen.ready iframe{opacity:1}
@@ -529,7 +516,7 @@
   .phone-screen::before{content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
     background:linear-gradient(180deg, var(--side) 0%, var(--bg) 60%); opacity:1; transition:opacity .6s var(--ease-out)}
   .phone-screen.ready::before{opacity:0}
-  @media (hover: hover){ .win:hover{transform:translateY(-3px); border-color:var(--line-strong)} .win-shot{transition:transform .5s var(--ease-out)} .win-body:hover .win-shot{transform:scale(1.012)} }
+  @media (hover: hover){ .win:hover{transform:translateY(-4px); box-shadow:0 32px 72px -20px rgb(0 0 0 / .6), var(--sh-panel); border-color:var(--line-strong)} .win-shot{transition:transform .5s var(--ease-out)} .win-body:hover .win-shot{transform:scale(1.012)} }
   .win-open{display:none}
   .win-shot{display:none}
   @media (min-width:981px){ .btn.sm.nav{background:transparent; color:var(--txt); border:1px solid var(--line-strong)} .btn.sm.nav:hover{background:var(--panel); border-color:var(--txt3)} }
@@ -556,12 +543,8 @@
   @media (max-width:600px){
     /* narrower column and calmer type: the page is read on a phone here */
     .wrap{padding:0 18px}
-    h2{font-size:19px}
-    .sub{font-size:14.5px; line-height:1.62}
-    .hero .lead{font-size:16px}
-    .row .v p, .feat-list .row .v p, details p{font-size:15px; line-height:1.62}
-    .row .v b, .feat-list .row .v b{font-size:15px}
-    .demo-cap{font-size:13px}
+    .row .v p, .feat-list .row .v p, details p{font-size:15px; line-height:1.65}
+    .row .v b, .feat-list .row .v b{font-size:16px}
     .hero-note{font-size:13px}
     .phone-shell{width:min(400px,100%)}
   @media (hover: none){ .phone-shell{width:min(348px, 86vw)} .iconbtn{width:44px; height:44px} .btn.sm{height:44px} }
