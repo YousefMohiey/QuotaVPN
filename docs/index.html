@@ -138,9 +138,9 @@
 
   /* header */
   .top{position:sticky; top:0; z-index:30; background:rgb(16 20 28 / .88); backdrop-filter:blur(20px) saturate(150%); border-bottom:1px solid var(--line)}
-  .top .in{display:flex; align-items:center; gap:10px; padding:12px 0}
-  .top img{width:28px; height:28px; border-radius:8px; flex:none}
-  .top .name{font-size:14.5px; font-weight:600; letter-spacing:.1px; white-space:nowrap}
+  .top .in{display:flex; align-items:center; gap:12px; padding:13px 0}
+  .top img{width:34px; height:34px; border-radius:10px; flex:none}
+  .top .name{font-size:16px; font-weight:600; letter-spacing:.1px; white-space:nowrap}
   .ver{flex:none; font-size:11.5px; color:var(--brand-strong); background:var(--brand-bg); border:1px solid var(--brand-line);
     border-radius:999px; padding:2px 9px; margin-left:2px; letter-spacing:.2px; white-space:nowrap}
   .top .sp{flex:1}
@@ -172,9 +172,9 @@
   section{padding:32px 0}
   /* one rhythm for the page: every chapter gets the same air, and the seam
      between two chapters is a single hairline instead of empty space. */
-  .wrap.sec{padding:104px 0}
+  .wrap.sec{padding:76px 0}
   .wrap.sec + .wrap.sec, .demo-sec + .wrap.sec, .wrap.sec + .demo-sec, .demo-sec{border-top:1px solid var(--line)}
-  .demo-sec{border-top:0; padding:10px 0 104px}
+  .demo-sec{border-top:0; padding:8px 0 76px}
   .wrap.sec + .demo-sec{border-top:0}
   .demo-inner{max-width:1240px; margin:0 auto; padding:0 24px; text-align:center}
   .demo-cap{margin-top:18px}
@@ -184,12 +184,12 @@
   .shot{display:block; width:100%; height:auto; opacity:1}
   .voice-actions{margin-top:24px; display:flex; justify-content:center}
   @media (max-width:760px){
-    .wrap.sec{padding:64px 0}
-    .demo-sec{padding:6px 0 64px}
+    .wrap.sec{padding:52px 0}
+    .demo-sec{padding:4px 0 52px}
     .demo-inner{padding:0 18px}
   }
 
-  .wrap.hero{position:relative; padding:124px 24px 104px; max-width:900px; overflow:hidden; text-align:center}
+  .wrap.hero{position:relative; padding:92px 24px 72px; max-width:900px; overflow:hidden; text-align:center}
   .brand-lockup{display:flex; flex-direction:column; align-items:center; gap:16px; margin-bottom:26px}
   .brand-lockup img{width:64px; height:64px; border-radius:18px; border:1px solid var(--glass-line); display:block}
   .brand-name{font-size:13px; letter-spacing:.2em; text-transform:uppercase; color:var(--txt2); font-weight:570}
@@ -393,7 +393,7 @@
   .setrow:last-child{border-bottom:0}
   .setrow .k{flex:none; width:118px; font-size:12.5px; color:var(--txt2)}
   .setrow .v{flex:1; min-width:0; font-size:12.5px; color:var(--txt)}
-  .demo-cap{display:flex; gap:14px; flex-wrap:wrap; align-items:center; color:var(--txt3); font-size:12.5px; padding:12px 4px 0}
+  .demo-cap{display:flex; gap:14px; flex-wrap:wrap; align-items:center; justify-content:center; color:var(--txt3); font-size:12.5px; padding:12px 4px 0}
   .demo-cap b{color:var(--txt2); font-weight:570}
 
   @keyframes rise{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
@@ -414,7 +414,7 @@
   .hero{animation:rise .55s var(--ease-out) both}
 
   @media (max-width:860px){
-    .wrap.hero{padding:76px 18px 64px}
+    .wrap.hero{padding:58px 18px 46px}
     .hero .cta{flex-direction:column; align-items:stretch}
     .hero .cta .btn{min-width:0; width:100%}
     .hero h1{font-size:clamp(28px, 8.2vw, 38px); max-width:20ch}
@@ -525,6 +525,7 @@
   .win-body::before{content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
     background:linear-gradient(180deg, var(--side) 0%, var(--bg) 60%); opacity:1; transition:opacity .6s var(--ease-out)}
   .win-body.ready::before{opacity:0}
+  .win-body.solid::before{display:none}
   .phone-screen::before{content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
     background:linear-gradient(180deg, var(--side) 0%, var(--bg) 60%); opacity:1; transition:opacity .6s var(--ease-out)}
   .phone-screen.ready::before{opacity:0}
@@ -658,8 +659,7 @@
       </div>
     </div>
     <div class="demo-cap">
-      <span><b>The real build</b>, running in this page</span>
-      <span>Press Connect, switch screens, run a speed test</span>
+      <span><b>The real build</b>, running in this page &#183; press Connect, switch screens, run a speed test</span>
     </div>
   </div>
 </section>
@@ -728,15 +728,14 @@
 
 <section class="demo-sec" id="voice-demo">
   <div class="demo-inner reveal" data-anim="app">
-    <div class="demo-label"><i></i>Voice Chat Helper</div>
+    <div class="demo-label"><i></i>Voice Chat Helper &#183; its own tab</div>
     <div class="win">
-      <div class="win-body">
-        <img class="shot" src="assets/app-valorant.png" alt="QuotaVPN on the Valorant tab" width="1322" height="872" loading="lazy">
+      <div class="win-body solid">
+        <img class="shot" src="assets/app-valorant.png" alt="QuotaVPN on the Valorant tab" width="1322" height="873" loading="lazy">
       </div>
     </div>
     <div class="demo-cap">
-      <span><b>One switch, its own tab</b>, next to Home</span>
-      <span>It carries the voice traffic and leaves your match connection alone</span>
+      <span><b>One switch, its own tab</b> &#183; it carries the voice traffic and leaves your match connection alone</span>
     </div>
     <div class="voice-actions">
       <button class="btn ghost" id="openVoice" type="button">Open the Valorant tab in the live demo</button>
@@ -765,8 +764,7 @@
           </div>
         </div>
         <div class="demo-cap">
-          <span><b>Live Android build</b></span>
-          <span>Home, Speed and Settings, all live</span>
+          <span><b>Live Android build</b> &#183; Home, Speed and Settings, all live</span>
         </div>
       </div>
       <div class="phone-copy">
