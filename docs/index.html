@@ -138,7 +138,51 @@
   .sub{color:var(--txt2); font-size:13.5px; margin:0; max-width:72ch; text-wrap:pretty}
   section{padding:32px 0}
 
-  .hero{padding:44px 0 8px; max-width:760px}
+  .wrap.hero{position:relative; padding:84px 0 30px; max-width:1080px; overflow:hidden}
+  .hero{display:grid; grid-template-columns:1.02fr .98fr; gap:56px; align-items:center}
+  .hero > *{position:relative; z-index:1}
+  .hero h1{font-size:clamp(30px, 3.5vw, 52px); line-height:1.07; letter-spacing:-.022em; font-weight:600; max-width:19ch; text-wrap:balance}
+  .hero .lead{font-size:clamp(14.5px, 1.1vw, 16px); max-width:54ch}
+  .hero-note{margin:16px 0 0; font-size:12.5px; color:var(--txt3)}
+  .btn.xl{padding:16px 26px; font-size:15px; border-radius:14px; gap:10px; min-height:54px}
+  .btn.xl svg{width:18px; height:18px}
+  .btn.primary.xl{box-shadow:0 12px 34px -14px rgb(31 89 182 / .8); position:relative; overflow:hidden}
+  .btn.primary.xl::after{content:""; position:absolute; inset:0 auto 0 -60%; width:45%; transform:skewX(-18deg);
+    background:linear-gradient(90deg, transparent, rgb(255 255 255 / .22), transparent); transition:left .55s var(--ease-out)}
+  .btn.primary.xl:hover::after{left:120%}
+  .hero-bg{position:absolute; top:-140px; left:0; right:0; height:540px; z-index:0; pointer-events:none;
+    background:radial-gradient(42% 60% at 78% 26%, rgb(31 89 182 / .16), transparent 70%); animation:drift 26s ease-in-out infinite alternate}
+  @keyframes drift{from{transform:translate3d(-1.5%, 0, 0) scale(1)} to{transform:translate3d(1.5%, 1.5%, 0) scale(1.06)}}
+  .hero-card{background:linear-gradient(180deg, var(--panel-hi), var(--panel)); border:1px solid var(--glass-line);
+    border-radius:var(--r-panel); padding:22px; box-shadow:0 24px 60px -30px rgb(0 0 0 / .8)}
+  .hc-top{display:flex; align-items:center; justify-content:space-between; font-size:12.5px}
+  .hc-state{display:inline-flex; align-items:center; gap:8px; color:var(--txt); font-weight:600; letter-spacing:.02em}
+  .hc-state i{width:8px; height:8px; border-radius:50%; background:#3ecf8e; box-shadow:0 0 0 0 rgb(62 207 142 / .5); animation:pulse 2.6s var(--ease-out) infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgb(62 207 142 / .45)} 70%{box-shadow:0 0 0 9px rgb(62 207 142 / 0)} 100%{box-shadow:0 0 0 0 rgb(62 207 142 / 0)}}
+  .hc-meta{color:var(--txt3); font-variant-numeric:tabular-nums}
+  .hc-dial{display:flex; flex-direction:column; align-items:center; gap:10px; padding:20px 0 18px}
+  .hc-pkg{font-size:13px; color:var(--txt2); letter-spacing:.06em}
+  .hc-row{display:flex; align-items:center; justify-content:space-between; gap:16px; padding:11px 0; border-top:1px solid var(--line); font-size:13.5px}
+  .hc-row .k{color:var(--txt3)}
+  .hc-row .v{color:var(--txt); font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .hc-row .v em{color:var(--txt3); font-style:normal; font-weight:400}
+  .flow{margin-top:18px}
+  .flow-track{position:relative; display:block; height:2px; border-radius:2px; background:var(--line-strong); overflow:hidden}
+  .flow-track b{position:absolute; top:0; left:0; height:100%; background:linear-gradient(90deg, var(--brand), var(--brand-hi)); animation:flowfill 4.4s var(--ease-out) infinite}
+  @keyframes flowfill{0%{width:0; opacity:.35} 90%{width:100%; opacity:1} 100%{width:100%; opacity:0}}
+  .flow-track i{position:absolute; top:-3px; left:0; width:8px; height:8px; border-radius:50%; background:var(--brand-hi);
+    box-shadow:0 0 0 4px rgb(31 89 182 / .18); animation:flowmove 4.4s var(--ease-out) infinite}
+  @keyframes flowmove{0%{left:0; opacity:0} 10%{opacity:1} 90%{opacity:1} 100%{left:calc(100% - 8px); opacity:0}}
+  .flow-labels{display:grid; grid-template-columns:1fr 1fr 1fr; margin-top:10px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--txt3)}
+  .flow-labels span:nth-child(2){text-align:center}
+  .flow-labels span:nth-child(3){text-align:right}
+  .flow-labels .on{color:var(--txt); font-weight:600}
+  .hero-copy > *, .hero-card{animation:rise .62s var(--ease-out) both}
+  .hero-copy > *:nth-child(2){animation-delay:.06s}
+  .hero-copy > *:nth-child(3){animation-delay:.12s}
+  .hero-copy > *:nth-child(4){animation-delay:.18s}
+  .hero-copy > *:nth-child(5){animation-delay:.24s}
+  .hero-card{animation-delay:.14s}
   .hero .eyebrow{margin-bottom:12px}
   .hero h1{margin-bottom:14px}
   .hero .lead{margin-bottom:22px}
@@ -328,7 +372,10 @@
   .hero{animation:rise .55s var(--ease-out) both}
 
   @media (max-width:860px){
-    .hero{padding:26px 0 6px}
+    .wrap.hero{padding:54px 0 14px}
+    .hero{grid-template-columns:1fr; gap:0}
+    .hero h1{font-size:clamp(29px, 8.4vw, 40px); max-width:none}
+    .hero-card{display:none}
     h1{font-size:26px; letter-spacing:-.4px}
     h2{font-size:18px}
     section{padding:24px 0}
@@ -370,18 +417,21 @@
   }
   @media (prefers-reduced-motion:reduce){
     html{scroll-behavior:auto}
-    .reveal,.reveal.in,.hero{opacity:1; animation:none; transform:none}
+    .reveal,.reveal.in,.hero,.hero > *,.hero-copy > *,.hero-card,.hero-bg,.flow-track i,.flow-track b,.hc-state i{opacity:1; animation:none !important; transform:none}
     .btn,.row,.iconbtn,.dtab,.preset,.dialbtn{transition:none}
     .iconbtn:hover{transform:none}
   }
 
   /* ---- the two live demos: real builds in a window and a phone shell ---- */
   .stage-head{display:flex; flex-direction:column; gap:10px; margin:0 0 16px}
-  .win{background:var(--panel); border:1px solid var(--glass-line); border-radius:var(--r-panel);
+  .win{background:var(--panel); border:1px solid var(--glass-line); border-radius:var(--r-panel); transition:transform .35s var(--ease-out), border-color .35s var(--ease-out);
     box-shadow:var(--sh-panel); overflow:hidden; margin-top:16px}
   .win-body{position:relative; overflow:hidden; background:var(--bg)}
+  @media (hover: hover){ .win:hover{transform:translateY(-3px); border-color:var(--line-strong)} .win-shot{transition:transform .5s var(--ease-out)} .win-body:hover .win-shot{transform:scale(1.012)} }
   .win-open{display:none}
   .win-shot{display:none}
+  @media (min-width:981px){ .btn.sm.nav{background:transparent; color:var(--txt); border:1px solid var(--line-strong)} .btn.sm.nav:hover{background:var(--panel); border-color:var(--txt3)} }
+  @media (max-width:980px){ .hero{grid-template-columns:1fr; gap:34px} .hero-card{display:none} }
   @media (max-width:760px){
     /* A 1060px app scaled into a phone is a postage stamp, so the frame shows
        the window as a still and the live demo opens in its own tab. Nothing
@@ -427,16 +477,11 @@
   @media (max-width:760px){
     .win-body iframe{display:none}
   }
-  /* On a touch screen a live iframe eats the swipe, so the demo stays locked
-     until it is tapped, and a Done chip hands the page back. */
-  .frame-lock, .frame-rel{display:none}
-  .touch .stage-locked .frame-lock{display:flex; position:absolute; inset:0; z-index:4; align-items:center; justify-content:center;
-    border:0; background:rgb(16 20 28 / 0.35); color:var(--txt); font:inherit; cursor:pointer}
-  .touch .stage-locked .frame-lock span{padding:11px 18px; border-radius:var(--r-ctl); border:1px solid var(--brand-line);
-    background:rgb(10 14 20 / 0.94); font-size:13px; font-weight:570}
-  .touch .stage-locked iframe{pointer-events:none}
-  .touch .stage-unlocked .frame-rel{display:flex; position:absolute; right:10px; bottom:10px; z-index:4; padding:8px 14px;
-    border-radius:999px; border:1px solid var(--line-strong); background:rgb(10 14 20 / 0.92); color:var(--txt2); font-size:12px}
+  @media (hover: none){
+    .phone-screen iframe{pointer-events:none}
+  }
+  /* On a touch screen a live iframe eats the swipe, so the phone demo is a
+     preview there: it never takes a tap, and a swipe scrolls the page. */
 </style>
 </head>
 <body>
@@ -448,7 +493,7 @@
     <span class="ver" id="ver" title="Latest release">v0.3.5</span>
     <span class="sp"></span>
     <nav>
-      <a class="txt" href="#demo">Try it</a>
+      <a class="txt" href="#demo">Live demo</a>
       <a class="txt" href="#features">Features</a>
       <a class="txt" href="#voice">Valorant</a>
       <a class="txt" href="#android">Android</a>
@@ -462,14 +507,38 @@
 </div>
 
 <div class="wrap hero">
-  <div class="eyebrow">Windows 10/11 and Android</div>
-  <h1>Your gaming and streaming packages, used on purpose.</h1>
-  <p class="lead">Your ISP reads the TLS handshake to decide which quota a session counts against. QuotaVPN puts a server name from the package you picked on it. The interface below is the app itself.</p>
-  <div class="cta">
-    <a class="btn primary" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v7.1H3V5.5Zm0 13 7.2 1v-7H3v6Zm8.4 1.2L21 21V12.6h-9.6v7.1ZM11.4 4.3 21 3v8.6h-9.6V4.3Z"/></svg>Download for Windows</a>
-    <a class="btn ghost" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg>Android APK</a>
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="hero-copy">
+    <div class="eyebrow">Windows 10/11 and Android</div>
+    <h1>Your gaming and streaming packages, spent on the right quota.</h1>
+    <p class="lead">Your ISP reads the TLS handshake to decide which quota a session counts against. QuotaVPN puts a server name from the package you picked on it, so a game or a stream pays from the right bucket instead of your general quota.</p>
+    <div class="cta">
+      <a class="btn primary xl" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v7.1H3V5.5Zm0 13 7.2 1v-7H3v6Zm8.4 1.2L21 21V12.6h-9.6v7.1ZM11.4 4.3 21 3v8.6h-9.6V4.3Z"/></svg><span>Download for Windows</span></a>
+      <a class="btn ghost xl" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg><span>Android APK</span></a>
+    </div>
+    <p class="hero-note">Free and open source, MIT licensed. No account, no sign up, nothing phoning home.</p>
   </div>
-  <p class="note">Free and open source, no account, MIT licensed.</p>
+  <div class="hero-card" aria-hidden="true">
+    <div class="hc-top">
+      <span class="hc-state"><i></i>Connected</span>
+      <span class="hc-meta">00:14:07</span>
+    </div>
+    <div class="hc-dial">
+      <svg viewBox="0 0 120 120" width="150" height="150">
+        <circle cx="60" cy="60" r="52" fill="none" stroke="var(--line-strong)" stroke-width="4"/>
+        <circle cx="60" cy="60" r="52" fill="none" stroke="var(--brand-hi)" stroke-width="4" stroke-linecap="round"
+          stroke-dasharray="228 327" transform="rotate(-90 60 60)"/>
+        <circle cx="60" cy="60" r="3" fill="var(--brand-hi)"/>
+      </svg>
+      <span class="hc-pkg">Gamerz</span>
+    </div>
+    <div class="hc-row"><span class="k">Package</span><span class="v">Gamerz <em>Gaming + Voice</em></span></div>
+    <div class="hc-row"><span class="k">Server</span><span class="v">steam.cdn.eg <em>:443</em></span></div>
+    <div class="flow">
+      <span class="flow-track"><b></b><i></i></span>
+      <span class="flow-labels"><span>idle</span><span>connecting</span><span class="on">connected</span></span>
+    </div>
+  </div>
 </div>
 
 <div class="wrap" id="demo">
@@ -504,8 +573,6 @@
         <div class="phone-shell">
           <div class="phone-screen" id="phoneScreen">
             <iframe id="phoneFrame" src="phone/index.html" title="QuotaVPN for Android, live interactive demo" loading="lazy"></iframe>
-            <button type="button" class="frame-lock" aria-label="Try the Android demo"><span>Tap to try the demo</span></button>
-            <button type="button" class="frame-rel" aria-label="Release the demo">Done</button>
           </div>
         </div>
         <div class="demo-cap">
@@ -819,28 +886,6 @@
   window.addEventListener('orientationchange', all);
   if(document.readyState === 'complete') all(); else window.addEventListener('load', all);
   all();
-})();
-</script>
-<script>
-(function(){
-  // Touch devices get the locked demo: the page scrolls, the demo opens on tap.
-  var touch = false;
-  try { touch = matchMedia("(hover: none)").matches; } catch(e){}
-  if (!touch) return;
-  document.documentElement.className += " touch";
-  var stage = document.getElementById("phoneScreen");
-  if (!stage) return;
-  stage.classList.add("stage-locked");
-  var lock = stage.querySelector(".frame-lock");
-  var rel = stage.querySelector(".frame-rel");
-  if (lock) lock.addEventListener("click", function(){
-    stage.classList.remove("stage-locked");
-    stage.classList.add("stage-unlocked");
-  });
-  if (rel) rel.addEventListener("click", function(){
-    stage.classList.add("stage-locked");
-    stage.classList.remove("stage-unlocked");
-  });
 })();
 </script>
 </body>
