@@ -138,7 +138,10 @@
   .sub{color:var(--txt2); font-size:13.5px; margin:0; max-width:72ch; text-wrap:pretty}
   section{padding:32px 0}
 
-  .wrap.hero{position:relative; padding:88px 24px 30px; max-width:900px; overflow:hidden; text-align:center}
+  .wrap.hero{position:relative; padding:124px 24px 104px; max-width:900px; overflow:hidden; text-align:center}
+  .brand-lockup{display:flex; flex-direction:column; align-items:center; gap:16px; margin-bottom:26px}
+  .brand-lockup img{width:64px; height:64px; border-radius:18px; border:1px solid var(--glass-line); display:block}
+  .brand-name{font-size:13px; letter-spacing:.2em; text-transform:uppercase; color:var(--txt2); font-weight:570}
   .hero{display:block}
   .hero > *{position:relative; z-index:1}
   .hero h1{font-size:clamp(31px, 4.6vw, 60px); line-height:1.05; letter-spacing:-.024em; font-weight:600; max-width:19ch; margin:14px auto 0; text-wrap:balance}
@@ -345,11 +348,23 @@
 
   @keyframes rise{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
   .reveal{opacity:0}
-  .reveal.in{animation:rise .5s var(--ease-out) both}
+  .reveal.in{animation:rise .72s var(--ease-out) both}
+  .reveal[data-anim="scale"].in{animation:pop .82s var(--ease-out) both}
+  .reveal[data-anim="left"].in{animation:slideL .72s var(--ease-out) both}
+  .reveal[data-anim="right"].in{animation:slideR .72s var(--ease-out) both}
+  .reveal[data-d="1"].in{animation-delay:.07s}
+  .reveal[data-d="2"].in{animation-delay:.14s}
+  .reveal[data-d="3"].in{animation-delay:.21s}
+  .reveal[data-d="4"].in{animation-delay:.28s}
+  .reveal[data-d="5"].in{animation-delay:.35s}
+  @keyframes rise{from{opacity:0; transform:translateY(20px)} to{opacity:1; transform:none}}
+  @keyframes pop{from{opacity:0; transform:translateY(26px) scale(.965)} to{opacity:1; transform:none}}
+  @keyframes slideL{from{opacity:0; transform:translateX(-24px)} to{opacity:1; transform:none}}
+  @keyframes slideR{from{opacity:0; transform:translateX(24px)} to{opacity:1; transform:none}}
   .hero{animation:rise .55s var(--ease-out) both}
 
   @media (max-width:860px){
-    .wrap.hero{padding:56px 18px 18px}
+    .wrap.hero{padding:76px 18px 64px}
     .hero .cta{flex-direction:column; align-items:stretch}
     .hero .cta .btn{min-width:0; width:100%}
     .hero h1{font-size:clamp(28px, 8.2vw, 38px); max-width:20ch}
@@ -402,19 +417,75 @@
 
   /* ---- the two live demos: real builds in a window and a phone shell ---- */
   .stage-head{display:flex; flex-direction:column; gap:10px; margin:0 0 16px}
+  .dl-block{max-width:760px; margin:0 auto; text-align:center}
+  .dl-block img{width:56px; height:56px; border-radius:16px; border:1px solid var(--glass-line); margin-bottom:20px}
+  .dl-block h2{font-size:clamp(24px, 2.6vw, 32px); letter-spacing:-.014em}
+  .dl-block .sub{margin:12px auto 0; max-width:52ch}
+  .dl-block .cta{justify-content:center; gap:12px; margin-top:28px}
+  .dl-block .cta .btn{min-width:232px; justify-content:center}
+  .dl-block .hero-note{margin:20px auto 0; max-width:62ch; line-height:1.7}
+  .dl-block .hero-note a{color:var(--brand-strong); text-decoration:none; border-bottom:1px solid var(--brand-line)}
+
+  .steps{list-style:none; display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:26px; margin:30px 0 0; padding:0; position:relative}
+  .steps::before{content:""; position:absolute; left:0; right:0; top:15px; height:1px; background:var(--line)}
+  .steps li{position:relative; padding-top:44px}
+  .steps .n{position:absolute; left:0; top:0; width:31px; height:31px; border-radius:50%; display:grid; place-items:center;
+    background:var(--bg); border:1px solid var(--brand-line); color:var(--brand-strong); font-size:12.5px; font-weight:600}
+  .steps b{display:block; font-size:14.5px; font-weight:570; margin-bottom:7px}
+  .steps p{margin:0; font-size:13px; line-height:1.6; color:var(--txt2)}
+  @media (max-width:860px){ .steps{grid-template-columns:minmax(0,1fr); gap:18px} .steps::before{left:15px; right:auto; top:6px; bottom:6px; width:1px; height:auto} .steps li{padding:6px 0 6px 48px} .steps .n{left:0; top:2px} }
+
+  details{border-top:1px solid var(--line)}
+  details:last-child{border-bottom:1px solid var(--line)}
+  summary{cursor:pointer; list-style:none; padding:15px 30px 15px 0; position:relative; font-size:14.5px; font-weight:520; color:var(--txt)}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+"; position:absolute; right:4px; top:13px; font-size:16px; color:var(--txt3); font-weight:400}
+  details[open] summary::after{content:"\2013"}
+  details p{margin:0; padding:0 30px 17px 0; font-size:13.5px; line-height:1.66; color:var(--txt2); max-width:74ch}
+
+  .feat-grid{display:grid; grid-template-columns:minmax(0,.85fr) minmax(0,1.35fr); gap:64px; align-items:start}
+  .feat-head{position:sticky; top:96px}
+  .feat-head h2{font-size:clamp(22px, 2.3vw, 29px); letter-spacing:-.012em}
+  .feat-head .sub{margin-top:12px; max-width:42ch}
+  .feat-list .row{display:block; padding:26px 0; border-top:1px solid var(--line)}
+  .feat-list .row:last-child{border-bottom:1px solid var(--line)}
+  .feat-list .row .k{font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--brand-strong); margin-bottom:9px}
+  .feat-list .row .v b{display:block; font-size:15.5px; font-weight:570; margin-bottom:7px}
+  .feat-list .row .v p{margin:0; font-size:13.5px; line-height:1.62; color:var(--txt2); max-width:60ch}
+  @media (max-width:900px){ .feat-grid{grid-template-columns:minmax(0,1fr); gap:26px} .feat-head{position:static} }
+
+  .exp-intro{max-width:62ch; margin:0 auto 54px; text-align:center}
+  .kicker{font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--brand-strong); margin-bottom:12px}
+  .exp-intro h2{font-size:clamp(22px, 2.4vw, 30px); line-height:1.25; letter-spacing:-.012em}
+  .exp-intro .sub{margin-top:12px}
+  .mini-facts{display:flex; justify-content:center; flex-wrap:wrap; gap:10px; margin-top:22px}
+  .mini-facts span{display:inline-flex; align-items:baseline; gap:7px; font-size:12.5px; color:var(--txt3);
+    border:1px solid var(--line); border-radius:999px; padding:7px 14px}
+  .mini-facts b{color:var(--txt); font-weight:600}
+  .app-stage{position:relative}
+  .reveal[data-anim="app"].in{animation:appIn .95s var(--ease-out) both}
+  @keyframes appIn{from{opacity:0; transform:translateY(38px) scale(.972)} to{opacity:1; transform:none}}
   .wrap#demo .stage-head, .wrap#android .stage-head{text-align:center; align-items:center}
   .wrap#demo .stage-head .sub, .wrap#android .stage-head .sub{margin:0 auto}
-  .win{background:var(--panel); border:1px solid var(--glass-line); border-radius:var(--r-panel); transition:transform .35s var(--ease-out), border-color .35s var(--ease-out);
+  .win{background:var(--panel); border:1px solid var(--line-strong); border-radius:var(--r-panel); box-shadow:0 40px 90px -50px rgb(0 0 0 / .9); transition:transform .35s var(--ease-out), border-color .35s var(--ease-out);
     box-shadow:var(--sh-panel); overflow:hidden; margin-top:16px}
   .win-body{position:relative; overflow:hidden; background:var(--bg)}
+  .win-body iframe, .phone-screen iframe{opacity:0; transition:opacity .55s var(--ease-out)}
+  .win-body.ready iframe, .phone-screen.ready iframe{opacity:1}
+  .win-body::before{content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+    background:linear-gradient(180deg, var(--side) 0%, var(--bg) 60%); opacity:1; transition:opacity .6s var(--ease-out)}
+  .win-body.ready::before{opacity:0}
+  .phone-screen::before{content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+    background:linear-gradient(180deg, var(--side) 0%, var(--bg) 60%); opacity:1; transition:opacity .6s var(--ease-out)}
+  .phone-screen.ready::before{opacity:0}
   @media (hover: hover){ .win:hover{transform:translateY(-3px); border-color:var(--line-strong)} .win-shot{transition:transform .5s var(--ease-out)} .win-body:hover .win-shot{transform:scale(1.012)} }
   .win-open{display:none}
   .win-shot{display:none}
   @media (min-width:981px){ .btn.sm.nav{background:transparent; color:var(--txt); border:1px solid var(--line-strong)} .btn.sm.nav:hover{background:var(--panel); border-color:var(--txt3)} }
-  @media (max-width:760px){
-    /* A 1060px app scaled into a phone is a postage stamp, so the frame shows
-       the window as a still and the live demo opens in its own tab. Nothing
-       sits on top of the app. */
+  @media (max-width:760px), (hover: none){
+    /* A 1060px app scaled into a phone is a postage stamp, and on any touch
+       screen a live frame would eat the swipes: the still stands in and the
+       live demo opens in its own tab. Nothing sits on top of the app. */
     .win-body iframe{display:none}
     .win-shot{display:block; width:100%; height:auto}
     .win-open{display:flex; gap:10px; align-items:center; justify-content:center; margin:12px 0 2px}
@@ -452,11 +523,6 @@
   @media (max-width:860px){
     .strip{grid-template-columns:1fr; gap:10px}
   }
-  /* After the base frame rules, which set display:block: on a phone the still
-     stands in for the live frame so nothing is scaled to a postage stamp. */
-  @media (max-width:760px), (hover: none){
-    .win-body iframe{display:none}
-  }
   @media (hover: none){
     /* The demo stays live and takes taps. It is sized to the app's own
        viewport and does not scroll itself, so a swipe anywhere on it chains
@@ -491,46 +557,146 @@
 
 <div class="wrap hero">
   <div class="hero-copy">
-    <div class="eyebrow">Windows 10/11 and Android</div>
+    <div class="brand-lockup">
+      <img src="assets/icon.png" alt="" width="64" height="64">
+      <span class="brand-name">QuotaVPN</span>
+    </div>
     <h1>Play and stream on the quota you picked.</h1>
     <p class="lead">Your ISP bills a connection against whichever quota its server name belongs to. QuotaVPN sets that name from the package you pick, so games and streams spend from that package instead of your general quota.</p>
     <div class="cta">
       <a class="btn primary xl" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v7.1H3V5.5Zm0 13 7.2 1v-7H3v6Zm8.4 1.2L21 21V12.6h-9.6v7.1ZM11.4 4.3 21 3v8.6h-9.6V4.3Z"/></svg><span>Download for Windows</span></a>
       <a class="btn ghost xl second" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg><span>Download for Android</span></a>
     </div>
-    <p class="hero-note">Free and open source, MIT licensed. No account, no sign up, nothing phoning home.</p>
+    <p class="hero-note">Windows 10/11 and Android &#183; free and open source, MIT licensed &#183; no account, no sign up</p>
   </div>
 </div>
 
 <div class="wrap" id="demo">
-  <section class="reveal">
-    <div class="stage-head">
-      <h2>The Windows app, running right here</h2>
-      <p class="sub">This is the real interface, the same build you install: same screens, same animations. Press Connect, move around, run a speed test. Nothing on this machine changes.</p>
-    </div>
-    <div class="win">
-      <div class="win-body" id="winBody">
-        <iframe id="appFrame" src="app/index.html" title="QuotaVPN for Windows, live interactive demo" loading="lazy"></iframe>
-        <img class="win-shot" src="assets/app-home.png" alt="QuotaVPN for Windows" loading="lazy">
-        <a class="win-open" href="app/index.html" target="_blank" rel="noopener"><span>Open the live demo full screen</span></a>
+  <section class="stage">
+    <div class="exp-intro reveal">
+      <div class="kicker">Windows 10/11</div>
+      <h2>One routing table changes where your traffic says it comes from.</h2>
+      <p class="sub">QuotaVPN keeps a small routing table on your machine. Your games and streams leave with a server name from the package you picked, so your ISP files that session under that package instead of your general quota. One dial starts it, one dial stops it.</p>
+      <div class="mini-facts" data-stagger>
+        <span><b>~35 MB</b> while running</span>
+        <span><b>3</b> transports</span>
+        <span><b>EN + AR</b> interface</span>
       </div>
     </div>
-    <div class="demo-cap">
-      <span><b>Live, not a mock-up</b></span>
-      <span>Connect, switch screens, run a speed test</span>
-      <span><a href="app/index.html" target="_blank" rel="noopener">Open the app demo full screen</a></span>
+    <div class="app-stage reveal" data-anim="app">
+      <div class="win" data-parallax="0.035">
+        <div class="win-body" id="winBody">
+          <iframe id="appFrame" src="app/index.html" title="QuotaVPN for Windows, live interactive demo" loading="lazy"></iframe>
+          <img class="win-shot" src="assets/app-home.png" alt="QuotaVPN for Windows" loading="lazy">
+          <a class="win-open" href="app/index.html" target="_blank" rel="noopener"><span>Open the live demo full screen</span></a>
+        </div>
+      </div>
+      <div class="demo-cap">
+        <span><b>The real build</b>, running in this page</span>
+        <span>Press Connect, switch screens, run a speed test</span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="wrap">
+  <div class="strip" id="facts">
+    <div><b>Signed updates</b><span>The app installs its own updates, verified</span></div>
+    <div><b>English and Arabic</b><span>The whole interface in both languages</span></div>
+    <div><b>Runs on its own server</b><span>Set up once and kept current</span></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <section id="features">
+    <div class="feat-grid">
+      <div class="feat-head reveal">
+        <h2>What it does</h2>
+        <p class="sub">One engine, two apps, and a routing table that decides which quota a session lands in.</p>
+      </div>
+      <div class="feat-list" data-stagger>
+        <div class="rows" style="margin-top:18px">
+      <div class="row">
+        <div class="k">Quota class</div>
+        <div class="v">
+          <b>Counts against the package you pick</b>
+          <p>Gamerz and Streamerz profiles each carry their own server list, so a game or a stream rides the package that should pay for it instead of your general quota.</p>
+        </div>
+      </div>
+      <div class="row">
+        <div class="k">Valorant voice</div>
+        <div class="v">
+          <b>Voice chat, when your region blocks it</b>
+          <p>Your game connection stays direct. QuotaVPN carries only the voice traffic, so region locks stop being the reason you play without a mic.</p>
+        </div>
+      </div>
+      <div class="row">
+        <div class="k">Transport</div>
+        <div class="v">
+          <b>Three modes, clearly labelled</b>
+          <p>Standard, WireGuard and Hysteria2. Each one says in plain words what it spends from, because a faster mode that counts differently is a decision, not a detail.</p>
+        </div>
+      </div>
+      <div class="row">
+        <div class="k">App routing</div>
+        <div class="v">
+          <b>Whole device, a list, or everything except</b>
+          <p>Send all traffic through the tunnel, only the apps you name, or everything except them. The choice is saved and survives restarts.</p>
+        </div>
+      </div>
+      <div class="row">
+        <div class="k">Updates</div>
+        <div class="v">
+          <b>The app keeps itself current</b>
+          <p>One installer per platform, no admin needed on Windows, signed updates applied for you. The Android APK sideloads once and updates the same way.</p>
+        </div>
+      </div>
+    
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="wrap">
+  <section id="voice" class="reveal">
+    <h2>Valorant voice chat</h2>
+    <p class="sub" style="margin-top:8px">Valorant voice chat is not available in some regions, and your ISP or region filter is usually the reason. The app has a page for exactly this: one setting, one switch.</p>
+    <div class="rows" style="margin-top:18px">
+      <div class="row">
+        <div class="k">What it does</div>
+        <div class="v">
+          <b>Carries the voice traffic, leaves the game where it is</b>
+          <p>Voice chat is handled through QuotaVPN while your match connection stays direct, so your ping in game does not move for the sake of a headset.</p>
+        </div>
+      </div>
+      <div class="row">
+        <div class="k">Using it</div>
+        <div class="v">
+          <b>Turn on Voice Chat Helper, then open Valorant</b>
+          <p>Keep QuotaVPN running while you play. Switching the helper off does not restart the rest of your session.</p>
+        </div>
+      </div>
+      <div class="row">
+        <div class="k">Where it lives</div>
+        <div class="v">
+          <b>Its own tab in both apps, next to Home</b>
+          <p>Open the Valorant tab in the preview above to see the switch and the three steps.</p>
+          <button class="btn ghost" id="openVoice" type="button" style="margin-top:10px; height:36px">Open the Valorant tab</button>
+        </div>
+      </div>
     </div>
   </section>
 </div>
 
 <div class="wrap" id="android">
-  <section class="reveal">
-    <div class="stage-head">
-      <h2>The same app in your pocket</h2>
-      <p class="sub">The Android build carries this exact theme: the same surfaces, the same accent, the same dial. Tap the dial below to connect.</p>
+  <section>
+    <div class="exp-intro reveal">
+      <div class="kicker">Android</div>
+      <h2>The same app, in your pocket.</h2>
+      <p class="sub">Same theme, same two packages, same dial: it is the identical interface, sized for a phone. Home, Speed and Settings, and the dial below is live.</p>
     </div>
-    <div class="phone-stage">
-      <div class="phone">
+    <div class="phone-stage reveal" data-anim="scale">
+      <div class="phone" data-parallax="0.05">
         <div class="phone-shell">
           <div class="phone-screen" id="phoneScreen">
             <iframe id="phoneFrame" src="phone/index.html" title="QuotaVPN for Android, live interactive demo" loading="lazy"></iframe>
@@ -570,93 +736,16 @@
 </div>
 
 <div class="wrap">
-  <div class="strip" id="facts">
-    <div><b>Signed updates</b><span>The app installs its own updates, verified</span></div>
-    <div><b>English and Arabic</b><span>The whole interface in both languages</span></div>
-    <div><b>Runs on its own server</b><span>Set up once and kept current</span></div>
-  </div>
-</div>
-
-<div class="wrap">
-  <section id="features" class="reveal">
-    <h2>What it does</h2>
-    <p class="sub" style="margin-top:8px">One engine, two apps, and a routing table that decides which quota a session lands in.</p>
-    <div class="rows" style="margin-top:18px">
-      <div class="row">
-        <div class="k">Quota class</div>
-        <div class="v">
-          <b>Counts against the package you pick</b>
-          <p>Gamerz and Streamerz profiles each carry their own server list, so a game or a stream rides the package that should pay for it instead of your general quota.</p>
-        </div>
-      </div>
-      <div class="row">
-        <div class="k">Valorant voice</div>
-        <div class="v">
-          <b>Voice chat, when your region blocks it</b>
-          <p>Your game connection stays direct. QuotaVPN carries only the voice traffic, so region locks stop being the reason you play without a mic.</p>
-        </div>
-      </div>
-      <div class="row">
-        <div class="k">Transport</div>
-        <div class="v">
-          <b>Three modes, clearly labelled</b>
-          <p>Standard, WireGuard and Hysteria2. Each one says in plain words what it spends from, because a faster mode that counts differently is a decision, not a detail.</p>
-        </div>
-      </div>
-      <div class="row">
-        <div class="k">App routing</div>
-        <div class="v">
-          <b>Whole device, a list, or everything except</b>
-          <p>Send all traffic through the tunnel, only the apps you name, or everything except them. The choice is saved and survives restarts.</p>
-        </div>
-      </div>
-      <div class="row">
-        <div class="k">Updates</div>
-        <div class="v">
-          <b>The app keeps itself current</b>
-          <p>One installer per platform, no admin needed on Windows, signed updates applied for you. The Android APK sideloads once and updates the same way.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-</div>
-
-<div class="wrap">
-  <section id="voice" class="reveal">
-    <h2>Valorant voice chat</h2>
-    <p class="sub" style="margin-top:8px">Valorant voice chat is not available in some regions, and your ISP or region filter is usually the reason. The app has a page for exactly this: one setting, one switch.</p>
-    <div class="rows" style="margin-top:18px">
-      <div class="row">
-        <div class="k">What it does</div>
-        <div class="v">
-          <b>Carries the voice traffic, leaves the game where it is</b>
-          <p>Voice chat is handled through QuotaVPN while your match connection stays direct, so your ping in game does not move for the sake of a headset.</p>
-        </div>
-      </div>
-      <div class="row">
-        <div class="k">Using it</div>
-        <div class="v">
-          <b>Turn on Voice Chat Helper, then open Valorant</b>
-          <p>Keep QuotaVPN running while you play. Switching the helper off does not restart the rest of your session.</p>
-        </div>
-      </div>
-      <div class="row">
-        <div class="k">Where it lives</div>
-        <div class="v">
-          <b>Its own tab in both apps, next to Home</b>
-          <p>Open the Valorant tab in the preview above to see the switch and the three steps.</p>
-          <button class="btn ghost" id="openVoice" type="button" style="margin-top:10px; height:36px">Open the Valorant tab</button>
-        </div>
-      </div>
-    </div>
-  </section>
-</div>
-
-<div class="wrap">
   <section id="how" class="reveal">
     <h2>How it works</h2>
-    <p class="sub" style="margin-top:8px">Pick a mode to see what a session counts against. The engine is sing-box on both platforms: wintun on Windows, VpnService on Android.</p>
-    <div class="modes" style="margin-top:16px">
+    <p class="sub" style="margin-top:8px">Four steps, nothing to configure.</p>
+    <ol class="steps" data-stagger>
+      <li><span class="n">1</span><b>Pick a package</b><p>Gamerz or Streamerz, each with its own server list.</p></li>
+      <li><span class="n">2</span><b>Press connect</b><p>The app writes its routing table and opens the tunnel.</p></li>
+      <li><span class="n">3</span><b>Traffic leaves tagged</b><p>Games and streams exit with a server name from that package.</p></li>
+      <li><span class="n">4</span><b>It bills that quota</b><p>The ISP files the session under your package, not your general quota.</p></li>
+    </ol>
+    <div class="modes" style="margin-top:34px">
       <div class="seg" role="group" aria-label="Transport mode" id="howSeg">
         <button type="button" aria-pressed="true" data-mode="standard">Standard</button>
         <button type="button" aria-pressed="false" data-mode="wg">WireGuard</button>
@@ -721,21 +810,16 @@
 </div>
 
 <div class="wrap">
-  <section class="reveal" id="download">
-    <h2>Get the build</h2>
-    <div class="rows" style="margin-top:16px">
-      <div class="row">
-        <div class="k">Windows 10/11</div>
-        <div class="v"><b>QuotaVPN x64 installer</b><p>Installs per user, no admin needed. After that the app updates itself: Settings, Updates, or the tray.</p></div>
+  <section id="download">
+    <div class="dl-block reveal">
+      <img src="assets/icon.png" alt="" width="56" height="56">
+      <h2>Get the build</h2>
+      <p class="sub">Free, open source, MIT licensed. No account, no sign up.</p>
+      <div class="cta">
+        <a class="btn primary xl" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v7.1H3V5.5Zm0 13 7.2 1v-7H3v6Zm8.4 1.2L21 21V12.6h-9.6v7.1ZM11.4 4.3 21 3v8.6h-9.6V4.3Z"/></svg><span>Download for Windows</span></a>
+        <a class="btn ghost xl second" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg><span>Download for Android</span></a>
       </div>
-      <div class="row">
-        <div class="k">Android</div>
-        <div class="v"><b>Signed APK, same releases page</b><p>Sideload it once, then it keeps itself current from there. Quick Settings tile and Always-on VPN included.</p></div>
-      </div>
-      <div class="dl-actions">
-        <a class="btn primary" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v7.1H3V5.5Zm0 13 7.2 1v-7H3v6Zm8.4 1.2L21 21V12.6h-9.6v7.1ZM11.4 4.3 21 3v8.6h-9.6V4.3Z"/></svg>Windows installer</a>
-        <a class="btn ghost" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg>Android APK</a>
-      </div>
+      <p class="hero-note">Windows installs per user, no admin needed, and updates itself from Settings or the tray. The APK sideloads once and keeps itself current. <a href="https://github.com/YousefMohiey/QuotaVPN" rel="noopener">Source on GitHub</a>.</p>
     </div>
   </section>
 </div>
@@ -786,18 +870,48 @@
     })['catch'](function(){});
 })();
 (function(){
-  var els = document.querySelectorAll('.reveal');
-  if(!els.length) return;
   var reduce = false;
-  try{ reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
-  if(reduce || !('IntersectionObserver' in window)){
-    for(var i=0;i<els.length;i++) els[i].classList.add('in');
-    return;
+  try { reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e){}
+  var groups = document.querySelectorAll('[data-stagger]');
+  for (var g=0; g<groups.length; g++){
+    var kids = groups[g].children;
+    for (var k=0; k<kids.length; k++){
+      kids[k].classList.add('reveal');
+      kids[k].setAttribute('data-d', String((k % 5) + 1));
+    }
   }
-  var io = new IntersectionObserver(function(list){
-    list.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
-  }, {rootMargin:'0px 0px -8% 0px', threshold:0.06});
-  for(var i=0;i<els.length;i++) io.observe(els[i]);
+  var els = document.querySelectorAll('.reveal');
+  if (els.length){
+    if (reduce || !('IntersectionObserver' in window)){
+      for (var i=0;i<els.length;i++) els[i].classList.add('in');
+    } else {
+      var io = new IntersectionObserver(function(list){
+        list.forEach(function(e){ if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+      }, { rootMargin:'0px 0px -10% 0px', threshold:0.08 });
+      for (var j=0;j<els.length;j++) io.observe(els[j]);
+    }
+  }
+  if (!reduce){
+    var items = document.querySelectorAll('[data-parallax]');
+    if (items.length){
+      var ticking = false;
+      var frame = function(){
+        ticking = false;
+        var vh = window.innerHeight || 800;
+        for (var n=0; n<items.length; n++){
+          var el = items[n], r = el.getBoundingClientRect();
+          if (r.bottom < -160 || r.top > vh + 160) continue;
+          var p = (r.top + r.height/2 - vh/2) / vh;
+          var amt = parseFloat(el.getAttribute('data-parallax')) || 0.05;
+          el.style.transform = 'translate3d(0,' + (-p * amt * 100).toFixed(2) + 'px,0)';
+        }
+      };
+      var onScroll = function(){ if (!ticking){ ticking = true; requestAnimationFrame(frame); } };
+      addEventListener('scroll', onScroll, {passive:true});
+      addEventListener('resize', onScroll, {passive:true});
+      frame();
+    }
+  }
 })();
 (function(){
   var seg = document.getElementById('howSeg');
@@ -845,13 +959,14 @@ window.addEventListener('message', function(e){
     fit('winBody', 1060, 700);
     fit('phoneScreen', 390, 844);
   }
-  // Phone visitors meet the phone build first; both demos stay on the page.
-  try {
-    if(window.matchMedia('(max-width:900px)').matches){
-      var d = document.getElementById('demo'), a = document.getElementById('android');
-      if(d && a && d.parentNode === a.parentNode) d.parentNode.insertBefore(a, d);
-    }
-  } catch(e){}
+  function arm(id, host){
+    var f = document.getElementById(id); if(!f) return;
+    var done = function(){ var h = document.getElementById(host); if(h) h.classList.add('ready'); };
+    f.addEventListener('load', function(){ done(); setTimeout(all, 60); });
+    setTimeout(done, 2500);
+  }
+  arm('appFrame', 'winBody');
+  arm('phoneFrame', 'phoneScreen');
   window.addEventListener('resize', all);
   window.addEventListener('orientationchange', all);
   if(document.readyState === 'complete') all(); else window.addEventListener('load', all);
