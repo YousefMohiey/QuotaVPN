@@ -96,6 +96,39 @@
   a{color:inherit; text-decoration:none}
   img{max-width:100%; height:auto}
   ::-webkit-scrollbar{width:10px; height:10px}
+  .scrollbar-top{position:fixed; top:0; left:0; height:2px; width:0; z-index:50; background:var(--brand-hi); transition:width .12s linear}
+  .totop{position:fixed; right:22px; bottom:22px; z-index:40; width:44px; height:44px; border-radius:50%;
+    display:grid; place-items:center; cursor:pointer; color:var(--txt2);
+    border:1px solid var(--line-strong); background:rgb(16 20 28 / .92); backdrop-filter:blur(10px);
+    opacity:0; transform:translateY(8px); pointer-events:none; transition:opacity .3s var(--ease-out), transform .3s var(--ease-out), color .2s, border-color .2s}
+  .totop.show{opacity:1; transform:none; pointer-events:auto}
+  .totop:hover{color:var(--txt); border-color:var(--txt3)}
+  .scroll-cue{display:inline-flex; flex-direction:column; align-items:center; gap:6px; margin:40px auto 0; text-decoration:none;
+    color:var(--txt3); font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; transition:color .2s var(--ease-out)}
+  .scroll-cue:hover{color:var(--txt)}
+  .scroll-cue svg{animation:cue 2.8s var(--ease-out) infinite}
+  @keyframes cue{0%,20%{transform:translateY(0); opacity:.35} 45%{opacity:1} 75%,100%{transform:translateY(6px); opacity:.35}}
+  .top nav a.txt{position:relative}
+  .top nav a.txt::after{content:""; position:absolute; left:0; right:0; bottom:-7px; height:1px; background:var(--brand-strong);
+    transform:scaleX(0); transform-origin:left; transition:transform .3s var(--ease-out)}
+  .top nav a.on{color:var(--txt)}
+  .top nav a.on::after, .top nav a.txt:hover::after{transform:scaleX(1)}
+  .win{position:relative}
+  .win::before{content:""; position:absolute; left:14px; right:14px; top:0; height:1px; z-index:2;
+    background:linear-gradient(90deg, transparent, rgb(255 255 255 / .18), transparent)}
+  .feat-list .row{transition:background-color .25s var(--ease-out), padding-left .25s var(--ease-out)}
+  @media (hover: hover){
+    .feat-list .row:hover{background:rgb(255 255 255 / .015); padding-left:10px}
+    .feat-list .row:hover .k{color:var(--brand-hi)}
+    .feat-list .row:hover .v b{color:#fff}
+  }
+  details[open] > p{animation:rise .34s var(--ease-out) both}
+  :focus-visible{outline:2px solid var(--brand-strong); outline-offset:2px; border-radius:6px}
+  .btn:focus-visible, .iconbtn:focus-visible, summary:focus-visible{outline-offset:3px}
+  a, button, summary, .btn{ touch-action:manipulation }
+  .skip{position:absolute; left:-9999px; top:8px; z-index:60; background:var(--panel); color:var(--txt);
+    border:1px solid var(--line-strong); border-radius:var(--r-ctl); padding:10px 16px; font-size:13.5px}
+  .skip:focus{left:16px}
   ::-webkit-scrollbar-thumb{background:rgb(255 255 255 / .1); border-radius:999px; border:3px solid transparent; background-clip:content-box}
   ::-webkit-scrollbar-thumb:hover{background:rgb(255 255 255 / .18); background-clip:content-box}
   ::-webkit-scrollbar-track{background:transparent}
@@ -135,7 +168,7 @@
   h1{font-size:34px; line-height:1.16; letter-spacing:-.7px; font-weight:600; margin:0; text-wrap:balance}
   h2{font-size:20px; letter-spacing:-.25px; font-weight:600; margin:0; text-wrap:balance}
   .lead{color:var(--txt2); font-size:14.5px; line-height:1.6; margin:0; max-width:62ch; text-wrap:pretty}
-  .sub{color:var(--txt2); font-size:13.5px; margin:0; max-width:72ch; text-wrap:pretty}
+  .sub{color:var(--txt2); font-size:13.5px; margin:0; max-width:68ch; text-wrap:pretty}
   section{padding:32px 0}
   /* one rhythm for the page: every chapter gets the same air, and the seam
      between two chapters is a single hairline instead of empty space. */
@@ -163,7 +196,7 @@
   .hero{display:block}
   .hero > *{position:relative; z-index:1}
   .hero h1{font-size:clamp(31px, 4.6vw, 60px); line-height:1.05; letter-spacing:-.024em; font-weight:600; max-width:19ch; margin:14px auto 0; text-wrap:balance}
-  .hero .lead{font-size:clamp(15px, 1.15vw, 17px); line-height:1.62; max-width:54ch; margin:20px auto 0}
+  .hero .lead{font-size:clamp(15px, 1.15vw, 17px); line-height:1.62; max-width:54ch; margin:20px auto 0; text-wrap:pretty}
   .hero .cta{justify-content:center; gap:12px; margin-top:30px}
   .hero .cta .btn{min-width:232px; justify-content:center}
   .hero-note{margin:18px auto 0; font-size:12.5px; color:var(--txt3)}
@@ -427,7 +460,7 @@
   }
   @media (prefers-reduced-motion:reduce){
     html{scroll-behavior:auto}
-    .reveal,.reveal.in,.hero,.hero > *,.hero-copy > *{opacity:1; animation:none !important; transform:none}
+    .reveal,.reveal.in,.hero,.hero > *,.hero-copy > *{opacity:1; animation:none !important; transform:none} .scroll-cue svg{animation:none}
     .btn,.row,.iconbtn,.dtab,.preset,.dialbtn{transition:none}
     .iconbtn:hover{transform:none}
   }
@@ -480,13 +513,13 @@
     border:1px solid var(--line); border-radius:999px; padding:7px 14px}
   .mini-facts b{color:var(--txt); font-weight:600}
   .app-stage{position:relative}
-  .reveal[data-anim="app"].in{animation:appIn .95s var(--ease-out) both}
+  .reveal[data-anim="app"].in{animation:appIn .82s var(--ease-out) both}
   @keyframes appIn{from{opacity:0; transform:translateY(38px) scale(.972)} to{opacity:1; transform:none}}
   .wrap#demo .stage-head, .wrap#android .stage-head{text-align:center; align-items:center}
   .wrap#demo .stage-head .sub, .wrap#android .stage-head .sub{margin:0 auto}
   .win{background:var(--panel); border:1px solid var(--line-strong); border-radius:var(--r-panel); box-shadow:0 40px 90px -50px rgb(0 0 0 / .9); transition:transform .35s var(--ease-out), border-color .35s var(--ease-out);
     box-shadow:var(--sh-panel); overflow:hidden; margin-top:16px}
-  .win-body{position:relative; overflow:hidden; background:var(--bg)}
+  .win-body{position:relative; overflow:hidden; background:var(--bg); aspect-ratio:1060 / 700}
   .win-body iframe, .phone-screen iframe{opacity:0; transition:opacity .55s var(--ease-out)}
   .win-body.ready iframe, .phone-screen.ready iframe{opacity:1}
   .win-body::before{content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
@@ -514,7 +547,7 @@
   .phone{display:flex; flex-direction:column; align-items:center}
   .phone-shell{box-sizing:border-box; padding:10px; border:1px solid var(--line-strong); border-radius:34px; background:var(--side);
     box-shadow:var(--sh-panel); width:410px; max-width:100%; min-width:0}
-  .phone-screen{position:relative; overflow:hidden; border-radius:26px; background:var(--bg); width:100%}
+  .phone-screen{position:relative; overflow:hidden; border-radius:26px; background:var(--bg); width:100%; aspect-ratio:390 / 844}
   .phone-screen iframe{position:absolute; top:0; left:0; display:block; border:0; transform-origin:0 0; background:var(--bg)}
   .phone-copy{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:18px; width:100%; max-width:820px; margin:0 auto}
   .phone-copy .rows{margin-top:0}
@@ -523,9 +556,14 @@
     /* narrower column and calmer type: the page is read on a phone here */
     .wrap{padding:0 18px}
     h2{font-size:19px}
-    .sub{font-size:13px}
+    .sub{font-size:14.5px; line-height:1.62}
+    .hero .lead{font-size:16px}
+    .row .v p, .feat-list .row .v p, details p{font-size:15px; line-height:1.62}
+    .row .v b, .feat-list .row .v b{font-size:15px}
+    .demo-cap{font-size:13px}
+    .hero-note{font-size:13px}
     .phone-shell{width:min(400px,100%)}
-  @media (hover: none){ .phone-shell{width:min(348px, 86vw)} }
+  @media (hover: none){ .phone-shell{width:min(348px, 86vw)} .iconbtn{width:44px; height:44px} .btn.sm{height:44px} }
   }
   @media (max-width:900px){
     .phone-stage{grid-template-columns:minmax(0,1fr); gap:22px}
@@ -551,6 +589,8 @@
 </style>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="scrollbar-top" id="scrollBar" aria-hidden="true"></div>
 
 <div class="top">
   <div class="wrap in">
@@ -572,6 +612,7 @@
   </div>
 </div>
 
+<main id="main">
 <div class="wrap hero">
   <div class="hero-copy">
     <div class="brand-lockup">
@@ -585,6 +626,8 @@
       <a class="btn ghost xl second" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg><span>Download for Android</span></a>
     </div>
     <p class="hero-note">Windows 10/11 and Android &#183; free and open source, MIT licensed &#183; no account, no sign up</p>
+    <a class="scroll-cue" href="#windows" aria-label="Scroll to the Windows section"><span>Scroll</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></a>
   </div>
 </div>
 
@@ -610,7 +653,7 @@
     <div class="win" data-parallax="0.03">
       <div class="win-body" id="winBody">
         <iframe id="appFrame" src="app/index.html" title="QuotaVPN for Windows, live interactive demo" loading="lazy"></iframe>
-        <img class="win-shot" src="assets/app-home.png" alt="QuotaVPN for Windows" loading="lazy">
+        <img class="win-shot" src="assets/app-home.png" alt="QuotaVPN for Windows" width="2644" height="1744" loading="lazy">
         <a class="win-open" href="app/index.html" target="_blank" rel="noopener"><span>Open the live demo full screen</span></a>
       </div>
     </div>
@@ -688,7 +731,7 @@
     <div class="demo-label"><i></i>Voice Chat Helper</div>
     <div class="win">
       <div class="win-body">
-        <img class="shot" src="assets/app-valorant.png" alt="QuotaVPN on the Valorant tab" loading="lazy">
+        <img class="shot" src="assets/app-valorant.png" alt="QuotaVPN on the Valorant tab" width="1322" height="872" loading="lazy">
       </div>
     </div>
     <div class="demo-cap">
@@ -843,6 +886,7 @@
   </section>
 </div>
 
+</main>
 <div class="wrap">
   <footer>
     <span>QuotaVPN</span>
@@ -990,6 +1034,40 @@ window.addEventListener('message', function(e){
   window.addEventListener('orientationchange', all);
   if(document.readyState === 'complete') all(); else window.addEventListener('load', all);
   all();
+})();
+</script>
+<button class="totop" id="toTop" type="button" aria-label="Back to top">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+</button>
+<script>
+/* Reading progress, a way back up, and a nav that shows where you are. */
+(function(){
+  var bar = document.getElementById('scrollBar');
+  var top = document.getElementById('toTop');
+  var links = [].slice.call(document.querySelectorAll('.top nav a[href^="#"]'));
+  var ticking = false;
+  function frame(){
+    ticking = false;
+    var h = document.documentElement.scrollHeight - window.innerHeight;
+    var y = window.scrollY || window.pageYOffset || 0;
+    if (bar) bar.style.width = (h > 0 ? Math.min(1, Math.max(0, y / h)) * 100 : 0) + '%';
+    if (top) top.classList.toggle('show', y > window.innerHeight * 1.4);
+  }
+  window.addEventListener('scroll', function(){ if (!ticking){ ticking = true; requestAnimationFrame(frame); } }, {passive:true});
+  window.addEventListener('resize', frame, {passive:true});
+  frame();
+  if (top) top.addEventListener('click', function(){ window.scrollTo({ top:0, behavior:'smooth' }); });
+  var ids = links.map(function(a){ return a.getAttribute('href').slice(1); });
+  if (ids.length && 'IntersectionObserver' in window){
+    var seen = {};
+    var io = new IntersectionObserver(function(list){
+      list.forEach(function(e){ seen[e.target.id] = e.isIntersecting ? (e.intersectionRatio || 0.01) : 0; });
+      var best = null, bestv = 0;
+      Object.keys(seen).forEach(function(k){ if (seen[k] > bestv){ bestv = seen[k]; best = k; } });
+      links.forEach(function(a){ a.classList.toggle('on', best !== null && a.getAttribute('href') === '#' + best); });
+    }, { rootMargin:'-45% 0px -45% 0px', threshold:[0, 0.25, 0.5, 1] });
+    ids.forEach(function(id){ var el = document.getElementById(id); if (el) io.observe(el); });
+  }
 })();
 </script>
 </body>
