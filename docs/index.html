@@ -137,6 +137,24 @@
   .lead{color:var(--txt2); font-size:14.5px; line-height:1.6; margin:0; max-width:62ch; text-wrap:pretty}
   .sub{color:var(--txt2); font-size:13.5px; margin:0; max-width:72ch; text-wrap:pretty}
   section{padding:32px 0}
+  /* one rhythm for the page: every chapter gets the same air, and the seam
+     between two chapters is a single hairline instead of empty space. */
+  .wrap.sec{padding:104px 0}
+  .wrap.sec + .wrap.sec, .demo-sec + .wrap.sec, .wrap.sec + .demo-sec, .demo-sec{border-top:1px solid var(--line)}
+  .demo-sec{border-top:0; padding:10px 0 104px}
+  .wrap.sec + .demo-sec{border-top:0}
+  .demo-inner{max-width:1240px; margin:0 auto; padding:0 24px; text-align:center}
+  .demo-cap{margin-top:18px}
+  .demo-label{display:inline-flex; align-items:center; gap:9px; margin-bottom:26px; padding:8px 16px; border-radius:999px;
+    border:1px solid var(--line); background:var(--panel); font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--txt2)}
+  .demo-label i{width:7px; height:7px; border-radius:50%; background:var(--brand-hi)}
+  .shot{display:block; width:100%; height:auto; opacity:1}
+  .voice-actions{margin-top:24px; display:flex; justify-content:center}
+  @media (max-width:760px){
+    .wrap.sec{padding:64px 0}
+    .demo-sec{padding:6px 0 64px}
+    .demo-inner{padding:0 18px}
+  }
 
   .wrap.hero{position:relative; padding:124px 24px 104px; max-width:900px; overflow:hidden; text-align:center}
   .brand-lockup{display:flex; flex-direction:column; align-items:center; gap:16px; margin-bottom:26px}
@@ -342,7 +360,6 @@
   .setrow:last-child{border-bottom:0}
   .setrow .k{flex:none; width:118px; font-size:12.5px; color:var(--txt2)}
   .setrow .v{flex:1; min-width:0; font-size:12.5px; color:var(--txt)}
-  .phone-screen.live + .demo-cap, .phone-screen.live{}
   .demo-cap{display:flex; gap:14px; flex-wrap:wrap; align-items:center; color:var(--txt3); font-size:12.5px; padding:12px 4px 0}
   .demo-cap b{color:var(--txt2); font-weight:570}
 
@@ -507,8 +524,8 @@
     .wrap{padding:0 18px}
     h2{font-size:19px}
     .sub{font-size:13px}
-    .phone-shell{width:min(340px,100%)}
-  @media (hover: none){ .phone-shell{width:min(308px, 78vw)} }
+    .phone-shell{width:min(400px,100%)}
+  @media (hover: none){ .phone-shell{width:min(348px, 86vw)} }
   }
   @media (max-width:900px){
     .phone-stage{grid-template-columns:minmax(0,1fr); gap:22px}
@@ -571,8 +588,8 @@
   </div>
 </div>
 
-<div class="wrap" id="demo">
-  <section class="stage">
+<div class="wrap sec" id="windows">
+  <section>
     <div class="exp-intro reveal">
       <div class="kicker">Windows 10/11</div>
       <h2>One routing table changes where your traffic says it comes from.</h2>
@@ -581,33 +598,32 @@
         <span><b>~35 MB</b> while running</span>
         <span><b>3</b> transports</span>
         <span><b>EN + AR</b> interface</span>
-      </div>
-    </div>
-    <div class="app-stage reveal" data-anim="app">
-      <div class="win" data-parallax="0.035">
-        <div class="win-body" id="winBody">
-          <iframe id="appFrame" src="app/index.html" title="QuotaVPN for Windows, live interactive demo" loading="lazy"></iframe>
-          <img class="win-shot" src="assets/app-home.png" alt="QuotaVPN for Windows" loading="lazy">
-          <a class="win-open" href="app/index.html" target="_blank" rel="noopener"><span>Open the live demo full screen</span></a>
-        </div>
-      </div>
-      <div class="demo-cap">
-        <span><b>The real build</b>, running in this page</span>
-        <span>Press Connect, switch screens, run a speed test</span>
+        <span><b>Signed</b> self-updates</span>
       </div>
     </div>
   </section>
 </div>
 
-<div class="wrap">
-  <div class="strip" id="facts">
-    <div><b>Signed updates</b><span>The app installs its own updates, verified</span></div>
-    <div><b>English and Arabic</b><span>The whole interface in both languages</span></div>
-    <div><b>Runs on its own server</b><span>Set up once and kept current</span></div>
+<section class="demo-sec" id="demo">
+  <div class="demo-inner reveal" data-anim="app">
+    <div class="demo-label"><i></i>Live demo &#183; the Windows build</div>
+    <div class="win" data-parallax="0.03">
+      <div class="win-body" id="winBody">
+        <iframe id="appFrame" src="app/index.html" title="QuotaVPN for Windows, live interactive demo" loading="lazy"></iframe>
+        <img class="win-shot" src="assets/app-home.png" alt="QuotaVPN for Windows" loading="lazy">
+        <a class="win-open" href="app/index.html" target="_blank" rel="noopener"><span>Open the live demo full screen</span></a>
+      </div>
+    </div>
+    <div class="demo-cap">
+      <span><b>The real build</b>, running in this page</span>
+      <span>Press Connect, switch screens, run a speed test</span>
+    </div>
   </div>
-</div>
+</section>
 
-<div class="wrap">
+
+
+<div class="wrap sec">
   <section id="features">
     <div class="feat-grid">
       <div class="feat-head reveal">
@@ -615,7 +631,6 @@
         <p class="sub">One engine, two apps, and a routing table that decides which quota a session lands in.</p>
       </div>
       <div class="feat-list" data-stagger>
-        <div class="rows" style="margin-top:18px">
       <div class="row">
         <div class="k">Quota class</div>
         <div class="v">
@@ -656,45 +671,49 @@
     </div>
   </section>
 </div>
+</div>
 
-<div class="wrap">
-  <section id="voice" class="reveal">
-    <h2>Valorant voice chat</h2>
-    <p class="sub" style="margin-top:8px">Valorant voice chat is not available in some regions, and your ISP or region filter is usually the reason. The app has a page for exactly this: one setting, one switch.</p>
-    <div class="rows" style="margin-top:18px">
-      <div class="row">
-        <div class="k">What it does</div>
-        <div class="v">
-          <b>Carries the voice traffic, leaves the game where it is</b>
-          <p>Voice chat is handled through QuotaVPN while your match connection stays direct, so your ping in game does not move for the sake of a headset.</p>
-        </div>
-      </div>
-      <div class="row">
-        <div class="k">Using it</div>
-        <div class="v">
-          <b>Turn on Voice Chat Helper, then open Valorant</b>
-          <p>Keep QuotaVPN running while you play. Switching the helper off does not restart the rest of your session.</p>
-        </div>
-      </div>
-      <div class="row">
-        <div class="k">Where it lives</div>
-        <div class="v">
-          <b>Its own tab in both apps, next to Home</b>
-          <p>Open the Valorant tab in the preview above to see the switch and the three steps.</p>
-          <button class="btn ghost" id="openVoice" type="button" style="margin-top:10px; height:36px">Open the Valorant tab</button>
-        </div>
-      </div>
+<div class="wrap sec" id="voice">
+  <section>
+    <div class="exp-intro reveal">
+      <div class="kicker">Valorant</div>
+      <h2>Voice chat, when your region blocks it.</h2>
+      <p class="sub">Valorant voice chat is not available in some regions, and your ISP or region filter is usually the reason. The app has a page for exactly this: one setting, one switch.</p>
     </div>
   </section>
 </div>
 
-<div class="wrap" id="android">
+<section class="demo-sec" id="voice-demo">
+  <div class="demo-inner reveal" data-anim="app">
+    <div class="demo-label"><i></i>Voice Chat Helper</div>
+    <div class="win">
+      <div class="win-body">
+        <img class="shot" src="assets/app-valorant.png" alt="QuotaVPN on the Valorant tab" loading="lazy">
+      </div>
+    </div>
+    <div class="demo-cap">
+      <span><b>One switch, its own tab</b>, next to Home</span>
+      <span>It carries the voice traffic and leaves your match connection alone</span>
+    </div>
+    <div class="voice-actions">
+      <button class="btn ghost" id="openVoice" type="button">Open the Valorant tab in the live demo</button>
+    </div>
+  </div>
+</section>
+
+<div class="wrap sec" id="android">
   <section>
     <div class="exp-intro reveal">
       <div class="kicker">Android</div>
       <h2>The same app, in your pocket.</h2>
-      <p class="sub">Same theme, same two packages, same dial: it is the identical interface, sized for a phone. Home, Speed and Settings, and the dial below is live.</p>
+      <p class="sub">Same theme, same two packages, same dial: the identical interface, sized for a phone. Home, Speed and Settings, with the dial live below.</p>
     </div>
+  </section>
+</div>
+
+<section class="demo-sec" id="android-demo">
+  <div class="demo-inner reveal" data-anim="app">
+    <div class="demo-label"><i></i>Live demo &#183; the Android build</div>
     <div class="phone-stage reveal" data-anim="scale">
       <div class="phone" data-parallax="0.05">
         <div class="phone-shell">
@@ -731,11 +750,11 @@
           <a class="btn ghost" href="https://github.com/YousefMohiey/QuotaVPN/releases">All releases</a>
         </div>
       </div>
-    </div>
-  </section>
-</div>
+    
+  </div>
+</section>
 
-<div class="wrap">
+<div class="wrap sec">
   <section id="how" class="reveal">
     <h2>How it works</h2>
     <p class="sub" style="margin-top:8px">Four steps, nothing to configure.</p>
@@ -781,7 +800,7 @@
   </section>
 </div>
 
-<div class="wrap">
+<div class="wrap sec">
   <section id="faq" class="reveal">
     <h2>Questions</h2>
     <div style="margin-top:16px">
@@ -809,7 +828,7 @@
   </section>
 </div>
 
-<div class="wrap">
+<div class="wrap sec">
   <section id="download">
     <div class="dl-block reveal">
       <img src="assets/icon.png" alt="" width="56" height="56">
