@@ -79,7 +79,8 @@
     --bg:#10141c; --side:#131a29; --panel:#111826; --panel-hover:#161e30; --field:#1a2338;
     --line:rgb(255 255 255 / .08); --line-strong:rgb(255 255 255 / .14); --glass-line:rgb(255 255 255 / .12);
     --txt:#eef1f6; --txt2:#a7b0bf; --txt3:#8b95a6;
-    --brand:#1f59b6; --brand-hi:#2870d1; --brand-strong:#5b8def;
+    --warn:#c49a58; --warn-bg:rgb(196 154 88 / .12); --warn-line:rgb(196 154 88 / .36);
+  --brand:#1f59b6; --brand-hi:#2870d1; --brand-strong:#5b8def;
     --brand-bg:rgb(31 89 182 / .14); --brand-line:rgb(31 89 182 / .4);
     --green:#5cb28e; --amber:#c49a58;
     --r-sm:6px; --r-ctl:10px; --r-card:16px; --r-panel:20px; --r-hero:24px;
@@ -126,12 +127,9 @@
   .top .sp{flex:1}
   .top nav{display:flex; align-items:center; gap:18px; font-size:13px; color:var(--txt2); flex:none}
   .top nav a.txt{position:relative; transition:color .18s var(--ease-out)}
-  .top nav a.txt::after{content:""; position:absolute; left:0; right:0; bottom:-7px; height:1px; background:var(--brand-strong);
-    transform:scaleX(0); transform-origin:left; transition:transform .3s var(--ease-out)}
-  .top nav a.txt:hover{color:var(--txt)}
+    .top nav a.txt:hover{color:var(--txt)}
   .top nav a.on{color:var(--txt)}
-  .top nav a.on::after, .top nav a.txt:hover::after{transform:scaleX(1)}
-  .iconbtn{display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px;
+    .iconbtn{display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px;
     border-radius:var(--r-ctl); border:1px solid var(--line-strong); color:var(--txt2); background:rgb(255 255 255 / .02);
     transition:color .18s var(--ease-out), border-color .18s var(--ease-out), background .18s var(--ease-out), transform .18s var(--ease-out)}
   .iconbtn:hover{color:var(--txt); border-color:var(--glass-line); background:rgb(255 255 255 / .06); transform:translateY(-1px)}
@@ -155,17 +153,17 @@
 
   /* type */
   .kicker{font-size:11.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--brand-strong)}
-  h1{font-size:clamp(36px, 5.2vw, 64px); line-height:1.1; letter-spacing:-.024em; font-weight:600; margin:0; text-wrap:balance}
-  h2{font-size:clamp(28px, 3.5vw, 42px); line-height:1.15; letter-spacing:-.015em; font-weight:600; margin:0; text-wrap:balance}
+  h1{font-size:clamp(30px, 3.6vw, 46px); line-height:1.1; letter-spacing:-.024em; font-weight:600; margin:0; text-wrap:balance}
+  h2{font-size:clamp(21px, 2.2vw, 28px); line-height:1.15; letter-spacing:-.015em; font-weight:600; margin:0; text-wrap:balance}
   .lead{color:var(--txt2); font-size:clamp(16px, 1.25vw, 18px); line-height:1.65; margin:0; max-width:64ch; text-wrap:pretty}
   .sub{color:var(--txt2); font-size:clamp(15px, 1.1vw, 16.5px); line-height:1.65; margin:0; max-width:64ch; text-wrap:pretty}
   section{padding:0}
 
   /* one rhythm for the page: every chapter gets the same air, and the seam
      between two chapters is a single hairline instead of empty space. */
-  .wrap.sec{padding:54px 0}
+  .wrap.sec{padding:44px 0}
   .wrap.sec + .wrap.sec, .demo-sec + .wrap.sec, .wrap.sec + .demo-sec, .demo-sec{border-top:1px solid var(--line)}
-  .demo-sec{border-top:0; padding:8px 0 54px}
+  .demo-sec{border-top:0; padding:6px 0 44px}
   .wrap.sec + .demo-sec{border-top:0}
   .demo-inner{max-width:1240px; margin:0 auto; padding:0 24px; text-align:center}
   .demo-cap{display:flex; gap:14px; flex-wrap:wrap; align-items:center; justify-content:center; color:var(--txt3); font-size:13.5px; padding:20px 4px 0}
@@ -173,8 +171,8 @@
   .demo-label{display:inline-flex; align-items:center; margin-bottom:16px; padding:7px 15px; border-radius:999px;
     border:1px solid var(--glass-line); background:var(--panel); font-size:11.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--txt2)}
   @media (max-width:760px){
-    .wrap.sec{padding:38px 0}
-    .demo-sec{padding:4px 0 38px}
+    .wrap.sec{padding:30px 0}
+    .demo-sec{padding:4px 0 30px}
     .demo-inner{padding:0 18px}
   }
 
@@ -203,13 +201,9 @@
   .scroll-cue svg{animation:cue 2.8s var(--ease-out) infinite}
   @keyframes cue{0%,20%{transform:translateY(0); opacity:.35} 45%{opacity:1} 75%,100%{transform:translateY(6px); opacity:.35}}
 
-  /* the idea: one statement, one breath of air */
-  .concept{max-width:900px}
-  .concept h2{font-size:clamp(30px, 4.2vw, 52px); line-height:1.12; letter-spacing:-.02em; max-width:26ch}
-  .concept .sub{margin-top:22px; max-width:56ch; font-size:clamp(15.5px, 1.15vw, 17px)}
 
   /* chapter intros */
-  .exp-intro{max-width:62ch; margin:0 auto 54px; text-align:center}
+  .exp-intro{max-width:62ch; margin:0 auto 40px; text-align:center}
   .kicker{margin-bottom:12px}
   .exp-intro .sub{margin-top:16px}
   .exp-intro:last-child{margin-bottom:0}
@@ -223,7 +217,7 @@
      The demos. Each frame is the shipped build in a window the reader drives,
      so the box is the app's own ratio and nothing is left over inside it.
      -------------------------------------------------------------------------- */
-  .demo-title{margin:0 0 10px; font-size:clamp(21px, 2.3vw, 29px); font-weight:600; letter-spacing:-.015em}
+  .demo-title{margin:0 0 8px; font-size:clamp(18px, 1.8vw, 22px); font-weight:600; letter-spacing:-.015em}
   .demo-sub{margin:0 auto 24px; max-width:64ch; color:var(--txt2); font-size:15px; line-height:1.65}
   .demo-inner .win{margin:0 auto}
   .win.narrow{width:100%; max-width:940px}
@@ -244,6 +238,10 @@
   .row .v b{display:block; font-size:15px; font-weight:600; margin-bottom:5px}
   .row .v p{margin:0; color:var(--txt2); font-size:14px; line-height:1.6}
 
+  .warn{display:flex; align-items:flex-start; gap:8px; margin:12px 0 0; max-width:620px; text-align:left;
+    border:1px solid var(--warn-line); background:var(--warn-bg); color:var(--warn); border-radius:var(--r-ctl);
+    padding:8px 12px; font-size:12.5px; line-height:1.5}
+  .warn svg{flex:none; margin-top:1px}
   .seg{display:inline-flex; border:1px solid var(--line); background:rgb(255 255 255 / .02); border-radius:var(--r-ctl); padding:4px}
   .seg button{appearance:none; border:0; background:transparent; color:var(--txt3); font:inherit; font-size:13.5px; font-weight:500;
     padding:8px 16px; min-height:44px; border-radius:8px; cursor:pointer; transition:color .18s var(--ease-out), background .18s var(--ease-out)}
@@ -252,7 +250,7 @@
 
   /* features */
   .feat-list{max-width:860px; margin:2px auto 0; text-align:left}
-  .feat-list .row{display:block; padding:26px 0; border-top:1px solid var(--line)}
+  .feat-list .row{display:block; padding:20px 0; border-top:1px solid var(--line)}
   .feat-list .row:last-child{border-bottom:1px solid var(--line)}
   .feat-list .row .k{font-size:11.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--brand-strong); margin-bottom:9px}
   .feat-list .row .v b{display:block; font-size:17px; font-weight:600; margin-bottom:7px}
@@ -279,7 +277,7 @@
   details{border-bottom:1px solid var(--line); transition:background .18s var(--ease-out)}
   details:first-of-type{border-top:1px solid var(--line)}
   details:hover{background:rgb(255 255 255 / .02)}
-  summary{cursor:pointer; list-style:none; display:flex; justify-content:space-between; gap:16px; align-items:center; padding:18px 20px; font-size:15px; font-weight:570}
+  summary{cursor:pointer; list-style:none; display:flex; justify-content:space-between; gap:16px; align-items:center; padding:14px 20px; font-size:15px; font-weight:570}
   summary::-webkit-details-marker{display:none}
   summary::after{content:"+"; color:var(--brand-strong); font-weight:600; font-size:18px; line-height:1; flex:none; transition:color .2s var(--ease-out)}
   details:hover summary::after{color:var(--brand-hi)}
@@ -294,7 +292,7 @@
   .dl-block .cta{justify-content:center; gap:12px; margin-top:28px}
   .dl-block .cta .btn{min-width:232px; justify-content:center}
   .dl-block .hero-note{margin:20px auto 0; max-width:62ch; line-height:1.7}
-  .dl-block .hero-note a{color:var(--brand-strong); text-decoration:none; border-bottom:1px solid var(--brand-line)}
+  .dl-block .hero-note a{color:var(--brand-strong); text-decoration:none; }
 
   footer{border-top:1px solid var(--line); margin-top:10px; padding:22px 0 40px; color:var(--txt3); font-size:12.5px;
     display:flex; gap:18px; flex-wrap:wrap; align-items:center}
@@ -431,24 +429,15 @@
       <span class="brand-name">QuotaVPN</span>
     </div>
     <h1>Play and stream on the quota you picked.</h1>
-    <p class="lead">QuotaVPN puts your package's name on every session, so games and streams spend from that quota instead of your general one.</p>
+    <p class="lead">Games and streams spend from the quota you picked, not your general one.</p>
     <div class="cta">
       <a class="btn primary xl" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v7.1H3V5.5Zm0 13 7.2 1v-7H3v6Zm8.4 1.2L21 21V12.6h-9.6v7.1ZM11.4 4.3 21 3v8.6h-9.6V4.3Z"/></svg><span>Download for Windows</span></a>
       <a class="btn ghost xl second" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg><span>Download for Android</span></a>
     </div>
     <p class="hero-note">Windows and Android &#183; free and open source &#183; no account</p>
-    <a class="scroll-cue" href="#idea" aria-label="Scroll to the demos"><span>Scroll</span>
+    <a class="scroll-cue" href="#demo" aria-label="Scroll to the demos"><span>Scroll</span>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></a>
   </div>
-</div>
-
-<div class="wrap sec" id="idea">
-  <section>
-    <div class="concept reveal">
-      <h2>Where your traffic says it comes from.</h2>
-      <p class="sub">Your ISP files each session by the server name in its handshake. QuotaVPN writes that name from the package you picked.</p>
-    </div>
-  </section>
 </div>
 
 <div class="wrap sec" id="windows">
@@ -456,7 +445,7 @@
     <div class="exp-intro reveal">
       <div class="kicker">Windows 10/11</div>
       <h2>Every control in one window.</h2>
-      <p class="sub">Package, routing, transport, connect. The demo below is the real build.</p>
+      <p class="sub">Package, routing, transport, connect.</p>
       <div class="mini-facts" data-stagger>
         <span><b>~35 MB</b> while running</span>
         <span><b>3</b> transports</span>
@@ -539,7 +528,7 @@
     <div class="exp-intro reveal">
       <div class="kicker">Valorant</div>
       <h2>Voice chat, when your region blocks it.</h2>
-      <p class="sub">Some regions block Valorant voice chat. The app has one switch for it, on its own tab.</p>
+      <p class="sub">Some regions block voice chat. One switch in the app fixes it.</p>
       <div class="voice-steps">
         <span><i>1</i>Turn on Voice Chat Helper</span>
         <span><i>2</i>Open Valorant</span>
@@ -617,6 +606,7 @@
         <button type="button" aria-pressed="false" data-mode="wg">WireGuard</button>
         <button type="button" aria-pressed="false" data-mode="hy2">Hysteria2</button>
       </div>
+      <p class="warn" id="howWarn" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg><span>WireGuard spends from your general quota, not your package.</span></p>
       <div class="rows" style="margin-top:10px">
         <div class="row howrow" data-mode="standard">
           <div class="k">Transport</div>
@@ -895,9 +885,18 @@
   if(!seg) return;
   var btns = seg.querySelectorAll('button');
   var rows = document.querySelectorAll('.howrow');
+  var warn = document.getElementById('howWarn');
   function pick(mode){
     for(var i=0;i<btns.length;i++) btns[i].setAttribute('aria-pressed', String(btns[i].dataset.mode === mode));
     for(var j=0;j<rows.length;j++) rows[j].style.display = rows[j].dataset.mode === mode ? '' : 'none';
+    if(warn){
+      if(mode === 'standard'){ warn.hidden = true; }
+      else {
+        warn.querySelector('span').textContent = (mode === 'wg' ? 'WireGuard' : 'Hysteria2') +
+          ' spends from your general quota, not your package.';
+        warn.hidden = false;
+      }
+    }
   }
   for(var i=0;i<btns.length;i++) btns[i].addEventListener('click', function(){ pick(this.dataset.mode); });
 })();

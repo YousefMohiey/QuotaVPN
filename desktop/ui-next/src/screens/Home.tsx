@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ChevronDown, ChevronRight, Gamepad2, Tv } from "lucide-react"
+import { ChevronDown, ChevronRight, Gamepad2, TriangleAlert, Tv } from "lucide-react"
 import { Hero } from "@/components/Hero"
 import { PickerDialog, type PickerItem } from "@/components/PickerDialog"
 import { Panel, Row } from "@/components/Row"
@@ -171,6 +171,15 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
             <p className="mt-1.5 text-[11.5px] text-txt3">
               {transport === "vless" ? t("trNoteVless") : transport === "wg" ? t("trNoteWg") : t("trNoteHy2")}
             </p>
+            {transport !== "vless" && (
+              <p
+                role="status"
+                className="mt-2 flex items-start gap-2 rounded-[10px] border border-warn-line bg-warn-bg px-2.5 py-1.5 text-[11.5px] leading-[1.45] text-warn"
+              >
+                <TriangleAlert className="mt-px size-3.5 shrink-0" aria-hidden />
+                <span>{t("quotaWarn")}</span>
+              </p>
+            )}
           </div>
         </Row>
       </Panel>
