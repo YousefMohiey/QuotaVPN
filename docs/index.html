@@ -71,6 +71,9 @@
      design system (desktop/ui-next/src): the charcoal-navy surface ladder,
      silver hairlines, one royal-blue accent, the app's radii and type scale.
      The app runs a true-black theme by owner call, so this page is flat too.
+     The centrepiece is the ACTUAL builds: /app is the Windows UI compiled
+     from the shipped source, /phone is the exact UI the APK packs. The page
+     walks those builds through their own states as you scroll.
      ========================================================================== */
   :root{
     --bg:#10141c; --side:#131a29; --panel:#111826; --panel-hover:#161e30; --field:#1a2338;
@@ -92,10 +95,12 @@
   }
   @font-face{font-family:"Cairo"; src:url("assets/cairo-ar.woff2") format("woff2"); font-weight:200 1000; font-style:normal; font-display:swap;
     unicode-range:U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+FB50-FDFF, U+FE70-FEFC}
-  [lang="ar"] .demo, [lang="ar"] .demo button, [lang="ar"] .demo input{font-family:"Cairo","Segoe UI",system-ui,sans-serif}
   a{color:inherit; text-decoration:none}
   img{max-width:100%; height:auto}
   ::-webkit-scrollbar{width:10px; height:10px}
+  ::-webkit-scrollbar-thumb{background:rgb(255 255 255 / .1); border-radius:999px; border:3px solid transparent; background-clip:content-box}
+  ::-webkit-scrollbar-thumb:hover{background:rgb(255 255 255 / .18); background-clip:content-box}
+  ::-webkit-scrollbar-track{background:transparent}
   .scrollbar-top{position:fixed; top:0; left:0; height:2px; width:0; z-index:50; background:var(--brand-hi); transition:width .12s linear}
   .totop{position:fixed; right:22px; bottom:22px; z-index:40; width:44px; height:44px; border-radius:50%;
     display:grid; place-items:center; cursor:pointer; color:var(--txt2);
@@ -103,35 +108,12 @@
     opacity:0; transform:translateY(8px); pointer-events:none; transition:opacity .3s var(--ease-out), transform .3s var(--ease-out), color .2s, border-color .2s}
   .totop.show{opacity:1; transform:none; pointer-events:auto}
   .totop:hover{color:var(--txt); border-color:var(--txt3)}
-  .scroll-cue{display:inline-flex; flex-direction:column; align-items:center; gap:6px; margin:22px auto 0; text-decoration:none;
-    color:var(--txt3); font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; transition:color .2s var(--ease-out)}
-  .scroll-cue:hover{color:var(--txt)}
-  .scroll-cue svg{animation:cue 2.8s var(--ease-out) infinite}
-  @keyframes cue{0%,20%{transform:translateY(0); opacity:.35} 45%{opacity:1} 75%,100%{transform:translateY(6px); opacity:.35}}
-  .top nav a.txt{position:relative}
-  .top nav a.txt::after{content:""; position:absolute; left:0; right:0; bottom:-7px; height:1px; background:var(--brand-strong);
-    transform:scaleX(0); transform-origin:left; transition:transform .3s var(--ease-out)}
-  .top nav a.on{color:var(--txt)}
-  .top nav a.on::after, .top nav a.txt:hover::after{transform:scaleX(1)}
-  .win{position:relative}
-  .win::before{content:""; position:absolute; left:14px; right:14px; top:0; height:1px; z-index:2;
-    background:linear-gradient(90deg, transparent, rgb(255 255 255 / .18), transparent)}
-  .feat-list .row{transition:background-color .25s var(--ease-out), padding-left .25s var(--ease-out)}
-  @media (hover: hover){
-    .feat-list .row:hover{background:rgb(255 255 255 / .015); padding-left:10px}
-    .feat-list .row:hover .k{color:var(--brand-hi)}
-    .feat-list .row:hover .v b{color:#fff}
-  }
-  details[open] > p{animation:rise .34s var(--ease-out) both}
-  :focus-visible{outline:2px solid var(--brand-strong); outline-offset:2px; border-radius:6px}
-  .btn:focus-visible, .iconbtn:focus-visible, summary:focus-visible{outline-offset:3px}
-  a, button, summary, .btn{ touch-action:manipulation }
   .skip{position:absolute; left:-9999px; top:8px; z-index:60; background:var(--panel); color:var(--txt);
     border:1px solid var(--line-strong); border-radius:var(--r-ctl); padding:10px 16px; font-size:13.5px}
   .skip:focus{left:16px}
-  ::-webkit-scrollbar-thumb{background:rgb(255 255 255 / .1); border-radius:999px; border:3px solid transparent; background-clip:content-box}
-  ::-webkit-scrollbar-thumb:hover{background:rgb(255 255 255 / .18); background-clip:content-box}
-  ::-webkit-scrollbar-track{background:transparent}
+  :focus-visible{outline:2px solid var(--brand-strong); outline-offset:2px; border-radius:6px}
+  .btn:focus-visible, .iconbtn:focus-visible, summary:focus-visible{outline-offset:3px}
+  a, button, summary, .btn{ touch-action:manipulation }
   .wrap{max-width:1080px; margin:0 auto; padding:0 24px}
   section[id], .wrap[id]{scroll-margin-top:72px}
 
@@ -144,13 +126,18 @@
     border-radius:999px; padding:2px 9px; margin-left:2px; letter-spacing:.2px; white-space:nowrap}
   .top .sp{flex:1}
   .top nav{display:flex; align-items:center; gap:18px; font-size:13px; color:var(--txt2); flex:none}
-  .top nav a.txt{transition:color .18s var(--ease-out)}
+  .top nav a.txt{position:relative; transition:color .18s var(--ease-out)}
+  .top nav a.txt::after{content:""; position:absolute; left:0; right:0; bottom:-7px; height:1px; background:var(--brand-strong);
+    transform:scaleX(0); transform-origin:left; transition:transform .3s var(--ease-out)}
   .top nav a.txt:hover{color:var(--txt)}
+  .top nav a.on{color:var(--txt)}
+  .top nav a.on::after, .top nav a.txt:hover::after{transform:scaleX(1)}
   .iconbtn{display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px;
     border-radius:var(--r-ctl); border:1px solid var(--line-strong); color:var(--txt2); background:rgb(255 255 255 / .02);
     transition:color .18s var(--ease-out), border-color .18s var(--ease-out), background .18s var(--ease-out), transform .18s var(--ease-out)}
   .iconbtn:hover{color:var(--txt); border-color:var(--glass-line); background:rgb(255 255 255 / .06); transform:translateY(-1px)}
 
+  /* buttons */
   .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; border-radius:var(--r-ctl);
     padding:11px 18px; font-size:13.5px; font-weight:570; letter-spacing:-.05px; border:1px solid transparent; cursor:pointer; min-height:44px;
     transition:background .18s var(--ease-out), border-color .18s var(--ease-out), transform .18s var(--ease-out)}
@@ -162,13 +149,23 @@
   .btn.sm{padding:0 14px; height:32px; font-size:12.5px}
   .btn.sm.nav{background:var(--brand); color:#fff; border-color:transparent}
   .btn.sm.nav:hover{background:var(--brand-hi)}
+  .btn.xl{padding:16px 26px; font-size:15px; border-radius:14px; gap:10px; min-height:54px}
+  .btn.xl svg{width:18px; height:18px}
+  .btn.xl.second{color:var(--txt2); border-color:var(--glass-line)}
+  .btn.xl.second:hover{border-color:var(--line-strong); color:var(--txt)}
+  .btn.primary.xl{position:relative; overflow:hidden; box-shadow:0 8px 20px -14px rgb(0 0 0 / .8)}
+  .btn.primary.xl::after{content:""; position:absolute; inset:0 auto 0 -60%; width:45%; transform:skewX(-18deg);
+    background:linear-gradient(90deg, transparent, rgb(255 255 255 / .22), transparent); transition:left .55s var(--ease-out)}
+  .btn.primary.xl:hover::after{left:120%}
 
-  .eyebrow, .kicker{font-size:11.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--brand-strong)}
+  /* type */
+  .kicker{font-size:11.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--brand-strong)}
   h1{font-size:clamp(36px, 5.2vw, 64px); line-height:1.1; letter-spacing:-.024em; font-weight:600; margin:0; text-wrap:balance}
   h2{font-size:clamp(28px, 3.5vw, 42px); line-height:1.15; letter-spacing:-.015em; font-weight:600; margin:0; text-wrap:balance}
   .lead{color:var(--txt2); font-size:clamp(16px, 1.25vw, 18px); line-height:1.65; margin:0; max-width:64ch; text-wrap:pretty}
   .sub{color:var(--txt2); font-size:clamp(15px, 1.1vw, 16.5px); line-height:1.65; margin:0; max-width:64ch; text-wrap:pretty}
   section{padding:0}
+
   /* one rhythm for the page: every chapter gets the same air, and the seam
      between two chapters is a single hairline instead of empty space. */
   .wrap.sec{padding:76px 0}
@@ -176,18 +173,18 @@
   .demo-sec{border-top:0; padding:8px 0 76px}
   .wrap.sec + .demo-sec{border-top:0}
   .demo-inner{max-width:1240px; margin:0 auto; padding:0 24px; text-align:center}
-  .demo-cap{margin-top:20px}
-  .demo-label{display:inline-flex; align-items:center; gap:9px; margin-bottom:28px; padding:8px 18px; border-radius:999px;
+  .demo-cap{display:flex; gap:14px; flex-wrap:wrap; align-items:center; justify-content:center; color:var(--txt3); font-size:13.5px; padding:20px 4px 0}
+  .demo-cap b{color:var(--txt2); font-weight:600}
+  .demo-label{display:inline-flex; align-items:center; gap:9px; margin-bottom:24px; padding:8px 18px; border-radius:999px;
     border:1px solid var(--glass-line); background:var(--panel); font-size:11.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--txt2)}
   .demo-label i{width:7px; height:7px; border-radius:50%; background:var(--brand-strong)}
-  .shot{display:block; width:100%; height:auto; opacity:1}
-  .voice-actions{margin-top:24px; display:flex; justify-content:center}
   @media (max-width:760px){
     .wrap.sec{padding:52px 0}
     .demo-sec{padding:4px 0 52px}
     .demo-inner{padding:0 18px}
   }
 
+  /* entrance */
   .wrap.hero{position:relative; padding:88px 24px 56px; max-width:900px; overflow:hidden; text-align:center}
   .brand-lockup{display:flex; flex-direction:column; align-items:center; gap:16px; margin-bottom:26px}
   .brand-lockup img{width:64px; height:64px; border-radius:18px; border:1px solid var(--glass-line); display:block}
@@ -199,14 +196,6 @@
   .hero .cta{justify-content:center; gap:12px; margin-top:30px}
   .hero .cta .btn{min-width:232px; justify-content:center}
   .hero-note{margin:18px auto 0; font-size:12.5px; color:var(--txt3)}
-  .btn.xl{padding:16px 26px; font-size:15px; border-radius:14px; gap:10px; min-height:54px}
-  .btn.xl svg{width:18px; height:18px}
-  .btn.xl.second{color:var(--txt2); border-color:var(--glass-line)}
-  .btn.xl.second:hover{border-color:var(--line-strong); color:var(--txt)}
-  .btn.primary.xl{position:relative; overflow:hidden; box-shadow:0 8px 20px -14px rgb(0 0 0 / .8)}
-  .btn.primary.xl::after{content:""; position:absolute; inset:0 auto 0 -60%; width:45%; transform:skewX(-18deg);
-    background:linear-gradient(90deg, transparent, rgb(255 255 255 / .22), transparent); transition:left .55s var(--ease-out)}
-  .btn.primary.xl:hover::after{left:120%}
   .hero-copy > *{animation:rise .62s var(--ease-out) both}
   .hero-copy > *:nth-child(2){animation-delay:.06s}
   .hero-copy > *:nth-child(3){animation-delay:.12s}
@@ -214,9 +203,63 @@
   .hero-copy > *:nth-child(5){animation-delay:.24s}
   .hero-copy > *:nth-child(6){animation-delay:.3s}
   .cta{display:flex; gap:10px; flex-wrap:wrap}
-  .note{color:var(--txt3); font-size:12.5px; margin:14px 0 0}
+  .scroll-cue{display:inline-flex; flex-direction:column; align-items:center; gap:6px; margin:22px auto 0; text-decoration:none;
+    color:var(--txt3); font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; transition:color .2s var(--ease-out)}
+  .scroll-cue:hover{color:var(--txt)}
+  .scroll-cue svg{animation:cue 2.8s var(--ease-out) infinite}
+  @keyframes cue{0%,20%{transform:translateY(0); opacity:.35} 45%{opacity:1} 75%,100%{transform:translateY(6px); opacity:.35}}
 
-  /* rows + panels */
+  /* the idea: one statement, one breath of air */
+  .concept{max-width:900px}
+  .concept h2{font-size:clamp(30px, 4.2vw, 52px); line-height:1.12; letter-spacing:-.02em; max-width:26ch}
+  .concept .sub{margin-top:22px; max-width:56ch; font-size:clamp(15.5px, 1.15vw, 17px)}
+
+  /* chapter intros */
+  .exp-intro{max-width:62ch; margin:0 auto 54px; text-align:center}
+  .kicker{margin-bottom:12px}
+  .exp-intro .sub{margin-top:16px}
+  .exp-intro:last-child{margin-bottom:0}
+  .mini-facts{display:flex; justify-content:center; flex-wrap:wrap; gap:10px; margin-top:24px}
+  .mini-facts span{display:inline-flex; align-items:baseline; gap:7px; font-size:13px; font-weight:500; color:var(--txt3);
+    border:1px solid var(--glass-line); border-radius:999px; padding:8px 16px; transition:border-color .2s var(--ease-out), color .2s var(--ease-out)}
+  .mini-facts span:hover{border-color:var(--line-strong); color:var(--txt2)}
+  .mini-facts b{color:var(--txt); font-weight:600}
+
+  /* --------------------------------------------------------------------------
+     The scroll stories. A pinned stage holds the real build while the caption
+     changes beside or above it, and the page clicks the app through its own
+     states. Height = one viewport plus one slice per step.
+     -------------------------------------------------------------------------- */
+  .story{position:relative; height:calc(100vh + var(--n,5) * 70vh)}
+  .story-pin{position:sticky; top:0; height:100vh; display:flex; flex-direction:column; justify-content:center; gap:16px; padding:14px 0}
+  .story-cap{position:relative; min-height:118px; text-align:left}
+  .story-cap .st{position:absolute; inset:0; opacity:0; transform:translateY(7px); pointer-events:none;
+    transition:opacity .32s var(--ease-out), transform .32s var(--ease-out)}
+  .story-cap .st.on{opacity:1; transform:none}
+  .story-cap h3{margin:0 0 7px; font-size:clamp(19px, 1.9vw, 25px); font-weight:600; letter-spacing:-.01em}
+  .story-cap p{margin:0; color:var(--txt2); font-size:15px; line-height:1.6; max-width:64ch}
+  .story-ticks{display:flex; gap:6px; justify-content:flex-start}
+  .story-ticks i{width:28px; height:2px; border-radius:2px; background:var(--line-strong);
+    transition:background .3s var(--ease-out), transform .3s var(--ease-out)}
+  .story-ticks i.done{background:var(--brand)}
+  .story-ticks i.on{background:var(--brand-strong); transform:scaleY(2)}
+  /* the phone story is a centred column: the device, then the words under it */
+  .story.center .story-cap{text-align:center; min-height:118px}
+  .story.center .story-cap p{margin:0 auto}
+  .story.center .story-ticks{justify-content:center}
+  .story.center .phone{flex:none}
+  .story.center .phone-shell{--ph:min(72vh, 760px); height:var(--ph); width:calc((var(--ph) - 20px) * .4621 + 20px); padding:10px}
+  .story.center .phone-screen{width:100%; height:100%; aspect-ratio:auto}
+  .story .win{margin-top:0; flex:1 1 auto; min-height:0; display:flex; flex-direction:column}
+  .story .win-body.fill{flex:1 1 auto; min-height:0; aspect-ratio:auto}
+  .story .win.narrow{width:100%; max-width:920px; margin:0 auto}
+  .voice-steps{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; justify-content:flex-start}
+  .voice-steps span{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; color:var(--txt2);
+    border:1px solid var(--glass-line); border-radius:999px; padding:7px 14px; background:var(--panel)}
+  .voice-steps i{font-style:normal; width:18px; height:18px; flex:none; display:grid; place-items:center; border-radius:50%;
+    border:1px solid var(--line); background:rgb(255 255 255 / .03); font-size:10px; color:var(--txt3)}
+
+  /* rows + panels (the app's own Row vocabulary) */
   .rows{background:var(--panel); border:1px solid var(--line); border-radius:var(--r-panel); overflow:hidden}
   .row{display:flex; gap:20px; padding:14px 18px; border-bottom:1px solid var(--line); align-items:flex-start; transition:background .18s var(--ease-out)}
   .row:last-child{border-bottom:0}
@@ -232,243 +275,23 @@
   .seg button[aria-pressed="true"]{background:rgb(255 255 255 / .1); color:var(--txt)}
   .seg button:not([aria-pressed="true"]):hover{color:var(--txt2)}
 
-  .gallery{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px}
-  figure{margin:0}
-  figcaption{color:var(--txt3); font-size:12.5px; margin-top:10px}
-
-  details{border-bottom:1px solid var(--line); transition:background .18s var(--ease-out)}
-  details:first-of-type{border-top:1px solid var(--line)}
-  details:hover{background:rgb(255 255 255 / .02)}
-  summary{cursor:pointer; list-style:none; display:flex; justify-content:space-between; gap:16px; align-items:center; padding:18px 20px; font-size:15px; font-weight:570}
-  summary::-webkit-details-marker{display:none}
-  summary::after{content:"+"; color:var(--brand-strong); font-weight:600; font-size:18px; line-height:1; flex:none; transition:color .2s var(--ease-out)}
-  details:hover summary::after{color:var(--brand-hi)}
-  details[open] summary::after{content:"\2212"}
-  details p{margin:0; padding:0 20px 20px; color:var(--txt2); font-size:14.5px; line-height:1.65; max-width:78ch}
-
-  .dl-actions{display:flex; gap:10px; flex-wrap:wrap; padding:16px 18px; border-top:1px solid var(--line); background:rgb(255 255 255 / .015)}
-
-  footer{border-top:1px solid var(--line); margin-top:10px; padding:22px 0 40px; color:var(--txt3); font-size:12.5px;
-    display:flex; gap:18px; flex-wrap:wrap; align-items:center}
-  footer a{color:var(--txt2); transition:color .18s var(--ease-out)}
-  footer a:hover{color:var(--txt)}
-  footer .sp{flex:1}
-
-  /* ==========================================================================
-     The interactive app. Same tokens, same components, running for real.
-     ========================================================================== */
-  .demo{
-    border:1px solid var(--glass-line); border-radius:var(--r-hero); background:var(--bg);
-    box-shadow:var(--sh-panel); overflow:hidden; display:flex; flex-direction:column; min-height:560px;
+  /* features */
+  .feat-grid{display:grid; grid-template-columns:minmax(0,.85fr) minmax(0,1.35fr); gap:64px; align-items:start}
+  .feat-head{position:sticky; top:96px}
+  .feat-head .sub{margin-top:16px; max-width:42ch}
+  .feat-list .row{display:block; padding:26px 0; border-top:1px solid var(--line)}
+  .feat-list .row:last-child{border-bottom:1px solid var(--line)}
+  .feat-list .row .k{font-size:11.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--brand-strong); margin-bottom:9px}
+  .feat-list .row .v b{display:block; font-size:17px; font-weight:600; margin-bottom:7px}
+  .feat-list .row .v p{margin:0; font-size:15px; line-height:1.65; color:var(--txt2); max-width:60ch}
+  @media (hover: hover){
+    .feat-list .row:hover{background:rgb(255 255 255 / .015); padding-left:10px}
+    .feat-list .row:hover .k{color:var(--brand-hi)}
+    .feat-list .row:hover .v b{color:#fff}
   }
-  .wstrip{flex:none; height:36px; display:flex; align-items:center; justify-content:flex-end; gap:16px;
-    padding:0 14px; border-bottom:1px solid var(--line); background:rgb(255 255 255 / .015); color:var(--txt3)}
-  .wstrip svg{width:15px; height:15px; opacity:.75}
-  .demo-body{flex:1; min-height:0; display:flex}
-  .demo-side{width:212px; flex:none; background:var(--side); border-right:1px solid var(--line);
-    display:flex; flex-direction:column; padding:12px}
-  .demo-id{display:flex; align-items:center; gap:10px; padding:2px 2px 12px}
-  .demo-id img{width:40px; height:40px; border-radius:10px; flex:none}
-  .demo-id .nm{font-size:13.5px; font-weight:600; line-height:1.2}
-  .demo-id .vv{font-size:10.5px; color:var(--txt3)}
-  .demo-tabs{display:flex; flex-direction:column; gap:2px}
-  .dtab{display:flex; align-items:center; gap:10px; width:100%; padding:8px 9px; border-radius:var(--r-ctl);
-    border:1px solid transparent; background:transparent; color:var(--txt2); font:inherit; font-size:12.5px; cursor:pointer;
-    transition:background .16s var(--ease-out), color .16s var(--ease-out), border-color .16s var(--ease-out); text-align:left}
-  .dtab svg{width:16px; height:16px; flex:none}
-  .dtab .vmark{width:16px; height:16px; flex:none; background-color:currentColor;
-    -webkit-mask:url("assets/valorant.png") center/contain no-repeat; mask:url("assets/valorant.png") center/contain no-repeat}
-  .dtab:hover{background:rgb(255 255 255 / .04); color:var(--txt)}
-  .dtab[aria-pressed="true"]{background:var(--brand-bg); border-color:var(--brand-line); color:var(--brand-strong)}
-  .demo-side .sp{flex:1}
+  @media (max-width:900px){ .feat-grid{grid-template-columns:minmax(0,1fr); gap:26px} .feat-head{position:static} }
 
-  .demo-main{flex:1; min-width:0; padding:16px; display:flex; flex-direction:column; gap:12px; overflow:hidden}
-  .dpage{display:none; flex-direction:column; gap:12px}
-  .dpage.on{display:flex}
-  .dhead{padding:0 2px}
-  .dhead h3{margin:0; font-size:15px; font-weight:600}
-  .dhead p{margin:2px 0 0; color:var(--txt3); font-size:12.5px}
-  .dpanel{background:var(--panel); border:1px solid var(--line); border-radius:var(--r-card); overflow:hidden}
-
-  /* home: dial */
-  .dial-wrap{display:flex; align-items:center; gap:22px; padding:18px; flex-wrap:wrap}
-  .dialbtn{position:relative; width:124px; height:124px; flex:none; border-radius:50%; cursor:pointer;
-    border:1px solid var(--line-strong); background:var(--field); color:var(--txt); font:inherit;
-    display:grid; place-items:center; transition:border-color .2s var(--ease-out), background .2s var(--ease-out)}
-  .dialbtn:hover{border-color:var(--brand-line)}
-  .dialbtn .ring{position:absolute; inset:-6px; border-radius:50%; padding:3px;
-    background:conic-gradient(var(--brand) calc(var(--p,0) * 1%), rgb(255 255 255 / .07) 0);
-    -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
-    mask:radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
-    transition:background .3s linear}
-  .dialbtn .in{display:flex; flex-direction:column; align-items:center; gap:5px; position:relative}
-  .dialbtn .in svg{width:22px; height:22px}
-  .dialbtn .lbl{font-size:12px; font-weight:570; letter-spacing:.02em}
-  .dialbtn.on{border-color:var(--brand-line); background:var(--brand-bg)}
-  .dialbtn.on .lbl{color:var(--brand-strong)}
-  .dialmeta{min-width:0; flex:1; display:flex; flex-direction:column; gap:2px}
-  .dialmeta .cn{font-size:14px; font-weight:600}
-  .dialmeta .st{font-size:12.5px; color:var(--txt2)}
-  .dialmeta .sn{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:11.5px; color:var(--txt3)}
-
-  .tiles{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border-top:1px solid var(--line)}
-  .tile{padding:11px 14px}
-  .tile + .tile{border-left:1px solid var(--line)}
-  .tile span{display:block; color:var(--txt3); font-size:11px; letter-spacing:.04em; text-transform:uppercase}
-  .tile b{font-size:15px; font-weight:600}
-  .spark{display:flex; align-items:flex-end; gap:2px; height:34px; padding:0 14px 12px}
-  .spark i{flex:1; min-width:2px; background:var(--brand); opacity:.75; border-radius:2px 2px 0 0; height:2px; transition:height .35s var(--ease-out), opacity .2s}
-
-  /* home: rows */
-  .presets{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding:12px; border-bottom:1px solid var(--line)}
-  .preset{min-height:62px; display:flex; flex-direction:column; justify-content:center; gap:3px; padding:8px 12px;
-    border:1px solid var(--line); border-radius:14px; background:rgb(255 255 255 / .02); color:var(--txt2);
-    font:inherit; cursor:pointer; text-align:left; transition:border-color .18s var(--ease-out), background .18s var(--ease-out)}
-  .preset:hover{border-color:var(--brand-line)}
-  .preset[aria-pressed="true"]{border-color:var(--brand-line); background:var(--brand-bg); color:var(--txt)}
-  .preset b{font-size:13px; font-weight:570}
-  .preset i{font-style:normal; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:11px; color:var(--txt3)}
-  .drow{display:flex; gap:16px; align-items:center; padding:11px 14px; border-bottom:1px solid var(--line)}
-  .drow:last-child{border-bottom:0}
-  .drow .k{flex:none; width:118px; font-size:12.5px; color:var(--txt2)}
-  .drow .v{flex:1; min-width:0}
-  .pick{display:flex; width:100%; max-width:340px; align-items:center; justify-content:space-between; gap:10px;
-    padding:0 12px; height:38px; border:1px solid var(--line); border-radius:var(--r-ctl); background:rgb(255 255 255 / .02);
-    color:var(--txt); font:inherit; font-size:12.5px; cursor:pointer; transition:border-color .18s var(--ease-out), background .18s var(--ease-out)}
-  .pick:hover{border-color:var(--brand-line); background:var(--brand-bg)}
-  .pick svg{width:15px; height:15px; flex:none; color:var(--txt2)}
-  .segw{display:flex; flex-direction:column; gap:6px}
-  .segw .hint{font-size:11.5px; color:var(--txt3)}
-
-  /* voice page */
-  .vhead{display:flex; align-items:center; gap:12px; padding:4px 2px}
-  .vmark-lg{width:36px; height:36px; background-color:var(--txt); -webkit-mask:url("assets/valorant.png") center/contain no-repeat; mask:url("assets/valorant.png") center/contain no-repeat}
-  .badge{margin-left:auto; display:inline-flex; align-items:center; gap:7px; height:28px; padding:0 12px; border-radius:999px;
-    border:1px solid var(--line); background:rgb(255 255 255 / .02); color:var(--txt2); font-size:12px; font-weight:500; white-space:nowrap}
-  .badge.on{border-color:var(--brand-line); background:var(--brand-bg); color:var(--brand-strong)}
-  .badge .dot{width:6px; height:6px; border-radius:50%; background:rgb(255 255 255 / .25)}
-  .badge.on .dot{background:var(--brand)}
-  .vcard{padding:16px}
-  .vcard h4{margin:0 0 5px; font-size:13.5px; font-weight:600}
-  .vcard p{margin:0; color:var(--txt2); font-size:12.5px; line-height:1.6; max-width:62ch}
-  .vrow{margin-top:14px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 14px; border-radius:14px;
-    border:1px solid var(--line); background:rgb(255 255 255 / .02); transition:border-color .2s var(--ease-out), background .2s var(--ease-out)}
-  .vrow.on{border-color:var(--brand-line); background:var(--brand-bg)}
-  .vrow .t{flex:1; min-width:200px}
-  .vrow .t b{display:block; font-size:13px; font-weight:600}
-  .vrow .t p{margin:2px 0 0; font-size:12px; color:var(--txt2)}
-  .vsteps .s{display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--line); font-size:12.5px; color:var(--txt2)}
-  .vsteps .s:last-child{border-bottom:0}
-  .vsteps .n{width:20px; height:20px; flex:none; display:grid; place-items:center; border-radius:50%; border:1px solid var(--line);
-    background:rgb(255 255 255 / .03); font-size:10.5px; color:var(--txt3)}
-  .vsub{padding:10px 14px; border-bottom:1px solid var(--line); font-size:12px; font-weight:500; color:var(--txt2)}
-  .vinfo{padding:14px 16px}
-  .vinfo b{display:block; font-size:12.5px; font-weight:500; color:var(--txt2)}
-  .vinfo p{margin:4px 0 0; font-size:12px; color:var(--txt2); line-height:1.6; max-width:62ch}
-
-  /* speed page */
-  .sptop{padding:18px 16px 4px; text-align:center}
-  .spnum{font-size:44px; font-weight:600; letter-spacing:-1px; line-height:1}
-  .spun{font-size:12px; color:var(--txt3); margin-left:4px}
-  .spcap{margin-top:6px; font-size:12.5px; color:var(--txt2)}
-  .spbars{display:flex; align-items:flex-end; gap:2px; height:52px; padding:12px 16px 0}
-  .spbars i{flex:1; min-width:2px; height:2px; background:var(--brand); opacity:.7; border-radius:2px 2px 0 0; transition:height .3s var(--ease-out)}
-  .spact{display:flex; align-items:center; gap:12px; padding:14px 16px; border-top:1px solid var(--line); margin-top:12px; flex-wrap:wrap}
-  .spres{padding:14px 16px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border-top:1px solid var(--line)}
-  .spres div{padding:2px 0}
-  .spres span{display:block; color:var(--txt3); font-size:11px; text-transform:uppercase; letter-spacing:.04em}
-  .spres b{font-size:15px; font-weight:600}
-  .verd{display:flex; gap:8px; flex-wrap:wrap; padding:0 16px 14px}
-  .verd i{font-style:normal; font-size:11.5px; padding:3px 9px; border-radius:999px; border:1px solid var(--line); background:rgb(255 255 255 / .02); color:var(--txt2)}
-
-  .hist .h{display:flex; justify-content:space-between; gap:12px; padding:11px 14px; border-bottom:1px solid var(--line); font-size:12.5px}
-  .hist .h:last-child{border-bottom:0}
-  .hist .h span{color:var(--txt3)}
-  .hist .h b{font-weight:570}
-  .empty{padding:26px 16px; text-align:center; color:var(--txt3); font-size:12.5px}
-
-  .setrow{display:flex; gap:16px; align-items:center; padding:12px 14px; border-bottom:1px solid var(--line); flex-wrap:wrap}
-  .setrow:last-child{border-bottom:0}
-  .setrow .k{flex:none; width:118px; font-size:12.5px; color:var(--txt2)}
-  .setrow .v{flex:1; min-width:0; font-size:12.5px; color:var(--txt)}
-  .demo-cap{display:flex; gap:14px; flex-wrap:wrap; align-items:center; justify-content:center; color:var(--txt3); font-size:13.5px; padding:12px 4px 0}
-  .demo-cap b{color:var(--txt2); font-weight:600}
-
-  @keyframes rise{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
-  .reveal{opacity:0}
-  .reveal.in{animation:rise .72s var(--ease-out) both}
-  .reveal[data-anim="scale"].in{animation:pop .82s var(--ease-out) both}
-  .reveal[data-anim="left"].in{animation:slideL .72s var(--ease-out) both}
-  .reveal[data-anim="right"].in{animation:slideR .72s var(--ease-out) both}
-  .reveal[data-d="1"].in{animation-delay:.07s}
-  .reveal[data-d="2"].in{animation-delay:.14s}
-  .reveal[data-d="3"].in{animation-delay:.21s}
-  .reveal[data-d="4"].in{animation-delay:.28s}
-  .reveal[data-d="5"].in{animation-delay:.35s}
-  @keyframes rise{from{opacity:0; transform:translateY(20px)} to{opacity:1; transform:none}}
-  @keyframes pop{from{opacity:0; transform:translateY(26px) scale(.965)} to{opacity:1; transform:none}}
-  @keyframes slideL{from{opacity:0; transform:translateX(-24px)} to{opacity:1; transform:none}}
-  @keyframes slideR{from{opacity:0; transform:translateX(24px)} to{opacity:1; transform:none}}
-  .hero{animation:rise .55s var(--ease-out) both}
-
-  @media (max-width:860px){
-    .wrap.hero{padding:52px 18px 38px}
-    .hero .cta{flex-direction:column; align-items:stretch}
-    .hero .cta .btn{min-width:0; width:100%}
-    section{padding:0}
-    .row{flex-direction:column; gap:6px; padding:13px 16px}
-    .row .k{width:auto}
-    .gallery{grid-template-columns:1fr}
-    .top nav a.txt{display:none}
-    .top nav{gap:10px}
-    .demo{min-height:0}
-    .demo-body{flex-direction:column}
-    .demo-side{width:100%; flex:0 0 auto; border-right:0; border-bottom:1px solid var(--line); flex-direction:row; flex-wrap:wrap; gap:4px; padding:8px}
-    .wstrip{height:30px}
-    .demo-id{width:100%; padding:2px 4px 6px}
-    .demo-id img{width:32px; height:32px}
-    .demo-tabs{flex-direction:row; flex:1; gap:2px}
-    .dtab{flex-direction:column; gap:4px; padding:7px 4px; font-size:10.5px; justify-content:center; text-align:center; flex:1; min-width:0}
-    .dtab svg,.dtab .vmark{width:16px; height:16px}
-    .demo-side .sp{display:none}
-    .demo-main{padding:12px}
-    .dialbtn{width:104px; height:104px; margin:0 auto}
-    .dial-wrap{justify-content:center; text-align:center; gap:14px}
-    .dialmeta{align-items:center; flex-basis:100%}
-    .drow{flex-direction:column; align-items:stretch; gap:6px}
-    .drow .k{width:auto}
-    .pick{max-width:none}
-    .presets{grid-template-columns:1fr}
-    .tiles{grid-template-columns:repeat(3,1fr)}
-    .spres{grid-template-columns:repeat(3,1fr); gap:8px}
-    .spnum{font-size:38px}
-  }
-  @media (max-width:420px){
-    .top .name{display:none}
-    .cta{flex-direction:column}
-    .cta .btn{width:100%}
-    .cta .btn.ghost{order:-1; background:var(--brand); color:#fff; border-color:transparent}
-    .cta .btn.primary{background:rgb(255 255 255 / .02); color:var(--txt); border-color:var(--line-strong)}
-    .tiles{grid-template-columns:1fr}
-    .tile + .tile{border-left:0; border-top:1px solid var(--line)}
-  }
-  @media (prefers-reduced-motion:reduce){
-    html{scroll-behavior:auto}
-    .reveal,.reveal.in,.hero,.hero > *,.hero-copy > *{opacity:1; animation:none !important; transform:none} .scroll-cue svg{animation:none}
-    .btn,.row,.iconbtn,.dtab,.preset,.dialbtn{transition:none}
-    .iconbtn:hover{transform:none}
-  }
-
-  /* ---- the two live demos: real builds in a window and a phone shell ---- */
-  .stage-head{display:flex; flex-direction:column; gap:10px; margin:0 0 16px}
-  .dl-block{max-width:760px; margin:0 auto; text-align:center}
-  .dl-block img{width:56px; height:56px; border-radius:16px; border:1px solid var(--glass-line); margin-bottom:20px}
-  .dl-block .sub{margin:12px auto 0; max-width:52ch}
-  .dl-block .cta{justify-content:center; gap:12px; margin-top:28px}
-  .dl-block .cta .btn{min-width:232px; justify-content:center}
-  .dl-block .hero-note{margin:20px auto 0; max-width:62ch; line-height:1.7}
-  .dl-block .hero-note a{color:var(--brand-strong); text-decoration:none; border-bottom:1px solid var(--brand-line)}
-
+  /* how it works */
   .steps{list-style:none; display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:26px; margin:30px 0 0; padding:0; position:relative}
   .steps::before{content:""; position:absolute; left:0; right:0; top:15px; height:1px; background:var(--line)}
   .steps li{position:relative; padding-top:44px}
@@ -480,34 +303,45 @@
   .steps p{margin:0; font-size:13px; line-height:1.6; color:var(--txt2)}
   @media (max-width:860px){ .steps{grid-template-columns:minmax(0,1fr); gap:18px} .steps::before{left:15px; right:auto; top:6px; bottom:6px; width:1px; height:auto} .steps li{padding:6px 0 6px 48px} .steps .n{left:0; top:2px} }
 
-  /* FAQ details styles removed to use the ones defined above */
+  /* faq */
+  details{border-bottom:1px solid var(--line); transition:background .18s var(--ease-out)}
+  details:first-of-type{border-top:1px solid var(--line)}
+  details:hover{background:rgb(255 255 255 / .02)}
+  summary{cursor:pointer; list-style:none; display:flex; justify-content:space-between; gap:16px; align-items:center; padding:18px 20px; font-size:15px; font-weight:570}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+"; color:var(--brand-strong); font-weight:600; font-size:18px; line-height:1; flex:none; transition:color .2s var(--ease-out)}
+  details:hover summary::after{color:var(--brand-hi)}
+  details[open] summary::after{content:"\2212"}
+  details p{margin:0; padding:0 20px 20px; color:var(--txt2); font-size:14.5px; line-height:1.65; max-width:78ch}
+  details[open] > p{animation:rise .34s var(--ease-out) both}
 
-  .feat-grid{display:grid; grid-template-columns:minmax(0,.85fr) minmax(0,1.35fr); gap:64px; align-items:start}
-  .feat-head{position:sticky; top:96px}
-  .feat-head .sub{margin-top:16px; max-width:42ch}
-  .feat-list .row{display:block; padding:26px 0; border-top:1px solid var(--line)}
-  .feat-list .row:last-child{border-bottom:1px solid var(--line)}
-  .feat-list .row .k{font-size:11.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--brand-strong); margin-bottom:9px}
-  .feat-list .row .v b{display:block; font-size:17px; font-weight:600; margin-bottom:7px}
-  .feat-list .row .v p{margin:0; font-size:15px; line-height:1.65; color:var(--txt2); max-width:60ch}
-  @media (max-width:900px){ .feat-grid{grid-template-columns:minmax(0,1fr); gap:26px} .feat-head{position:static} }
+  /* download */
+  .dl-block{max-width:760px; margin:0 auto; text-align:center}
+  .dl-block img{width:56px; height:56px; border-radius:16px; border:1px solid var(--glass-line); margin-bottom:20px}
+  .dl-block .sub{margin:12px auto 0; max-width:52ch}
+  .dl-block .cta{justify-content:center; gap:12px; margin-top:28px}
+  .dl-block .cta .btn{min-width:232px; justify-content:center}
+  .dl-block .hero-note{margin:20px auto 0; max-width:62ch; line-height:1.7}
+  .dl-block .hero-note a{color:var(--brand-strong); text-decoration:none; border-bottom:1px solid var(--brand-line)}
 
-  .exp-intro{max-width:62ch; margin:0 auto 54px; text-align:center}
-  .kicker{margin-bottom:12px}
-  .exp-intro .sub{margin-top:16px}
-  .mini-facts{display:flex; justify-content:center; flex-wrap:wrap; gap:10px; margin-top:24px}
-  .mini-facts span{display:inline-flex; align-items:baseline; gap:7px; font-size:13px; font-weight:500; color:var(--txt3);
-    border:1px solid var(--glass-line); border-radius:999px; padding:8px 16px; transition:border-color .2s var(--ease-out), color .2s var(--ease-out)}
-  .mini-facts span:hover{border-color:var(--line-strong); color:var(--txt2)}
-  .mini-facts b{color:var(--txt); font-weight:600}
-  .app-stage{position:relative}
-  .reveal[data-anim="app"].in{animation:appIn .82s var(--ease-out) both}
-  @keyframes appIn{from{opacity:0; transform:translateY(38px) scale(.972)} to{opacity:1; transform:none}}
-  .wrap#demo .stage-head, .wrap#android .stage-head{text-align:center; align-items:center}
-  .wrap#demo .stage-head .sub, .wrap#android .stage-head .sub{margin:0 auto}
-  .win{background:var(--panel); border:1px solid var(--glass-line); border-radius:var(--r-panel); box-shadow:var(--sh-panel); transition:transform .35s var(--ease-out), border-color .35s var(--ease-out), box-shadow .35s var(--ease-out); overflow:hidden; margin-top:20px}
+  footer{border-top:1px solid var(--line); margin-top:10px; padding:22px 0 40px; color:var(--txt3); font-size:12.5px;
+    display:flex; gap:18px; flex-wrap:wrap; align-items:center}
+  footer a{color:var(--txt2); transition:color .18s var(--ease-out)}
+  footer a:hover{color:var(--txt)}
+  footer .sp{flex:1}
+
+  /* --------------------------------------------------------------------------
+     The frames: a window for the Windows build, a shell for the phone. Both
+     render at the app's real logical size and only the wrapper scales.
+     -------------------------------------------------------------------------- */
+  .win{background:var(--panel); border:1px solid var(--glass-line); border-radius:var(--r-panel); box-shadow:var(--sh-panel);
+    transition:transform .35s var(--ease-out), border-color .35s var(--ease-out), box-shadow .35s var(--ease-out); overflow:hidden;
+    margin-top:20px; position:relative}
+  .win::before{content:""; position:absolute; left:14px; right:14px; top:0; height:1px; z-index:2;
+    background:linear-gradient(90deg, transparent, rgb(255 255 255 / .18), transparent)}
   .win-body{position:relative; overflow:hidden; background:var(--bg); aspect-ratio:1060 / 700}
-  .win-body iframe, .phone-screen iframe{opacity:0; transition:opacity .55s var(--ease-out)}
+  .win-body iframe, .phone-screen iframe{position:absolute; top:0; left:0; display:block; border:0; transform-origin:0 0; background:var(--bg);
+    opacity:0; transition:opacity .55s var(--ease-out)}
   .win-body.ready iframe, .phone-screen.ready iframe{opacity:1}
   .win-body::before{content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
     background:linear-gradient(180deg, var(--side) 0%, var(--bg) 60%); opacity:1; transition:opacity .6s var(--ease-out)}
@@ -516,7 +350,8 @@
   .phone-screen::before{content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
     background:linear-gradient(180deg, var(--side) 0%, var(--bg) 60%); opacity:1; transition:opacity .6s var(--ease-out)}
   .phone-screen.ready::before{opacity:0}
-  @media (hover: hover){ .win:hover{transform:translateY(-4px); box-shadow:0 32px 72px -20px rgb(0 0 0 / .6), var(--sh-panel); border-color:var(--line-strong)} .win-shot{transition:transform .5s var(--ease-out)} .win-body:hover .win-shot{transform:scale(1.012)} }
+  @media (hover: hover){ .win:hover{transform:translateY(-4px); box-shadow:0 32px 72px -20px rgb(0 0 0 / .6), var(--sh-panel); border-color:var(--line-strong)}
+    .win-shot{transition:transform .5s var(--ease-out)} .win-body:hover .win-shot{transform:scale(1.012)} }
   .win-open{display:none}
   .win-shot{display:none}
   @media (min-width:981px){ .btn.sm.nav{background:transparent; color:var(--txt); border:1px solid var(--line-strong)} .btn.sm.nav:hover{background:var(--panel); border-color:var(--txt3)} }
@@ -526,51 +361,80 @@
        live demo opens in its own tab. Nothing sits on top of the app. */
     .win-body iframe{display:none}
     .win-shot{display:block; width:100%; height:auto}
+    .story .win{flex:0 0 auto}
+    .story .win-body.fill{flex:0 0 auto; aspect-ratio:1060 / 700; width:100%; max-width:calc((100vh - 250px) * 1.5143); margin:0 auto}
     .win-open{display:flex; gap:10px; align-items:center; justify-content:center; margin:12px 0 2px}
     .win-open span{display:inline-flex; align-items:center; gap:8px; border:1px solid var(--brand-line);
       background:var(--brand-bg); color:var(--txt); border-radius:var(--r-ctl); padding:11px 18px; font-size:13px; font-weight:570}
   }
-  .win-body iframe{position:absolute; top:0; left:0; display:block; border:0; transform-origin:0 0; background:var(--bg)}
-  .phone-stage{display:grid; grid-template-columns:minmax(0,1fr); justify-items:center; gap:38px; margin-top:18px}
+
   .phone{display:flex; flex-direction:column; align-items:center}
   .phone-shell{box-sizing:border-box; padding:10px; border:1px solid var(--line-strong); border-radius:34px; background:var(--side);
     box-shadow:var(--sh-panel); width:410px; max-width:100%; min-width:0}
   .phone-screen{position:relative; overflow:hidden; border-radius:26px; background:var(--bg); width:100%; aspect-ratio:390 / 844}
-  .phone-screen iframe{position:absolute; top:0; left:0; display:block; border:0; transform-origin:0 0; background:var(--bg)}
-  .phone-copy{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:18px; width:100%; max-width:820px; margin:0 auto}
-  .phone-copy .rows{margin-top:0}
-  .phone .demo-cap{padding:12px 4px 0}
+  .phone-copy{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:18px; width:100%; max-width:900px; margin:34px auto 0; text-align:left}
+  .phone-copy .cta{margin-top:2px}
+  @media (max-width:900px){
+    .phone-copy{grid-template-columns:minmax(0,1fr); max-width:560px}
+  }
+  @media (hover: none){ .phone-shell{width:min(348px, 86vw)} .iconbtn{width:44px; height:44px} .btn.sm{height:44px} }
+
+  /* small screens: the split story stacks, the slices shorten */
+  @media (max-width:860px){
+    .wrap.hero{padding:52px 18px 38px}
+    .hero .cta{flex-direction:column; align-items:stretch}
+    .hero .cta .btn{min-width:0; width:100%}
+    .row{flex-direction:column; gap:6px; padding:13px 16px}
+    .row .k{width:auto}
+    .top nav a.txt{display:none}
+    .top nav{gap:10px}
+    .story{height:calc(100vh + var(--n,5) * 58vh)}
+    .story.center .phone-shell{height:auto; width:min(320px, 80vw)}
+    .story.center .phone-screen{aspect-ratio:390 / 844; height:auto}
+    .story.center .story-cap{min-height:132px}
+    .story-cap{min-height:132px}
+    .story-cap p{font-size:14.5px}
+  }
   @media (max-width:600px){
-    /* narrower column and calmer type: the page is read on a phone here */
     .wrap{padding:0 18px}
     .row .v p, .feat-list .row .v p, details p{font-size:15px; line-height:1.65}
     .row .v b, .feat-list .row .v b{font-size:16px}
     .hero-note{font-size:13px}
     .phone-shell{width:min(400px,100%)}
-  @media (hover: none){ .phone-shell{width:min(348px, 86vw)} .iconbtn{width:44px; height:44px} .btn.sm{height:44px} }
   }
-  @media (max-width:900px){
-    .phone-stage{grid-template-columns:minmax(0,1fr); gap:22px}
-    .phone{min-width:0; width:100%; max-width:410px; margin:0 auto}
-    .phone .demo-cap{justify-content:center; text-align:center}
-    .phone-copy{min-width:0; grid-template-columns:minmax(0,1fr)}
+  @media (max-width:420px){
+    .top .name{display:none}
+    .cta{flex-direction:column}
+    .cta .btn{width:100%}
+    .cta .btn.ghost{order:-1; background:var(--brand); color:#fff; border-color:transparent}
+    .cta .btn.primary{background:rgb(255 255 255 / .02); color:var(--txt); border-color:var(--line-strong)}
   }
-  .strip{display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px; margin:8px 0 0}
-  .strip > div{padding:16px 18px; border:1px solid var(--glass-line); border-radius:var(--r-card); background:var(--panel)}
-  .strip b{display:block; margin-bottom:6px; font-size:14px; font-weight:600; color:var(--txt)}
-  .strip span{display:block; font-size:13px; line-height:1.5; color:var(--txt3)}
-  @media (max-width:860px){
-    .strip{grid-template-columns:1fr; gap:10px}
+
+  /* reveal system: the hidden start state only applies once the script is up */
+  html.js .reveal{opacity:0}
+  @keyframes rise{from{opacity:0; transform:translateY(20px)} to{opacity:1; transform:none}}
+  @keyframes pop{from{opacity:0; transform:translateY(26px) scale(.965)} to{opacity:1; transform:none}}
+  @keyframes appIn{from{opacity:0; transform:translateY(38px) scale(.972)} to{opacity:1; transform:none}}
+  html.js .reveal.in{animation:rise .72s var(--ease-out) both}
+  html.js .reveal[data-anim="scale"].in{animation:pop .82s var(--ease-out) both}
+  html.js .reveal[data-anim="app"].in{animation:appIn .82s var(--ease-out) both}
+  html.js .reveal[data-d="1"].in{animation-delay:.07s}
+  html.js .reveal[data-d="2"].in{animation-delay:.14s}
+  html.js .reveal[data-d="3"].in{animation-delay:.21s}
+  html.js .reveal[data-d="4"].in{animation-delay:.28s}
+  html.js .reveal[data-d="5"].in{animation-delay:.35s}
+  .hero{animation:rise .55s var(--ease-out) both}
+
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    html.js .reveal, html.js .reveal.in, .hero, .hero > *, .hero-copy > *{opacity:1; animation:none !important; transform:none}
+    .scroll-cue svg{animation:none}
+    .btn,.row,.iconbtn,.preset,.win{transition:none}
+    .iconbtn:hover{transform:none}
+    .story-cap .st{transition:none}
   }
-  @media (hover: none){
-    /* The demo stays live and takes taps. It is sized to the app's own
-       viewport and does not scroll itself, so a swipe anywhere on it chains
-       up to the page and the page scrolls like normal. */
-    .phone-screen iframe{pointer-events:auto}
-  }
-  /* On a touch screen a live iframe eats the swipe, so the phone demo is a
-     preview there: it never takes a tap, and a swipe scrolls the page. */
 </style>
+<script>document.documentElement.className += ' js';</script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -597,6 +461,7 @@
 </div>
 
 <main id="main">
+
 <div class="wrap hero">
   <div class="hero-copy">
     <div class="brand-lockup">
@@ -610,17 +475,26 @@
       <a class="btn ghost xl second" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg><span>Download for Android</span></a>
     </div>
     <p class="hero-note">Windows 10/11 and Android &#183; free and open source, MIT licensed &#183; no account, no sign up</p>
-    <a class="scroll-cue" href="#windows" aria-label="Scroll to the Windows section"><span>Scroll</span>
+    <a class="scroll-cue" href="#idea" aria-label="Scroll to the product story"><span>Scroll</span>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></a>
   </div>
+</div>
+
+<div class="wrap sec" id="idea">
+  <section>
+    <div class="concept reveal">
+      <h2>One routing table changes where your traffic says it comes from.</h2>
+      <p class="sub">Your ISP files a session into a quota bucket from the server name in its handshake. QuotaVPN writes that name from the package you picked, so a game or a stream lands in that bucket instead of your general quota.</p>
+    </div>
+  </section>
 </div>
 
 <div class="wrap sec" id="windows">
   <section>
     <div class="exp-intro reveal">
       <div class="kicker">Windows 10/11</div>
-      <h2>One routing table changes where your traffic says it comes from.</h2>
-      <p class="sub">QuotaVPN keeps a small routing table on your machine. Your games and streams leave with a server name from the package you picked, so your ISP files that session under that package instead of your general quota. One dial starts it, one dial stops it.</p>
+      <h2>Every control in one window.</h2>
+      <p class="sub">Package, routing, transport, connect. The demo below is the real Windows build running in this page, and it follows your scroll.</p>
       <div class="mini-facts" data-stagger>
         <span><b>~35 MB</b> while running</span>
         <span><b>3</b> transports</span>
@@ -632,12 +506,24 @@
 </div>
 
 <section class="demo-sec" id="demo">
-  <div class="demo-inner reveal" data-anim="app">
+  <div class="demo-inner">
     <div class="demo-label"><i></i>Live demo &#183; the Windows build</div>
-    <div class="win" data-parallax="0.03">
-      <div class="win-body" id="winBody">
-        <iframe id="appFrame" src="app/index.html" title="QuotaVPN for Windows, live interactive demo" loading="lazy"></iframe>
-        <img class="win-shot" src="assets/app-home.png" alt="QuotaVPN for Windows" width="2644" height="1744" loading="lazy">
+    <div class="story" id="winStory" style="--n:5">
+      <div class="story-pin">
+        <div class="story-cap">
+          <div class="st on"><h3>Pick a package.</h3><p>Gamerz and Streamerz each carry their own server list. The one you pick becomes the names your traffic leaves with.</p></div>
+          <div class="st"><h3>Choose how traffic is routed.</h3><p>Whole device, only the apps you name, or everything except them. The choice is saved and survives restarts.</p></div>
+          <div class="st"><h3>Choose your transport.</h3><p>Standard stamps a package server name on the session. WireGuard and Hysteria2 trade that for raw speed.</p></div>
+          <div class="st"><h3>Press the dial.</h3><p>The routing table is written and the tunnel opens. One circle shows the state: idle, working, live.</p></div>
+          <div class="st"><h3>The session bills that quota.</h3><p>Traffic leaves tagged with the package, so your ISP files it there instead of your general quota.</p></div>
+        </div>
+        <div class="story-ticks" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+        <div class="win">
+          <div class="win-body fill" id="winBody">
+            <iframe id="appFrame" src="app/index.html" title="QuotaVPN for Windows, live interactive demo" loading="lazy"></iframe>
+            <img class="win-shot" src="assets/app-home.png" alt="QuotaVPN for Windows" width="2644" height="1744" loading="lazy">
+          </div>
+        </div>
         <a class="win-open" href="app/index.html" target="_blank" rel="noopener"><span>Open the live demo full screen</span></a>
       </div>
     </div>
@@ -646,8 +532,6 @@
     </div>
   </div>
 </section>
-
-
 
 <div class="wrap sec">
   <section id="features">
@@ -692,11 +576,9 @@
           <p>One installer per platform, no admin needed on Windows, signed updates applied for you. The Android APK sideloads once and updates the same way.</p>
         </div>
       </div>
-    
       </div>
     </div>
   </section>
-</div>
 </div>
 
 <div class="wrap sec" id="voice">
@@ -704,24 +586,38 @@
     <div class="exp-intro reveal">
       <div class="kicker">Valorant</div>
       <h2>Voice chat, when your region blocks it.</h2>
-      <p class="sub">Valorant voice chat is not available in some regions, and your ISP or region filter is usually the reason. The app has a page for exactly this: one setting, one switch.</p>
+      <p class="sub">Some regions cannot use Valorant voice chat. The app has a page for exactly that: one switch, its own tab.</p>
+      <div class="voice-steps">
+        <span><i>1</i>Turn on Voice Chat Helper</span>
+        <span><i>2</i>Open Valorant</span>
+        <span><i>3</i>Use voice chat normally</span>
+      </div>
     </div>
   </section>
 </div>
 
 <section class="demo-sec" id="voice-demo">
-  <div class="demo-inner reveal" data-anim="app">
+  <div class="demo-inner">
     <div class="demo-label"><i></i>Voice Chat Helper &#183; its own tab</div>
-    <div class="win">
-      <div class="win-body solid">
-        <img class="shot" src="assets/app-valorant.png" alt="QuotaVPN on the Valorant tab" width="1322" height="873" loading="lazy">
+    <div class="story" id="voiceStory" style="--n:3">
+      <div class="story-pin">
+        <div class="story-cap">
+          <div class="st on"><h3>Its own tab.</h3><p>The helper is one switch on one page. Nothing else in the app changes for it.</p></div>
+          <div class="st"><h3>Turn it on.</h3><p>Voice chat starts riding the tunnel while the match connection stays where it is.</p></div>
+          <div class="st"><h3>Your game stays direct.</h3><p>Only voice traffic moves. The ping you play on does not change.</p></div>
+        </div>
+        <div class="story-ticks" aria-hidden="true"><i class="on"></i><i></i><i></i></div>
+        <div class="win narrow">
+          <div class="win-body" id="voiceBody" data-fit="box">
+            <iframe id="voiceFrame" src="app/index.html" title="QuotaVPN Voice Chat Helper, live demo" loading="lazy"></iframe>
+            <img class="win-shot" src="assets/app-valorant.png" alt="QuotaVPN on the Valorant tab" width="1322" height="873" loading="lazy">
+          </div>
+        </div>
+        <a class="win-open" href="app/index.html" target="_blank" rel="noopener"><span>Open the live demo full screen</span></a>
       </div>
     </div>
     <div class="demo-cap">
       <span><b>One switch, its own tab</b> &#183; it carries the voice traffic and leaves your match connection alone</span>
-    </div>
-    <div class="voice-actions">
-      <button class="btn ghost" id="openVoice" type="button">Open the Valorant tab in the live demo</button>
     </div>
   </div>
 </section>
@@ -731,50 +627,84 @@
     <div class="exp-intro reveal">
       <div class="kicker">Android</div>
       <h2>The same app, in your pocket.</h2>
-      <p class="sub">Same theme, same two packages, same dial: the identical interface, sized for a phone. Home, Speed and Settings, with the dial live below.</p>
+      <p class="sub">Same theme, same packages, same dial, sized for a phone. Home, Speed and Settings, live below.</p>
     </div>
   </section>
 </div>
 
 <section class="demo-sec" id="android-demo">
-  <div class="demo-inner reveal" data-anim="app">
+  <div class="demo-inner">
     <div class="demo-label"><i></i>Live demo &#183; the Android build</div>
-    <div class="phone-stage reveal" data-anim="scale">
-      <div class="phone" data-parallax="0.05">
-        <div class="phone-shell">
-          <div class="phone-screen" id="phoneScreen">
-            <iframe id="phoneFrame" src="phone/index.html" title="QuotaVPN for Android, live interactive demo" loading="lazy"></iframe>
+    <div class="story center" id="phStory" style="--n:4">
+      <div class="story-pin">
+        <div class="phone">
+          <div class="phone-shell">
+            <div class="phone-screen" id="phoneScreen">
+              <iframe id="phoneFrame" src="phone/index.html" title="QuotaVPN for Android, live interactive demo" loading="lazy"></iframe>
+            </div>
           </div>
         </div>
-        <div class="demo-cap">
-          <span><b>Live Android build</b> &#183; Home, Speed and Settings, all live</span>
+        <div class="story-cap">
+          <div class="st on"><h3>The same app, in your pocket.</h3><p>The phone build is the desktop build: same packages, same transport choices, same dial.</p></div>
+          <div class="st"><h3>Pick a package.</h3><p>Tap Gamerz or Streamerz. The server list follows the package.</p></div>
+          <div class="st"><h3>Press the dial.</h3><p>Connecting, then live. The card under the dial shows the session and the traffic it moved.</p></div>
+          <div class="st"><h3>Speed and Settings came along.</h3><p>The same speed test, the same settings, the same signed updates. Nothing was left on the desktop.</p></div>
+        </div>
+        <div class="story-ticks" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i></div>
+      </div>
+    </div>
+    <div class="demo-cap">
+      <span><b>Live Android build</b> &#183; Home, Speed and Settings, all live</span>
+    </div>
+    <div class="phone-copy">
+      <div class="rows">
+        <div class="row">
+          <div class="k">One dial</div>
+          <div class="v"><b>Connect and disconnect from the same circle</b><p>It stays grey when idle, turns blue while it works, and green once a session is live.</p></div>
+        </div>
+        <div class="row">
+          <div class="k">Two packages</div>
+          <div class="v"><b>The same two packages as the desktop</b><p>Gamerz and Streamerz, each with its own server list, and the one you pick is the one the tunnel rides.</p></div>
+        </div>
+        <div class="row">
+          <div class="k">Speed test</div>
+          <div class="v"><b>Measures the route you are on right now</b><p>Ping, jitter, download and upload run against the QuotaVPN server, so the number is the path your traffic actually takes. The last runs stay in a list.</p></div>
+        </div>
+        <div class="row">
+          <div class="k">Kept current</div>
+          <div class="v"><b>The app updates itself</b><p>Settings, Updates pulls the newest signed APK from the releases page and installs it over the old one.</p></div>
         </div>
       </div>
-      <div class="phone-copy">
-        <div class="rows">
-          <div class="row">
-            <div class="k">One dial</div>
-            <div class="v"><b>Connect and disconnect from the same circle</b><p>It stays grey when idle, turns blue while it works, and green once a session is live.</p></div>
-          </div>
-          <div class="row">
-            <div class="k">Two packages</div>
-            <div class="v"><b>The same two packages as the desktop</b><p>Create them on either app. Copy or revoke any of them from the list, and pick the one the VPN rides on.</p></div>
-          </div>
-          <div class="row">
-            <div class="k">Speed test</div>
-            <div class="v"><b>Measures the route you are on right now</b><p>Ping, jitter, download and upload run against the QuotaVPN server, so the number is the path your traffic actually takes. The last runs stay in a list.</p></div>
-          </div>
-          <div class="row">
-            <div class="k">Kept current</div>
-            <div class="v"><b>The app updates itself</b><p>Settings, Updates pulls the newest signed APK from the releases page and installs it over the old one.</p></div>
-          </div>
-        </div>
-        <div class="dl-actions">
-          <a class="btn primary" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg>Signed Android APK</a>
-          <a class="btn ghost" href="https://github.com/YousefMohiey/QuotaVPN/releases">All releases</a>
-        </div>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg>Signed Android APK</a>
+        <a class="btn ghost" href="https://github.com/YousefMohiey/QuotaVPN/releases">All releases</a>
       </div>
-    
+    </div>
+  </div>
+</section>
+
+<div class="wrap sec" id="speed">
+  <section>
+    <div class="exp-intro reveal">
+      <h2>Measure the route you are on.</h2>
+      <p class="sub">Ping, jitter, download and upload, measured against the server your traffic actually rides rather than a server across the world. The same run lives in both apps, and the last ones stay in a list.</p>
+    </div>
+  </section>
+</div>
+
+<section class="demo-sec" id="speed-demo">
+  <div class="demo-inner">
+    <div class="demo-label"><i></i>Live demo &#183; a speed run</div>
+    <div class="win" data-anim="app">
+      <div class="win-body" id="speedBody" data-fit="box">
+        <iframe id="speedFrame" src="app/index.html" title="QuotaVPN speed test, live demo" loading="lazy"></iframe>
+        <img class="win-shot" src="assets/app-speed.png" alt="QuotaVPN speed test" width="2644" height="1744" loading="lazy">
+      </div>
+    </div>
+    <a class="win-open" href="app/index.html" target="_blank" rel="noopener"><span>Open the live demo full screen</span></a>
+    <div class="demo-cap">
+      <span><b>One press, four numbers</b> &#183; ping, jitter, download and upload, against the server the traffic rides</span>
+    </div>
   </div>
 </section>
 
@@ -878,15 +808,18 @@
   </footer>
 </div>
 
+<button class="totop" id="toTop" type="button" aria-label="Back to top">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+</button>
+
 <script>
+/* The version chip and the structured data read the live release. Cached for
+   ten minutes so a page revisited after a release shows the new number
+   without hammering the API; a cached value older than that is ignored. */
 (function(){
-  // The version chip and the download rows read the live release. Cached for
-  // ten minutes so a page revisited after a release shows the new number
-  // without hammering the API; a cached value older than that is ignored.
   var TTL = 10 * 60 * 1000;
   function put(v){
-    var ids=['ver','verWin'], i;
-    for(i=0;i<ids.length;i++){ var e=document.getElementById(ids[i]); if(e) e.textContent = v; }
+    var el = document.getElementById('ver'); if(el) el.textContent = v;
     var sc = document.getElementById('app-schema');
     if(sc && sc.textContent){
       sc.textContent = sc.textContent.replace(/"softwareVersion":\s*"[^"]*"/, '"softwareVersion": "' + v.replace(/^v/i,'') + '"');
@@ -913,6 +846,8 @@
       }
     })['catch'](function(){});
 })();
+
+/* Section reveals: one observer, unobserved after it fires. */
 (function(){
   var reduce = false;
   try { reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e){}
@@ -935,28 +870,297 @@
       for (var j=0;j<els.length;j++) io.observe(els[j]);
     }
   }
-  if (!reduce){
-    var items = document.querySelectorAll('[data-parallax]');
-    if (items.length){
-      var ticking = false;
-      var frame = function(){
-        ticking = false;
-        var vh = window.innerHeight || 800;
-        for (var n=0; n<items.length; n++){
-          var el = items[n], r = el.getBoundingClientRect();
-          if (r.bottom < -160 || r.top > vh + 160) continue;
-          var p = (r.top + r.height/2 - vh/2) / vh;
-          var amt = parseFloat(el.getAttribute('data-parallax')) || 0.05;
-          el.style.transform = 'translate3d(0,' + (-p * amt * 100).toFixed(2) + 'px,0)';
-        }
-      };
-      var onScroll = function(){ if (!ticking){ ticking = true; requestAnimationFrame(frame); } };
-      addEventListener('scroll', onScroll, {passive:true});
-      addEventListener('resize', onScroll, {passive:true});
-      frame();
+})();
+
+/* ============================================================================
+   The demos. Both are the real builds, served from this site:
+     /app    the Windows interface, compiled from the source the app ships
+     /phone  the Android interface, exactly the files packed into the APK
+   Each frame renders at the app's own logical size and only the wrapper
+   scales, so nothing inside is re-laid-out.
+   ========================================================================== */
+(function(){
+  function fit(boxId, w, h){
+    var box = document.getElementById(boxId);
+    if(!box) return;
+    var f = box.querySelector('iframe');
+    if(!f) return;
+    var bw = box.clientWidth || w, bh = box.clientHeight || h;
+    var s = Math.min(1, bw / w, bh / h);
+    f.style.width = w + 'px';
+    f.style.height = h + 'px';
+    f.style.transform = 'scale(' + s + ')';
+    f.style.transformOrigin = '0 0';
+    f.style.left = Math.max(0, Math.round((bw - w * s) / 2)) + 'px';
+    f.style.top = Math.max(0, Math.round((bh - h * s) / 2)) + 'px';
+    if(box.getAttribute('data-fit') === 'box') box.style.height = Math.round(h * s) + 'px';
+  }
+  function all(){
+    fit('winBody', 1060, 700);
+    fit('voiceBody', 1060, 700);
+    fit('speedBody', 1060, 700);
+    fit('phoneScreen', 390, 844);
+  }
+  function arm(id, host){
+    var f = document.getElementById(id); if(!f) return;
+    var done = function(){ var hh = document.getElementById(host); if(hh) hh.classList.add('ready'); };
+    f.addEventListener('load', function(){ done(); setTimeout(all, 60); });
+    setTimeout(done, 2500);
+  }
+  arm('appFrame', 'winBody');
+  arm('voiceFrame', 'voiceBody');
+  arm('speedFrame', 'speedBody');
+  arm('phoneFrame', 'phoneScreen');
+  window.addEventListener('resize', all);
+  window.addEventListener('orientationchange', all);
+  if(document.readyState === 'complete') all(); else window.addEventListener('load', all);
+  all();
+  window.__qcFit = all;
+})();
+
+/* ============================================================================
+   The stories. The page clicks the real builds through their own controls as
+   the steps pass, so what moves on screen is the app itself, not an actor.
+   ========================================================================== */
+(function(){
+  function doc(id){
+    var f = document.getElementById(id);
+    if(!f) return null;
+    try { return f.contentDocument; } catch(e){ return null; }
+  }
+  function click(d, re){
+    if(!d) return false;
+    var bs = d.querySelectorAll('button');
+    for(var i=0;i<bs.length;i++){
+      var t = (bs[i].innerText || '').replace(/\s+/g,' ').trim();
+      if(re.test(t)){ try{ bs[i].click(); return true; }catch(e){ return false; } }
     }
+    return false;
+  }
+  function clickId(d, id){ if(!d) return false; var b = d.getElementById(id); if(!b) return false; try{ b.click(); return true; }catch(e){ return false; } }
+  /* A screen can load its list before its controls exist, so a click can land
+     a moment too early. Retry for a few seconds, and stop the moment the step
+     that asked for it is no longer the one on screen. */
+  function tryClick(st, k, frameId, re, tries){
+    var n = 0;
+    (function attempt(){
+      if(st && st.cur !== k) return;
+      if(click(doc(frameId), re)) return;
+      if(++n < (tries || 7)) setTimeout(attempt, 650);
+    })();
+  }
+  function tryClickId(st, k, frameId, id, tries){
+    var n = 0;
+    (function attempt(){
+      if(st && st.cur !== k) return;
+      if(clickId(doc(frameId), id)) return;
+      if(++n < (tries || 7)) setTimeout(attempt, 650);
+    })();
+  }
+  function tryClickPlain(frameId, re, tries){
+    var n = 0;
+    (function attempt(){
+      if(click(doc(frameId), re)) return;
+      if(++n < (tries || 4)) setTimeout(attempt, 650);
+    })();
+  }
+
+  var winSt = { cur: -1, gen: 0 }, voiceSt = { cur: -1, gen: 0 }, phSt = { cur: -1, gen: 0 };
+
+  /* A delayed click only runs while the step that asked for it is still the
+     one on screen, so a fast scroll cannot leave half an old step behind. */
+  function later(st, gen, fn, ms){
+    setTimeout(function(){ if(st.gen === gen) fn(); }, ms);
+  }
+
+  /* On a touch screen the Windows frame is a still, so the story swaps it for
+     the connected one when the dial step arrives. */
+  function winStill(on){
+    var img = document.querySelector('#winBody .win-shot');
+    if(!img || img.offsetParent === null) return;
+    var want = on ? 'assets/app-home-on.png' : 'assets/app-home.png';
+    if(img.getAttribute('src') !== want) img.setAttribute('src', want);
+  }
+
+  /* Windows: home, package, routing sheet, transport, connect. */
+  var winActs = [
+    function(){
+      var g = winSt.gen;
+      winStill(false);
+      tryClick(winSt, 0, 'appFrame', /^Home$/);
+      later(winSt, g, function(){ tryClick(winSt, 0, 'appFrame', /^Streamerz\b/); }, 400);
+    },
+    function(){ winStill(false); tryClick(winSt, 1, 'appFrame', /^VPN for Whole device/); },
+    function(){
+      var g = winSt.gen;
+      winStill(false);
+      tryClick(winSt, 2, 'appFrame', /^Back$/);
+      later(winSt, g, function(){ tryClick(winSt, 2, 'appFrame', /^WireGuard$/); }, 800);
+    },
+    function(){
+      var g = winSt.gen;
+      winStill(true);
+      tryClick(winSt, 3, 'appFrame', /^Back$/);
+      later(winSt, g, function(){ tryClick(winSt, 3, 'appFrame', /^Standard$/); }, 400);
+      later(winSt, g, function(){ tryClick(winSt, 3, 'appFrame', /^Connect$/); }, 950);
+    },
+    /* The last step settles the app, so a fast scroll cannot land on a
+       half-finished sequence: any open sheet closes and the tunnel is up. */
+    function(){
+      var g = winSt.gen;
+      winStill(true);
+      tryClick(winSt, 4, 'appFrame', /^Back$/);
+      later(winSt, g, function(){ tryClick(winSt, 4, 'appFrame', /^Connect$/); }, 900);
+    }
+  ];
+  function winReset(){
+    var g = ++winSt.gen;
+    winStill(false);
+    tryClickPlain('appFrame', /^Back$/, 2);
+    later(winSt, g, function(){ tryClickPlain('appFrame', /^Disconnect$/, 2); }, 400);
+    later(winSt, g, function(){ tryClickPlain('appFrame', /^Standard$/, 2); }, 800);
+  }
+
+  /* Valorant: its tab, then the one switch. */
+  var voiceActs = [
+    function(){ tryClick(voiceSt, 0, 'voiceFrame', /^Valorant$/); },
+    function(){ tryClick(voiceSt, 1, 'voiceFrame', /^Enable$/); },
+    function(){ tryClick(voiceSt, 2, 'voiceFrame', /^Enable$/); }
+  ];
+  function voiceReset(){
+    var g = ++voiceSt.gen;
+    tryClickPlain('voiceFrame', /^Disable$/, 2);
+    later(voiceSt, g, function(){ tryClickPlain('voiceFrame', /^Home$/, 2); }, 400);
+  }
+
+  /* Android: package, dial, then the Speed tab takes its own run. */
+  var phActs = [
+    function(){},
+    function(){ tryClick(phSt, 1, 'phoneFrame', /^Streamerz\b/); },
+    function(){ clickId(doc('phoneFrame'), 'btn-connect'); },
+    function(){
+      var g = phSt.gen;
+      var d = doc('phoneFrame'); if(!d) return;
+      var tab = d.querySelector('.tabbar button[data-tab="speed"]');
+      if(tab) tab.click();
+      later(phSt, g, function(){ tryClickId(phSt, 3, 'phoneFrame', 'sp-run', 3); }, 900);
+    }
+  ];
+  function phReset(){
+    var g = ++phSt.gen;
+    var d = doc('phoneFrame'); if(!d) return;
+    var tab = d.querySelector('.tabbar button[data-tab="connect"]');
+    if(tab) tab.click();
+    later(phSt, g, function(){
+      var d2 = doc('phoneFrame'); if(!d2) return;
+      var lbl = d2.getElementById('btn-label');
+      if(lbl && /disconnect/i.test(lbl.textContent || '')) clickId(d2, 'btn-connect');
+    }, 450);
+  }
+
+  var stories = [];
+  function story(rootId, st, acts, reset){
+    var root = document.getElementById(rootId);
+    if(!root) return;
+    var sts = root.querySelectorAll('.story-cap .st');
+    var ticks = root.querySelectorAll('.story-ticks i');
+    var n = sts.length, below = null;
+    function go(k){
+      if(k === st.cur) return;
+      st.cur = k;
+      st.gen++;
+      for(var i=0;i<sts.length;i++) sts[i].classList.toggle('on', i === k);
+      for(var j=0;j<ticks.length;j++){
+        ticks[j].classList.toggle('on', j === k);
+        ticks[j].classList.toggle('done', j < k);
+      }
+      if(acts[k]){ try{ acts[k](); }catch(e){} }
+      if(window.__qcFit) window.__qcFit();
+    }
+    stories.push({
+      root: root,
+      tick: function(){
+        var vh = window.innerHeight || 800;
+        var r = root.getBoundingClientRect();
+        if(r.top < vh){
+          /* The step is whichever slice of the story sits at the middle of the
+             screen: one viewport of lead-in, then one slice per step. */
+          var x = (vh * 0.5) - r.top;
+          var k = Math.floor((x - vh * 0.2) / (vh * 0.7));
+          if(k < 0) k = 0;
+          if(k > n - 1) k = n - 1;
+          go(k);
+        }
+        var isBelow = r.top > vh;
+        if(isBelow && below === false){
+          st.cur = -1;
+          if(reset){ try{ reset(); }catch(e){} }
+        }
+        below = isBelow;
+      }
+    });
+  }
+
+  story('winStory', winSt, winActs, winReset);
+  story('voiceStory', voiceSt, voiceActs, voiceReset);
+  story('phStory', phSt, phActs, phReset);
+
+  /* The speed run starts the first time its frame is properly in view. The
+     screen loads its server pool first, so the start button needs patience. */
+  var spDemo = document.getElementById('speed-demo');
+  if(spDemo && 'IntersectionObserver' in window){
+    var spIo = new IntersectionObserver(function(list){
+      for(var i=0;i<list.length;i++){
+        if(list[i].isIntersecting){
+          spIo.disconnect();
+          setTimeout(function(){
+            tryClickPlain('speedFrame', /^Speed$/, 10);
+            tryClickPlain('speedFrame', /^Start test$/, 30);
+          }, 400);
+        }
+      }
+    }, { threshold: 0.05, rootMargin: '300px 0px' });
+    spIo.observe(spDemo);
+  }
+
+  /* Reading progress, a way back up, a nav that shows where you are, and the
+     story resets when a chapter is scrolled back above. One frame loop. */
+  var bar = document.getElementById('scrollBar');
+  var top = document.getElementById('toTop');
+  var links = [].slice.call(document.querySelectorAll('.top nav a[href^="#"]'));
+  var ticking = false;
+  function frame(){
+    ticking = false;
+    var vh = window.innerHeight || 800;
+    var h = document.documentElement.scrollHeight - vh;
+    var y = window.scrollY || window.pageYOffset || 0;
+    if (bar) bar.style.width = (h > 0 ? Math.min(1, Math.max(0, y / h)) * 100 : 0) + '%';
+    if (top) top.classList.toggle('show', y > vh * 1.4);
+    for (var i=0;i<stories.length;i++) stories[i].tick();
+  }
+  window.addEventListener('scroll', function(){ if (!ticking){ ticking = true; requestAnimationFrame(frame); } }, {passive:true});
+  window.addEventListener('resize', frame, {passive:true});
+  frame();
+  if (top) top.addEventListener('click', function(){ window.scrollTo({ top:0, behavior:'smooth' }); });
+  /* A chapter is an intro plus its demo, and the demo runs several screens
+     tall, so both elements answer for the same nav link. */
+  var alias = { 'voice-demo': '#voice', 'android-demo': '#android' };
+  var ids = links.map(function(a){ return a.getAttribute('href').slice(1); });
+  Object.keys(alias).forEach(function(k){ if (ids.indexOf(k) < 0) ids.push(k); });
+  if (ids.length && 'IntersectionObserver' in window){
+    var seen = {};
+    var io2 = new IntersectionObserver(function(list){
+      list.forEach(function(e){ seen[e.target.id] = e.isIntersecting ? (e.intersectionRatio || 0.01) : 0; });
+      var best = null, bestv = 0;
+      Object.keys(seen).forEach(function(k){ if (seen[k] > bestv){ bestv = seen[k]; best = k; } });
+      var want = best === null ? null : (alias[best] || '#' + best);
+      links.forEach(function(a){ a.classList.toggle('on', want !== null && a.getAttribute('href') === want); });
+    }, { rootMargin:'-45% 0px -45% 0px', threshold:[0, 0.25, 0.5, 1] });
+    ids.forEach(function(id){ var el = document.getElementById(id); if (el) io2.observe(el); });
   }
 })();
+
+/* The transport switch under How it works. */
 (function(){
   var seg = document.getElementById('howSeg');
   if(!seg) return;
@@ -968,88 +1172,13 @@
   }
   for(var i=0;i<btns.length;i++) btns[i].addEventListener('click', function(){ pick(this.dataset.mode); });
 })();
-</script>
 
-<script>
-/* The demo hands its vertical drags up here, so a swipe that starts on the
-   app scrolls the page exactly like a swipe anywhere else. */
+/* The phone demo hands its vertical drags up here, so a swipe that starts on
+   the app scrolls the page exactly like a swipe anywhere else. */
 window.addEventListener('message', function(e){
   if (e.origin !== location.origin || !e.data || typeof e.data.qcScroll !== 'number') return;
   window.scrollBy(0, e.data.qcScroll);
 });
-</script>
-
-<script>
-/* ============================================================================
-   Both demos are the real builds, served from this site:
-     /app    the Windows interface, compiled from the source the app ships
-     /phone  the Android interface, exactly the files packed into the APK
-   They keep their own layout and animation. All that happens here is fitting
-   the fixed app viewport into whatever width the page has.
-   ========================================================================== */
-(function(){
-  function fit(boxId, w, h){
-    var box = document.getElementById(boxId);
-    if(!box) return;
-    var f = box.querySelector('iframe');
-    if(!f) return;
-    var s = Math.min(1, (box.clientWidth || w) / w);
-    f.style.width = w + 'px';
-    f.style.height = h + 'px';
-    f.style.transform = 'scale(' + s + ')';
-    box.style.height = Math.round(h * s) + 'px';
-  }
-  function all(){
-    fit('winBody', 1060, 700);
-    fit('phoneScreen', 390, 844);
-  }
-  function arm(id, host){
-    var f = document.getElementById(id); if(!f) return;
-    var done = function(){ var h = document.getElementById(host); if(h) h.classList.add('ready'); };
-    f.addEventListener('load', function(){ done(); setTimeout(all, 60); });
-    setTimeout(done, 2500);
-  }
-  arm('appFrame', 'winBody');
-  arm('phoneFrame', 'phoneScreen');
-  window.addEventListener('resize', all);
-  window.addEventListener('orientationchange', all);
-  if(document.readyState === 'complete') all(); else window.addEventListener('load', all);
-  all();
-})();
-</script>
-<button class="totop" id="toTop" type="button" aria-label="Back to top">
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-</button>
-<script>
-/* Reading progress, a way back up, and a nav that shows where you are. */
-(function(){
-  var bar = document.getElementById('scrollBar');
-  var top = document.getElementById('toTop');
-  var links = [].slice.call(document.querySelectorAll('.top nav a[href^="#"]'));
-  var ticking = false;
-  function frame(){
-    ticking = false;
-    var h = document.documentElement.scrollHeight - window.innerHeight;
-    var y = window.scrollY || window.pageYOffset || 0;
-    if (bar) bar.style.width = (h > 0 ? Math.min(1, Math.max(0, y / h)) * 100 : 0) + '%';
-    if (top) top.classList.toggle('show', y > window.innerHeight * 1.4);
-  }
-  window.addEventListener('scroll', function(){ if (!ticking){ ticking = true; requestAnimationFrame(frame); } }, {passive:true});
-  window.addEventListener('resize', frame, {passive:true});
-  frame();
-  if (top) top.addEventListener('click', function(){ window.scrollTo({ top:0, behavior:'smooth' }); });
-  var ids = links.map(function(a){ return a.getAttribute('href').slice(1); });
-  if (ids.length && 'IntersectionObserver' in window){
-    var seen = {};
-    var io = new IntersectionObserver(function(list){
-      list.forEach(function(e){ seen[e.target.id] = e.isIntersecting ? (e.intersectionRatio || 0.01) : 0; });
-      var best = null, bestv = 0;
-      Object.keys(seen).forEach(function(k){ if (seen[k] > bestv){ bestv = seen[k]; best = k; } });
-      links.forEach(function(a){ a.classList.toggle('on', best !== null && a.getAttribute('href') === '#' + best); });
-    }, { rootMargin:'-45% 0px -45% 0px', threshold:[0, 0.25, 0.5, 1] });
-    ids.forEach(function(id){ var el = document.getElementById(id); if (el) io.observe(el); });
-  }
-})();
 </script>
 </body>
 </html>
