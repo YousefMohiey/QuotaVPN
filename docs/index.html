@@ -242,9 +242,6 @@
   .split-mid h2{margin:0; font-size:clamp(20px, 2.1vw, 26px); font-weight:600; letter-spacing:-.015em}
   .split-mid .sub{margin:0}
   @media (max-width:980px){
-    .feat-list{grid-template-columns:minmax(0,1fr); gap:0}
-    .feat-list .row:nth-last-child(-n+2){border-bottom:0}
-    .feat-list .row:last-child{border-bottom:1px solid var(--line)}
     .split, .split-android, .split-mid{grid-template-columns:minmax(0,1fr); gap:24px; text-align:center}
     .split-copy .demo-sub{text-align:center}
     .split .mini-facts, .split .voice-steps{justify-content:center}
@@ -284,6 +281,11 @@
     .feat-list .row:hover{background:rgb(255 255 255 / .015); padding-left:10px}
     .feat-list .row:hover .k{color:var(--brand-hi)}
     .feat-list .row:hover .v b{color:#fff}
+  }
+  @media (max-width:900px){
+    .feat-list{grid-template-columns:minmax(0,1fr)}
+    .feat-list .row:nth-last-child(-n+2){border-bottom:0}
+    .feat-list .row:last-child{border-bottom:1px solid var(--line)}
   }
 
   /* how it works */
