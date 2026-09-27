@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuotaVPN demo</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#0b0e14}</style>
+</head>
+<body>
+<script>
+/* The site embeds four builds of the app inside one page. They all share this
+   origin, so without a namespace they write over each other's saved state: one
+   frame connecting flips another frame's switch, and the voice helper only
+   reads as on while its own build is running. Each frame asks for its own
+   namespace here, then the real build is written in behind it.
+
+   Query: ?src=app/index.html&n=win  (n = the storage namespace for this frame) */
+(function(){
+  var q = new URLSearchParams(location.search);
+  var src = q.get('src') || 'app/index.html';
+  var ns = (q.get('n') || 'demo').replace(/[^a-z0-9-]/gi, '');
+  var base = new URL(src, location.href).href.replace(/[^/]*$/, '');
+  var shim = '(function(){try{var r=window.localStorage,p="qcdemo-' + ns + ':";' +
+    'var s={getItem:function(k){return r.getItem(p+k)},setItem:function(k,v){r.setItem(p+k,String(v))},' +
+    'removeItem:function(k){r.removeItem(p+k)},key:function(){return null}};' +
+    'try{Object.defineProperty(s,"length",{get:function(){return 0}})}catch(e){}' +
+    'try{Object.defineProperty(window,"localStorage",{get:function(){return s},configurable:true})}catch(e){' +
+    'try{window.localStorage=s}catch(e2){}}}catch(e){}})();';
+  /* A wheel over a demo would be swallowed by the frame: the page around it
+     would not move while the pointer sits on the build. Hand the gesture back
+     to the page unless the thing under the pointer can scroll that way itself.
+     This has to live here: document.open() drops listeners on the document, so
+     anything the site attaches before the write would not survive it. */
+  var wheel = '(function(){document.addEventListener("wheel",function(e){' +
+    'var n=e.target,mine=true;' +
+    'while(n&&n.nodeType===1&&n!==document.documentElement){' +
+    'var st=document.defaultView.getComputedStyle(n);' +
+    'if(/(auto|scroll)/.test(st.overflowY)&&n.scrollHeight>n.clientHeight+2&&' +
+    '((e.deltaY<0&&n.scrollTop>0)||(e.deltaY>0&&n.scrollTop+n.clientHeight<n.scrollHeight-2))){mine=false;break;}' +
+    'n=n.parentElement;}' +
+    'if(mine){e.preventDefault();try{parent.scrollBy(0,e.deltaMode===1?e.deltaY*16:e.deltaY);}catch(err){}}' +
+    '},{passive:false});})();';
+  fetch(src).then(function(r){ return r.text(); }).then(function(html){
+    var head = '<base href="' + base + '"><scr' + 'ipt>' + shim + wheel + '</scr' + 'ipt>';
+    html = /<head([^>]*)>/i.test(html) ? html.replace(/<head([^>]*)>/i, '<head$1>' + head) : head + html;
+    document.open();
+    document.write(html);
+    document.close();
+  }).catch(function(){
+    document.body.innerHTML = '<p style="font:14px system-ui;color:#8b95a6;padding:20px">Demo unavailable.</p>';
+  });
+})();
+</script>
+</body>
+</html>

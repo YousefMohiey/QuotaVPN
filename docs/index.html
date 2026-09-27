@@ -168,19 +168,19 @@
 
   /* one rhythm for the page: every chapter gets the same air, and the seam
      between two chapters is a single hairline instead of empty space. */
-  .wrap.sec{padding:76px 0}
+  .wrap.sec{padding:62px 0}
   .wrap.sec + .wrap.sec, .demo-sec + .wrap.sec, .wrap.sec + .demo-sec, .demo-sec{border-top:1px solid var(--line)}
-  .demo-sec{border-top:0; padding:8px 0 76px}
+  .demo-sec{border-top:0; padding:8px 0 62px}
   .wrap.sec + .demo-sec{border-top:0}
   .demo-inner{max-width:1240px; margin:0 auto; padding:0 24px; text-align:center}
   .demo-cap{display:flex; gap:14px; flex-wrap:wrap; align-items:center; justify-content:center; color:var(--txt3); font-size:13.5px; padding:20px 4px 0}
   .demo-cap b{color:var(--txt2); font-weight:600}
-  .demo-label{display:inline-flex; align-items:center; gap:9px; margin-bottom:24px; padding:8px 18px; border-radius:999px;
+  .demo-label{display:inline-flex; align-items:center; gap:9px; margin-bottom:18px; padding:8px 18px; border-radius:999px;
     border:1px solid var(--glass-line); background:var(--panel); font-size:11.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--txt2)}
   .demo-label i{width:7px; height:7px; border-radius:50%; background:var(--brand-strong)}
   @media (max-width:760px){
-    .wrap.sec{padding:52px 0}
-    .demo-sec{padding:4px 0 52px}
+    .wrap.sec{padding:44px 0}
+    .demo-sec{padding:4px 0 44px}
     .demo-inner{padding:0 18px}
   }
 
@@ -230,7 +230,7 @@
      changes beside or above it, and the page clicks the app through its own
      states. Height = one viewport plus one slice per step.
      -------------------------------------------------------------------------- */
-  .story{position:relative; height:calc(100vh + var(--n,5) * 70vh)}
+  .story{position:relative; height:calc(100vh + var(--n,5) * 42vh)}
   .story-pin{position:sticky; top:0; height:100vh; display:flex; flex-direction:column; justify-content:center; gap:16px; padding:14px 0}
   .story-cap{position:relative; min-height:118px; text-align:left}
   .story-cap .st{position:absolute; inset:0; opacity:0; transform:translateY(7px); pointer-events:none;
@@ -250,9 +250,11 @@
   .story.center .phone{flex:none}
   .story.center .phone-shell{--ph:min(72vh, 760px); height:var(--ph); width:calc((var(--ph) - 20px) * .4621 + 20px); padding:10px}
   .story.center .phone-screen{width:100%; height:100%; aspect-ratio:auto}
-  .story .win{margin-top:0; flex:1 1 auto; min-height:0; display:flex; flex-direction:column}
-  .story .win-body.fill{flex:1 1 auto; min-height:0; aspect-ratio:auto}
-  .story .win.narrow{width:100%; max-width:920px; margin:0 auto}
+  /* the window hugs the app: the box takes the height the story leaves it and
+     the app's own ratio sets the width, so no letterbox padding is left over */
+  .story .win{margin:0 auto; flex:1 1 auto; min-height:0; display:flex; flex-direction:column; width:fit-content; max-width:100%}
+  .story .win-body.fill{flex:1 1 auto; min-height:0; height:100%; width:auto; max-width:100%; aspect-ratio:1060 / 700; margin:0 auto}
+  .story .win.narrow{width:100%; max-width:920px}
   .voice-steps{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; justify-content:flex-start}
   .voice-steps span{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; color:var(--txt2);
     border:1px solid var(--glass-line); border-radius:999px; padding:7px 14px; background:var(--panel)}
@@ -361,8 +363,8 @@
        live demo opens in its own tab. Nothing sits on top of the app. */
     .win-body iframe{display:none}
     .win-shot{display:block; width:100%; height:auto}
-    .story .win{flex:0 0 auto}
-    .story .win-body.fill{flex:0 0 auto; aspect-ratio:1060 / 700; width:100%; max-width:calc((100vh - 250px) * 1.5143); margin:0 auto}
+    .story .win{flex:0 0 auto; width:100%}
+    .story .win-body.fill{flex:0 0 auto; height:auto; width:100%; max-width:calc((100vh - 250px) * 1.5143); aspect-ratio:1060 / 700; margin:0 auto}
     .win-open{display:flex; gap:10px; align-items:center; justify-content:center; margin:12px 0 2px}
     .win-open span{display:inline-flex; align-items:center; gap:8px; border:1px solid var(--brand-line);
       background:var(--brand-bg); color:var(--txt); border-radius:var(--r-ctl); padding:11px 18px; font-size:13px; font-weight:570}
@@ -388,7 +390,7 @@
     .row .k{width:auto}
     .top nav a.txt{display:none}
     .top nav{gap:10px}
-    .story{height:calc(100vh + var(--n,5) * 58vh)}
+    .story{height:calc(100vh + var(--n,5) * 46vh)}
     .story.center .phone-shell{height:auto; width:min(320px, 80vw)}
     .story.center .phone-screen{aspect-ratio:390 / 844; height:auto}
     .story.center .story-cap{min-height:132px}
@@ -520,7 +522,7 @@
         <div class="story-ticks" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i></div>
         <div class="win">
           <div class="win-body fill" id="winBody">
-            <iframe id="appFrame" src="app/index.html" title="QuotaVPN for Windows, live interactive demo" loading="lazy"></iframe>
+            <iframe id="appFrame" src="demo-frame.html?src=app/index.html&amp;n=win" title="QuotaVPN for Windows, live interactive demo"></iframe>
             <img class="win-shot" src="assets/app-home.png" alt="QuotaVPN for Windows" width="2644" height="1744" loading="lazy">
           </div>
         </div>
@@ -609,7 +611,7 @@
         <div class="story-ticks" aria-hidden="true"><i class="on"></i><i></i><i></i></div>
         <div class="win narrow">
           <div class="win-body" id="voiceBody" data-fit="box">
-            <iframe id="voiceFrame" src="app/index.html" title="QuotaVPN Voice Chat Helper, live demo" loading="lazy"></iframe>
+            <iframe id="voiceFrame" src="demo-frame.html?src=app/index.html&amp;n=voice" title="QuotaVPN Voice Chat Helper, live demo"></iframe>
             <img class="win-shot" src="assets/app-valorant.png" alt="QuotaVPN on the Valorant tab" width="1322" height="873" loading="lazy">
           </div>
         </div>
@@ -640,7 +642,7 @@
         <div class="phone">
           <div class="phone-shell">
             <div class="phone-screen" id="phoneScreen">
-              <iframe id="phoneFrame" src="phone/index.html" title="QuotaVPN for Android, live interactive demo" loading="lazy"></iframe>
+              <iframe id="phoneFrame" src="demo-frame.html?src=phone/index.html&amp;n=phone" title="QuotaVPN for Android, live interactive demo"></iframe>
             </div>
           </div>
         </div>
@@ -697,7 +699,7 @@
     <div class="demo-label"><i></i>Live demo &#183; a speed run</div>
     <div class="win" data-anim="app">
       <div class="win-body" id="speedBody" data-fit="box">
-        <iframe id="speedFrame" src="app/index.html" title="QuotaVPN speed test, live demo" loading="lazy"></iframe>
+        <iframe id="speedFrame" src="demo-frame.html?src=app/index.html&amp;n=speed" title="QuotaVPN speed test, live demo"></iframe>
         <img class="win-shot" src="assets/app-speed.png" alt="QuotaVPN speed test" width="2644" height="1744" loading="lazy">
       </div>
     </div>
@@ -886,7 +888,9 @@
     var f = box.querySelector('iframe');
     if(!f) return;
     var bw = box.clientWidth || w, bh = box.clientHeight || h;
-    var s = Math.min(1, bw / w, bh / h);
+    /* the frame hugs the app: it scales up as well as down, so the window
+       never carries letterbox padding */
+    var s = Math.min(bw / w, bh / h);
     f.style.width = w + 'px';
     f.style.height = h + 'px';
     f.style.transform = 'scale(' + s + ')';
@@ -901,11 +905,23 @@
     fit('speedBody', 1060, 700);
     fit('phoneScreen', 390, 844);
   }
+  /* A frame counts as ready once the build inside it has rendered its own
+     controls: the wrapper writes the app in after the frame's first load, so
+     the load event alone would say yes far too early. */
   function arm(id, host){
     var f = document.getElementById(id); if(!f) return;
-    var done = function(){ var hh = document.getElementById(host); if(hh) hh.classList.add('ready'); };
-    f.addEventListener('load', function(){ done(); setTimeout(all, 60); });
-    setTimeout(done, 2500);
+    var n = 0;
+    (function wait(){
+      var ok = false;
+      try { ok = !!(f.contentDocument && f.contentDocument.querySelector('button')); } catch(e){}
+      if(ok || ++n > 40){
+        var hh = document.getElementById(host); if(hh) hh.classList.add('ready');
+        all();
+        return;
+      }
+      setTimeout(wait, 250);
+    })();
+    f.addEventListener('load', function(){ setTimeout(all, 120); });
   }
   arm('appFrame', 'winBody');
   arm('voiceFrame', 'voiceBody');
@@ -964,6 +980,53 @@
       if(++n < (tries || 4)) setTimeout(attempt, 650);
     })();
   }
+  /* Click once, then look again a few seconds later. The app needs a moment to
+     finish a screen change, and clicking again during one can undo the first
+     click, so the retry waits for the effect instead of hammering the button. */
+  function ensure(st, frameId, check, fire, tries, wait){
+    var g = st.gen, n = 0, w = wait || 2800;
+    (function attempt(){
+      if(st.gen !== g) return;
+      var d = doc(frameId);
+      if(d && check(d)) return;
+      if(d) fire(d);
+      if(++n < (tries || 3)) setTimeout(attempt, w);
+    })();
+  }
+  function hasBtn(d, re){
+    var bs = d.querySelectorAll('button');
+    for(var i=0;i<bs.length;i++){ if(re.test((bs[i].innerText || '').replace(/\s+/g,' ').trim())) return true; }
+    return false;
+  }
+  /* The app renders a screen change asynchronously, so a single click can land
+     while it is busy and go nowhere. Each story keeps a small idempotent nudge:
+     if the state its current step is meant to show is not there, ask again. */
+  function nudge(st, frameId, specs){
+    setInterval(function(){
+      var k = st.cur; if(k < 0 || !specs[k]) return;
+      var d = doc(frameId); if(!d) return;
+      try { if(!specs[k].check(d)) specs[k].act(d); } catch(e){}
+    }, 900);
+  }
+
+  /* Warm the screens each story will need, off screen, so the first real click
+     is not also paying for the app's first render of that screen. The routing
+     sheet in particular builds its app list before its controls exist. */
+  function warm(frameId, seq, span){
+    var i = 0, t0 = Date.now();
+    (function next(){
+      if(Date.now() - t0 > (span || 12000)) return;
+      var d = doc(frameId);
+      if(!d || !d.querySelector('button')){ setTimeout(next, 400); return; }
+      if(i >= seq.length) return;
+      var re = seq[i++];
+      if(re) click(d, re);
+      setTimeout(next, 1500);
+    })();
+  }
+  warm('appFrame', [/^VPN for Whole device/, /^Back$/, /^Streamerz\b/]);
+  warm('voiceFrame', [/^Valorant$/, /^Home$/]);
+  warm('speedFrame', [/^Speed$/, /^Home$/]);
 
   var winSt = { cur: -1, gen: 0 }, voiceSt = { cur: -1, gen: 0 }, phSt = { cur: -1, gen: 0 };
 
@@ -990,7 +1053,11 @@
       tryClick(winSt, 0, 'appFrame', /^Home$/);
       later(winSt, g, function(){ tryClick(winSt, 0, 'appFrame', /^Streamerz\b/); }, 400);
     },
-    function(){ winStill(false); tryClick(winSt, 1, 'appFrame', /^VPN for Whole device/); },
+    function(){
+      winStill(false);
+      ensure(winSt, 'appFrame', function(d){ return /All apps/.test(d.body.innerText); },
+             function(d){ click(d, /^VPN for Whole device/); }, 3, 2600);
+    },
     function(){
       var g = winSt.gen;
       winStill(false);
@@ -1021,11 +1088,13 @@
     later(winSt, g, function(){ tryClickPlain('appFrame', /^Standard$/, 2); }, 800);
   }
 
-  /* Valorant: its tab, then the one switch. */
+  /* Valorant: its tab, then the one switch. The helper flips its own session on
+     when the switch goes, so nothing else has to be running first. */
   var voiceActs = [
     function(){ tryClick(voiceSt, 0, 'voiceFrame', /^Valorant$/); },
-    function(){ tryClick(voiceSt, 1, 'voiceFrame', /^Enable$/); },
-    function(){ tryClick(voiceSt, 2, 'voiceFrame', /^Enable$/); }
+    function(){ ensure(voiceSt, 'voiceFrame', function(d){ return hasBtn(d, /^Disable$/); },
+                       function(d){ click(d, /^Enable$/); }, 3, 2500); },
+    function(){}
   ];
   function voiceReset(){
     var g = ++voiceSt.gen;
@@ -1066,9 +1135,18 @@
     var ticks = root.querySelectorAll('.story-ticks i');
     var n = sts.length, below = null;
     function go(k){
-      if(k === st.cur) return;
+      /* A step that fires while its frame is still loading gets another chance
+         once the app's own controls exist, throttled so the tick cannot spam
+         clicks. */
+      var box = root.querySelector('.win-body, .phone-screen');
+      var f = box && box.querySelector('iframe');
+      var ready = false;
+      try { ready = !!(box.classList.contains('ready') && f.contentDocument && f.contentDocument.querySelector('button')); } catch(e){ ready = false; }
+      var now = Date.now();
+      if(k === st.cur && (ready || now - (st.try || 0) < 700)) return;
       st.cur = k;
       st.gen++;
+      st.try = now;
       for(var i=0;i<sts.length;i++) sts[i].classList.toggle('on', i === k);
       for(var j=0;j<ticks.length;j++){
         ticks[j].classList.toggle('on', j === k);
@@ -1084,9 +1162,10 @@
         var r = root.getBoundingClientRect();
         if(r.top < vh){
           /* The step is whichever slice of the story sits at the middle of the
-             screen: one viewport of lead-in, then one slice per step. */
+             screen: one slice per step, so the last one owns the tail instead
+             of leaving a dead stretch after it. */
           var x = (vh * 0.5) - r.top;
-          var k = Math.floor((x - vh * 0.2) / (vh * 0.7));
+          var k = Math.floor((x - vh * 0.5) / (vh * 0.42));
           if(k < 0) k = 0;
           if(k > n - 1) k = n - 1;
           go(k);
@@ -1105,22 +1184,53 @@
   story('voiceStory', voiceSt, voiceActs, voiceReset);
   story('phStory', phSt, phActs, phReset);
 
-  /* The speed run starts the first time its frame is properly in view. The
-     screen loads its server pool first, so the start button needs patience. */
+  /* What each step is meant to be showing, so a lost click heals itself. */
+  nudge(winSt, 'appFrame', [
+    null,
+    { check: function(d){ return /All apps/.test(d.body.innerText); },
+      act:   function(d){ click(d, /^VPN for Whole device/); } },
+    { check: function(d){ return !/All apps/.test(d.body.innerText); },
+      act:   function(d){ click(d, /^Back$/); } },
+    { check: function(d){ return hasBtn(d, /^Disconnect$/); },
+      act:   function(d){ if(hasBtn(d, /^Back$/)){ click(d, /^Back$/); return; } if(hasBtn(d, /^Standard$/)) click(d, /^Standard$/); else click(d, /^Connect$/); } },
+    { check: function(d){ return hasBtn(d, /^Disconnect$/); },
+      act:   function(d){ if(hasBtn(d, /^Back$/)){ click(d, /^Back$/); return; } click(d, /^Connect$/); } }
+  ]);
+  nudge(voiceSt, 'voiceFrame', [
+    null,
+    { check: function(d){ return hasBtn(d, /^Disable$/); }, act: function(d){ click(d, /^Enable$/); } },
+    { check: function(d){ return hasBtn(d, /^Disable$/); }, act: function(d){ click(d, /^Enable$/); } }
+  ]);
+  nudge(phSt, 'phoneFrame', [
+    null, null,
+    { check: function(d){ var l = d.getElementById('btn-label'); return !l || /disconnect/i.test(l.textContent || ''); },
+      act:   function(d){ clickId(d, 'btn-connect'); } },
+    { check: function(d){ var t = d.querySelector('.tabbar button[data-tab="speed"]'); return !!(t && t.classList.contains('on')); },
+      act:   function(d){ var t = d.querySelector('.tabbar button[data-tab="speed"]'); if(t) t.click(); } }
+  ]);
+
+  /* The speed run starts once its frame is near the screen and has loaded. The
+     screen builds its server pool first, so the tab and the button are checked
+     rather than fired once at a guess. */
   var spDemo = document.getElementById('speed-demo');
-  if(spDemo && 'IntersectionObserver' in window){
-    var spIo = new IntersectionObserver(function(list){
-      for(var i=0;i<list.length;i++){
-        if(list[i].isIntersecting){
-          spIo.disconnect();
-          setTimeout(function(){
-            tryClickPlain('speedFrame', /^Speed$/, 10);
-            tryClickPlain('speedFrame', /^Start test$/, 30);
-          }, 400);
-        }
+  if(spDemo){
+    var spN = 0, spDone = false, spPhase = 0, spWait = 0;
+    var spTick = setInterval(function(){
+      if(spDone || ++spN > 240){ clearInterval(spTick); return; }
+      var r = spDemo.getBoundingClientRect(), vh = window.innerHeight || 800;
+      if(r.top > vh + 150 || r.bottom < -150) return;
+      var d = doc('speedFrame');
+      if(!d || !d.querySelector('button')) return;
+      var t = d.body.innerText || '';
+      if(/Measuring|Mbps/.test(t)){ spDone = true; clearInterval(spTick); return; }
+      if(/Start test/.test(t)){
+        /* ask once, then leave the screen alone while the run starts */
+        if(spPhase !== 2 || ++spWait > 14){ spPhase = 2; spWait = 0; click(d, /^Start test$/); }
+        return;
       }
-    }, { threshold: 0.05, rootMargin: '300px 0px' });
-    spIo.observe(spDemo);
+      /* still on another screen: ask for Speed once, then let it build */
+      if(spPhase !== 1 || ++spWait > 14){ spPhase = 1; spWait = 0; click(d, /^Speed$/); }
+    }, 700);
   }
 
   /* Reading progress, a way back up, a nav that shows where you are, and the
