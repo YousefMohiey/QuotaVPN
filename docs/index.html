@@ -242,6 +242,7 @@
     border:1px solid var(--warn-line); background:var(--warn-bg); color:var(--warn); border-radius:var(--r-ctl);
     padding:8px 12px; font-size:12.5px; line-height:1.5}
   .warn svg{flex:none; margin-top:1px}
+  .warn[hidden]{display:none}
   .seg{display:inline-flex; border:1px solid var(--line); background:rgb(255 255 255 / .02); border-radius:var(--r-ctl); padding:4px}
   .seg button{appearance:none; border:0; background:transparent; color:var(--txt3); font:inherit; font-size:13.5px; font-weight:500;
     padding:8px 16px; min-height:44px; border-radius:8px; cursor:pointer; transition:color .18s var(--ease-out), background .18s var(--ease-out)}
@@ -408,9 +409,9 @@
     <span class="sp"></span>
     <nav>
       <a class="txt" href="#demo">Live demo</a>
-      <a class="txt" href="#features">Features</a>
-      <a class="txt" href="#voice">Valorant</a>
       <a class="txt" href="#android">Android</a>
+      <a class="txt" href="#voice">Valorant</a>
+      <a class="txt" href="#features">Features</a>
       <a class="txt" href="#faq">FAQ</a>
       <a class="iconbtn" href="https://github.com/YousefMohiey/QuotaVPN" aria-label="QuotaVPN on GitHub" title="GitHub">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-2.1c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.24 2.76.12 3.05.74.81 1.18 1.83 1.18 3.09 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.06.78 2.13v3.16c0 .31.2.67.8.55A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></svg>
@@ -445,7 +446,7 @@
     <div class="exp-intro reveal">
       <div class="kicker">Windows 10/11</div>
       <h2>Every control in one window.</h2>
-      <p class="sub">Package, routing, transport, connect.</p>
+      <p class="sub">Package, routing, transport, connect. The real build, running right here.</p>
       <div class="mini-facts" data-stagger>
         <span><b>~35 MB</b> while running</span>
         <span><b>3</b> transports</span>
@@ -453,14 +454,7 @@
         <span><b>Signed</b> self-updates</span>
       </div>
     </div>
-  </section>
-</div>
-
-<section class="demo-sec" id="demo">
-  <div class="demo-inner">
-    <div class="demo-label">Live demo &#183; the Windows build</div>
-    <h2 class="demo-title">The real app, not a video of it.</h2>
-    <p class="demo-sub">Press anything: it is the shipped build, running right here.</p>
+    <div class="demo-inner" id="demo">
     <div class="win">
       <div class="win-body" id="winBody">
         <iframe id="appFrame" src="demo-frame.html?src=app/index.html&amp;n=win" title="QuotaVPN for Windows, live interactive demo"></iframe>
@@ -468,8 +462,68 @@
       </div>
     </div>
     <a class="win-open" href="app/index.html" target="_blank" rel="noopener"><span>Open the live demo full screen</span></a>
-  </div>
-</section>
+  </section>
+</div>
+
+<div class="wrap sec" id="android">
+  <section>
+    <div class="exp-intro reveal">
+      <div class="kicker">Android</div>
+      <h2>The same app, in your pocket.</h2>
+      <p class="sub">Same theme, same packages, same dial. Tap through the real build.</p>
+    </div>
+    <div class="demo-inner" id="android-demo">
+    <div class="phone">
+      <div class="phone-shell">
+        <div class="phone-screen" id="phoneScreen">
+          <iframe id="phoneFrame" src="demo-frame.html?src=phone/index.html&amp;n=phone" title="QuotaVPN for Android, live interactive demo"></iframe>
+        </div>
+      </div>
+    </div>
+    <div class="demo-cap">
+      <span><b>Live Android build</b> &#183; Home, Speed and Settings, all live</span>
+    </div>
+    <div class="phone-copy">
+      <div class="rows">
+        <div class="row">
+          <div class="k">One dial</div>
+          <div class="v"><b>One circle for the whole session</b><p>Grey idle, blue working, green live.</p></div>
+        </div>
+        <div class="row">
+          <div class="k">Two packages</div>
+          <div class="v"><b>The same two packages as the desktop</b><p>Gamerz and Streamerz, each with its own server list.</p></div>
+        </div>
+        <div class="row">
+          <div class="k">Speed test</div>
+          <div class="v"><b>Measures the route you are on</b><p>Ping, jitter, download, upload, against the server your traffic rides.</p></div>
+        </div>
+        <div class="row">
+          <div class="k">Kept current</div>
+          <div class="v"><b>The app updates itself</b><p>Pull the newest signed APK from inside the app.</p></div>
+        </div>
+      </div>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg>Signed Android APK</a>
+        <a class="btn ghost" href="https://github.com/YousefMohiey/QuotaVPN/releases">All releases</a>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="wrap sec" id="voice">
+  <section>
+    <div class="exp-intro reveal">
+      <div class="kicker">Valorant</div>
+      <h2>Voice chat, when your region blocks it.</h2>
+      <p class="sub">Some regions block voice chat. One switch in the app fixes it.</p>
+      <div class="voice-steps">
+        <span><i>1</i>Turn on Voice Chat Helper</span>
+        <span><i>2</i>Open Valorant</span>
+        <span><i>3</i>Use voice chat normally</span>
+      </div>
+    </div>
+  </section>
+</div>
 
 <div class="wrap sec">
   <section id="features">
@@ -522,73 +576,6 @@
     </div>
   </section>
 </div>
-
-<div class="wrap sec" id="voice">
-  <section>
-    <div class="exp-intro reveal">
-      <div class="kicker">Valorant</div>
-      <h2>Voice chat, when your region blocks it.</h2>
-      <p class="sub">Some regions block voice chat. One switch in the app fixes it.</p>
-      <div class="voice-steps">
-        <span><i>1</i>Turn on Voice Chat Helper</span>
-        <span><i>2</i>Open Valorant</span>
-        <span><i>3</i>Use voice chat normally</span>
-      </div>
-    </div>
-  </section>
-</div>
-
-<div class="wrap sec" id="android">
-  <section>
-    <div class="exp-intro reveal">
-      <div class="kicker">Android</div>
-      <h2>The same app, in your pocket.</h2>
-      <p class="sub">Same theme, same packages, same dial.</p>
-    </div>
-  </section>
-</div>
-
-<section class="demo-sec" id="android-demo">
-  <div class="demo-inner">
-    <div class="demo-label">Live demo &#183; the Android build</div>
-    <h2 class="demo-title">Nothing was left on the desktop.</h2>
-    <p class="demo-sub">Tap through the real Android build below.</p>
-    <div class="phone">
-      <div class="phone-shell">
-        <div class="phone-screen" id="phoneScreen">
-          <iframe id="phoneFrame" src="demo-frame.html?src=phone/index.html&amp;n=phone" title="QuotaVPN for Android, live interactive demo"></iframe>
-        </div>
-      </div>
-    </div>
-    <div class="demo-cap">
-      <span><b>Live Android build</b> &#183; Home, Speed and Settings, all live</span>
-    </div>
-    <div class="phone-copy">
-      <div class="rows">
-        <div class="row">
-          <div class="k">One dial</div>
-          <div class="v"><b>One circle for the whole session</b><p>Grey idle, blue working, green live.</p></div>
-        </div>
-        <div class="row">
-          <div class="k">Two packages</div>
-          <div class="v"><b>The same two packages as the desktop</b><p>Gamerz and Streamerz, each with its own server list.</p></div>
-        </div>
-        <div class="row">
-          <div class="k">Speed test</div>
-          <div class="v"><b>Measures the route you are on</b><p>Ping, jitter, download, upload, against the server your traffic rides.</p></div>
-        </div>
-        <div class="row">
-          <div class="k">Kept current</div>
-          <div class="v"><b>The app updates itself</b><p>Pull the newest signed APK from inside the app.</p></div>
-        </div>
-      </div>
-      <div class="cta">
-        <a class="btn primary" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg>Signed Android APK</a>
-        <a class="btn ghost" href="https://github.com/YousefMohiey/QuotaVPN/releases">All releases</a>
-      </div>
-    </div>
-  </div>
-</section>
 
 <div class="wrap sec">
   <section id="how" class="reveal">
@@ -850,33 +837,30 @@
 
   var top = document.getElementById('toTop');
   var links = [].slice.call(document.querySelectorAll('.top nav a[href^="#"]'));
+  var ids = links.map(function(a){ return a.getAttribute('href').slice(1); });
   var ticking = false;
   function frame(){
     ticking = false;
     var vh = window.innerHeight || 800;
     var y = window.scrollY || window.pageYOffset || 0;
     if (top) top.classList.toggle('show', y > vh * 1.4);
+    var line = vh * 0.18, cur = null;
+    for (var i = 0; i < ids.length; i++){
+      var el = document.getElementById(ids[i]);
+      if (el && el.getBoundingClientRect().top <= line) cur = ids[i];
+    }
+    /* At the end of the page the last chapters cannot cross the line, so the
+       final one takes the marker. */
+    if (y + vh >= (document.documentElement.scrollHeight || 0) - 4) cur = ids[ids.length - 1];
+    if (cur === null && ids.length) cur = ids[0];
+    for (var j = 0; j < links.length; j++){
+      links[j].classList.toggle('on', cur !== null && links[j].getAttribute('href') === '#' + cur);
+    }
   }
   window.addEventListener('scroll', function(){ if (!ticking){ ticking = true; requestAnimationFrame(frame); } }, {passive:true});
   window.addEventListener('resize', frame, {passive:true});
   frame();
   if (top) top.addEventListener('click', function(){ window.scrollTo({ top:0, behavior:'smooth' }); });
-  /* The nav marks the chapter you are in: an intro and its demo answer for the
-     same link. */
-  var alias = { 'android-demo': '#android' };
-  var ids = links.map(function(a){ return a.getAttribute('href').slice(1); });
-  Object.keys(alias).forEach(function(k){ if (ids.indexOf(k) < 0) ids.push(k); });
-  if (ids.length && 'IntersectionObserver' in window){
-    var seen = {};
-    var io2 = new IntersectionObserver(function(list){
-      list.forEach(function(e){ seen[e.target.id] = e.isIntersecting ? (e.intersectionRatio || 0.01) : 0; });
-      var best = null, bestv = 0;
-      Object.keys(seen).forEach(function(k){ if (seen[k] > bestv){ bestv = seen[k]; best = k; } });
-      var want = best === null ? null : (alias[best] || '#' + best);
-      links.forEach(function(a){ a.classList.toggle('on', want !== null && a.getAttribute('href') === want); });
-    }, { rootMargin:'-45% 0px -45% 0px', threshold:[0, 0.25, 0.5, 1] });
-    ids.forEach(function(id){ var el = document.getElementById(id); if (el) io2.observe(el); });
-  }
 })();
 
 /* The transport switch under How it works. */
