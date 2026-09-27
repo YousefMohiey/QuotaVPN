@@ -153,10 +153,6 @@
   .btn.xl svg{width:18px; height:18px}
   .btn.xl.second{color:var(--txt2); border-color:var(--glass-line)}
   .btn.xl.second:hover{border-color:var(--line-strong); color:var(--txt)}
-  .btn.primary.xl{position:relative; overflow:hidden; box-shadow:0 8px 20px -14px rgb(0 0 0 / .8)}
-  .btn.primary.xl::after{content:""; position:absolute; inset:0 auto 0 -60%; width:45%; transform:skewX(-18deg);
-    background:linear-gradient(90deg, transparent, rgb(255 255 255 / .22), transparent); transition:left .55s var(--ease-out)}
-  .btn.primary.xl:hover::after{left:120%}
 
   /* type */
   .kicker{font-size:11.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--brand-strong)}
@@ -175,9 +171,8 @@
   .demo-inner{max-width:1240px; margin:0 auto; padding:0 24px; text-align:center}
   .demo-cap{display:flex; gap:14px; flex-wrap:wrap; align-items:center; justify-content:center; color:var(--txt3); font-size:13.5px; padding:20px 4px 0}
   .demo-cap b{color:var(--txt2); font-weight:600}
-  .demo-label{display:inline-flex; align-items:center; gap:9px; margin-bottom:18px; padding:8px 18px; border-radius:999px;
+  .demo-label{display:inline-flex; align-items:center; margin-bottom:16px; padding:7px 15px; border-radius:999px;
     border:1px solid var(--glass-line); background:var(--panel); font-size:11.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--txt2)}
-  .demo-label i{width:7px; height:7px; border-radius:50%; background:var(--brand-strong)}
   @media (max-width:760px){
     .wrap.sec{padding:44px 0}
     .demo-sec{padding:4px 0 44px}
@@ -352,7 +347,7 @@
     box-shadow:var(--sh-panel); width:410px; max-width:100%; min-width:0}
   .phone-screen{position:relative; overflow:hidden; border-radius:26px; background:var(--bg); width:100%; aspect-ratio:390 / 844}
   .phone-copy{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:18px; width:100%; max-width:900px; margin:34px auto 0; text-align:left}
-  .phone-copy .cta{margin-top:2px}
+  .phone-copy .cta{margin-top:2px; align-self:start; align-items:flex-start}
   @media (max-width:900px){
     .phone-copy{grid-template-columns:minmax(0,1fr); max-width:560px}
   }
@@ -441,12 +436,12 @@
       <span class="brand-name">QuotaVPN</span>
     </div>
     <h1>Play and stream on the quota you picked.</h1>
-    <p class="lead">Your ISP bills a connection against whichever quota its server name belongs to. QuotaVPN sets that name from the package you pick, so games and streams spend from that package instead of your general quota.</p>
+    <p class="lead">QuotaVPN puts your package's name on every session, so games and streams spend from that quota instead of your general one.</p>
     <div class="cta">
       <a class="btn primary xl" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v7.1H3V5.5Zm0 13 7.2 1v-7H3v6Zm8.4 1.2L21 21V12.6h-9.6v7.1ZM11.4 4.3 21 3v8.6h-9.6V4.3Z"/></svg><span>Download for Windows</span></a>
       <a class="btn ghost xl second" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg><span>Download for Android</span></a>
     </div>
-    <p class="hero-note">Windows 10/11 and Android &#183; free and open source, MIT licensed &#183; no account, no sign up</p>
+    <p class="hero-note">Windows and Android &#183; free and open source &#183; no account</p>
     <a class="scroll-cue" href="#idea" aria-label="Scroll to the demos"><span>Scroll</span>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></a>
   </div>
@@ -455,8 +450,8 @@
 <div class="wrap sec" id="idea">
   <section>
     <div class="concept reveal">
-      <h2>One routing table changes where your traffic says it comes from.</h2>
-      <p class="sub">Your ISP files a session into a quota bucket from the server name in its handshake. QuotaVPN writes that name from the package you picked, so a game or a stream lands in that bucket instead of your general quota.</p>
+      <h2>Where your traffic says it comes from.</h2>
+      <p class="sub">Your ISP files each session by the server name in its handshake. QuotaVPN writes that name from the package you picked.</p>
     </div>
   </section>
 </div>
@@ -466,7 +461,7 @@
     <div class="exp-intro reveal">
       <div class="kicker">Windows 10/11</div>
       <h2>Every control in one window.</h2>
-      <p class="sub">Package, routing, transport, connect. The demo below is the real Windows build running in this page, and it follows your scroll.</p>
+      <p class="sub">Package, routing, transport, connect. The demo below is the real build.</p>
       <div class="mini-facts" data-stagger>
         <span><b>~35 MB</b> while running</span>
         <span><b>3</b> transports</span>
@@ -479,9 +474,9 @@
 
 <section class="demo-sec" id="demo">
   <div class="demo-inner">
-    <div class="demo-label"><i></i>Live demo &#183; the Windows build</div>
+    <div class="demo-label">Live demo &#183; the Windows build</div>
     <h2 class="demo-title">The real app, not a video of it.</h2>
-    <p class="demo-sub">Pick a package, set the app routing, choose a transport, press the dial. This is the shipped build running in the page, so press anything.</p>
+    <p class="demo-sub">Press anything: it is the shipped build, running right here.</p>
     <div class="win">
       <div class="win-body" id="winBody">
         <iframe id="appFrame" src="demo-frame.html?src=app/index.html&amp;n=win" title="QuotaVPN for Windows, live interactive demo"></iframe>
@@ -497,42 +492,42 @@
     <div class="feat-grid">
       <div class="feat-head reveal">
         <h2>What it does</h2>
-        <p class="sub">One engine, two apps, and a routing table that decides which quota a session lands in.</p>
+        <p class="sub">Two apps, one engine, one routing table.</p>
       </div>
       <div class="feat-list" data-stagger>
       <div class="row">
         <div class="k">Quota class</div>
         <div class="v">
           <b>Counts against the package you pick</b>
-          <p>Gamerz and Streamerz profiles each carry their own server list, so a game or a stream rides the package that should pay for it instead of your general quota.</p>
+          <p>Each package carries its own server list, so a session rides the package that should pay for it.</p>
         </div>
       </div>
       <div class="row">
         <div class="k">Valorant voice</div>
         <div class="v">
           <b>Voice chat, when your region blocks it</b>
-          <p>Your game connection stays direct. QuotaVPN carries only the voice traffic, so region locks stop being the reason you play without a mic.</p>
+          <p>Only the voice traffic moves. Your match connection stays direct.</p>
         </div>
       </div>
       <div class="row">
         <div class="k">Transport</div>
         <div class="v">
           <b>Three modes, clearly labelled</b>
-          <p>Standard, WireGuard and Hysteria2. Each one says in plain words what it spends from, because a faster mode that counts differently is a decision, not a detail.</p>
+          <p>Standard, WireGuard, Hysteria2, each labelled with what it spends from.</p>
         </div>
       </div>
       <div class="row">
         <div class="k">App routing</div>
         <div class="v">
           <b>Whole device, a list, or everything except</b>
-          <p>Send all traffic through the tunnel, only the apps you name, or everything except them. The choice is saved and survives restarts.</p>
+          <p>Saved, and it survives restarts.</p>
         </div>
       </div>
       <div class="row">
         <div class="k">Updates</div>
         <div class="v">
           <b>The app keeps itself current</b>
-          <p>One installer per platform, no admin needed on Windows, signed updates applied for you. The Android APK sideloads once and updates the same way.</p>
+          <p>No admin on Windows. The APK sideloads once and keeps itself current.</p>
         </div>
       </div>
       </div>
@@ -545,7 +540,7 @@
     <div class="exp-intro reveal">
       <div class="kicker">Valorant</div>
       <h2>Voice chat, when your region blocks it.</h2>
-      <p class="sub">Some regions cannot use Valorant voice chat. The app has a page for exactly that: one switch, its own tab.</p>
+      <p class="sub">Some regions block Valorant voice chat. One switch in the app fixes that.</p>
       <div class="voice-steps">
         <span><i>1</i>Turn on Voice Chat Helper</span>
         <span><i>2</i>Open Valorant</span>
@@ -557,9 +552,9 @@
 
 <section class="demo-sec" id="voice-demo">
   <div class="demo-inner">
-    <div class="demo-label"><i></i>Voice Chat Helper &#183; its own tab</div>
-    <h2 class="demo-title">Voice chat, when your region blocks it.</h2>
-    <p class="demo-sub">This frame opens on the Valorant tab. Press Enable: the helper carries only the voice traffic and leaves your match connection where it is.</p>
+    <div class="demo-label">Voice Chat Helper &#183; its own tab</div>
+    <h2 class="demo-title">One switch, its own tab.</h2>
+    <p class="demo-sub">Press Enable: voice rides the tunnel, your match stays direct.</p>
     <div class="win narrow">
       <div class="win-body" id="voiceBody" data-fit="box">
         <iframe id="voiceFrame" src="demo-frame.html?src=app/index.html&amp;n=voice" title="QuotaVPN Voice Chat Helper, live demo"></iframe>
@@ -575,16 +570,16 @@
     <div class="exp-intro reveal">
       <div class="kicker">Android</div>
       <h2>The same app, in your pocket.</h2>
-      <p class="sub">Same theme, same packages, same dial, sized for a phone. Home, Speed and Settings, live below.</p>
+      <p class="sub">Same theme, same packages, same dial.</p>
     </div>
   </section>
 </div>
 
 <section class="demo-sec" id="android-demo">
   <div class="demo-inner">
-    <div class="demo-label"><i></i>Live demo &#183; the Android build</div>
-    <h2 class="demo-title">The same app, in your pocket.</h2>
-    <p class="demo-sub">The phone build is the desktop build: same packages, same transport choices, same dial. Tap through it below.</p>
+    <div class="demo-label">Live demo &#183; the Android build</div>
+    <h2 class="demo-title">Nothing was left on the desktop.</h2>
+    <p class="demo-sub">Tap through the real Android build below.</p>
     <div class="phone">
       <div class="phone-shell">
         <div class="phone-screen" id="phoneScreen">
@@ -599,19 +594,19 @@
       <div class="rows">
         <div class="row">
           <div class="k">One dial</div>
-          <div class="v"><b>Connect and disconnect from the same circle</b><p>It stays grey when idle, turns blue while it works, and green once a session is live.</p></div>
+          <div class="v"><b>One circle for the whole session</b><p>Grey idle, blue working, green live.</p></div>
         </div>
         <div class="row">
           <div class="k">Two packages</div>
-          <div class="v"><b>The same two packages as the desktop</b><p>Gamerz and Streamerz, each with its own server list, and the one you pick is the one the tunnel rides.</p></div>
+          <div class="v"><b>The same two packages as the desktop</b><p>Gamerz and Streamerz, each with its own server list.</p></div>
         </div>
         <div class="row">
           <div class="k">Speed test</div>
-          <div class="v"><b>Measures the route you are on right now</b><p>Ping, jitter, download and upload run against the QuotaVPN server, so the number is the path your traffic actually takes. The last runs stay in a list.</p></div>
+          <div class="v"><b>Measures the route you are on</b><p>Ping, jitter, download, upload, against the server your traffic rides.</p></div>
         </div>
         <div class="row">
           <div class="k">Kept current</div>
-          <div class="v"><b>The app updates itself</b><p>Settings, Updates pulls the newest signed APK from the releases page and installs it over the old one.</p></div>
+          <div class="v"><b>The app updates itself</b><p>Pull the newest signed APK from inside the app.</p></div>
         </div>
       </div>
       <div class="cta">
@@ -626,14 +621,14 @@
   <section>
     <div class="exp-intro reveal">
       <h2>Measure the route you are on.</h2>
-      <p class="sub">Ping, jitter, download and upload, measured against the server your traffic actually rides rather than a server across the world. The same run lives in both apps, and the last ones stay in a list.</p>
+      <p class="sub">Ping, jitter, download and upload, against the server your traffic actually rides.</p>
     </div>
   </section>
 </div>
 
 <section class="demo-sec" id="speed-demo">
   <div class="demo-inner">
-    <div class="demo-label"><i></i>Live demo &#183; a speed run</div>
+    <div class="demo-label">Live demo &#183; a speed run</div>
     <div class="win" data-anim="app">
       <div class="win-body" id="speedBody" data-fit="box">
         <iframe id="speedFrame" src="demo-frame.html?src=app/index.html&amp;n=speed" title="QuotaVPN speed test, live demo"></iframe>
@@ -666,7 +661,7 @@
       <div class="rows" style="margin-top:10px">
         <div class="row howrow" data-mode="standard">
           <div class="k">Transport</div>
-          <div class="v"><b>VLESS on TCP 443 with the class SNI</b><p>A TLS handshake that carries a server name from your package's own whitelist, so the ISP files the session under that package.</p></div>
+          <div class="v"><b>VLESS on TCP 443 with the class SNI</b><p>A TLS handshake carrying a server name from the package's whitelist.</p></div>
         </div>
         <div class="row howrow" data-mode="standard">
           <div class="k">Counts from</div>
@@ -699,23 +694,23 @@
     <div style="margin-top:16px">
       <details open>
         <summary>What does QuotaVPN actually change?</summary>
-        <p>Your ISP decides which quota a connection counts against from the TLS handshake at its start. QuotaVPN gives each connection a server name from the package you picked, so the session lands in that bucket instead of your general quota.</p>
+        <p>The server name your ISP reads at the start of each connection. It decides which quota the session counts against.</p>
       </details>
       <details>
         <summary>What is the Valorant voice chat helper?</summary>
-        <p>Valorant voice chat is not available in some regions. The helper routes just the voice traffic through QuotaVPN while your game connection stays direct, so you can talk in game without moving the match itself onto the tunnel.</p>
+        <p>A switch that routes only voice traffic, leaving your match connection direct.</p>
       </details>
       <details>
         <summary>Does it work with any ISP?</summary>
-        <p>It is built for ISPs that sell your line in quota buckets, where gaming, streaming and general traffic are counted separately. On a normal line it still works as a plain VPN.</p>
+        <p>It is built for ISPs that sell your line in quota buckets. On a normal line it still works as a plain VPN.</p>
       </details>
       <details>
         <summary>Do I need an account?</summary>
-        <p>No. There is no sign up and no account. The build comes pointed at the QuotaVPN server, and the app connects.</p>
+        <p>No. No sign up, no account.</p>
       </details>
       <details>
         <summary>Is the Android build a real app or a wrapper?</summary>
-        <p>It is a native VpnService app with the same Rust core as the Windows build, including per-app routing, a Quick Settings tile and Always-on VPN support.</p>
+        <p>A native VpnService app with the same Rust core, per-app routing and Always-on VPN.</p>
       </details>
     </div>
   </section>
@@ -731,7 +726,7 @@
         <a class="btn primary xl" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v7.1H3V5.5Zm0 13 7.2 1v-7H3v6Zm8.4 1.2L21 21V12.6h-9.6v7.1ZM11.4 4.3 21 3v8.6h-9.6V4.3Z"/></svg><span>Download for Windows</span></a>
         <a class="btn ghost xl second" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg><span>Download for Android</span></a>
       </div>
-      <p class="hero-note">Windows installs per user, no admin needed, and updates itself from Settings or the tray. The APK sideloads once and keeps itself current. <a href="https://github.com/YousefMohiey/QuotaVPN" rel="noopener">Source on GitHub</a>.</p>
+      <p class="hero-note">Windows installs per user and updates itself. The APK sideloads once and keeps itself current. <a href="https://github.com/YousefMohiey/QuotaVPN" rel="noopener">Source on GitHub</a>.</p>
     </div>
   </section>
 </div>
