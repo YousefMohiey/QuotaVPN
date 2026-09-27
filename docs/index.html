@@ -101,7 +101,6 @@
   ::-webkit-scrollbar-thumb{background:rgb(255 255 255 / .1); border-radius:999px; border:3px solid transparent; background-clip:content-box}
   ::-webkit-scrollbar-thumb:hover{background:rgb(255 255 255 / .18); background-clip:content-box}
   ::-webkit-scrollbar-track{background:transparent}
-  .scrollbar-top{position:fixed; top:0; left:0; height:2px; width:0; z-index:50; background:var(--brand-hi); transition:width .12s linear}
   .totop{position:fixed; right:22px; bottom:22px; z-index:40; width:44px; height:44px; border-radius:50%;
     display:grid; place-items:center; cursor:pointer; color:var(--txt2);
     border:1px solid var(--line-strong); background:rgb(16 20 28 / .92); backdrop-filter:blur(10px);
@@ -164,9 +163,9 @@
 
   /* one rhythm for the page: every chapter gets the same air, and the seam
      between two chapters is a single hairline instead of empty space. */
-  .wrap.sec{padding:62px 0}
+  .wrap.sec{padding:54px 0}
   .wrap.sec + .wrap.sec, .demo-sec + .wrap.sec, .wrap.sec + .demo-sec, .demo-sec{border-top:1px solid var(--line)}
-  .demo-sec{border-top:0; padding:8px 0 62px}
+  .demo-sec{border-top:0; padding:8px 0 54px}
   .wrap.sec + .demo-sec{border-top:0}
   .demo-inner{max-width:1240px; margin:0 auto; padding:0 24px; text-align:center}
   .demo-cap{display:flex; gap:14px; flex-wrap:wrap; align-items:center; justify-content:center; color:var(--txt3); font-size:13.5px; padding:20px 4px 0}
@@ -174,8 +173,8 @@
   .demo-label{display:inline-flex; align-items:center; margin-bottom:16px; padding:7px 15px; border-radius:999px;
     border:1px solid var(--glass-line); background:var(--panel); font-size:11.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--txt2)}
   @media (max-width:760px){
-    .wrap.sec{padding:44px 0}
-    .demo-sec{padding:4px 0 44px}
+    .wrap.sec{padding:38px 0}
+    .demo-sec{padding:4px 0 38px}
     .demo-inner{padding:0 18px}
   }
 
@@ -229,7 +228,7 @@
   .demo-inner .win{margin:0 auto}
   .win.narrow{width:100%; max-width:940px}
   .demo-inner .phone{margin:4px auto 0}
-  .voice-steps{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; justify-content:flex-start}
+  .voice-steps{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; justify-content:center}
   .voice-steps span{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; color:var(--txt2);
     border:1px solid var(--glass-line); border-radius:999px; padding:7px 14px; background:var(--panel)}
   .voice-steps i{font-style:normal; width:18px; height:18px; flex:none; display:grid; place-items:center; border-radius:50%;
@@ -252,9 +251,7 @@
   .seg button:not([aria-pressed="true"]):hover{color:var(--txt2)}
 
   /* features */
-  .feat-grid{display:grid; grid-template-columns:minmax(0,.85fr) minmax(0,1.35fr); gap:64px; align-items:start}
-  .feat-head{position:sticky; top:96px}
-  .feat-head .sub{margin-top:16px; max-width:42ch}
+  .feat-list{max-width:860px; margin:2px auto 0; text-align:left}
   .feat-list .row{display:block; padding:26px 0; border-top:1px solid var(--line)}
   .feat-list .row:last-child{border-bottom:1px solid var(--line)}
   .feat-list .row .k{font-size:11.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--brand-strong); margin-bottom:9px}
@@ -265,7 +262,6 @@
     .feat-list .row:hover .k{color:var(--brand-hi)}
     .feat-list .row:hover .v b{color:#fff}
   }
-  @media (max-width:900px){ .feat-grid{grid-template-columns:minmax(0,1fr); gap:26px} .feat-head{position:static} }
 
   /* how it works */
   .steps{list-style:none; display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:26px; margin:30px 0 0; padding:0; position:relative}
@@ -346,8 +342,8 @@
   .phone-shell{box-sizing:border-box; padding:10px; border:1px solid var(--line-strong); border-radius:34px; background:var(--side);
     box-shadow:var(--sh-panel); width:410px; max-width:100%; min-width:0}
   .phone-screen{position:relative; overflow:hidden; border-radius:26px; background:var(--bg); width:100%; aspect-ratio:390 / 844}
-  .phone-copy{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:18px; width:100%; max-width:900px; margin:34px auto 0; text-align:left}
-  .phone-copy .cta{margin-top:2px; align-self:start; align-items:flex-start}
+  .phone-copy{width:100%; max-width:900px; margin:30px auto 0; text-align:left}
+  .phone-copy .cta{margin-top:16px; justify-content:center}
   @media (max-width:900px){
     .phone-copy{grid-template-columns:minmax(0,1fr); max-width:560px}
   }
@@ -405,7 +401,6 @@
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
-<div class="scrollbar-top" id="scrollBar" aria-hidden="true"></div>
 
 <div class="top">
   <div class="wrap in">
@@ -489,12 +484,11 @@
 
 <div class="wrap sec">
   <section id="features">
-    <div class="feat-grid">
-      <div class="feat-head reveal">
-        <h2>What it does</h2>
-        <p class="sub">Two apps, one engine, one routing table.</p>
-      </div>
-      <div class="feat-list" data-stagger>
+    <div class="exp-intro reveal">
+      <h2>What it does</h2>
+      <p class="sub">Two apps, one engine, one routing table.</p>
+    </div>
+    <div class="feat-list" data-stagger>
       <div class="row">
         <div class="k">Quota class</div>
         <div class="v">
@@ -507,6 +501,13 @@
         <div class="v">
           <b>Voice chat, when your region blocks it</b>
           <p>Only the voice traffic moves. Your match connection stays direct.</p>
+        </div>
+      </div>
+      <div class="row">
+        <div class="k">Speed test</div>
+        <div class="v">
+          <b>Measures the route you are on</b>
+          <p>Ping, jitter, download and upload, against the server your traffic rides.</p>
         </div>
       </div>
       <div class="row">
@@ -529,8 +530,6 @@
           <b>The app keeps itself current</b>
           <p>No admin on Windows. The APK sideloads once and keeps itself current.</p>
         </div>
-      </div>
-      </div>
     </div>
   </section>
 </div>
@@ -540,7 +539,7 @@
     <div class="exp-intro reveal">
       <div class="kicker">Valorant</div>
       <h2>Voice chat, when your region blocks it.</h2>
-      <p class="sub">Some regions block Valorant voice chat. One switch in the app fixes that.</p>
+      <p class="sub">Some regions block Valorant voice chat. The app has one switch for it, on its own tab.</p>
       <div class="voice-steps">
         <span><i>1</i>Turn on Voice Chat Helper</span>
         <span><i>2</i>Open Valorant</span>
@@ -549,21 +548,6 @@
     </div>
   </section>
 </div>
-
-<section class="demo-sec" id="voice-demo">
-  <div class="demo-inner">
-    <div class="demo-label">Voice Chat Helper &#183; its own tab</div>
-    <h2 class="demo-title">One switch, its own tab.</h2>
-    <p class="demo-sub">Press Enable: voice rides the tunnel, your match stays direct.</p>
-    <div class="win narrow">
-      <div class="win-body" id="voiceBody" data-fit="box">
-        <iframe id="voiceFrame" src="demo-frame.html?src=app/index.html&amp;n=voice" title="QuotaVPN Voice Chat Helper, live demo"></iframe>
-        <img class="win-shot" src="assets/app-valorant.png" alt="QuotaVPN on the Valorant tab" width="1322" height="873" loading="lazy">
-      </div>
-    </div>
-    <a class="win-open" href="app/index.html" target="_blank" rel="noopener"><span>Open the live demo full screen</span></a>
-  </div>
-</section>
 
 <div class="wrap sec" id="android">
   <section>
@@ -613,31 +597,6 @@
         <a class="btn primary" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg>Signed Android APK</a>
         <a class="btn ghost" href="https://github.com/YousefMohiey/QuotaVPN/releases">All releases</a>
       </div>
-    </div>
-  </div>
-</section>
-
-<div class="wrap sec" id="speed">
-  <section>
-    <div class="exp-intro reveal">
-      <h2>Measure the route you are on.</h2>
-      <p class="sub">Ping, jitter, download and upload, against the server your traffic actually rides.</p>
-    </div>
-  </section>
-</div>
-
-<section class="demo-sec" id="speed-demo">
-  <div class="demo-inner">
-    <div class="demo-label">Live demo &#183; a speed run</div>
-    <div class="win" data-anim="app">
-      <div class="win-body" id="speedBody" data-fit="box">
-        <iframe id="speedFrame" src="demo-frame.html?src=app/index.html&amp;n=speed" title="QuotaVPN speed test, live demo"></iframe>
-        <img class="win-shot" src="assets/app-speed.png" alt="QuotaVPN speed test" width="2644" height="1744" loading="lazy">
-      </div>
-    </div>
-    <a class="win-open" href="app/index.html" target="_blank" rel="noopener"><span>Open the live demo full screen</span></a>
-    <div class="demo-cap">
-      <span><b>One press, four numbers</b> &#183; ping, jitter, download and upload, against the server the traffic rides</span>
     </div>
   </div>
 </section>
@@ -899,16 +858,13 @@
   openOn('voiceFrame', /^Valorant$/);
   openOn('speedFrame', /^Speed$/);
 
-  var bar = document.getElementById('scrollBar');
   var top = document.getElementById('toTop');
   var links = [].slice.call(document.querySelectorAll('.top nav a[href^="#"]'));
   var ticking = false;
   function frame(){
     ticking = false;
     var vh = window.innerHeight || 800;
-    var h = document.documentElement.scrollHeight - vh;
     var y = window.scrollY || window.pageYOffset || 0;
-    if (bar) bar.style.width = (h > 0 ? Math.min(1, Math.max(0, y / h)) * 100 : 0) + '%';
     if (top) top.classList.toggle('show', y > vh * 1.4);
   }
   window.addEventListener('scroll', function(){ if (!ticking){ ticking = true; requestAnimationFrame(frame); } }, {passive:true});
@@ -917,7 +873,7 @@
   if (top) top.addEventListener('click', function(){ window.scrollTo({ top:0, behavior:'smooth' }); });
   /* The nav marks the chapter you are in: an intro and its demo answer for the
      same link. */
-  var alias = { 'voice-demo': '#voice', 'android-demo': '#android' };
+  var alias = { 'android-demo': '#android' };
   var ids = links.map(function(a){ return a.getAttribute('href').slice(1); });
   Object.keys(alias).forEach(function(k){ if (ids.indexOf(k) < 0) ids.push(k); });
   if (ids.length && 'IntersectionObserver' in window){
