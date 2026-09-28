@@ -200,10 +200,33 @@
   }
 
   /* -------------------------------------------------------------------- foot */
-  .close{border-top:1px solid var(--line); padding:clamp(34px, 4vw, 56px) 0 clamp(38px, 5vw, 64px);
-    display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap}
-  .close p{color:var(--txt2); font-size:15px; max-width:48ch}
-  .close .act{display:flex; gap:10px; flex-wrap:wrap}
+  /* The last thing on the page is the app's own power dial. Press it and it
+     takes you up to the download, which is the only place the buttons live. */
+  .close{border-top:1px solid var(--line); padding:clamp(40px, 5vw, 68px) 0 clamp(44px, 6vw, 76px);
+    display:flex; flex-direction:column; align-items:center; gap:20px; text-align:center}
+  .close p{color:var(--txt2); font-size:15px; max-width:52ch}
+  .close .ready{color:var(--txt); font-size:clamp(17px, 1.5vw, 20px); font-weight:600; letter-spacing:-.012em}
+  .close .under2{font-size:14px; color:var(--txt3); max-width:56ch}
+  .dial{position:relative; width:132px; height:132px; border-radius:50%; cursor:pointer;
+    display:grid; place-items:center; gap:2px; padding:0; font:inherit;
+    border:1px solid var(--line-strong); background:var(--panel); color:var(--txt);
+    box-shadow:inset 0 -10px 22px rgb(0 0 0 / .25), 0 18px 40px rgb(0 0 0 / .35);
+    transition:transform .2s var(--ease), border-color .2s var(--ease), box-shadow .2s var(--ease)}
+  .dial:hover{transform:translateY(-3px); border-color:var(--brand-line);
+    box-shadow:inset 0 -10px 22px rgb(0 0 0 / .25), 0 24px 50px rgb(0 0 0 / .42)}
+  .dial:active{transform:translateY(0) scale(.97)}
+  .dial svg{color:var(--brand-strong)}
+  .dial .lbl2{font-size:13px; color:var(--txt3)}
+  .dial span{font-size:14px; font-weight:600; letter-spacing:-.005em; color:var(--txt)}
+  .dial i{position:absolute; inset:-1px; border-radius:50%; border:2px solid var(--brand-strong); opacity:0; pointer-events:none}
+  .dial.go i{animation:sweep .75s var(--ease)}
+  @keyframes sweep{from{opacity:.85; transform:scale(1)} to{opacity:0; transform:scale(1.55)}}
+  .nudge{animation:nudge .55s var(--ease) 2}
+  @keyframes nudge{0%, 100%{transform:none} 30%{transform:translateY(-4px)} 65%{transform:translateY(1px)}}
+  @media (prefers-reduced-motion: reduce){
+    .dial.go i, .nudge{animation:none}
+    .dial:hover{transform:none}
+  }
   footer{border-top:1px solid var(--line); color:var(--txt3); font-size:13px}
   footer .in{display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center; padding:22px 0}
   footer a:hover{color:var(--txt)}
@@ -334,17 +357,13 @@
   </section>
 
   <section class="close">
-    <p>Free and open source, MIT licensed. No account, no sign up, no server to configure.</p>
-    <div class="act">
-      <a class="btn fill dl-win" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v7.1H3V5.5Zm0 13 7.2 1v-7H3v6Zm8.4 1.2L21 21V12.6h-9.6v7.1ZM11.4 4.3 21 3v8.6h-9.6V4.3Z"/></svg>
-        Download for Windows
-      </a>
-      <a class="btn line dl-apk" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg>
-        Get the Android APK
-      </a>
-    </div>
+    <p class="ready">Ready when you are.</p>
+    <button class="dial" id="goDl" type="button" aria-label="Take me up to the download">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true"><path d="M12 3.5v7"/><path d="M6.6 7.1a8 8 0 1 0 10.8 0"/></svg>
+      <span>Get it</span>
+      <i aria-hidden="true"></i>
+    </button>
+    <p class="under2">Press it and it walks you up to the download. Free and open source, MIT licensed, no account.</p>
   </section>
 </main>
 
@@ -501,6 +520,27 @@
   for(var i = 0; i < btns.length; i++){
     btns[i].addEventListener('click', function(){ pick(this.dataset.t); });
   }
+})();
+
+/* The dial at the end walks you back up to the download, and gives the button
+   up there a nudge when you arrive. */
+(function(){
+  var dial = document.getElementById('goDl');
+  if(!dial) return;
+  var reduce = false;
+  try{ reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
+  dial.addEventListener('click', function(){
+    dial.classList.add('go');
+    setTimeout(function(){ dial.classList.remove('go'); }, 800);
+    var target = document.querySelector('.hero .dl-win');
+    if(target){
+      target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block:'center' });
+      setTimeout(function(){ target.classList.add('nudge'); }, reduce ? 60 : 520);
+      setTimeout(function(){ target.classList.remove('nudge'); }, 1700);
+    } else {
+      window.scrollTo({ top:0, behavior: reduce ? 'auto' : 'smooth' });
+    }
+  });
 })();
 
 /* The phone build hands its vertical drags up here, so a swipe that starts on
