@@ -90,6 +90,18 @@
   .hdr nav a:hover{color:var(--txt)}
   .hdr .cta{margin-left:clamp(6px, 1vw, 16px); flex:none}
   @media (max-width:760px){
+    /* A phone cannot run the installer, so the APK takes the lead action and
+       the hero centres itself. */
+    .hero h1, .hero .lead, .hero .meta{text-align:center}
+    .hero h1{max-width:none}
+    .hero .lead{max-width:none}
+    .hero .act{flex-direction:column-reverse; align-items:stretch; gap:10px}
+    .hero .act .btn{width:100%}
+    .hero .act .dl-win{background:rgb(255 255 255 / .03); border-color:rgb(255 255 255 / .2); color:var(--txt); box-shadow:none}
+    .hero .act .dl-win:hover{background:rgb(255 255 255 / .07)}
+    .hero .act .dl-apk{background:var(--brand); border-color:transparent; color:#fff; box-shadow:inset 0 1px 0 rgb(255 255 255 / .16), 0 6px 18px rgb(31 89 182 / .28)}
+    .hero .act .dl-apk:hover{background:var(--brand-hi)}
+    .points li{text-align:center}
     .hdr nav{display:none}
     .hdr .cta{margin-left:auto}
     .brand .chip{display:none}
@@ -116,6 +128,11 @@
   .hero .lead{margin-top:20px; color:var(--txt2); font-size:clamp(15.5px, 1.15vw, 17px); line-height:1.6; max-width:56ch; text-wrap:pretty}
   .hero .act{margin-top:30px; display:flex; align-items:center; flex-wrap:wrap; gap:12px 14px}
   .hero .meta{margin-top:14px; font-size:13px; color:var(--txt2)}
+  .warn{margin-top:clamp(30px, 3.5vw, 44px); display:flex; align-items:flex-start; gap:10px;
+    border:1px solid rgb(196 154 88 / .36); background:rgb(196 154 88 / .1); color:#d9b478;
+    border-radius:var(--r-ctl); padding:12px 15px; font-size:14px; line-height:1.55; max-width:76ch}
+  .warn svg{flex:none; margin-top:2px}
+  .warn b{color:#e8c78d; font-weight:600}
   .points{margin-top:clamp(38px, 4.5vw, 60px); display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:28px clamp(20px, 3vw, 44px)}
   .points li{color:var(--txt2); font-size:14.5px; line-height:1.6; padding-top:18px; border-top:1px solid rgb(255 255 255 / .12)}
   .points b{display:block; color:var(--txt); font-weight:600; font-size:15px; margin-bottom:5px}
@@ -232,7 +249,7 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v7.1H3V5.5Zm0 13 7.2 1v-7H3v6Zm8.4 1.2L21 21V12.6h-9.6v7.1ZM11.4 4.3 21 3v8.6h-9.6V4.3Z"/></svg>
         Download for Windows
       </a>
-      <a class="btn line lg" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk">
+      <a class="btn line lg dl-apk" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg>
         Get the Android APK
       </a>
@@ -243,6 +260,10 @@
       <li><b>Voice chat, when your region blocks it.</b> One switch moves the voice traffic and leaves your match direct.</li>
       <li><b>Three transports.</b> Standard keeps it. The other two spend general quota.</li>
     </ul>
+    <p class="warn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      <span><b>Quota warning.</b> WireGuard and Hysteria2 spend from your general quota, not from your Gamerz or Streamerz package. Standard is the one that keeps the package quota.</span>
+    </p>
   </section>
 
   <section class="build rv" id="windows">
