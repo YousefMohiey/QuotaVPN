@@ -16,3 +16,8 @@ android/tauri-cli-npm/node_modules/
 *.apk
 
 __pycache__/
+
+# local secrets and env files: never committed
+.env
+.env.*
+!.env.example
