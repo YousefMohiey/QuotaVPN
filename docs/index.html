@@ -207,26 +207,21 @@
   .close p{color:var(--txt2); font-size:15px; max-width:52ch}
   .close .ready{color:var(--txt); font-size:clamp(17px, 1.5vw, 20px); font-weight:600; letter-spacing:-.012em}
   .close .under2{font-size:14px; color:var(--txt3); max-width:56ch}
-  .dial{position:relative; width:132px; height:132px; border-radius:50%; cursor:pointer;
-    display:grid; place-items:center; gap:2px; padding:0; font:inherit;
-    border:1px solid var(--line-strong); background:var(--panel); color:var(--txt);
-    box-shadow:inset 0 -10px 22px rgb(0 0 0 / .25), 0 18px 40px rgb(0 0 0 / .35);
-    transition:transform .2s var(--ease), border-color .2s var(--ease), box-shadow .2s var(--ease)}
-  .dial:hover{transform:translateY(-3px); border-color:var(--brand-line);
-    box-shadow:inset 0 -10px 22px rgb(0 0 0 / .25), 0 24px 50px rgb(0 0 0 / .42)}
-  .dial:active{transform:translateY(0) scale(.97)}
-  .dial svg{color:var(--brand-strong)}
-  .dial .lbl2{font-size:13px; color:var(--txt3)}
-  .dial span{font-size:14px; font-weight:600; letter-spacing:-.005em; color:var(--txt)}
-  .dial i{position:absolute; inset:-1px; border-radius:50%; border:2px solid var(--brand-strong); opacity:0; pointer-events:none}
-  .dial.go i{animation:sweep .75s var(--ease)}
-  @keyframes sweep{from{opacity:.85; transform:scale(1)} to{opacity:0; transform:scale(1.55)}}
+  /* One big button, and on a mouse it leans toward you before you reach it.
+     Pressing it walks you up to the download. */
+  .magnet{appearance:none; border:0; background:transparent; padding:0; cursor:pointer; font:inherit;
+    transition:transform .3s cubic-bezier(.16,1,.3,1)}
+  .magnet .face{display:inline-flex; align-items:center; gap:12px; height:58px; padding:0 28px;
+    border-radius:15px; background:var(--brand); color:#fff; font-size:16px; font-weight:600; letter-spacing:-.012em;
+    box-shadow:inset 0 1px 0 rgb(255 255 255 / .18), 0 14px 32px rgb(31 89 182 / .3);
+    transition:background .2s var(--ease), box-shadow .2s var(--ease)}
+  .magnet:hover .face{background:var(--brand-hi); box-shadow:inset 0 1px 0 rgb(255 255 255 / .2), 0 18px 40px rgb(31 89 182 / .38)}
+  .magnet:active .face{box-shadow:inset 0 1px 0 rgb(255 255 255 / .12), 0 10px 22px rgb(31 89 182 / .28)}
+  .magnet svg{transition:transform .25s var(--ease)}
+  .magnet:hover svg{transform:translateY(-3px)}
   .nudge{animation:nudge .55s var(--ease) 2}
   @keyframes nudge{0%, 100%{transform:none} 30%{transform:translateY(-4px)} 65%{transform:translateY(1px)}}
-  @media (prefers-reduced-motion: reduce){
-    .dial.go i, .nudge{animation:none}
-    .dial:hover{transform:none}
-  }
+  @media (prefers-reduced-motion: reduce){ .nudge{animation:none} }
   footer{border-top:1px solid var(--line); color:var(--txt3); font-size:13px}
   footer .in{display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center; padding:22px 0}
   footer a:hover{color:var(--txt)}
@@ -358,10 +353,11 @@
 
   <section class="close">
     <p class="ready">Ready when you are.</p>
-    <button class="dial" id="goDl" type="button" aria-label="Take me up to the download">
-      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true"><path d="M12 3.5v7"/><path d="M6.6 7.1a8 8 0 1 0 10.8 0"/></svg>
-      <span>Get it</span>
-      <i aria-hidden="true"></i>
+    <button class="magnet" id="goDl" type="button" aria-label="Take me up to the download">
+      <span class="face">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>
+        Get QuotaVPN
+      </span>
     </button>
     <p class="under2">Press it and it walks you up to the download. Free and open source, MIT licensed, no account.</p>
   </section>
@@ -522,16 +518,25 @@
   }
 })();
 
-/* The dial at the end walks you back up to the download, and gives the button
-   up there a nudge when you arrive. */
+/* The last button walks you back up to the download and gives the button up
+   there a nudge when you arrive. On a mouse it leans toward the cursor first. */
 (function(){
-  var dial = document.getElementById('goDl');
-  if(!dial) return;
-  var reduce = false;
+  var btn = document.getElementById('goDl');
+  if(!btn) return;
+  var reduce = false, fine = false;
   try{ reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
-  dial.addEventListener('click', function(){
-    dial.classList.add('go');
-    setTimeout(function(){ dial.classList.remove('go'); }, 800);
+  try{ fine = matchMedia('(hover:hover) and (pointer:fine)').matches; }catch(e){}
+  var home = btn.parentElement;
+  if(fine && !reduce && home){
+    home.addEventListener('mousemove', function(e){
+      var r = btn.getBoundingClientRect();
+      var dx = (e.clientX - (r.left + r.width / 2)) / Math.max(r.width, 1);
+      var dy = (e.clientY - (r.top + r.height / 2)) / Math.max(r.height, 1);
+      btn.style.transform = 'translate(' + (dx * 12).toFixed(1) + 'px,' + (dy * 9).toFixed(1) + 'px)';
+    }, { passive:true });
+    home.addEventListener('mouseleave', function(){ btn.style.transform = ''; }, { passive:true });
+  }
+  btn.addEventListener('click', function(){
     var target = document.querySelector('.hero .dl-win');
     if(target){
       target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block:'center' });
