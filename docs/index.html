@@ -253,6 +253,11 @@
     .phone-screen iframe{pointer-events:none}
     .build h2 span{display:block; margin-top:3px}
   }
+  /* on a phone the header already offers the APK, so this one would be a
+     second copy of the same button in the same screen */
+  @media (max-width:760px){
+    .phone-copy .dl-apk{display:none}
+  }
 </style>
 </head>
 <body>
@@ -344,6 +349,10 @@
           <li><b>Speed test on your own route.</b> Ping, jitter, download, upload.</li>
           <li><b>Per-app routing and Always-on VPN,</b> and it updates itself from inside.</li>
         </ul>
+        <a class="btn line dl-apk" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg>
+          Get the Android APK
+        </a>
       </div>
     </div>
   </section>
