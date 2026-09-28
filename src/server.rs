@@ -159,6 +159,12 @@ pub fn is_embed_key(key: &str) -> bool {
     crate::config::EMBED_KEY.map_or(false, |e| e == key)
 }
 
+/// Append this device's secret to an agent command, so the agent can check
+/// the caller really is the device it claims to be.
+fn with_secret(cmd: &str) -> String {
+    format!("{} {}", cmd, crate::config::AppConfig::device_secret())
+}
+
 fn valid_uuid(u: &str) -> bool {
     u.len() == 36 && u.bytes().all(|b| b.is_ascii_hexdigit() || b == b'-')
 }
@@ -168,7 +174,7 @@ pub async fn add_client(host: &str, port: u16, user: &str, key: &str, uuidv: &st
         if !valid_uuid(uuidv) {
             return Err("bad id".to_string());
         }
-        return run_cmd(host, port, user, key, &format!("qc-add {uuidv}")).await;
+        return run_cmd(host, port, user, key, &with_secret(&format!("qc-add {uuidv}"))).await;
     }
     let script = ADD_CLIENT.replace("Q_C_UUID_HERE", uuidv);
     run_cmd(host, port, user, key, &script).await
@@ -179,7 +185,7 @@ pub async fn remove_client(host: &str, port: u16, user: &str, key: &str, uuidv: 
         if !valid_uuid(uuidv) {
             return Err("bad id".to_string());
         }
-        return run_cmd(host, port, user, key, &format!("qc-revoke {uuidv}")).await;
+        return run_cmd(host, port, user, key, &with_secret(&format!("qc-revoke {uuidv}"))).await;
     }
     let script = REMOVE_CLIENT.replace("Q_C_UUID_HERE", uuidv);
     run_cmd(host, port, user, key, &script).await
@@ -194,7 +200,14 @@ pub async fn list_clients(host: &str, port: u16, user: &str, key: &str) -> Resul
     Ok(out
         .lines()
         .map(|l| l.trim().to_string())
-        .filter(|l| !l.is_empty() && l != "[exit 0]" && !l.starts_with("NO_CONFIG"))
+        .filter(|l| {
+            !l.is_empty()
+                && l != "[exit 0]"
+                && l != "denied"
+                && !l.starts_with("NO_CONFIG")
+                && !l.contains("rate limited")
+                && !l.contains("server is full")
+        })
         .collect())
 }
 
@@ -219,7 +232,7 @@ fn shell_out(out: &str) -> Result<String, String> {
 pub async fn ensure_net(host: &str, port: u16, user: &str, key: &str) -> Result<String, String> {
     if is_embed_key(key) {
         // readiness probe: old agents deny this command
-        run_cmd(host, port, user, key, "qc-hy2-pass").await.and_then(|o| shell_out(&o))?;
+        run_cmd(host, port, user, key, "qc-ping").await.and_then(|o| shell_out(&o))?;
         return Ok("NET_READY (agent)".to_string());
     }
     run_cmd(host, port, user, key, NET_SCRIPT).await
@@ -256,7 +269,7 @@ fn clean_json(out: &str) -> Result<String, String> {
 
 /// Shared Hysteria2 password (one per server, no per-user step needed).
 pub async fn hy2_password(host: &str, port: u16, user: &str, key: &str) -> Result<String, String> {
-    let out = net_cmd(host, port, user, key, "qc-hy2-pass", "sudo /usr/local/bin/qc-hy2-pass").await?;
+    let out = net_cmd(host, port, user, key, &with_secret("qc-hy2-pass"), "sudo /usr/local/bin/qc-hy2-pass").await?;
     clean_line(&out)
 }
 
@@ -294,7 +307,7 @@ pub async fn wg_add(host: &str, port: u16, user: &str, key: &str, uuidv: &str) -
     }
     let out = net_cmd(
         host, port, user, key,
-        &format!("qc-wg-add {uuidv}"),
+        &with_secret(&format!("qc-wg-add {uuidv}")),
         &format!("sudo /usr/local/bin/qc-wg-add {uuidv}"),
     )
     .await?;
@@ -313,7 +326,7 @@ pub async fn wg_del(host: &str, port: u16, user: &str, key: &str, uuidv: &str) {
     }
     let _ = net_cmd(
         host, port, user, key,
-        &format!("qc-wg-del {uuidv}"),
+        &with_secret(&format!("qc-wg-del {uuidv}")),
         &format!("sudo /usr/local/bin/qc-wg-del {uuidv}"),
     )
     .await;

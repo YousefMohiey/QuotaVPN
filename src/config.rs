@@ -81,6 +81,30 @@ impl AppConfig {
         Self::config_dir().join("config.json")
     }
 
+    /// Per-device secret, made once per install and kept beside the config.
+    /// The server agent ties every call that changes anything to this value,
+    /// so the device key that ships inside the app can only ever speak for a
+    /// device that does not exist yet.
+    pub fn device_secret() -> String {
+        let p = Self::config_dir().join("device_secret");
+        if let Ok(existing) = std::fs::read_to_string(&p) {
+            let s = existing.trim().to_string();
+            if s.len() >= 32 && s.bytes().all(|b| b.is_ascii_hexdigit()) {
+                return s;
+            }
+        }
+        let s = format!(
+            "{}{}",
+            uuid::Uuid::new_v4().simple(),
+            uuid::Uuid::new_v4().simple()
+        );
+        if let Some(dir) = Self::config_dir().to_str() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        let _ = std::fs::write(&p, &s);
+        s
+    }
+
     pub fn load() -> Self {
         let p = Self::config_path();
         if let Ok(txt) = std::fs::read_to_string(&p) {
