@@ -757,8 +757,24 @@ async function autoUpdateCheck() {
       updApk = r.apk_url || "";
       $("upd-state").textContent = t("updOut").replace("{v}", r.latest);
       if (updApk) $("btn-get-upd").hidden = false;
+      updateBanner(r.latest);
     }
   } catch (e) { /* offline is fine; manual check stays */ }
+}
+
+// A new build announces itself at the top of the app, not only inside
+// Settings. Tapping the line starts the same download flow as the button.
+function updateBanner(latest) {
+  const el = $("infobar");
+  el.hidden = false;
+  el.className = "bar updb";
+  $("infobar-icon").textContent = "\u2191";
+  $("infobar-text").textContent = t("updOut").replace("{v}", latest);
+  clearTimeout(barTimer);
+  el.onclick = (e) => {
+    if (e.target && e.target.id === "infobar-x") return;
+    $("btn-get-upd").click();
+  };
 }
 function paintActiveCard() {
   const uuid = $("tunnel-card").value;
