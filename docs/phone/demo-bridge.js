@@ -90,19 +90,41 @@
   // iframe that merely sits there still eats touch scrolls, and the demo is
   // the only part of the site where that would strand the visitor.
   if (window.parent !== window) {
-    let lastY = null, dragging = false;
+    let lastY = null, dragging = false, acc = 0, raf = 0;
+    function flush() {
+      raf = 0;
+      if (!acc) return;
+      window.parent.postMessage({ qcScroll: acc }, "*");
+      acc = 0;
+    }
+    /* A drag that starts on something the app itself scrolls (a long list, a
+       settings pane) belongs to that list, not to the page. */
+    function ownedBy(e) {
+      let n = e.target;
+      while (n && n.nodeType === 1 && n !== document.documentElement) {
+        const st = getComputedStyle(n);
+        if (/(auto|scroll)/.test(st.overflowY) && n.scrollHeight > n.clientHeight + 2) return true;
+        n = n.parentElement;
+      }
+      return false;
+    }
     document.addEventListener("touchstart", (e) => {
-      if (e.touches.length === 1) { lastY = e.touches[0].clientY; dragging = false; }
+      if (e.touches.length === 1) { lastY = e.touches[0].clientY; dragging = false; acc = 0; }
     }, { passive: true });
     document.addEventListener("touchmove", (e) => {
       if (lastY === null || e.touches.length !== 1) return;
       const y = e.touches[0].clientY, dy = y - lastY;
-      if (!dragging && Math.abs(dy) > 8) dragging = true;
-      if (!dragging) return;
+      if (!dragging && Math.abs(dy) > 8) dragging = !ownedBy(e);
+      if (!dragging) { lastY = y; return; }
       e.preventDefault();
-      window.parent.postMessage({ qcScroll: -dy }, "*");
+      acc -= dy;
       lastY = y;
+      if (!raf) raf = requestAnimationFrame(flush);
     }, { passive: false });
-    document.addEventListener("touchend", () => { lastY = null; dragging = false; }, { passive: true });
+    document.addEventListener("touchend", () => {
+      lastY = null; dragging = false;
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
+      flush();
+    }, { passive: true });
   }
 })();
