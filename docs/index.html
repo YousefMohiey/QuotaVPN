@@ -19,6 +19,10 @@
 <meta name="twitter:title" content="QuotaVPN">
 <meta name="twitter:description" content="Your gaming and streaming packages, used on purpose. Windows and Android.">
 <meta name="twitter:image" content="https://quotavpn.app/assets/og.png">
+<meta property="og:image:alt" content="QuotaVPN running on Windows: the dark interface with its power button">
+<meta name="twitter:image:alt" content="QuotaVPN">
+<link rel="preconnect" href="https://api.github.com" crossorigin>
+<link rel="dns-prefetch" href="https://api.github.com">
 <link rel="icon" href="assets/icon.png">
 <script type="application/ld+json" id="app-schema">
 {
@@ -50,7 +54,7 @@
     --line:rgb(255 255 255 / .08); --line-strong:rgb(255 255 255 / .14);
     --txt:#eef1f6; --txt2:#a7b0bf; --txt3:#8b95a6;
     --brand:#1f59b6; --brand-hi:#2870d1; --brand-strong:#5b8def;
-    --r-sm:6px; --r-ctl:10px; --r-panel:20px;
+    --r-sm:6px; --r-ctl:10px; --r-btn:10px; --r-btn-lg:12px; --r-panel:20px;
     --ease:cubic-bezier(.16,1,.3,1);
     --shell:1440px;
   }
@@ -113,7 +117,7 @@
 
   /* ----------------------------------------------------------------- buttons */
   .btn{display:inline-flex; align-items:center; justify-content:center; gap:9px;
-    height:44px; padding:0 18px; border-radius:var(--r-ctl); font:inherit; font-size:14px; font-weight:600;
+    height:44px; padding:0 18px; border-radius:var(--r-btn); font:inherit; font-size:14px; font-weight:600;
     border:1px solid transparent; cursor:pointer; white-space:nowrap; letter-spacing:-.005em;
     transition:transform .18s var(--ease), background .18s var(--ease), border-color .18s var(--ease), box-shadow .18s var(--ease)}
   .btn:hover{transform:translateY(-1px)}
@@ -123,7 +127,7 @@
   .btn.line{border-color:rgb(255 255 255 / .2); background:rgb(255 255 255 / .02); color:var(--txt)}
   .btn.line:hover{background:rgb(255 255 255 / .06); border-color:rgb(255 255 255 / .3)}
   .btn.sm{height:38px; padding:0 15px; font-size:13.5px}
-  .btn.lg{height:50px; padding:0 22px; font-size:15px; border-radius:12px}
+  .btn.lg{height:50px; padding:0 22px; font-size:15px; border-radius:var(--r-btn-lg)}
   .btn svg{flex:none}
 
   /* -------------------------------------------------------------------- hero */
@@ -131,7 +135,11 @@
   .hero h1{font-size:clamp(32px, 4vw, 54px); line-height:1.08; font-weight:600; letter-spacing:-.028em; max-width:26ch; margin:0 auto; text-wrap:balance}
   .hero .lead{margin:20px auto 0; color:var(--txt2); font-size:clamp(15.5px, 1.15vw, 17px); line-height:1.6; max-width:56ch; text-wrap:pretty}
   .hero .act{margin-top:30px; display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:12px 14px}
-  .hero .meta{margin-top:14px; font-size:13px; color:var(--txt2)}
+  .hero .meta{margin:0; font-size:13px; color:var(--txt2)}
+  /* the first viewport is the statement and the button; the reasons and the
+     connection switch start under it, after a hairline */
+  .why{margin-top:clamp(30px, 3.4vw, 46px); border-top:1px solid var(--line); padding-top:clamp(24px, 2.8vw, 38px)}
+  .why .points{margin-top:0}
   /* The connection switch, the way the app carries it: pick a mode, read what
      it costs you. Standard keeps the package quota; the other two do not. */
   .trans{margin-top:clamp(30px, 3.5vw, 48px); display:flex; flex-direction:column; align-items:center; gap:14px}
@@ -212,7 +220,7 @@
   .magnet{appearance:none; border:0; background:transparent; padding:0; cursor:pointer; font:inherit;
     transition:transform .3s cubic-bezier(.16,1,.3,1)}
   .magnet .face{display:inline-flex; align-items:center; gap:12px; height:58px; padding:0 28px;
-    border-radius:15px; background:var(--brand); color:#fff; font-size:16px; font-weight:600; letter-spacing:-.012em;
+    border-radius:var(--r-btn-lg); background:var(--brand); color:#fff; font-size:16px; font-weight:600; letter-spacing:-.012em;
     box-shadow:inset 0 1px 0 rgb(255 255 255 / .18), 0 14px 32px rgb(31 89 182 / .3);
     transition:background .2s var(--ease), box-shadow .2s var(--ease)}
   .magnet:hover .face{background:var(--brand-hi); box-shadow:inset 0 1px 0 rgb(255 255 255 / .2), 0 18px 40px rgb(31 89 182 / .38)}
@@ -258,9 +266,18 @@
   @media (max-width:760px){
     .phone-copy .dl-apk{display:none}
   }
+
+  /* --------------------------------------------------------------- a11y bits */
+  .skip{position:absolute; left:-9999px; top:12px; z-index:60; padding:10px 16px;
+    border-radius:var(--r-btn); background:var(--brand); color:#fff; font-weight:600; font-size:14px}
+  .skip:focus{left:16px}
+  .sent{position:absolute; top:0; left:0; width:1px; height:9px; pointer-events:none}
+  .btn, .seg button, .magnet, .hdr nav a, footer a, .under .open{touch-action:manipulation}
 </style>
 </head>
 <body>
+<a class="skip" href="#top">Skip to the builds and the download</a>
+<div class="sent" aria-hidden="true"></div>
 
 <header class="hdr" id="hdr">
   <div class="shell in">
@@ -285,7 +302,7 @@
 <main class="shell" id="top">
   <section class="hero">
     <h1>Play on the quota you picked. Not the general one.</h1>
-    <p class="lead">Every session carries a server name from the package you chose, so games and streams bill to Gamerz or Streamerz instead of your general quota.</p>
+    <p class="lead">Your games and streams bill to the package you picked, Gamerz or Streamerz, not the general quota.</p>
     <div class="act">
       <a class="btn fill lg dl-win" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v7.1H3V5.5Zm0 13 7.2 1v-7H3v6Zm8.4 1.2L21 21V12.6h-9.6v7.1ZM11.4 4.3 21 3v8.6h-9.6V4.3Z"/></svg>
@@ -295,8 +312,9 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg>
         Get the Android APK
       </a>
+      <p class="meta" id="dlMeta">17 MB, setup for Windows 10 and 11</p>
     </div>
-    <p class="meta" id="dlMeta">17 MB, setup for Windows 10 and 11</p>
+    <div class="why">
     <ul class="points">
       <li><b>Gamerz or Streamerz.</b> Two packages, two server lists, one decision per session.</li>
       <li><b><img class="vlogo" src="assets/valorant.png" alt="" width="19" height="19">Valorant voice chat,</b> when your region blocks it. One switch moves the voice traffic and leaves your match direct.</li>
@@ -309,10 +327,11 @@
         <button type="button" data-t="wg" aria-pressed="false">WireGuard</button>
         <button type="button" data-t="hy2" aria-pressed="false">Hysteria2</button>
       </div>
-      <p class="tnote" id="tNote">
+      <p class="tnote" id="tNote" aria-live="polite">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
         <span>Default traffic. This is the mode that keeps your package quota.</span>
       </p>
+    </div>
     </div>
   </section>
 
@@ -322,7 +341,7 @@
     </div>
     <div class="frame">
       <div class="stage" id="winBody">
-        <iframe id="appFrame" src="demo-frame.html?src=app/index.html&amp;n=win" title="QuotaVPN for Windows, live interactive demo"></iframe>
+        <iframe id="appFrame" data-src="demo-frame.html?src=app/index.html&amp;n=win" title="QuotaVPN for Windows, live interactive demo"></iframe>
         <img class="still" src="assets/app-home.png" alt="QuotaVPN for Windows" width="2644" height="1744" loading="lazy">
       </div>
     </div>
@@ -339,7 +358,7 @@
       <div class="phone">
         <div class="phone-shell">
           <div class="phone-screen" id="phoneScreen">
-            <iframe id="phoneFrame" src="demo-frame.html?src=phone/index.html&amp;n=phone" title="QuotaVPN for Android, live interactive demo"></iframe>
+            <iframe id="phoneFrame" data-src="demo-frame.html?src=phone/index.html&amp;n=phone" title="QuotaVPN for Android, live interactive demo"></iframe>
           </div>
         </div>
       </div>
@@ -365,7 +384,7 @@
         Get QuotaVPN
       </span>
     </button>
-    <p class="under2">Press it and it walks you up to the download. Free and open source, MIT licensed, no account.</p>
+    <p class="under2">Free and open source, MIT licensed, no account.</p>
   </section>
 </main>
 
@@ -446,11 +465,18 @@
       try{ localStorage.setItem('qvRel', JSON.stringify({ d: d, t: Date.now() })); }catch(e){}
     })['catch'](function(){});
 
-  /* The header earns its border once the page moves. */
+  /* The header earns its border once the page moves. The sentinel at the top
+     of the document reports the first scrolled pixel, so nothing subscribes
+     to the scroll event. */
   var hdr = document.getElementById('hdr');
-  function mark(){ if(hdr) hdr.classList.toggle('stuck', (window.scrollY || 0) > 8); }
-  mark();
-  window.addEventListener('scroll', mark, { passive:true });
+  var sent = document.querySelector('.sent');
+  if(hdr && sent && 'IntersectionObserver' in window){
+    new IntersectionObserver(function(list){
+      hdr.classList.toggle('stuck', !list[0].isIntersecting);
+    }, { threshold: 0 }).observe(sent);
+  } else if(hdr){
+    hdr.classList.add('stuck');
+  }
 })();
 
 /* The builds rise once as they arrive, and lift their placeholder when the
@@ -480,7 +506,6 @@
     if(phone) phone.style.setProperty('--s', (phone.clientWidth / 360).toFixed(4));
   }
   fit();
-  window.addEventListener('resize', fit, { passive:true });
   if('ResizeObserver' in window){
     var ro = new ResizeObserver(fit);
     var wb = document.getElementById('winBody'); if(wb) ro.observe(wb);
@@ -496,8 +521,40 @@
       if(++n < (tries || 30)) setTimeout(go, 400);
     })();
   }
-  arm(document.getElementById('winBody'));
-  arm(document.getElementById('phoneScreen'));
+  /* Each demo is the whole shipped app. It is loaded once its section comes
+     near the viewport, so the page itself stays light; the frame already
+     reserves its size, so nothing shifts when it arrives. */
+  function load(box){
+    if(!box) return false;
+    var f = box.querySelector('iframe[data-src]');
+    if(f){
+      var hidden = false;
+      try{ hidden = getComputedStyle(f).display === 'none'; }catch(e){}
+      /* on a phone the Windows frame is swapped for its still, so its app is
+         never fetched at all */
+      if(hidden) return false;
+      f.src = f.getAttribute('data-src');
+      f.removeAttribute('data-src');
+    }
+    arm(box);
+    return true;
+  }
+  var boxes = [document.getElementById('winBody'), document.getElementById('phoneScreen')];
+  if('IntersectionObserver' in window){
+    var late = new IntersectionObserver(function(list){
+      list.forEach(function(e){
+        if(!e.isIntersecting) return;
+        if(load(e.target)) late.unobserve(e.target);
+      });
+    }, { rootMargin: '700px 0px' });
+    boxes.forEach(function(b){ if(b) late.observe(b); });
+    /* belt and braces: if the observer never reports (an old engine, or a tab
+       that never fires one), the demos still arrive on their own. Loaded boxes
+       are skipped, so this costs nothing when the observer works. */
+    setTimeout(function(){ boxes.forEach(load); }, 4000);
+  } else {
+    boxes.forEach(load);
+  }
 })();
 
 /* The connection switch on the page, the same choice the app gives you. */
