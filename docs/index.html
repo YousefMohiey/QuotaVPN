@@ -530,9 +530,9 @@
     if(f){
       var hidden = false;
       try{ hidden = getComputedStyle(f).display === 'none'; }catch(e){}
-      /* on a phone the Windows frame is swapped for its still, so its app is
-         never fetched at all */
-      if(hidden) return false;
+      /* on a phone the Windows frame is swapped for its still: its app is
+         never fetched, and the placeholder over the still steps aside */
+      if(hidden){ box.classList.add('solid'); return false; }
       f.src = f.getAttribute('data-src');
       f.removeAttribute('data-src');
     }
