@@ -10,7 +10,7 @@ A personal VPN for Windows and Android that makes your traffic ride the data pac
 ![UI: English + Arabic](https://img.shields.io/badge/UI-English%20%2B%20Arabic-0b0f18)
 ![License: MIT](https://img.shields.io/badge/license-MIT-0b0f18)
 
-**Website:** https://yousefmohiey.github.io/QuotaVPN/ · **Download:** [latest release](https://github.com/YousefMohiey/QuotaVPN/releases/latest)
+**Website:** https://quotavpn.app/ · **Download:** [latest release](https://github.com/YousefMohiey/QuotaVPN/releases/latest)
 
 ## Download
 
@@ -23,8 +23,8 @@ A personal VPN for Windows and Android that makes your traffic ride the data pac
 
 The website carries two live demos, both built from the same source the apps ship:
 
-- Windows interface: https://yousefmohiey.github.io/QuotaVPN/app/
-- Android interface: https://yousefmohiey.github.io/QuotaVPN/phone/
+- Windows interface: https://quotavpn.app/app/
+- Android interface: https://quotavpn.app/phone/
 
 Press Connect, move between screens, run a speed test. Nothing is routed and nothing is installed.
 

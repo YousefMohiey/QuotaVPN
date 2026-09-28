@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://yousefmohiey.github.io/QuotaVPN/sitemap.xml
+Sitemap: https://quotavpn.app/sitemap.xml
