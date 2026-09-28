@@ -178,14 +178,14 @@
 
   /* the phone keeps one line with the text beside it, both starting at the top */
   .phone-row{display:grid; grid-template-columns:auto minmax(0,1fr); gap:clamp(28px, 4.5vw, 64px); align-items:center}
-  .phone{width:min(318px, 78vw); flex:none}
+  .phone{width:min(360px, 92vw, calc(92vh * 0.4621)); flex:none}
   .phone-shell{position:relative; width:100%; aspect-ratio:390/844; padding:10px;
     border:1px solid var(--line-strong); border-radius:32px; background:var(--panel);
     box-shadow:inset 0 -14px 30px rgb(0 0 0 / .22), 0 26px 70px rgb(0 0 0 / .38);
     transition:border-color .3s var(--ease), box-shadow .3s var(--ease)}
   .phone-shell:hover{border-color:rgb(255 255 255 / .22); box-shadow:inset 0 -14px 30px rgb(0 0 0 / .22), 0 34px 84px rgb(0 0 0 / .46)}
-  .phone-screen{position:absolute; inset:10px; border-radius:23px; overflow:hidden; background:var(--bg)}
-  .phone-screen iframe{position:absolute; top:0; left:0; width:390px; height:844px; border:0; display:block;
+  .phone-screen{position:absolute; inset:7px; border-radius:21px; overflow:hidden; background:var(--bg)}
+  .phone-screen iframe{position:absolute; top:0; left:0; width:360px; height:779px; border:0; display:block;
     transform-origin:0 0; transform:scale(var(--s,1))}
   .phone-copy{max-width:52ch}
   .phone-copy ul{display:grid; gap:14px}
@@ -250,6 +250,7 @@
     .stage{aspect-ratio:2644/1744}
     .stage iframe{display:none}
     .stage .still{display:block}
+    .phone-screen iframe{pointer-events:none}
     .build h2 span{display:block; margin-top:3px}
   }
 </style>
@@ -471,7 +472,7 @@
     var win = document.getElementById('winBody');
     var phone = document.getElementById('phoneScreen');
     if(win) win.style.setProperty('--s', (win.clientWidth / 1060).toFixed(4));
-    if(phone) phone.style.setProperty('--s', (phone.clientWidth / 390).toFixed(4));
+    if(phone) phone.style.setProperty('--s', (phone.clientWidth / 360).toFixed(4));
   }
   fit();
   window.addEventListener('resize', fit, { passive:true });
