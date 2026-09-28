@@ -537,7 +537,11 @@
     home.addEventListener('mouseleave', function(){ btn.style.transform = ''; }, { passive:true });
   }
   btn.addEventListener('click', function(){
-    var target = document.querySelector('.hero .dl-win');
+    /* whichever build this visitor can actually run */
+    var phone = false;
+    try{ phone = matchMedia('(max-width:760px)').matches; }catch(e){}
+    var target = document.querySelector(phone ? '.hero .dl-apk' : '.hero .dl-win')
+              || document.querySelector('.hero .dl-win');
     if(target){
       target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block:'center' });
       setTimeout(function(){ target.classList.add('nudge'); }, reduce ? 60 : 520);
