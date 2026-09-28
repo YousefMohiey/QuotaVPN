@@ -39,31 +39,30 @@
 </script>
 <style>
   /* ==========================================================================
-     QuotaVPN website, second design. The palette, the radii and the type
-     family are the desktop app's own (desktop/ui-next/src), because the page
-     and the app are the same product. Everything else is new: no chapter
-     labels, no pill badges, no spec rows, no FAQ. One left-aligned statement,
-     then the two shipped builds, live, at full width. That is the page.
+     QuotaVPN site. Palette, radii and type family are the desktop app's own
+     (desktop/ui-next/src): the page and the app are one product. Layout is a
+     single 1440 grid, a real header, a statement, then the two shipped builds
+     live and full width. The download buttons resolve the current installer
+     straight from the releases API, so nobody detours through GitHub.
      ========================================================================== */
   :root{
-    --bg:#10141c; --panel:#111826; --field:#1a2338;
+    --bg:#10141c; --panel:#111826;
     --line:rgb(255 255 255 / .08); --line-strong:rgb(255 255 255 / .14);
     --txt:#eef1f6; --txt2:#a7b0bf; --txt3:#8b95a6;
     --brand:#1f59b6; --brand-hi:#2870d1; --brand-strong:#5b8def;
-    --brand-bg:rgb(31 89 182 / .14); --brand-line:rgb(31 89 182 / .4);
-    --warn:#c49a58;
     --r-sm:6px; --r-ctl:10px; --r-panel:20px;
     --ease:cubic-bezier(.16,1,.3,1);
+    --shell:1440px;
   }
   *{box-sizing:border-box}
-  html{-webkit-text-size-adjust:100%; color-scheme:dark}
+  html{-webkit-text-size-adjust:100%; color-scheme:dark; scroll-padding-top:96px}
+  @media (prefers-reduced-motion: no-preference){ html{scroll-behavior:smooth} }
   body{
     margin:0; background:var(--bg); color:var(--txt);
     font:15px/1.6 "Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
     font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased;
     caret-color:var(--brand-strong);
   }
-  /* The parts nobody draws still carry the design. */
   ::selection{background:var(--brand-hi); color:#fff}
   ::-webkit-scrollbar{width:12px; height:12px}
   ::-webkit-scrollbar-track{background:var(--bg)}
@@ -74,213 +73,238 @@
   img{max-width:100%; height:auto}
   h1,h2,p,ul{margin:0}
   ul{padding:0; list-style:none}
+  .shell{max-width:var(--shell); margin:0 auto; padding:0 clamp(20px, 3.4vw, 48px)}
 
-  .shell{max-width:1520px; margin:0 auto; padding:0 clamp(20px, 4vw, 56px)}
-
-  /* ---------------------------------------------------------------- top bar */
-  .bar{display:flex; align-items:center; gap:12px; padding:26px 0}
-  .bar img{width:34px; height:34px; border-radius:9px; display:block}
-  .bar .name{font-size:16px; font-weight:600; letter-spacing:-.01em}
-  .bar .chip{
-    font-size:12.5px; color:var(--txt2); border:1px solid var(--line);
-    border-radius:999px; padding:2px 9px; font-variant-numeric:tabular-nums;
+  /* ------------------------------------------------------------------ header */
+  .hdr{position:sticky; top:0; z-index:20; background:rgb(16 20 28 / .82);
+    -webkit-backdrop-filter:blur(14px) saturate(140%); backdrop-filter:blur(14px) saturate(140%);
+    border-bottom:1px solid transparent; transition:border-color .25s var(--ease), background .25s var(--ease)}
+  .hdr.stuck{border-bottom-color:var(--line); background:rgb(16 20 28 / .92)}
+  .hdr .in{display:flex; align-items:center; gap:clamp(14px, 2vw, 34px); height:68px}
+  .brand{display:flex; align-items:center; gap:11px; flex:none}
+  .brand img{width:32px; height:32px; border-radius:9px; display:block}
+  .brand .name{font-size:15.5px; font-weight:600; letter-spacing:-.01em}
+  .chip{font-size:12px; color:var(--txt2); border:1px solid var(--line); border-radius:999px; padding:2px 9px}
+  .hdr nav{display:flex; align-items:center; gap:clamp(14px, 1.8vw, 28px); font-size:13.5px; color:var(--txt2); margin-left:auto}
+  .hdr nav a{position:relative; padding:6px 0; transition:color .18s var(--ease)}
+  .hdr nav a:hover{color:var(--txt)}
+  .hdr .cta{margin-left:clamp(6px, 1vw, 16px); flex:none}
+  @media (max-width:760px){
+    .hdr nav{display:none}
+    .hdr .cta{margin-left:auto}
+    .brand .chip{display:none}
   }
-  .bar .sp{flex:1}
-  .bar .gh{color:var(--txt3); display:grid; place-items:center; width:38px; height:38px; border-radius:10px; transition:color .18s var(--ease), background .18s var(--ease)}
-  .bar .gh:hover{color:var(--txt); background:rgb(255 255 255 / .05)}
 
-  /* -------------------------------------------------------------- statement */
-  .stmt{padding:clamp(28px, 6vw, 76px) 0 clamp(30px, 5vw, 64px)}
-  .stmt h1{
-    font-size:clamp(30px, 3.4vw, 46px); line-height:1.14; font-weight:600;
-    letter-spacing:-.022em; max-width:19ch; text-wrap:balance;
-  }
-  .stmt .pts{margin-top:26px; max-width:62ch; display:grid; gap:6px}
-  .stmt .pts li{color:var(--txt2); font-size:15.5px; line-height:1.55}
-  .stmt .pts b{color:var(--txt); font-weight:600}
-  .stmt .act{margin-top:30px; display:flex; flex-wrap:wrap; gap:10px}
-
-  /* ------------------------------------------------------------------ buttons */
-  .btn{
-    display:inline-flex; align-items:center; gap:9px; height:44px; padding:0 18px;
-    border-radius:var(--r-ctl); font:inherit; font-size:14px; font-weight:600; letter-spacing:-.005em;
-    border:1px solid transparent; cursor:pointer; white-space:nowrap;
-    transition:transform .16s var(--ease), background .18s var(--ease), border-color .18s var(--ease);
-  }
+  /* ----------------------------------------------------------------- buttons */
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:9px;
+    height:44px; padding:0 18px; border-radius:var(--r-ctl); font:inherit; font-size:14px; font-weight:600;
+    border:1px solid transparent; cursor:pointer; white-space:nowrap; letter-spacing:-.005em;
+    transition:transform .18s var(--ease), background .18s var(--ease), border-color .18s var(--ease), box-shadow .18s var(--ease)}
+  .btn:hover{transform:translateY(-1px)}
   .btn:active{transform:translateY(1px)}
-  .btn.fill{background:var(--brand); color:#fff; box-shadow:inset 0 1px 0 rgb(255 255 255 / .16)}
-  .btn.fill:hover{background:var(--brand-hi)}
+  .btn.fill{background:var(--brand); color:#fff; box-shadow:inset 0 1px 0 rgb(255 255 255 / .16), 0 6px 18px rgb(31 89 182 / .28)}
+  .btn.fill:hover{background:var(--brand-hi); box-shadow:inset 0 1px 0 rgb(255 255 255 / .18), 0 10px 26px rgb(31 89 182 / .34)}
   .btn.line{border-color:rgb(255 255 255 / .2); background:rgb(255 255 255 / .02); color:var(--txt)}
   .btn.line:hover{background:rgb(255 255 255 / .06); border-color:rgb(255 255 255 / .3)}
+  .btn.sm{height:38px; padding:0 15px; font-size:13.5px}
+  .btn.lg{height:50px; padding:0 22px; font-size:15px; border-radius:12px}
   .btn svg{flex:none}
 
-  /* ------------------------------------------------------------------- builds */
-  .build{margin:0 0 clamp(40px, 6vw, 84px)}
-  .build h2{
-    font-size:clamp(15px, 1.15vw, 17px); font-weight:600; letter-spacing:-.005em;
-    color:var(--txt); margin-bottom:14px;
-  }
+  /* -------------------------------------------------------------------- hero */
+  .hero{padding:clamp(40px, 6vw, 84px) 0 clamp(30px, 4vw, 56px)}
+  .hero h1{font-size:clamp(32px, 4vw, 54px); line-height:1.08; font-weight:600; letter-spacing:-.028em; max-width:17ch; text-wrap:balance}
+  .hero .lead{margin-top:20px; color:var(--txt2); font-size:clamp(15.5px, 1.15vw, 17px); line-height:1.6; max-width:56ch; text-wrap:pretty}
+  .hero .act{margin-top:30px; display:flex; align-items:center; flex-wrap:wrap; gap:12px 14px}
+  .hero .meta{margin-top:14px; font-size:13px; color:var(--txt2)}
+  .points{margin-top:clamp(38px, 4.5vw, 60px); display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:28px clamp(20px, 3vw, 44px)}
+  .points li{color:var(--txt2); font-size:14.5px; line-height:1.6; padding-top:18px; border-top:1px solid rgb(255 255 255 / .12)}
+  .points b{display:block; color:var(--txt); font-weight:600; font-size:15px; margin-bottom:5px}
+  @media (max-width:820px){ .points{grid-template-columns:minmax(0,1fr); gap:18px} }
+
+  /* ------------------------------------------------------------------ builds */
+  .build{padding:clamp(28px, 4vw, 52px) 0; border-top:1px solid var(--line)}
+  .build .head{margin-bottom:18px}
+  .build h2{font-size:clamp(16px, 1.3vw, 19px); font-weight:600; letter-spacing:-.008em}
   .build h2 span{color:var(--txt3); font-weight:400}
-  .frame{
-    position:relative; border:1px solid var(--line-strong); border-radius:var(--r-panel);
+  .frame{position:relative; border:1px solid var(--line-strong); border-radius:var(--r-panel);
     background:var(--panel); overflow:hidden;
     box-shadow:inset 0 -14px 30px rgb(0 0 0 / .22), 0 26px 70px rgb(0 0 0 / .38);
-  }
-  .frame::before{
-    content:""; position:absolute; left:16px; right:16px; top:0; height:1px; z-index:2;
-    background:linear-gradient(90deg, transparent, rgb(255 255 255 / .16) 22%, rgb(255 255 255 / .16) 78%, transparent);
-  }
-  /* The build is written in after the wrapper loads; until then a soft panel. */
-  .stage{position:relative; aspect-ratio:1060/700; background:
-    radial-gradient(120% 90% at 50% 0%, rgb(255 255 255 / .04), transparent 60%), var(--panel)}
+    transition:border-color .3s var(--ease), box-shadow .3s var(--ease)}
+  .frame:hover{border-color:rgb(255 255 255 / .22); box-shadow:inset 0 -14px 30px rgb(0 0 0 / .22), 0 34px 84px rgb(0 0 0 / .46)}
+  .frame::before{content:""; position:absolute; left:16px; right:16px; top:0; height:1px; z-index:2;
+    background:linear-gradient(90deg, transparent, rgb(255 255 255 / .16) 22%, rgb(255 255 255 / .16) 78%, transparent)}
+  .stage{position:relative; aspect-ratio:1060/700}
   .stage iframe{position:absolute; inset:0; width:100%; height:100%; border:0; display:block}
   .stage .still{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:none}
+  .stage::after{content:""; position:absolute; inset:0; opacity:1; pointer-events:none; transition:opacity .55s var(--ease);
+    background:radial-gradient(120% 90% at 50% 0%, rgb(255 255 255 / .04), transparent 60%), var(--panel)}
   .stage.ready::after, .stage.solid::after{opacity:0}
-  .stage::after{
-    content:""; position:absolute; inset:0; opacity:1; transition:opacity .5s var(--ease); pointer-events:none;
-    background:radial-gradient(120% 90% at 50% 0%, rgb(255 255 255 / .04), transparent 60%), var(--panel);
-  }
-  .open{margin-top:14px; font-size:13.5px; color:var(--txt2); display:inline-flex; align-items:center; gap:7px}
-  .open:hover{color:var(--txt)}
+  .under{margin-top:14px; display:flex; align-items:center; gap:18px; flex-wrap:wrap}
+  .under .open{font-size:13.5px; color:var(--txt2); display:inline-flex; align-items:center; gap:7px}
+  .under .open:hover{color:var(--txt)}
 
-  /* the phone sits in its own column, left, so the eye keeps one line */
-  .phone-row{display:grid; grid-template-columns:auto minmax(0,1fr); gap:clamp(24px, 4vw, 56px); align-items:center}
-  .phone{width:min(330px, 80vw); flex:none}
-  .phone-shell{
-    position:relative; width:100%; aspect-ratio:390/844; padding:10px;
-    border:1px solid var(--line-strong); border-radius:34px; background:var(--panel);
+  /* the phone keeps one line with the text beside it, both starting at the top */
+  .phone-row{display:grid; grid-template-columns:auto minmax(0,1fr); gap:clamp(28px, 4.5vw, 64px); align-items:center}
+  .phone{width:min(318px, 78vw); flex:none}
+  .phone-shell{position:relative; width:100%; aspect-ratio:390/844; padding:10px;
+    border:1px solid var(--line-strong); border-radius:32px; background:var(--panel);
     box-shadow:inset 0 -14px 30px rgb(0 0 0 / .22), 0 26px 70px rgb(0 0 0 / .38);
-  }
-  .phone-screen{position:absolute; inset:10px; border-radius:25px; overflow:hidden; background:var(--bg)}
+    transition:border-color .3s var(--ease), box-shadow .3s var(--ease)}
+  .phone-shell:hover{border-color:rgb(255 255 255 / .22); box-shadow:inset 0 -14px 30px rgb(0 0 0 / .22), 0 34px 84px rgb(0 0 0 / .46)}
+  .phone-screen{position:absolute; inset:10px; border-radius:23px; overflow:hidden; background:var(--bg)}
   .phone-screen iframe{position:absolute; inset:0; width:100%; height:100%; border:0; display:block}
-  .phone-note{max-width:46ch}
-  .phone-note ul{display:grid; gap:9px; color:var(--txt2); font-size:14.5px; line-height:1.55}
-  .phone-note b{color:var(--txt); font-weight:600}
-  .phone-note .btn{margin-top:20px}
+  .phone-copy{max-width:52ch}
+  .phone-copy ul{display:grid; gap:14px}
+  .phone-copy li{color:var(--txt2); font-size:14.5px; line-height:1.55; padding-left:20px; position:relative}
+  .phone-copy li::before{content:""; position:absolute; left:2px; top:.52em; width:6px; height:6px; border-radius:2px; background:var(--brand-strong); opacity:.85}
+  .phone-copy b{color:var(--txt); font-weight:600}
+  .phone-copy .btn{margin-top:24px; margin-left:20px}
+  @media (max-width:900px){
+    .phone-row{grid-template-columns:minmax(0,1fr); gap:26px}
+    .phone{margin:0 auto}
+    .phone-copy{margin:0 auto}
+  }
 
-  /* -------------------------------------------------------------------- close */
-  .close{border-top:1px solid var(--line); padding:clamp(30px, 4vw, 52px) 0 clamp(34px, 5vw, 64px)}
-  .close p{color:var(--txt2); font-size:15.5px; max-width:52ch}
-  .close .act{margin-top:22px; display:flex; flex-wrap:wrap; gap:10px}
+  /* -------------------------------------------------------------------- foot */
+  .close{border-top:1px solid var(--line); padding:clamp(34px, 4vw, 56px) 0 clamp(38px, 5vw, 64px);
+    display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap}
+  .close p{color:var(--txt2); font-size:15px; max-width:48ch}
+  .close .act{display:flex; gap:10px; flex-wrap:wrap}
   footer{border-top:1px solid var(--line); color:var(--txt3); font-size:13px}
-  footer .in{display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center; padding:22px 0}
+  footer .in{display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center; padding:22px 0}
   footer a:hover{color:var(--txt)}
   footer .sp{flex:1}
+  footer .brand img{width:22px; height:22px; border-radius:6px}
 
-  /* ------------------------------------------------------------- one moment */
-  @keyframes rise{from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none}}
-  .stmt h1, .stmt .pts, .stmt .act{animation:rise .7s var(--ease) both}
-  .stmt .pts{animation-delay:.08s}
-  .stmt .act{animation-delay:.16s}
+  /* -------------------------------------------------------- one authored run */
+  @keyframes rise{from{opacity:0; transform:translateY(16px)} to{opacity:1; transform:none}}
+  @keyframes lift{from{opacity:0; transform:translateY(26px) scale(.985)} to{opacity:1; transform:none}}
+  .hero h1, .hero .lead, .hero .act, .points{animation:rise .75s var(--ease) both}
+  .hero .lead{animation-delay:.07s}
+  .hero .act{animation-delay:.14s}
+  .points{animation-delay:.21s}
+  .rv{opacity:0}
+  .rv.in{animation:lift .8s var(--ease) both}
   @media (prefers-reduced-motion: reduce){
-    .stmt h1, .stmt .pts, .stmt .act{animation:none}
+    .hero h1, .hero .lead, .hero .act, .points{animation:none}
+    .rv{opacity:1}
+    .rv.in{animation:none}
+    .btn:hover, .frame:hover, .phone-shell:hover{transform:none}
   }
 
-  /* ------------------------------------------------------------------ phones */
-  @media (max-width:900px){
-    .phone-row{grid-template-columns:minmax(0,1fr); gap:22px}
-    .phone{margin:0 auto}
-    .phone-note{margin:0 auto}
-    .phone-note ul{text-align:left}
-    .stmt h1{max-width:24ch}
-  }
-  /* A live iframe swallows swipes on touch, so the Windows build shows its
-     still there and the phone build stays the interactive one. */
+  /* a live iframe swallows swipes on touch, so the Windows build shows its
+     still there and the phone build stays the interactive one */
   @media (max-width:760px), (hover:none){
     .stage{aspect-ratio:2644/1744}
     .stage iframe{display:none}
     .stage .still{display:block}
-    .stage.solid::after{opacity:0}
-    .build h2 span{display:block; margin-top:2px}
+    .build h2 span{display:block; margin-top:3px}
   }
 </style>
 </head>
 <body>
 
-<div class="shell">
-  <header class="bar">
-    <img src="assets/icon.png" alt="" width="34" height="34">
-    <span class="name">QuotaVPN</span>
-    <span class="chip" id="ver">v0.3.5</span>
-    <span class="sp"></span>
-    <a class="gh" href="https://github.com/YousefMohiey/QuotaVPN" aria-label="QuotaVPN on GitHub" title="GitHub">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-2.1c-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.24 2.76.12 3.05.74.81 1.18 1.83 1.18 3.09 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.06.78 2.13v3.16c0 .31.2.67.8.55A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></svg>
+<header class="hdr" id="hdr">
+  <div class="shell in">
+    <a class="brand" href="#top">
+      <img src="assets/icon.png" alt="" width="32" height="32">
+      <span class="name">QuotaVPN</span>
+      <span class="chip" id="ver">v0.3.5</span>
     </a>
-  </header>
+    <nav>
+      <a href="#windows">Windows</a>
+      <a href="#android">Android</a>
+      <a href="https://github.com/YousefMohiey/QuotaVPN">GitHub</a>
+    </nav>
+    <a class="btn line sm cta dl-win" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v7.1H3V5.5Zm0 13 7.2 1v-7H3v6Zm8.4 1.2L21 21V12.6h-9.6v7.1ZM11.4 4.3 21 3v8.6h-9.6V4.3Z"/></svg>
+      Download
+    </a>
+  </div>
+</header>
 
-  <main>
-    <section class="stmt">
-      <h1>Pick the quota your games come out of.</h1>
-      <ul class="pts">
-        <li><b>Gamerz or Streamerz.</b> Each one carries its own server list, and the session rides the package that should pay for it.</li>
-        <li><b>Voice chat, when your region blocks it.</b> One switch moves the voice traffic and leaves your match connection direct.</li>
-        <li><b>Three transports.</b> Standard keeps the package quota; WireGuard and Hysteria2 spend your general one.</li>
-      </ul>
-      <div class="act">
-        <a class="btn fill" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v7.1H3V5.5Zm0 13 7.2 1v-7H3v6Zm8.4 1.2L21 21V12.6h-9.6v7.1ZM11.4 4.3 21 3v8.6h-9.6V4.3Z"/></svg>
-          Download for Windows
-        </a>
-        <a class="btn line" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg>
-          Get the Android APK
-        </a>
-      </div>
-    </section>
+<main class="shell" id="top">
+  <section class="hero">
+    <h1>Pick the quota your games come out of.</h1>
+    <p class="lead">Every session carries a server name from the package you chose, so games and streams bill to Gamerz or Streamerz instead of your general quota.</p>
+    <div class="act">
+      <a class="btn fill lg dl-win" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v7.1H3V5.5Zm0 13 7.2 1v-7H3v6Zm8.4 1.2L21 21V12.6h-9.6v7.1ZM11.4 4.3 21 3v8.6h-9.6V4.3Z"/></svg>
+        Download for Windows
+      </a>
+      <a class="btn line lg" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg>
+        Get the Android APK
+      </a>
+    </div>
+    <p class="meta" id="dlMeta">17 MB, setup for Windows 10 and 11</p>
+    <ul class="points">
+      <li><b>Gamerz or Streamerz.</b> Two packages, two server lists, one decision per session.</li>
+      <li><b>Voice chat, when your region blocks it.</b> One switch moves the voice traffic and leaves your match direct.</li>
+      <li><b>Three transports.</b> Standard keeps it. The other two spend general quota.</li>
+    </ul>
+  </section>
 
-    <section class="build" id="windows">
+  <section class="build rv" id="windows">
+    <div class="head">
       <h2>The Windows build, live. <span>Press anything, it is the shipped app.</span></h2>
-      <div class="frame">
-        <div class="stage" id="winBody">
-          <iframe id="appFrame" src="demo-frame.html?src=app/index.html&amp;n=win" title="QuotaVPN for Windows, live interactive demo"></iframe>
-          <img class="still" src="assets/app-home.png" alt="QuotaVPN for Windows" width="2644" height="1744" loading="lazy">
-        </div>
+    </div>
+    <div class="frame">
+      <div class="stage" id="winBody">
+        <iframe id="appFrame" src="demo-frame.html?src=app/index.html&amp;n=win" title="QuotaVPN for Windows, live interactive demo"></iframe>
+        <img class="still" src="assets/app-home.png" alt="QuotaVPN for Windows" width="2644" height="1744" loading="lazy">
       </div>
+    </div>
+    <div class="under">
       <a class="open" href="app/index.html" target="_blank" rel="noopener">Open full screen</a>
-    </section>
+    </div>
+  </section>
 
-    <section class="build" id="android">
+  <section class="build rv" id="android">
+    <div class="head">
       <h2>The Android build. <span>Same app, same theme, same two packages.</span></h2>
-      <div class="phone-row">
-        <div class="phone">
-          <div class="phone-shell">
-            <div class="phone-screen" id="phoneScreen">
-              <iframe id="phoneFrame" src="demo-frame.html?src=phone/index.html&amp;n=phone" title="QuotaVPN for Android, live interactive demo"></iframe>
-            </div>
+    </div>
+    <div class="phone-row">
+      <div class="phone">
+        <div class="phone-shell">
+          <div class="phone-screen" id="phoneScreen">
+            <iframe id="phoneFrame" src="demo-frame.html?src=phone/index.html&amp;n=phone" title="QuotaVPN for Android, live interactive demo"></iframe>
           </div>
         </div>
-        <div class="phone-note">
-          <ul>
-            <li><b>One circle runs the session.</b> Grey idle, blue working, green live.</li>
-            <li><b>Speed test, per-app routing,</b> both packages, Always-on VPN.</li>
-            <li><b>It updates itself</b> from inside the app.</li>
-          </ul>
-          <a class="btn line" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg>
-            Get the Android APK
-          </a>
-        </div>
       </div>
-    </section>
-
-    <section class="close">
-      <p>Free and open source, MIT licensed. No account, no sign up, no server to configure.</p>
-      <div class="act">
-        <a class="btn fill" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v7.1H3V5.5Zm0 13 7.2 1v-7H3v6Zm8.4 1.2L21 21V12.6h-9.6v7.1ZM11.4 4.3 21 3v8.6h-9.6V4.3Z"/></svg>
-          Download for Windows
-        </a>
-        <a class="btn line" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk">
+      <div class="phone-copy">
+        <ul>
+          <li><b>One circle runs the session.</b> Grey idle, blue working, green live.</li>
+          <li><b>Speed test on your own route.</b> Ping, jitter, download, upload.</li>
+          <li><b>Per-app routing and Always-on VPN,</b> and it updates itself from inside.</li>
+        </ul>
+        <a class="btn line dl-apk" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg>
           Get the Android APK
         </a>
       </div>
-    </section>
-  </main>
+    </div>
+  </section>
 
+  <section class="close">
+    <p>Free and open source, MIT licensed. No account, no sign up, no server to configure.</p>
+    <div class="act">
+      <a class="btn fill dl-win" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v7.1H3V5.5Zm0 13 7.2 1v-7H3v6Zm8.4 1.2L21 21V12.6h-9.6v7.1ZM11.4 4.3 21 3v8.6h-9.6V4.3Z"/></svg>
+        Download for Windows
+      </a>
+      <a class="btn line dl-apk" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg>
+        Get the Android APK
+      </a>
+    </div>
+  </section>
+</main>
+
+<div class="shell">
   <footer>
     <div class="in">
-      <span>QuotaVPN</span>
+      <span class="brand"><img src="assets/icon.png" alt="" width="22" height="22"><span>QuotaVPN</span></span>
       <span class="sp"></span>
       <a href="https://github.com/YousefMohiey/QuotaVPN">Source on GitHub</a>
       <a href="https://github.com/YousefMohiey/QuotaVPN/releases">Releases</a>
@@ -290,43 +314,83 @@
 </div>
 
 <script>
-/* The version chip reads the live release, cached for ten minutes. */
+/* One call drives the whole page: the version chip, the structured data, and
+   every Windows button. The installer asset carries the version in its name,
+   so the buttons are rewritten to the URL the API just handed us instead of
+   sending anyone through the releases page. Cached for ten minutes. */
 (function(){
   var TTL = 10 * 60 * 1000;
-  function put(v){
-    var el = document.getElementById('ver'); if(el) el.textContent = v;
-    var sc = document.getElementById('app-schema');
-    if(sc && sc.textContent){
-      sc.textContent = sc.textContent.replace(/"softwareVersion":\s*"[^"]*"/, '"softwareVersion": "' + v.replace(/^v/i,'') + '"');
+  var FALLBACK = 'https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.3.5/QuotaVPN_0.3.5_x64-setup.exe';
+  function mb(n){ return Math.round(n / 1048576) + ' MB'; }
+  function apply(d){
+    var tag = d && d.tag_name ? 'v' + String(d.tag_name).replace(/^v/i, '') : null;
+    if(tag){
+      var chip = document.getElementById('ver'); if(chip) chip.textContent = tag;
+      var sc = document.getElementById('app-schema');
+      if(sc && sc.textContent){
+        sc.textContent = sc.textContent.replace(/"softwareVersion":\s*"[^"]*"/, '"softwareVersion": "' + tag.replace(/^v/i, '') + '"');
+      }
+    }
+    var exe = null, apk = null;
+    (d && d.assets ? d.assets : []).forEach(function(a){
+      if(/-setup\.exe$/i.test(a.name)) exe = a;
+      if(/\.apk$/i.test(a.name)) apk = a;
+    });
+    if(exe){
+      document.querySelectorAll('.dl-win').forEach(function(el){ el.setAttribute('href', exe.browser_download_url); });
+      var meta = document.getElementById('dlMeta');
+      if(meta) meta.textContent = mb(exe.size) + ', setup for Windows 10 and 11';
+    }
+    if(apk){
+      document.querySelectorAll('.dl-apk').forEach(function(el){ el.setAttribute('href', apk.browser_download_url); });
     }
   }
   function cached(){
     try{
-      var raw = localStorage.getItem('qvVer');
+      var raw = localStorage.getItem('qvRel');
       if(!raw) return null;
       var o = JSON.parse(raw);
-      if(o && o.v && (Date.now() - (o.t||0)) < TTL) return o.v;
+      if(o && o.d && (Date.now() - (o.t || 0)) < TTL) return o.d;
     }catch(e){}
     return null;
   }
   var c = cached();
-  if(c){ put(c); }
+  if(c){ apply(c); } else {
+    document.querySelectorAll('.dl-win').forEach(function(el){ el.setAttribute('href', FALLBACK); });
+  }
   fetch('https://api.github.com/repos/YousefMohiey/QuotaVPN/releases/latest', { cache: 'no-store' })
     .then(function(r){ return r.ok ? r.json() : null; })
     .then(function(d){
-      if(d && d.tag_name){
-        var v = 'v' + String(d.tag_name).replace(/^v/i,'');
-        put(v);
-        try{ localStorage.setItem('qvVer', JSON.stringify({ v: v, t: Date.now() })); }catch(e){}
-      }
+      if(!d || !d.tag_name) return;
+      apply(d);
+      try{ localStorage.setItem('qvRel', JSON.stringify({ d: d, t: Date.now() })); }catch(e){}
     })['catch'](function(){});
+
+  /* The header earns its border once the page moves. */
+  var hdr = document.getElementById('hdr');
+  function mark(){ if(hdr) hdr.classList.toggle('stuck', (window.scrollY || 0) > 8); }
+  mark();
+  window.addEventListener('scroll', mark, { passive:true });
 })();
 
-/* Each build lifts its own placeholder once the wrapper has written the app in,
-   so a slow frame never reads as an empty panel. */
+/* The builds rise once as they arrive, and lift their placeholder when the
+   wrapper has written the app in. */
 (function(){
-  var win = document.getElementById('winBody');
-  var phone = document.getElementById('phoneScreen');
+  var reduce = false;
+  try{ reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
+  var blocks = document.querySelectorAll('.rv');
+  if(reduce || !('IntersectionObserver' in window)){
+    blocks.forEach(function(b){ b.classList.add('in'); });
+  } else {
+    var io = new IntersectionObserver(function(list){
+      list.forEach(function(e){
+        if(!e.isIntersecting) return;
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      });
+    }, { rootMargin:'0px 0px -12% 0px', threshold:0.08 });
+    blocks.forEach(function(b){ io.observe(b); });
+  }
   function arm(box, tries){
     var n = 0;
     (function go(){
@@ -336,7 +400,8 @@
       if(++n < (tries || 30)) setTimeout(go, 400);
     })();
   }
-  arm(win); arm(phone);
+  arm(document.getElementById('winBody'));
+  arm(document.getElementById('phoneScreen'));
 })();
 
 /* The phone build hands its vertical drags up here, so a swipe that starts on
