@@ -250,6 +250,7 @@
     .stage{aspect-ratio:2644/1744}
     .stage iframe{display:none}
     .stage .still{display:block}
+    .phone-screen iframe{pointer-events:none}
     .build h2 span{display:block; margin-top:3px}
   }
 </style>
@@ -550,6 +551,33 @@
       window.scrollTo({ top:0, behavior: reduce ? 'auto' : 'smooth' });
     }
   });
+})();
+
+/* On touch the phone frame never takes the pointer, so a swipe that starts
+   anywhere over the demo is the browser's own page scroll, momentum and all.
+   A tap is still meant for the app, so it is mapped into the frame and handed
+   to whatever the app has under that point. */
+(function(){
+  var screen = document.getElementById('phoneScreen');
+  var frame = document.getElementById('phoneFrame');
+  if(!screen || !frame) return;
+  screen.addEventListener('click', function(e){
+    var touch = false;
+    try{ touch = matchMedia('(max-width:760px), (hover:none)').matches; }catch(err){}
+    if(!touch) return;
+    var doc = null;
+    try{ doc = frame.contentDocument; }catch(err){ return; }
+    if(!doc) return;
+    var s = 1;
+    try{ s = parseFloat(getComputedStyle(screen).getPropertyValue('--s')) || 1; }catch(err){}
+    var box = frame.getBoundingClientRect();
+    var x = (e.clientX - box.left) / s, y = (e.clientY - box.top) / s;
+    var el = doc.elementFromPoint(x, y);
+    if(!el) return;
+    el.dispatchEvent(new MouseEvent('click', {
+      bubbles:true, cancelable:true, view:frame.contentWindow, clientX:x, clientY:y
+    }));
+  }, false);
 })();
 
 /* The phone build hands its vertical drags up here, so a swipe that starts on

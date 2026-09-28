@@ -95,44 +95,4 @@
     (document.head || document.documentElement).appendChild(st);
   } catch (e) {}
 
-  // Taps belong to the demo, swipes belong to the page. The browser chains a
-  // drag out of this frame on its own, so the page scroll stays the browser's
-  // own scrolling, momentum and all. If a frame turns out not to chain, the
-  // first real drag tells us and every drag after it is handed up by hand.
-  if (window.parent !== window) {
-    let lastY = null, moved = 0, scripted = false, acc = 0, raf = 0, pageY = 0;
-    const pageTop = () => { try { return window.parent.scrollY || 0; } catch (e) { return null; } };
-    function flush() {
-      raf = 0;
-      if (!acc) return;
-      window.parent.postMessage({ qcScroll: acc }, "*");
-      acc = 0;
-    }
-    document.addEventListener("touchstart", (e) => {
-      if (e.touches.length === 1) {
-        lastY = e.touches[0].clientY;
-        moved = 0; acc = 0;
-        pageY = pageTop();
-      }
-    }, { passive: true });
-    document.addEventListener("touchmove", (e) => {
-      if (lastY === null || e.touches.length !== 1) return;
-      const y = e.touches[0].clientY, dy = y - lastY;
-      lastY = y;
-      moved += Math.abs(dy);
-      if (!scripted) return;              // the browser has this one
-      e.preventDefault();
-      acc -= dy;
-      if (!raf) raf = requestAnimationFrame(flush);
-    }, { passive: false });
-    document.addEventListener("touchend", () => {
-      const before = pageY, after = pageTop();
-      if (!scripted && moved > 60 && before !== null && after !== null && Math.abs(after - before) < 2) {
-        scripted = true;                  // this frame does not chain: we do it
-      }
-      lastY = null;
-      if (raf) { cancelAnimationFrame(raf); raf = 0; }
-      flush();
-    }, { passive: true });
-  }
 })();
