@@ -100,31 +100,37 @@ def hand_drawn_16() -> Image.Image:
     with an open counter, and a 2px blue tail. The tile tone matches the
     larger frames so it reads as the same icon, and the rim keeps the tile
     edge visible on a dark desktop.
+    The ring runs wider than the tile would suggest (outer r 5.5 of an 8px
+    half-frame) with a 6px open counter: Task Manager and Details view show
+    this frame at true size, and a thinner ring with a bigger hole reads
+    there as a faint grey circle. The tail is a chunky 2px diagonal growing
+    out of the ring's lower right so it survives as blue, not smear.
     """
     S = 16
     im = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     px = im.load()
-    tile = (7, 8, 10)
-    rim = (32, 36, 44)
-    top = (48, 54, 66)
+    tile = (13, 15, 19)
+    rim = (44, 48, 60)
+    top = (58, 64, 78)
     white = (240, 242, 246)
-    blue = (19, 98, 229)
+    blue = (25, 110, 235)
     for y in range(S):
         for x in range(S):
             cx, cy = min(x, S - 1 - x), min(y, S - 1 - y)
             if cx + cy <= 1:          # 2px rounded corners
                 continue
             c = rim if (cx == 0 or cy == 0) else tile
-            if y == 1 and 3 <= x <= 12:
+            if y == 1 and 2 <= x <= 13:
                 c = top
             px[x, y] = (*c, 255)
     for y in range(S):
         for x in range(S):
             dx, dy = x - 7.5, y - 7.5
             r = (dx * dx + dy * dy) ** 0.5
-            if 3.6 <= r <= 5.3:
+            if 3.2 <= r <= 5.5:
                 px[x, y] = (*white, 255)
-    for x, y in [(10, 10), (11, 10), (11, 11), (12, 11), (12, 12), (13, 12)]:
+    for x, y in [(10, 10), (11, 10), (10, 11), (11, 11), (12, 11),
+                 (11, 12), (12, 12), (13, 12), (12, 13), (13, 13)]:
         px[x, y] = (*blue, 255)
     return im
 
