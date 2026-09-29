@@ -41,9 +41,9 @@ Your ISP classifies a connection from the TLS handshake at its start, and that i
 
 ## Screenshots
 
-| Connected | Speed test | Profiles |
-|---|---|---|
-| ![Windows app, connected](assets/app-home.png) | ![Speed screen](assets/app-speed.png) | ![Profile tiles](assets/app-valorant.png) |
+| Connected | Speed test | Profiles | Arabic |
+|---|---|---|---|
+| ![Windows app, connected](assets/app-home.png) | ![Speed screen](assets/app-speed.png) | ![Profile tiles](assets/app-valorant.png) | ![Arabic interface](assets/app-arabic.png) |
 
 One tap connects. The profile tiles pick the quota class, the Server row picks the address, and the session counters run while you are on.
 
@@ -74,25 +74,30 @@ Open these on the instance subnet's security list (the list attached to that sub
 | In | UDP | 51820 | WireGuard |
 | In | UDP | 53 | WireGuard fallback |
 
-Point a DuckDNS (or any) name at the box and refresh it on a cron; the app resolves it on every connect. SSH stays key-only, and the day-to-day key is restricted to adding, revoking and listing clients.
+Point a DuckDNS (or any) name at the box and refresh it on a cron; the app resolves it on every connect. SSH stays key-only, and the key the apps carry runs through a forced command that can only register a device, revoke a device, manage its WireGuard peers and hand it its transport credentials. It cannot open a shell.
 
 ## Project layout
 
-- `desktop/ui-next/` - Windows UI (React 19 + Tailwind v4, EN + AR, the glass theme)
+- `desktop/ui-next/` - Windows UI (React 19 + Tailwind v4, EN + AR, the app dark theme)
 - `desktop/src-tauri/` - Windows backend: whole-PC sing-box + wintun engine, live process list, tray, updater
 - `android/tauri-app/` - Android app: the shared Rust core with the phone UI
 - `android/tauri-plugin-qctunnel/` - Kotlin `VpnService`, libbox engine, Quick Settings tile, per-app picker
 - `src/` - Rust core shared by both apps
 - `embed/` - server scripts plus the restricted agent key (`*.pem` is gitignored, never committed)
-- `docs/` - handoff, architecture, status
+- `docs/` - the published site (quotavpn.app): the landing page and the two live demos
+- `notes/` - handoff, architecture and status: the long-form documentation
+- `tools/` - build and release scripts (APK, site sync, publishing)
+- `assets/` - README and site artwork
 
-Building needs Rust stable and Node; the APK additionally needs Android SDK 35, NDK 28 and JDK 23. Windows release: `npm run build` in `desktop/ui-next` then a Tauri build with the signing env; Android release: `bash tools/build-apk.sh` (see `docs/HANDOFF.md`). No tokens or passwords live in this repo; the DuckDNS token lives only in the server crontab.
+Building needs Rust stable and Node; the APK additionally needs Android SDK 36, NDK 28 and JDK 23. Windows release: `npm run build` in `desktop/ui-next` then a Tauri build with the signing env; Android release: `bash tools/build-apk.sh` (see `notes/HANDOFF.md`). No tokens or passwords live in this repo; the DuckDNS token lives only in the server crontab.
 
 ## Docs
 
-- `docs/HANDOFF.md` - the full system map: flows, code map, build and release, traps
-- `docs/ARCHITECTURE.md` - how it is built, file by file
-- `docs/STATUS.md` - what works, known issues, roadmap
+- `notes/HANDOFF.md` - the full system map: flows, code map, build and release, traps
+- `notes/ARCHITECTURE.md` - how it is built, file by file
+- `notes/STATUS.md` - what works, known issues, roadmap
+- `AGENTS.md` - the short working rules, for contributors and AI assistants
+- `SECURITY.md` - how to report a vulnerability privately
 
 ## License
 

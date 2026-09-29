@@ -1,6 +1,6 @@
 # QuotaVPN handoff
 
-Read this first, then `docs/STATUS.md` for the live state and `AGENTS.md` for the short
+Read this first, then `notes/STATUS.md` for the live state and `AGENTS.md` for the short
 version of the working rules. This document is the long version: what the product is, how
 the pieces talk to each other, where everything lives, how to build and verify each target,
 and every trap already paid for once.
@@ -151,7 +151,7 @@ server (`/speed/down`, `/speed/up`) plus public ping targets.
 - Release tooling lives **outside** the repo, in `C:/Tools/qc-tools/` on the owner's build
   machine (publish script, UI audit scripts, screenshot drivers). If you clone this repo
   elsewhere, that tooling will not be there; the release can still be done by hand with `gh`.
-- `docs/ARCHITECTURE.md` and `docs/STATUS.md`: older but still accurate summaries; this file is
+- `notes/ARCHITECTURE.md` and `notes/STATUS.md`: older but still accurate summaries; this file is
   the entry point.
 
 ## 5. Config and secrets

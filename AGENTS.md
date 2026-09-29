@@ -1,7 +1,7 @@
 # QuotaVPN - notes for coding agents
 
 The long-form handoff (system map, flows, code map, build and release, traps) is in
-`docs/HANDOFF.md`. Read it before changing anything structural.
+`notes/HANDOFF.md`. Read it before changing anything structural.
 
 A VPN client for Windows and Android that routes per-app and per-quota traffic
 through a personal Xray/VLESS server. Both apps carry all three transports:
@@ -86,4 +86,4 @@ one desktop shortcut, named QuotaVPN, removing leftovers from older installs eve
 (user and shared desktops, both start menus) on install and update, and the finish page no
 longer asks about creating a shortcut. The app is unchanged from 0.3.1 (AmneziaWG WireGuard,
 disconnect fix, live speed test, stripped binary). Windows UI is the React app in
-`desktop/ui-next`; the phone still runs the vanilla UI. `docs/STATUS.md` has the details.
+`desktop/ui-next`; the phone still runs the vanilla UI. `notes/STATUS.md` has the details.
