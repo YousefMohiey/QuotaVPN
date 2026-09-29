@@ -309,7 +309,6 @@
       <a href="#how">How it works</a>
       <a href="#windows">Windows</a>
       <a href="#android">Android</a>
-      <a href="#server">Server</a>
       <a href="https://github.com/YousefMohiey/QuotaVPN">GitHub</a>
     </nav>
     <a class="btn line sm cta dl-win" id="hdrCta" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest">
@@ -412,34 +411,6 @@
     </div>
   </section>
 
-  <section class="build rv" id="server">
-    <div class="head">
-      <h2>Run your own server.</h2>
-    </div>
-    <div class="band-copy">
-      <ul>
-        <li><b>Ubuntu 22.04 or newer.</b> An Oracle Always Free instance is enough.</li>
-        <li><b>Two scripts do the work.</b> <code>qc-fresh.sh</code> installs Xray on TCP 443 plus the restricted agent key; <code>qc-net.sh</code> adds Hysteria2 on UDP 443 and WireGuard on UDP 51820, with a UDP 53 redirect for ISPs that filter the default port.</li>
-        <li><b>One name.</b> Point a DuckDNS (or any) name at the box; the app resolves it on every connect. SSH stays key-only.</li>
-      </ul>
-      <p>Scripts live in <a class="u" href="https://github.com/YousefMohiey/QuotaVPN/tree/master/embed">embed/</a>. The full sequence, traps included, is in <a class="u" href="https://github.com/YousefMohiey/QuotaVPN/blob/master/notes/HANDOFF.md">notes/HANDOFF.md</a>.</p>
-    </div>
-  </section>
-
-  <section class="build rv" id="safety">
-    <div class="head">
-      <h2>Safety, plainly.</h2>
-    </div>
-    <div class="band-copy">
-      <ul>
-        <li><b>Open source.</b> This repository is what the published builds come from; no credentials, tokens or private keys live in it.</li>
-        <li><b>A key that cannot open a shell.</b> The key inside the apps runs through a forced command: register a device, revoke a device, manage its WireGuard peers, hand it credentials. Nothing else.</li>
-        <li><b>Signed Windows updates.</b> The app verifies the release signature before installing.</li>
-      </ul>
-      <p>Limits, stated the same way: installers are unsigned, so expect the SmartScreen warning on first run; and Connected means the tunnel device is up, not that the handshake was verified. Details in <a class="u" href="https://github.com/YousefMohiey/QuotaVPN/blob/master/SECURITY.md">SECURITY.md</a>.</p>
-    </div>
-  </section>
-
   <section class="close">
     <p class="ready">Ready when you are.</p>
     <button class="magnet" id="goDl" type="button" aria-label="Take me up to the download">
@@ -460,7 +431,6 @@
       <a href="https://github.com/YousefMohiey/QuotaVPN">Source on GitHub</a>
       <a href="https://github.com/YousefMohiey/QuotaVPN/releases">Releases</a>
       <a href="https://github.com/YousefMohiey/QuotaVPN/blob/master/SECURITY.md">Security</a>
-      <a href="https://github.com/YousefMohiey/QuotaVPN/blob/master/notes/HANDOFF.md">Server docs</a>
       <a href="https://github.com/YousefMohiey/QuotaVPN/blob/master/LICENSE">MIT licensed</a>
     </div>
   </footer>
