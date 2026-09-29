@@ -1,55 +1,61 @@
 ![QuotaVPN](assets/banner.svg?v=6)
 
-# QuotaVPN
+<h1 align="center">QuotaVPN</h1>
 
-A personal VPN for Windows and Android that makes your traffic ride the data package you pick: gaming, streaming, or your general quota.
+<p align="center">Windows and Android. Point a connection at the data package you paid for, and watch it bill there.</p>
 
-[![Latest release](https://img.shields.io/github/v/release/YousefMohiey/QuotaVPN?color=5cb28e&labelColor=0b0f18)](https://github.com/YousefMohiey/QuotaVPN/releases/latest)
-![Windows 10 / 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0b0f18?logo=windows&logoColor=white)
-![Android](https://img.shields.io/badge/Android-0b0f18?logo=android&logoColor=3ddc84)
-![UI: English + Arabic](https://img.shields.io/badge/UI-English%20%2B%20Arabic-0b0f18)
-![License: MIT](https://img.shields.io/badge/license-MIT-0b0f18)
+<p align="center">
+  <a href="https://github.com/YousefMohiey/QuotaVPN/releases/latest"><b>Download</b></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://quotavpn.app/">Website</a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://quotavpn.app/app/">Windows demo</a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://quotavpn.app/phone/">Android demo</a>
+</p>
 
-**Website:** https://quotavpn.app/ **Download:** [latest release](https://github.com/YousefMohiey/QuotaVPN/releases/latest)
+<p align="center">
+  <a href="https://github.com/YousefMohiey/QuotaVPN/releases/latest"><img src="https://img.shields.io/github/v/release/YousefMohiey/QuotaVPN?color=5cb28e&labelColor=0b0f18" alt="Latest release"></a>
+  <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0b0f18?logo=windows&logoColor=white" alt="Windows 10 and 11">
+  <img src="https://img.shields.io/badge/Android-0b0f18?logo=android&logoColor=3ddc84" alt="Android">
+  <img src="https://img.shields.io/badge/UI-English%20%2B%20Arabic-0b0f18" alt="English and Arabic">
+  <img src="https://img.shields.io/badge/license-MIT-0b0f18" alt="MIT license">
+</p>
 
-## The problem it solves
+## Why it exists
 
-Your ISP decides which quota a connection bills to by reading the server name in the TLS handshake, at the very start of the connection. QuotaVPN puts the server name of the package you chose into that handshake, so the session bills where you want it: your gaming package, your streaming package, or the general pool.
+Your ISP decides which quota a connection bills to by reading the server name in the TLS handshake, at the very start of the connection. QuotaVPN puts the server name of the package you chose into that handshake, so the session bills where you want it: your gaming package, your streaming package, or the general pool. That is the whole idea.
 
-## What you get
+## Install
 
-- **Two packages, Gamerz and Streamerz.** Each carries its own server list (EA, Riot, Steam, YouTube, Meta, Prime Video and more) plus any custom server you add.
-- **Three transports, labelled honestly.** Standard keeps the package quota; WireGuard and Hysteria2 spend general quota and are your raw-speed options.
-- **Per-app routing**, on both platforms: whole device, only these apps, or everything except them.
-- **Speed screen** with ping, download and upload against the server, plus history.
+| | File | Notes |
+|---|---|---|
+| **Windows 10 / 11** | `QuotaVPN_<version>_x64-setup.exe` | Installs for the current user, no admin rights. Updates itself from then on. |
+| **Android** | `QuotaVPN-mobile-signed.apk` | Sideload once. Updates itself from the same releases page. |
+
+Both come from the [latest release](https://github.com/YousefMohiey/QuotaVPN/releases/latest). If you would rather look before installing, the website runs both interfaces live, built from the same source: [the Windows build](https://quotavpn.app/app/) and [the Android build](https://quotavpn.app/phone/). Nothing is routed and nothing is installed.
+
+The installers are not code-signed yet, so Windows SmartScreen will warn about an unknown publisher the first time. Pick **More info**, then **Run anyway**. Everything that warning is about is auditable, because this repository is the source the builds came from.
+
+## The app
+
+- **Two packages, Gamerz and Streamerz.** Each carries its own server list (EA, Riot, Steam, YouTube, Meta, Prime Video and more) plus any custom name you add.
+- **Three transports, labelled honestly.** Standard keeps the package quota; WireGuard and Hysteria2 spend general quota and are the raw-speed options.
+- **Per-app routing** on both platforms: the whole device, only these apps, or everything except them.
+- **A speed screen** with ping, download and upload against the server, and history.
 - **English and Arabic** in both apps. The layout keeps its shape; nothing mirrors.
-- **Signed self-updates.** The app downloads the signed installer and applies it for you.
+- **Signed self-updates.** The app fetches the signed installer and applies it for you.
 
-## Download
+## Screens
 
-| Platform | File | Notes |
-|----------|------|-------|
-| Windows 10/11 | `QuotaVPN_<version>_x64-setup.exe` | Installs for the current user, no admin rights. Updates itself afterwards. |
-| Android | `QuotaVPN-mobile-signed.apk` | Sideload once. Updates itself from the same releases page. |
-
-The installers are not code-signed, so Windows SmartScreen warns about an unknown publisher the first time you run one: pick **More info**, then **Run anyway**. Everything that warning is about is auditable, because this repository is the source those builds came from.
-
-## Try it without installing
-
-The website runs both interfaces live, built from the same source the apps ship:
-
-- Windows interface: https://quotavpn.app/app/
-- Android interface: https://quotavpn.app/phone/
-
-Press connect, move between screens, run a speed test. Nothing is routed and nothing is installed.
-
-## Screenshots
-
-| Connected | Speed test | Profiles | Arabic |
+| Connected | Valorant voice chat | Server list | Arabic |
 |---|---|---|---|
-| ![Windows app, connected](assets/app-home.png) | ![Speed screen](assets/app-speed.png) | ![Profile tiles](assets/app-valorant.png) | ![Arabic interface](assets/app-arabic.png) |
+| ![The home screen, connected](assets/app-home.png) | ![The Valorant voice chat helper](assets/app-valorant-voice.png) | ![The server list](assets/app-servers.png) | ![The Arabic interface](assets/app-arabic.png) |
 
-## How traffic counts
+## Details
+
+<details>
+<summary><b>How each transport counts</b></summary>
 
 | Mode | Transport | Counts from |
 |------|-----------|-------------|
@@ -57,9 +63,12 @@ Press connect, move between screens, run a speed test. Nothing is routed and not
 | WireGuard | Raw UDP, no TLS handshake | General quota |
 | Hysteria2 | UDP 443 with the same server name | General quota (ISPs read the name off TCP only) |
 
-The engine is sing-box: on Windows it runs with wintun inside the app, on Android it runs through `VpnService` with libbox. Traffic goes through the tunnel or nowhere.
+The engine is sing-box: on Windows it runs with wintun inside the app, on Android through `VpnService` with libbox. Traffic goes through the tunnel or nowhere.
 
-## Self-hosting the server
+</details>
+
+<details>
+<summary><b>Run your own server</b></summary>
 
 You bring Ubuntu 22.04 or newer (an Oracle Always Free instance is enough). Two scripts in `embed/`:
 
@@ -78,7 +87,10 @@ Open these on the security list of the instance's own subnet:
 
 Point a DuckDNS (or any) name at the box and refresh it from a cron; the app resolves it on every connect. SSH stays key-only, and the key the apps carry runs through a forced command that can only register a device, revoke a device, manage its WireGuard peers, and hand it its transport credentials. It cannot open a shell.
 
-## Project layout
+</details>
+
+<details>
+<summary><b>Repository map</b></summary>
 
 - `desktop/ui-next/` the Windows UI (React 19 + Tailwind v4, English and Arabic)
 - `desktop/src-tauri/` the Windows backend: whole-device sing-box with wintun, process list, tray, updater
@@ -88,24 +100,24 @@ Point a DuckDNS (or any) name at the box and refresh it from a cron; the app res
 - `embed/` the server scripts and the agent (`*.pem` is gitignored and never committed)
 - `docs/` the published site: the landing page and the two live demos
 - `notes/` the long-form documentation
-- `tools/` build and release scripts
-- `assets/` README and site artwork
+- `tools/` the build and release scripts
 
-## Build from source
+</details>
 
-Rust stable and Node are enough for the desktop. The APK also needs Android SDK 36, NDK 28 and JDK 23.
+<details>
+<summary><b>Build from source</b></summary>
+
+Rust stable and Node cover the desktop build; the APK also needs Android SDK 36, NDK 28 and JDK 23.
 
 - Windows: `npm run build` in `desktop/ui-next`, then a Tauri build with the signing environment set.
 - Android: `bash tools/build-apk.sh`.
-- A full release, both platforms and the published site: `notes/HANDOFF.md` has the sequence.
+- A full release across both platforms and the site: `notes/HANDOFF.md` has the sequence.
 
-## Documentation
+</details>
 
-- `notes/HANDOFF.md` the full system map: flows, code map, build and release, traps
-- `notes/ARCHITECTURE.md` how it is built, file by file
-- `notes/STATUS.md` what works, known issues, roadmap
-- `AGENTS.md` the short working rules, for contributors and AI assistants
-- `SECURITY.md` how to report a vulnerability privately
+## Docs
+
+[`notes/HANDOFF.md`](notes/HANDOFF.md) the full system map, [`notes/ARCHITECTURE.md`](notes/ARCHITECTURE.md) file by file, [`notes/STATUS.md`](notes/STATUS.md) what works and what comes next, [`AGENTS.md`](AGENTS.md) the working rules, [`SECURITY.md`](SECURITY.md) how to report a vulnerability privately.
 
 ## License
 
