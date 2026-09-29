@@ -2,8 +2,11 @@
 """Regenerate every QuotaCards app icon from the single master art.
 
 Source of truth: res/app-icon-src.png (1254x1254).
+The exe icon is set by Tauri from desktop/src-tauri/icons/icon.ico at bundle
+time: nothing else may embed an icon into the exe, or Explorer reads the
+wrong icon group and shows a pixelated icon.
 Outputs:
-  res/app-icon.ico                      (embedded into the exe by build.rs / windres)
+  res/app-icon.ico                      (kept for tooling; not linked into the exe)
   desktop/src-tauri/icons/{icon.ico,32x32.png,128x128.png,128x128@2x.png,icon.png}
   android/tauri-app/src-tauri/icons/{icon.ico,icon.png}
   res/icon16.png res/icon32.png res/icon48.png res/icon256.png

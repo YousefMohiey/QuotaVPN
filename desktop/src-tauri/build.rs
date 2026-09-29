@@ -1,6 +1,10 @@
 //! Desktop build: Tauri codegen plus the Windows UAC manifest (TUN mode
-//! needs admin) and app icon, embedded with windres. Degrades to a
-//! warning, never a build failure, if no resource compiler is found.
+//! needs admin), embedded with windres. The exe icon is NOT embedded here:
+//! Tauri sets it from icons/icon.ico at bundle time, and a second embedded
+//! copy creates a second icon group whose entries no longer match the icon
+//! data, which is exactly how Explorer ends up showing a pixelated icon.
+//! Degrades to a warning, never a build failure, if no resource compiler
+//! is found.
 use std::{env, fs, path::PathBuf};
 
 fn main() {
@@ -43,13 +47,7 @@ fn main() {
     let mf = root.join("res").join("quotacards.manifest");
     // forward slashes: backslashes would parse as escapes inside the .rc
     let mf_res = mf.to_string_lossy().replace('\\', "/");
-    let icon = root.join("res").join("app-icon.ico");
-    let icon_res = icon.to_string_lossy().replace('\\', "/");
-    fs::write(
-        &rc,
-        format!("1 RT_MANIFEST \"{mf_res}\"\nIDI_ICON1 ICON \"{icon_res}\"\n"),
-    )
-    .unwrap();
+    fs::write(&rc, format!("1 RT_MANIFEST \"{mf_res}\"\n")).unwrap();
     let windres = ["windres.exe", "x86_64-w64-mingw32-windres.exe"]
         .into_iter()
         .find(|w| std::process::Command::new(w).arg("--version").output().is_ok())
@@ -115,5 +113,4 @@ fn main() {
         None => println!("cargo:warning=windres not found; building without admin manifest"),
     }
     println!("cargo:rerun-if-changed=../../res/quotacards.manifest");
-    println!("cargo:rerun-if-changed=../../res/app-icon.ico");
 }
