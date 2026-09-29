@@ -21,3 +21,6 @@ __pycache__/
 .env
 .env.*
 !.env.example
+
+# editor and agent tooling, never part of the app
+.clawhub/
