@@ -859,7 +859,7 @@ function openSheet(which) {
       }));
     }
     for (const s of spPool.slice(0, 12)) {
-      if (s.id === "own") continue;
+      if (s.id === "own" || s.id === "cloudflare") continue;
       list.append(optRow(s.label + " · " + s.host, s.detail, cur === s.id, () => {
         spChoose = s.id;
         try { localStorage.setItem("qc-speed-target", s.id); } catch (e) {}
@@ -1216,23 +1216,19 @@ async function spLoadPool() {
 async function spPickFastest(pool) {
   const shortlist = pool.slice(0, 9);
   if (shortlist.length <= 1) return pool[0] || SP_CF;
-  const reach = await Promise.all(
-    shortlist.map((s) => call("speed_latency", { url: s.ping, probes: 1 })
-      .then((r) => Array.isArray(r) && r.length > 0)
-      .catch(() => false)),
-  );
-  let cands = shortlist.filter((_, i) => reach[i]);
-  if (!cands.length) cands = [SP_CF];
+  // One latency round: unreachable servers come back null and drop out here,
+  // so a run starts after one round of probes, not two.
   const times = await Promise.all(
-    cands.map((s) => call("speed_latency", { url: s.ping, probes: 1 })
+    shortlist.map((s) => call("speed_latency", { url: s.ping, probes: 1 })
       .then((r) => (Array.isArray(r) && r.length ? Math.min.apply(null, r) : null))
       .catch(() => null)),
   );
-  let best = cands[0];
-  let bestMs = Infinity;
-  cands.forEach((s, i) => {
-    const ms = times[i];
-    if (ms !== null && ms < bestMs) { best = s; bestMs = ms; }
+  const ranked = shortlist.map((s, i) => ({ s, ms: times[i] })).filter((o) => o.ms !== null);
+  if (!ranked.length) ranked.push({ s: SP_CF, ms: null });
+  let best = ranked[0].s;
+  let bestMs = ranked[0].ms === null ? Infinity : ranked[0].ms;
+  ranked.forEach((o) => {
+    if (o.ms !== null && o.ms < bestMs) { best = o.s; bestMs = o.ms; }
   });
   // A server can answer a ping and still serve nothing (an empty body or a
   // wall), which would leave the run at zero. Prove bytes before trusting it,
@@ -1261,8 +1257,8 @@ function spTargetDef() {
   if (spChoose === "own") { const own = spOwnServer(); if (own) return own; }
   return SP_CF;
 }
-function spTargetLabel() { return spSim() ? t("cfName") : spTargetDef().label; }
-function spTargetNote() { return spSim() ? t("srvPublic") : (spTargetDef().detail || ""); }
+function spTargetLabel() { const d = spTargetDef(); return (spSim() || d.id === "cloudflare") ? t("srvAuto") : d.label; }
+function spTargetNote() { const d = spTargetDef(); return (spSim() || d.id === "cloudflare") ? t("srvAutoNote") : (d.detail || ""); }
 /// Load the pool and pick, the way the desktop does on open and on refresh.
 async function spRefreshTarget() {
   if (spSim() || spPicking) return;
@@ -1307,7 +1303,7 @@ function spPaintBars() {
   }
   const tail = spSamples.slice(-SP_BARS);
   const view = tail.length >= SP_BARS ? tail : tail.concat(new Array(SP_BARS - tail.length).fill(0));
-  const max = Math.max(1, ...view);
+  const max = Math.max(1, spPeak, ...view);
   const accent = spPhase === "upload" ? "var(--green)" : spPhase === "ping" ? "var(--amber)" : "var(--accent)";
   for (let i = 0; i < SP_BARS; i++) {
     const v = view[i] || 0;
@@ -1366,12 +1362,12 @@ function spPaintTarget() {
   const el = $("sp-target");
   if (el) el.textContent = spTargetLabel();
   const host = $("sp-host");
-  if (host) host.textContent = d.host || t("findingServer");
+  if (host) host.textContent = d.id === "cloudflare" ? "" : (d.host || t("findingServer"));
   const note = $("sp-note");
   if (note) note.textContent = spTargetNote();
   const sub = $("sp-sub");
   if (sub) {
-    try { sub.textContent = activeKind() + " · " + (d.host || "-"); } catch (e) { sub.textContent = d.host || "-"; }
+    try { sub.textContent = activeKind() + ((d.id === "cloudflare" || !d.host) ? "" : " · " + d.host); } catch (e) { sub.textContent = (d.id === "cloudflare" || !d.host) ? "-" : d.host; }
   }
 }
 
@@ -1431,7 +1427,7 @@ async function spSimPhase(peak, seconds, signal) {
   let best = 0;
   for (let i = 0; i < steps && !signal.aborted; i++) {
     const p = i / steps;
-    const v = peak * (1 - Math.exp(-6 * p)) * (1 - 0.08 * Math.sin(p * 22));
+    const v = peak * (1 - Math.exp(-3 * p)) * (1 - 0.10 * Math.sin(p * 22) - 0.04 * Math.sin(p * 57));
     if (v > best) best = v;
     spPush(v);
     await spSleep(120);
@@ -1550,7 +1546,7 @@ async function spRunPhase(which, signal, target) {
   spGateAt = 0;
   spPaintReadout();
 
-  const SLICES = 15;
+  const SLICES = 12;
   const SLICE_S = 0.6;
   let bytes = 0;
   let secs = 0;
@@ -1671,7 +1667,8 @@ document.querySelectorAll(".sstat").forEach((b) => {
 try {
   const saved = localStorage.getItem("qc-speed-target");
   if (saved) spChoose = saved;
-  if (spChoose === "own" || spChoose === "cloudflare") spTarget = spFindInPool(spChoose);
+  if (spChoose === "cloudflare") spChoose = "auto";
+  if (spChoose === "own") spTarget = spFindInPool(spChoose);
 } catch (e) {}
 spPaintTarget();
 spPaintReadout();
