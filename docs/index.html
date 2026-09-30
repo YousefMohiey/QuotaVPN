@@ -82,8 +82,8 @@
   /* ------------------------------------------------------------------ header */
   .hdr{position:sticky; top:0; z-index:20; background:rgb(21 27 39 / .82);
     -webkit-backdrop-filter:blur(14px) saturate(140%); backdrop-filter:blur(14px) saturate(140%);
-    border-bottom:1px solid transparent; transition:border-color .25s var(--ease), background .25s var(--ease)}
-  .hdr.stuck{border-bottom-color:var(--line); background:rgb(21 27 39 / .92)}
+    border-bottom:1px solid var(--line); transition:background .25s var(--ease)}
+  .hdr.stuck{background:rgb(21 27 39 / .92)}
   .hdr .in{display:flex; align-items:center; gap:clamp(14px, 2vw, 34px); height:68px}
   .brand{display:flex; align-items:center; gap:11px; flex:none}
   .brand img{width:32px; height:32px; border-radius:9px; display:block}
@@ -155,14 +155,14 @@
   /* Features: the same hairline-row language as How it works, two rows of
      three on desktop so six features read as one grid, not six cards. */
   .feat{margin:0; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:26px clamp(20px, 3vw, 44px)}
-  .feat li{color:var(--txt2); font-size:14px; line-height:1.6; padding-top:16px; border-top:1px solid rgb(255 255 255 / .12)}
+  .feat li{color:var(--txt2); font-size:14px; line-height:1.6}
   .feat .ft{display:flex; align-items:center; gap:10px; color:var(--txt); font-weight:600; font-size:15px; margin-bottom:6px}
   .feat .ft svg{flex:none; color:var(--brand-strong)}
   @media (max-width:1000px){ .feat{grid-template-columns:repeat(2, minmax(0,1fr))} }
   @media (max-width:640px){ .feat{grid-template-columns:minmax(0,1fr); gap:18px} }
 
   /* ------------------------------------------------------------------ builds */
-  .build{padding:clamp(24px, 3vw, 44px) 0; border-top:1px solid var(--line)}
+  .build{padding:clamp(34px, 4.5vw, 64px) 0}
   .build .head{margin-bottom:20px; display:flex; align-items:center; gap:10px 14px; flex-wrap:wrap}
   .build h2{font-size:clamp(18px, 1.6vw, 22px); font-weight:600; letter-spacing:-.012em}
   .build .sub{color:var(--txt3); font-size:14px; margin:-8px 0 22px}
@@ -172,7 +172,7 @@
   /* How it works: three steps, one hairline each, a quiet line joining the
      numbers on desktop so the sequence reads left to right. */
   .steps{margin:0; padding:0; list-style:none; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:28px clamp(20px, 3vw, 44px)}
-  .steps li{color:var(--txt2); font-size:14.5px; line-height:1.6; padding-top:18px; border-top:1px solid rgb(255 255 255 / .12); position:relative}
+  .steps li{color:var(--txt2); font-size:14.5px; line-height:1.6; position:relative}
   .steps b{display:block; color:var(--txt); font-weight:600; font-size:15px; margin-bottom:5px}
   .steps .n{display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px;
     border:1px solid var(--line-strong); border-radius:8px; background:var(--bg);
@@ -232,27 +232,19 @@
   /* Valorant voice chat: two paths, one dashed line joining them. The dash
      drifts on desktop and stands still under reduced motion. */
   .vmark{width:40px; height:40px; border-radius:10px; flex:none}
-  .vpaths{margin-top:22px; max-width:720px; position:relative; display:grid; gap:0}
-  .vpaths::before{content:""; position:absolute; left:11px; top:26px; bottom:26px; width:2px;
-    background-image:linear-gradient(var(--line-strong) 45%, transparent 45%);
-    background-size:2px 8px; animation:drift 1.6s linear infinite}
-  @keyframes drift{to{background-position:0 16px}}
-  .vpath{display:grid; grid-template-columns:150px minmax(0,1fr); gap:18px; align-items:baseline; padding:14px 0 14px 34px; position:relative}
-  .vpath::before{content:""; position:absolute; left:7px; top:22px; width:10px; height:10px; border-radius:50%;
-    background:var(--bg); border:2px solid var(--txt3)}
-  .vpath.via::before{border-color:var(--brand-strong)}
-  .vpath + .vpath{border-top:1px solid var(--line)}
+  .vpaths{margin-top:22px; max-width:720px; position:relative; display:grid; gap:26px}
+  .vpath{display:grid; grid-template-columns:150px minmax(0,1fr); gap:18px; align-items:baseline; position:relative}
   .vtag{display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:var(--txt2); white-space:nowrap}
   .vpath.via .vtag{color:var(--txt)}
   .vpath p{color:var(--txt2); font-size:14.5px; line-height:1.6; margin:0}
   .vpath p b{color:var(--txt); font-weight:600}
   @media (max-width:640px){ .vpath{grid-template-columns:minmax(0,1fr); gap:6px} }
-  @media (prefers-reduced-motion: reduce){ .vpaths::before{animation:none} }
+
 
   /* -------------------------------------------------------------------- foot */
   /* The last thing on the page is the app's own power dial. Press it and it
      takes you up to the download, which is the only place the buttons live. */
-  .close{border-top:1px solid var(--line); padding:clamp(32px, 4vw, 52px) 0 clamp(36px, 4.5vw, 56px);
+  .close{padding:clamp(40px, 5vw, 68px) 0 clamp(44px, 5.5vw, 72px);
     display:flex; flex-direction:column; align-items:center; gap:20px; text-align:center}
   .close p{color:var(--txt2); font-size:15px; max-width:52ch}
   .close .ready{color:var(--txt); font-size:clamp(17px, 1.5vw, 20px); font-weight:600; letter-spacing:-.012em}
@@ -272,7 +264,7 @@
   .nudge{animation:nudge .55s var(--ease) 2}
   @keyframes nudge{0%, 100%{transform:none} 30%{transform:translateY(-4px)} 65%{transform:translateY(1px)}}
   @media (prefers-reduced-motion: reduce){ .nudge{animation:none} }
-  footer{border-top:1px solid var(--line); color:var(--txt3); font-size:13px}
+  footer{color:var(--txt3); font-size:13px}
   footer .in{display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center; padding:22px 0}
   footer a:hover{color:var(--txt)}
   footer .sp{flex:1}
