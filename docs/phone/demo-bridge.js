@@ -67,6 +67,7 @@
       return ok("Card revoked.");
     },
     resolve_host: () => "197.44.211.84",
+    net_info: () => ({ ip: "197.44.211.84", isp: "Demo route", place: "" }),
     check_update: () => ({ current: "0.3.5", latest: "0.3.5", available: false, apk_url: "", url: "#" }),
     apply_update: () => ({}),
   };
@@ -85,6 +86,12 @@
 
   // The demo never runs the first-run coach: it is a tour, not a setup.
   try { if (!localStorage.getItem("qc-coach-done")) localStorage.setItem("qc-coach-done", "1"); } catch (e) {}
+  // The demo opens with Gamerz picked, so the cards, the server row and the
+  // transport note all read real values instead of dashes.
+  try {
+    if (!localStorage.getItem("qc-tunnel-card"))
+      localStorage.setItem("qc-tunnel-card", "11111111-1111-4111-8111-111111111111");
+  } catch (e) {}
 
   // The app's scrollpanes pin their overscroll so the real build cannot pull
   // the system refresh down on top of a running tunnel. Inside this frame that

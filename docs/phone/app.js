@@ -377,7 +377,7 @@ function paintHero() {
   // The IP lives only in the home net rows.
   // Home net row: the IP lives inside the hero, only while connected.
   $("home-ip").textContent = maskHost(serverIp || serverHost);
-  $("home-ipbox").hidden = !vpnOn;
+  $("ip-row").hidden = !vpnOn;
   $("session-line").hidden = !vpnOn;
   if (busy) {
     $("hero-state").textContent = t("working");
@@ -413,10 +413,27 @@ function paintHero() {
   }
 }
 
+let busyWatch = 0;
 function setBusy(b) {
   busy = b;
   for (const id of ["btn-connect"]) $(id).disabled = b;
   paintHero();
+  try { if (busyWatch) clearTimeout(busyWatch); } catch (e) {}
+  busyWatch = 0;
+  if (b) {
+    try {
+      busyWatch = setTimeout(() => {
+        busyWatch = 0;
+        if (busy) {
+          busy = false;
+          for (const id of ["btn-connect"]) $(id).disabled = false;
+          paintHero();
+          paintPresets();
+          bar(false, t("noReply"));
+        }
+      }, 20000);
+    } catch (e) {}
+  }
   // The package buttons mirror the busy state too: without this they stay
   // disabled after any work that runs through refresh() (the load probe did
   // exactly that, and taps on them went nowhere).
@@ -480,15 +497,17 @@ document.querySelectorAll("#presets .preset").forEach((b) => {
 });
 
 // Probe + diagnostics run silently now: no user-facing server tools.
-async function doProbe() {
-  if (busy) return;
-  setBusy(true);
+async function doProbe(owned) {
+  if (!owned) {
+    if (busy) return;
+    setBusy(true);
+  }
   try {
     const r = await call("probe_server");
     connected = r.ok;
     bar(r.ok, r.msg);
     await refresh();
-  } finally { setBusy(false); }
+  } finally { if (!owned) setBusy(false); }
 }
 
 function fillTunnelCards(cards) {
@@ -1044,7 +1063,7 @@ $("btn-connect").onclick = async () => {
     new Promise((r) => setTimeout(r, 350)),
   ]);
   try {
-    if (!connected) await doProbe();
+    if (!connected) await doProbe(true);
     if (!connected) return;
     const r = await call("tunnel_start", {
       uuid,
