@@ -163,6 +163,10 @@
 
   /* ------------------------------------------------------------------ builds */
   .build{padding:clamp(34px, 4.5vw, 64px) 0}
+  .build.tint{background:rgb(255 255 255 / .018); border:1px solid var(--line);
+    border-radius:24px; padding:clamp(28px, 3.5vw, 48px) clamp(20px, 3vw, 44px);
+    margin:clamp(8px, 1.5vw, 18px) 0}
+  @media (max-width:640px){ .build.tint{border-radius:18px} }
   .build .head{margin-bottom:20px; display:flex; align-items:center; gap:10px 14px; flex-wrap:wrap}
   .build h2{font-size:clamp(18px, 1.6vw, 22px); font-weight:600; letter-spacing:-.012em}
   .build .sub{color:var(--txt3); font-size:14px; margin:-8px 0 22px}
@@ -351,7 +355,7 @@
     </div>
   </section>
 
-  <section class="build rv" id="how">
+  <section class="build rv tint" id="how">
     <div class="head">
       <h2>How it works. <span>Three steps, then one honest sentence.</span></h2>
     </div>
@@ -409,7 +413,7 @@
     </div>
   </section>
 
-  <section class="build rv" id="features">
+  <section class="build rv tint" id="features">
     <div class="head">
       <h2>What it does.</h2>
     </div>
@@ -440,7 +444,7 @@
     </div>
   </section>
 
-  <section class="build rv" id="transports">
+  <section class="build rv tint" id="transports">
     <div class="head">
       <h2>Three modes. One keeps the package quota.</h2>
     </div>
