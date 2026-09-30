@@ -1142,7 +1142,8 @@ document.querySelectorAll("svg").forEach((s) => s.setAttribute("aria-hidden", "t
 const SP_HIST = "qc-speed-history";
 const SP_PING_PROBES = 8;
 const SP_PHASE_SECONDS = 9;
-const SP_BARS = 48;
+const SP_NARROW = (() => { try { return matchMedia("(max-width:760px)").matches; } catch (e) { return false; } })();
+const SP_BARS = SP_NARROW ? 28 : 48;
 const SP_SAMPLE_MS = 90;
 let spCtl = null;
 let spSamples = [];
@@ -1340,13 +1341,16 @@ function spPaintBars() {
   const view = tail.length >= SP_BARS ? tail : tail.concat(new Array(SP_BARS - tail.length).fill(0));
   const max = Math.max(1, spPeak, ...view);
   const accent = spPhase === "upload" ? "var(--green)" : spPhase === "ping" ? "var(--amber)" : "var(--accent)";
+  if (box._accent !== accent) {
+    box._accent = accent;
+    for (let i = 0; i < SP_BARS; i++) box.children[i].style.background = accent;
+  }
   for (let i = 0; i < SP_BARS; i++) {
     const v = view[i] || 0;
     const q = v / max;
     const bar = box.children[i];
     bar.style.height = v === 0 ? "2px" : Math.max(8, q * 100) + "%";
-    bar.style.background = "color-mix(in oklab, " + accent + " " + Math.round(18 + q * 62) + "%, rgb(255 255 255 / 0.10))";
-    bar.style.opacity = v === 0 ? "0.28" : (spCtl && i === SP_BARS - 1) ? "1" : "0.92";
+    bar.style.opacity = v === 0 ? "0.28" : (spCtl && i === SP_BARS - 1) ? "1" : (0.55 + q * 0.4).toFixed(2);
   }
 }
 function spPaintTiles() {
