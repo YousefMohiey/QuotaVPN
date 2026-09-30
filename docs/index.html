@@ -232,10 +232,6 @@
   /* Valorant voice chat: two paths side by side, the logo marks it as
      Valorant, and one red mic is the only red on the section. */
   .vmark{width:40px; height:40px; border-radius:10px; flex:none}
-  .vspot{margin-top:clamp(26px, 3.5vw, 40px)}
-  .vspot .vsub{display:flex; align-items:center; gap:12px; margin-bottom:20px}
-  .vspot .vsub img{width:32px; height:32px; border-radius:8px; flex:none}
-  .vspot .vsub span{font-size:16px; font-weight:600; letter-spacing:-.01em}
   .vpaths{margin-top:24px; display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:clamp(24px, 4vw, 56px)}
   .vpath{display:grid; gap:10px; align-content:start}
   .vtag{display:inline-flex; align-items:center; gap:10px; font-size:15px; font-weight:600; color:var(--txt)}
@@ -432,19 +428,6 @@
       <li><div class="ft"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 16V4"/><path d="M7 20l-3-3"/><path d="M7 20l3-3"/><path d="M17 8v12"/><path d="M17 4l-3 3"/><path d="M17 4l3 3"/></svg>Three transports</div>Standard keeps the package quota; WireGuard and Hysteria2 spend general quota.</li>
       <li><div class="ft"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg>Self-updating</div>Windows installs signed releases itself; Android updates from inside the app.</li>
     </ul>
-    <div class="vspot">
-      <div class="vsub"><img src="assets/valorant.png" alt="Valorant" width="32" height="32" loading="lazy"><span>Valorant voice chat, when your region blocks it.</span></div>
-      <div class="vpaths">
-      <div class="vpath">
-        <span class="vtag"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="16" cy="11.5" r=".9"/><circle cx="18.2" cy="13.7" r=".9"/></svg>Match traffic, direct</span>
-        <p>Your game connection stays on its normal route, so your in-game ping stays the same.</p>
-      </div>
-      <div class="vpath via">
-        <span class="vtag"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>Voice traffic, via QuotaVPN</span>
-        <p>One switch moves the voice chat through the VPN so it <b>connects</b>.</p>
-      </div>
-      </div>
-    </div>
   </section>
 
   <section class="build rv tint" id="transports">
@@ -462,6 +445,24 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
         <span>Default traffic. This is the mode that keeps your package quota.</span>
       </p>
+    </div>
+  </section>
+
+
+  <section class="build rv" id="voice">
+    <div class="head">
+      <img class="vmark" src="assets/valorant.png" alt="Valorant" width="40" height="40">
+      <h2>Valorant voice chat, when your region blocks it.</h2>
+    </div>
+    <div class="vpaths">
+    <div class="vpath">
+      <span class="vtag"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="16" cy="11.5" r=".9"/><circle cx="18.2" cy="13.7" r=".9"/></svg>Match traffic, direct</span>
+      <p>Your game connection stays on its normal route, so your in-game ping stays the same.</p>
+    </div>
+    <div class="vpath via">
+      <span class="vtag"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>Voice traffic, via QuotaVPN</span>
+      <p>One switch moves the voice chat through the VPN so it <b>connects</b>.</p>
+    </div>
     </div>
   </section>
 
