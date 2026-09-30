@@ -229,14 +229,13 @@
     .phone-copy{margin:0 auto}
   }
 
-  /* Valorant voice chat: the logo sits on its red badge, the two paths sit
-     side by side, and the voice path carries the Valorant red. */
-  .vmark{width:40px; height:40px; border-radius:10px; flex:none; background:#ff4655; padding:7px}
+  /* Valorant voice chat: two paths side by side, the logo marks it as
+     Valorant, and one red mic is the only red on the section. */
+  .vmark{width:40px; height:40px; border-radius:10px; flex:none}
   .vpaths{margin-top:24px; display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:clamp(24px, 4vw, 56px)}
   .vpath{display:grid; gap:10px; align-content:start}
   .vtag{display:inline-flex; align-items:center; gap:10px; font-size:15px; font-weight:600; color:var(--txt)}
   .vtag svg{flex:none; color:var(--txt3)}
-  .vpath.via .vtag{color:#ff707b}
   .vpath.via .vtag svg{color:#ff707b}
   .vpath p{color:var(--txt2); font-size:14.5px; line-height:1.6; margin:0; max-width:52ch}
   .vpath p b{color:var(--txt); font-weight:600}
