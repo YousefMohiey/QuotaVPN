@@ -1026,10 +1026,12 @@ $("btn-connect").onclick = async () => {
     goTab("apps");
     return;
   }
-  if (!connected) await doProbe();
-  if (!connected) return;
   setBusy(true);
+  $("hero-sub").textContent = t("connecting");
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   try {
+    if (!connected) await doProbe();
+    if (!connected) return;
     const r = await call("tunnel_start", {
       uuid,
       appsMode: appsMode === "all" ? "" : appsMode,
@@ -1322,7 +1324,15 @@ function spPaintTiles() {
   set("sp-down", spPhase === "download" ? (live == null ? "-" : spNum(live, "mbps")) : (spLast.down == null ? "-" : spNum(spLast.down, "mbps")));
   set("sp-up", spPhase === "upload" ? (live == null ? "-" : spNum(live, "mbps")) : (spLast.up == null ? "-" : spNum(spLast.up, "mbps")));
 }
+let spPaintQueued = false;
 function spPaintReadout() {
+  // Samples arrive faster than a phone screen draws; queue one paint per
+  // frame so style writes never land mid-frame, the visible stutter.
+  if (spPaintQueued) return;
+  spPaintQueued = true;
+  requestAnimationFrame(() => { spPaintQueued = false; spPaintNow(); });
+}
+function spPaintNow() {
   const v = spSamples.length ? spSamples[spSamples.length - 1] : 0;
   const val = $("sp-value");
   if (val) val.textContent = spNum(v, spPhase === "ping" ? "ms" : "mbps");
