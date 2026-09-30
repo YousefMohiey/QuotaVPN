@@ -294,6 +294,10 @@
     .stage .still{display:block}
     .phone-screen iframe{pointer-events:none}
     .build h2 span{display:block; margin-top:3px}
+    /* the desktop build needs a wide screen, so its fullscreen link would
+       only open the squeezed layout from the screenshot: touch visitors
+       get the phone demo below instead */
+    #windows .under{display:none}
   }
   /* on a phone the header already offers the APK, so this one would be a
      second copy of the same button in the same screen */
@@ -434,7 +438,7 @@
     <div class="vpaths">
       <div class="vpath">
         <span class="vtag"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="16" cy="11.5" r=".9"/><circle cx="18.2" cy="13.7" r=".9"/></svg>Match traffic, direct</span>
-        <p>Your game connection stays on its normal route, <b>untouched</b>.</p>
+        <p>Your game connection stays on its normal route, so your in-game ping stays the same.</p>
       </div>
       <div class="vpath via">
         <span class="vtag"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>Voice traffic, via QuotaVPN</span>
