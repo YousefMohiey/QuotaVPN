@@ -1028,7 +1028,12 @@ $("btn-connect").onclick = async () => {
   }
   setBusy(true);
   $("hero-sub").textContent = t("connecting");
-  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  // Two frames so the busy state truly paints; the timeout wins in a hidden
+  // tab where animation frames never fire, so the tap can never wedge busy.
+  await Promise.race([
+    new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
+    new Promise((r) => setTimeout(r, 350)),
+  ]);
   try {
     if (!connected) await doProbe();
     if (!connected) return;
