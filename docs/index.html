@@ -175,15 +175,17 @@
   .demo-note{font-size:12px; color:var(--txt3); border:1px solid var(--line); border-radius:999px; padding:2px 10px; white-space:nowrap}
   /* How it works: three steps, one hairline each, a quiet line joining the
      numbers on desktop so the sequence reads left to right. */
-  .steps{margin:0; padding:0; list-style:none; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:28px clamp(20px, 3vw, 44px)}
+  .how-grid{display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:clamp(30px, 4.5vw, 64px); align-items:start}
+  .steps{margin:0; padding:0; list-style:none; display:grid; gap:22px}
   .steps li{color:var(--txt2); font-size:14.5px; line-height:1.6; position:relative}
   .steps b{display:block; color:var(--txt); font-weight:600; font-size:15px; margin-bottom:5px}
   .steps .n{display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px;
     border:1px solid var(--line-strong); border-radius:8px; background:var(--bg);
     color:var(--brand-strong); font-size:12.5px; margin-right:10px; position:relative}
-  @media (max-width:820px){ .steps{grid-template-columns:minmax(0,1fr); gap:18px} }
+  @media (max-width:820px){ .how-grid{grid-template-columns:minmax(0,1fr); gap:24px} .steps{gap:18px} }
   /* Server and Safety reuse the phone copy list style, one shared rule */
-  .band-copy{max-width:64ch}
+  .band-copy{max-width:none}
+  .band-copy .k{display:block; font-size:12.5px; color:var(--txt3); letter-spacing:.01em; margin-bottom:8px}
   .band-copy ul{display:grid; gap:14px}
   .band-copy li{color:var(--txt2); font-size:14.5px; line-height:1.55; padding-left:20px; position:relative}
   .band-copy li::before{content:""; position:absolute; left:2px; top:.52em; width:6px; height:6px; border-radius:2px; background:var(--brand-strong); opacity:.85}
@@ -355,12 +357,14 @@
     <div class="head">
       <h2>How it works. <span>Three steps, then one honest sentence.</span></h2>
     </div>
-    <ol class="steps">
-      <li><b><span class="n">01</span>Pick a package.</b> Gamerz or Streamerz, one decision per session.</li>
-      <li><b><span class="n">02</span>Connect.</b> One circle runs the session on both apps.</li>
-      <li><b><span class="n">03</span>It bills there.</b> The session counts against that package, not the general pool.</li>
-    </ol>
-    <div class="band-copy"><p>Underneath: your ISP sorts connections by reading the server name in the TLS handshake, so the app puts your package's server name into that handshake. Standard does this over VLESS on TCP 443; WireGuard and Hysteria2 are raw UDP with nothing to read, so they spend general quota.</p></div>
+    <div class="how-grid">
+      <ol class="steps">
+        <li><b><span class="n">01</span>Pick a package.</b> Gamerz or Streamerz, one decision per session.</li>
+        <li><b><span class="n">02</span>Connect.</b> One circle runs the session on both apps.</li>
+        <li><b><span class="n">03</span>It bills there.</b> The session counts against that package, not the general pool.</li>
+      </ol>
+      <div class="band-copy"><span class="k">Underneath</span><p>Your ISP sorts connections by reading the server name in the TLS handshake, so the app puts your package's server name into that handshake. Standard does this over VLESS on TCP 443; WireGuard and Hysteria2 are raw UDP with nothing to read, so they spend general quota.</p></div>
+    </div>
   </section>
 
   <section class="build rv" id="windows">
