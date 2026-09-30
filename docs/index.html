@@ -193,15 +193,15 @@
   .band-copy a.u{color:var(--brand-strong)}
   .band-copy a.u:hover{text-decoration:underline}
   .frame{position:relative; border:1px solid var(--line-strong); border-radius:var(--r-panel);
-    background:var(--panel); overflow:hidden; padding:8px; max-width:1120px; margin:0 auto;
+    background:#10141c; overflow:hidden; padding:0; max-width:1120px; margin:0 auto;
     transition:border-color .3s var(--ease)}
   .frame:hover{border-color:rgb(255 255 255 / .22)}
-  .stage{position:relative; aspect-ratio:1060/700; border-radius:14px; overflow:hidden}
+  .stage{position:relative; aspect-ratio:1060/700; border-radius:15px; overflow:hidden}
   .stage iframe{position:absolute; top:0; left:0; width:1060px; height:700px; border:0; display:block;
     transform-origin:0 0; transform:scale(var(--s,1))}
   .stage .still{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:none}
   .stage::after{content:""; position:absolute; inset:0; opacity:1; pointer-events:none; transition:opacity .55s var(--ease);
-    background:radial-gradient(120% 90% at 50% 0%, rgb(255 255 255 / .04), transparent 60%), var(--panel)}
+    background:radial-gradient(120% 90% at 50% 0%, rgb(255 255 255 / .04), transparent 60%), #10141c}
   .stage.ready::after, .stage.solid::after{opacity:0}
   .under{margin-top:14px; display:flex; align-items:center; gap:18px; flex-wrap:wrap}
   .under .open{font-size:13.5px; color:var(--txt2); display:inline-flex; align-items:center; gap:7px}
@@ -210,11 +210,11 @@
   /* the phone keeps one line with the text beside it, both starting at the top */
   .phone-row{display:grid; grid-template-columns:auto minmax(0,1fr); gap:clamp(28px, 4.5vw, 64px); align-items:center}
   .phone{width:min(360px, 92vw, calc(92vh * 0.4621)); flex:none}
-  .phone-shell{position:relative; width:100%; aspect-ratio:390/844; padding:8px;
+  .phone-shell{position:relative; width:100%; aspect-ratio:390/844; padding:0;
     border:1px solid var(--line-strong); border-radius:28px; background:var(--panel);
     transition:border-color .3s var(--ease)}
   .phone-shell:hover{border-color:rgb(255 255 255 / .22)}
-  .phone-screen{position:absolute; inset:7px; border-radius:21px; overflow:hidden; background:var(--bg)}
+  .phone-screen{position:absolute; inset:1px; border-radius:27px; overflow:hidden; background:#10141c}
   .phone-screen iframe{position:absolute; top:0; left:0; width:360px; height:779px; border:0; display:block;
     transform-origin:0 0; transform:scale(var(--s,1))}
   .phone-copy{max-width:52ch}
