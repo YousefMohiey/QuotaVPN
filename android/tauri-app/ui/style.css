@@ -238,8 +238,7 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
 .stat-label { font-size: 11px; font-weight: 500; letter-spacing: 0.02em; color: var(--txt3); }
 .stat b { font-size: 12.5px; font-weight: 600; color: var(--txt); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 #home-ip { unicode-bidi: plaintext; }
-#home-ipbox { cursor: pointer; }
-#home-ipbox[hidden] { display: none; }
+#ip-row { cursor: pointer; }
 /* Custom picker: field button + centered dialog. No native popups. */
 .pick {
   width: 100%;
@@ -624,3 +623,12 @@ button:disabled { opacity: 0.45; }
 [lang="ar"] .preset-sni{padding-inline-start:0; padding-inline-end:22px}
 .preset:disabled{opacity:.6}
 .preset:active{transform:scale(0.985)}
+
+/* Home mirrors the Windows home: the dial carries state alone, the package
+   cards wear the desktop glass, and server, routing and IP read as flat
+   divider rows instead of boxes. */
+.hero-state{display:none}
+.presets{margin:14px 0 6px}
+.preset{border-radius:20px; border-color:rgb(255 255 255 / 0.12); background:rgba(16, 20, 28, 0.55)}
+#tunnel-card-btn{cursor:pointer}
+.homenet-row svg{width:15px; height:15px; color:var(--txt3); flex:none}

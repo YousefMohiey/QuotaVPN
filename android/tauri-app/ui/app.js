@@ -562,6 +562,8 @@ function paintAppsSeg() {
   if (st) st.textContent = appsStatus();
   const rs = $("routing-sub");
   if (rs) rs.textContent = appsStatus();
+  const hr = $("home-routing-sub");
+  if (hr) hr.textContent = appsStatus();
 }
 // Live summary: which mode is active, how many apps picked, pending or not.
 function appsStatus() {
@@ -951,6 +953,13 @@ $("sheet-search").oninput = (e) => {
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && sheetFor) closeSheet(); });
 // Settings rows: routing opens the apps view, which is a full screen now.
 $("row-routing").onclick = () => goTab("apps");
+const rowHomeRouting = $("row-home-routing");
+if (rowHomeRouting) {
+  rowHomeRouting.onclick = () => goTab("apps");
+  rowHomeRouting.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); goTab("apps"); } };
+}
+const tunnelCardBtn = $("tunnel-card-btn");
+if (tunnelCardBtn) tunnelCardBtn.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openSheet("sni"); } };
 $("btn-apps-back").onclick = () => goTab("settings");
 
 
@@ -1060,7 +1069,7 @@ document.querySelectorAll("#lang-seg button").forEach((b) => {
   b.onclick = () => applyLang(b.dataset.lang);
 });
 // Tap the home net rows to see the full host (toast overlay, layout never grows).
-$("home-ipbox").onclick = () => { if (serverHost) bar(true, serverIp && serverIp !== serverHost ? serverIp + " · " + serverHost : serverHost); };
+$("ip-row").onclick = () => { if (serverHost) bar(true, serverIp && serverIp !== serverHost ? serverIp + " · " + serverHost : serverHost); };
 // First-run coach for people who never used the app. Shows once, only when
 // there are no cards yet. Dismissing remembers the choice.
 $("btn-coach").onclick = () => {

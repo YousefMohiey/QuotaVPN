@@ -31,12 +31,6 @@
         <span>↑ <span id="sess-tx">0 B</span></span>
       </div>
       <div class="hero-sub" id="hero-sub">Pick a card and connect.</div>
-      <div class="homenet" id="home-ipbox">
-        <div class="homenet-row" id="ip-row"><span class="homenet-label" data-i18n="yourIp">Your IP</span><b id="home-ip" dir="ltr">-</b></div>
-
-      </div>
-      <div class="seg" id="transport-seg"><button data-transport="vless" class="on" data-i18n="trStandard">Standard</button><button data-transport="hy2" data-i18n="trGame">Hysteria2</button><button data-transport="wg" data-i18n="trWg">WireGuard</button></div>
-      <p class="hint" id="transport-note"></p>
       <div class="presets" id="presets">
         <button type="button" class="preset" data-kind="Gamerz" aria-pressed="false">
           <span class="preset-name"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 11h4M8 9v4"/><path d="M15.5 12h.01M17.5 10h.01"/><rect x="2" y="6" width="20" height="12" rx="4"/></svg><span data-i18n="kindGamerz">Gamerz</span></span>
@@ -47,11 +41,20 @@
           <span class="preset-sni" dir="ltr"></span>
         </button>
       </div>
-      <label data-i18n="cardForVpn" id="tunnel-card-label">Server</label>
-      <button class="pick" id="tunnel-card-btn" aria-haspopup="listbox" aria-expanded="false">
-        <span id="tunnel-card-name">-</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-      </button>
+      <div class="homenet" id="home-rows">
+        <div class="homenet-row" id="tunnel-card-btn" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+          <span class="homenet-label" data-i18n="cardForVpn">Server</span><b id="tunnel-card-name" dir="ltr">-</b>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="homenet-row" id="row-home-routing" role="button" tabindex="0">
+          <span class="homenet-label" data-i18n="routing">App routing</span><b id="home-routing-sub" dir="ltr"></b>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        </div>
+        <div class="homenet-row" id="ip-row"><span class="homenet-label" data-i18n="yourIp">Your IP</span><b id="home-ip" dir="ltr">-</b></div>
+      </div>
+      <label data-i18n="transport" id="transport-label">Connection</label>
+      <div class="seg" id="transport-seg"><button data-transport="vless" class="on" data-i18n="trStandard">Standard</button><button data-transport="hy2" data-i18n="trGame">Hysteria2</button><button data-transport="wg" data-i18n="trWg">WireGuard</button></div>
+      <p class="hint" id="transport-note"></p>
       <select id="tunnel-card" hidden></select>
       <select id="card-sni-select" hidden></select>
       <input id="card-sni" hidden autocomplete="off" />

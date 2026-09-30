@@ -206,6 +206,7 @@
   .under{margin-top:14px; display:flex; align-items:center; gap:18px; flex-wrap:wrap}
   .under .open{font-size:13.5px; color:var(--txt2); display:inline-flex; align-items:center; gap:7px}
   .under .open:hover{color:var(--txt)}
+  .touch-note{display:none}
 
   /* the phone keeps one line with the text beside it, both starting at the top */
   .phone-row{display:grid; grid-template-columns:auto minmax(0,1fr); gap:clamp(28px, 4.5vw, 64px); align-items:center}
@@ -298,6 +299,7 @@
     .stage .still{display:block}
     .phone-screen iframe{pointer-events:none}
     .build h2 span{display:block; margin-top:3px}
+    #windows .touch-note{display:block; margin:12px 0 0; font-size:13px; color:var(--txt3)}
     /* the desktop build needs a wide screen, so its fullscreen link would
        only open the squeezed layout from the screenshot: touch visitors
        get the phone demo below instead */
@@ -386,6 +388,7 @@
         <img class="still" src="assets/app-home.png" alt="QuotaVPN for Windows" width="2644" height="1744" loading="lazy">
       </div>
     </div>
+    <p class="touch-note">Static preview on touch screens. The Android demo below is live.</p>
     <div class="under">
       <a class="open" href="app/index.html" target="_blank" rel="noopener">Open full screen</a>
     </div>
