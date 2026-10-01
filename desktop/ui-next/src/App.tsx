@@ -101,8 +101,8 @@ export default function App() {
           <div
             aria-hidden
             style={{ backgroundImage: `url(${omenUrl})` }}
-            className={`pointer-events-none fixed inset-y-0 left-[236px] right-0 z-0 select-none bg-cover bg-right bg-no-repeat transition-opacity duration-300 [mask-image:linear-gradient(to_right,transparent_0,black_22%)] ${
-              tab === "voice" ? "opacity-70" : "opacity-0"
+            className={`pointer-events-none fixed inset-y-0 left-[236px] right-0 z-0 select-none bg-cover bg-[position:72%_center] bg-no-repeat transition-opacity duration-300 [mask-image:linear-gradient(to_right,transparent_0,black_30%)] [filter:brightness(0.72)_saturate(0.8)] ${
+              tab === "voice" ? "opacity-50" : "opacity-0"
             }`}
           />
           {/* the caption strip: pt-14 below keeps the window buttons in clear

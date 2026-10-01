@@ -199,9 +199,9 @@ export function Voice() {
     <div className="relative">
       <div className="relative z-10">
         <div className="flex items-center gap-5">
-          <ValorantMark className="size-[84px] shrink-0 text-white" />
+          <ValorantMark className="size-[72px] shrink-0 text-white" />
           <div className="min-w-0">
-            <h1 className="text-[34px] font-semibold leading-tight text-txt">{t("voiceTitle")}</h1>
+            <h1 className="text-[30px] font-semibold leading-tight text-txt">{t("voiceTitle")}</h1>
             <p className="mt-1 text-[15px] text-txt2">{t("voiceTagline")}</p>
             <p className="mt-0.5 text-[15px] font-bold text-txt">{t("voicePingBold")}</p>
           </div>
