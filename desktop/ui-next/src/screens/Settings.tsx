@@ -129,7 +129,7 @@ export function Settings() {
             disabled={startupBusy}
             onCheckedChange={() => void flipStartup(!startup)}
             aria-label={t("startupTitle")}
-            className="shrink-0"
+            className="shrink-0 data-[state=checked]:border-transparent data-[state=checked]:bg-[var(--brand-vivid)]"
           />
         </div>
       </Card>

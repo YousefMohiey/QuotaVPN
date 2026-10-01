@@ -49,6 +49,7 @@
 
   /* One accent + muted semantics. Saturated hues read as generated. */
   --brand: #1f59b6;
+  --brand-vivid: #2e7bf6;
   --brand-strong: #5b8def;
   --brand-bg: rgb(31 89 182 / 0.14);
   --brand-line: rgb(31 89 182 / 0.4);

@@ -30,7 +30,7 @@ function Toggle({
       onClick={() => void onFlip()}
       className={cn(
         "relative h-[34px] w-[60px] shrink-0 rounded-full border transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60",
-        on ? "border-transparent bg-[var(--brand)]" : "border-line bg-white/[0.06]",
+        on ? "border-transparent bg-[var(--brand-vivid)]" : "border-line bg-white/[0.06]",
       )}
     >
       <span
