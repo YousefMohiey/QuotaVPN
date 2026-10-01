@@ -188,7 +188,7 @@ export const en = {
   "voiceRowBody": "Use Valorant voice chat in your region through QuotaVPN without affecting your game connection or ping.",
   "voiceActive": "Voice Chat Active",
   "voiceLaunchTitle": "Launch with Valorant",
-  "voiceLaunchBody": "Automatically enable Voice Chat Helper when Valorant starts.",
+  "voiceLaunchBody": "Turn the Voice Chat Helper on with Valorant, and back off when it closes.",
   "voicePingBold": "Doesn’t affect your ping.",
   "voiceTagline": "Use Valorant voice chat through QuotaVPN.",
   "history": "History",

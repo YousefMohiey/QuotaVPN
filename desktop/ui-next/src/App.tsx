@@ -112,14 +112,14 @@ export default function App() {
             aria-hidden
             className="pointer-events-none sticky top-0 z-20 -mb-14 h-14 bg-gradient-to-b from-[#10141c] via-[#10141c]/85 to-transparent"
           />
-          <div className="mx-auto w-full max-w-[900px] px-8 pb-6 pt-14">
-            <AnimatePresence mode="wait" initial={false}>
+          <div className="relative mx-auto w-full max-w-[900px] px-8 pb-6 pt-14">
+            <AnimatePresence mode="popLayout" initial={false}>
               <motion.div
                 key={tab}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6, transition: { duration: 0.1 } }}
-                transition={{ duration: 0.2, ease: EASE_OUT }}
+                transition={{ duration: 0.15, ease: EASE_OUT }}
               >
                 {tab === "home" && <Home onOpenApps={() => go("apps")} />}
                 {tab === "speed" && <Speed onOpenHistory={() => go("history")} />}

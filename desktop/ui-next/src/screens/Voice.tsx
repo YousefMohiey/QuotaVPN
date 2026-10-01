@@ -86,8 +86,8 @@ export function Voice() {
 
   const on = running && localStorage.getItem("qc-voice-active") === "1"
 
-  const setHelper = async (next: boolean) => {
-    if (busy) return
+  const setHelper = async (next: boolean): Promise<boolean> => {
+    if (busy) return false
     setBusy(true)
     setMsg("")
     try {
@@ -106,10 +106,11 @@ export function Voice() {
         }
         localStorage.removeItem("qc-voice-active")
         localStorage.removeItem("qc-voice-merged")
+        return true
       } else {
         if (!card) {
           setMsg(t("needCard"))
-          return
+          return false
         }
         // A running session keeps its configuration and gains the voice
         // rules; with nothing running this starts a voice-only session.
@@ -119,6 +120,7 @@ export function Voice() {
           localStorage.setItem("qc-voice-active", "1")
           localStorage.setItem("qc-voice-merged", merged ? "1" : "0")
           setRunning(true)
+          return true
         } else {
           // A cold start can report failure a moment before the engine is
           // actually routing: check once more and adopt it when it came up.
@@ -128,35 +130,48 @@ export function Voice() {
             localStorage.setItem("qc-voice-active", "1")
             localStorage.setItem("qc-voice-merged", merged ? "1" : "0")
             setRunning(true)
+            return true
           } else {
             setMsg(r.msg)
+            return false
           }
         }
       }
     } catch (e) {
       setMsg(typeof e === "string" ? e : String(e))
+      return false
     } finally {
       setBusy(false)
     }
   }
 
-  // "Launch with Valorant": with the flag on, the page watches for the game
-  // process and arms the helper itself when it appears, on this page or on
-  // app start. State flows through refs so one interval covers every render.
+  // "Launch with Valorant": the flag only watches. The game itself drives
+  // the helper: appearing arms it, closing disarms it when the watcher armed
+  // it (a helper you switched on yourself is left alone). State flows
+  // through refs so one interval covers every render.
   const watchRef = useRef({ card, on, busy })
   watchRef.current = { card, on, busy }
   const setHelperRef = useRef(setHelper)
   setHelperRef.current = setHelper
+  const gameWasUp = useRef(false)
   useEffect(() => {
+    const get = (k: string) => {
+      try {
+        return localStorage.getItem(k)
+      } catch {
+        return null
+      }
+    }
     let alive = true
     const tick = async () => {
       try {
-        if (localStorage.getItem("qc-voice-launch") !== "1") return
+        if (localStorage.getItem("qc-voice-launch") !== "1") {
+          gameWasUp.current = false
+          return
+        }
       } catch {
         return
       }
-      const snapshot = watchRef.current
-      if (!snapshot.card || snapshot.on || snapshot.busy) return
       let game = false
       try {
         for (const exe of ["VALORANT-Win64-Shipping.exe"]) {
@@ -168,7 +183,32 @@ export function Voice() {
       } catch {
         return
       }
-      if (game && alive) await setHelperRef.current(true)
+      if (!alive) return
+      const snapshot = watchRef.current
+      if (game && !gameWasUp.current) {
+        // The game just appeared: arm the helper unless it is already on.
+        gameWasUp.current = true
+        if (!snapshot.card || snapshot.on || snapshot.busy) return
+        const armed = await setHelperRef.current(true)
+        if (!armed) return
+        try {
+          localStorage.setItem("qc-voice-auto", "1")
+        } catch {
+          /* private mode */
+        }
+      } else if (!game && gameWasUp.current) {
+        // The game just closed: stand the watcher-armed helper down. A
+        // merged session keeps its setup minus the voice rules, a
+        // voice-only session just stops.
+        gameWasUp.current = false
+        if (get("qc-voice-auto") !== "1" || !snapshot.on || snapshot.busy) return
+        await setHelperRef.current(false)
+        try {
+          localStorage.removeItem("qc-voice-auto")
+        } catch {
+          /* private mode */
+        }
+      }
     }
     void tick()
     const id = window.setInterval(() => void tick(), 5000)
@@ -180,14 +220,16 @@ export function Voice() {
   }, [])
 
   const flipLaunch = async () => {
+    // The flag never touches the helper itself: only the game appearing
+    // arms it, and only the game closing stands it down.
     const next = !launch
     setLaunch(next)
     try {
       localStorage.setItem("qc-voice-launch", next ? "1" : "0")
+      if (!next) localStorage.removeItem("qc-voice-auto")
     } catch {
       /* private mode */
     }
-    if (next && !on) await setHelper(true)
   }
 
   return (
