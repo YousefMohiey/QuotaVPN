@@ -590,7 +590,7 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
             <div className="text-[10.5px] font-medium tracking-[0.08em] text-txt3 uppercase">
               {t("yourConn")}
             </div>
-            <div className="mt-1 truncate text-[14.5px] font-semibold text-txt" dir="auto">
+            <div className="mt-1 truncate text-[14px] font-semibold text-txt" dir="auto">
               {netInfo?.isp || netInfo?.ip || "-"}
             </div>
             <div className="mt-0.5 truncate text-[12px] tabular-nums text-txt2" dir="auto">
@@ -605,12 +605,12 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
               {t("targetServer")}
             </div>
             {picking ? (
-              <div className="mt-1 animate-pulse truncate text-[14.5px] font-semibold text-txt3" dir="auto">
+              <div className="mt-1 animate-pulse truncate text-[14px] font-semibold text-txt3" dir="auto">
                 {t("findingServer")}
               </div>
             ) : (
               <>
-                <div className="mt-1 truncate text-[14.5px] font-semibold text-txt" dir="auto">
+                <div className="mt-1 truncate text-[14px] font-semibold text-txt" dir="auto">
                   {(picked ?? CLOUDFLARE).label}
                 </div>
                 <div className="mt-0.5 truncate text-[12px] text-txt2" dir="auto">

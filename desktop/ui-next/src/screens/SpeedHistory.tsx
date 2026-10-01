@@ -252,7 +252,7 @@ export function SpeedHistory({ onBack, onOpenResult }: { onBack: () => void; onO
                 >
                   {s.round ? (s.value === null ? "-" : Math.round(s.value)) : num(s.value)}
                 </span>
-                <span className="text-[10px] text-txt3">{s.unit}</span>
+                <span className="text-[10.5px] text-txt3">{s.unit}</span>
               </div>
             ))}
           </div>

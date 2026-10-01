@@ -41,9 +41,10 @@
   --line: rgb(255 255 255 / 0.08);
   --line-strong: rgb(255 255 255 / 0.14);
 
-  /* Text: three steps, all readable on --panel. */
+  /* Text: three steps, all readable on --panel. txt2 carries the steel
+     blue the reference art is graded in. */
   --txt: #eef1f6;
-  --txt2: #a7b0bf;
+  --txt2: #9db9d4;
   --txt3: #8b95a6;
 
   /* One accent + muted semantics. Saturated hues read as generated. */

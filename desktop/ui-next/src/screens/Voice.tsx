@@ -207,7 +207,7 @@ export function Voice() {
           <ValorantMark className="size-[84px] shrink-0 text-white" />
           <div className="min-w-0">
             <h1 className="text-[34px] font-semibold leading-tight text-txt">{t("voiceTitle")}</h1>
-            <p className="mt-1 text-[15px] text-txt">{t("voiceTagline")}</p>
+            <p className="mt-1 text-[15px] text-txt2">{t("voiceTagline")}</p>
             <p className="mt-0.5 text-[15px] font-bold text-txt">{t("voicePingBold")}</p>
           </div>
         </div>
@@ -216,7 +216,7 @@ export function Voice() {
           <div className="flex items-start justify-between gap-6">
             <div className="min-w-0">
               <h2 className="text-[17px] font-semibold text-txt">{t("voiceRowTitle")}</h2>
-              <p className="mt-1 max-w-[640px] text-[14px] leading-relaxed text-txt">{t("voiceRowBody")}</p>
+              <p className="mt-1 max-w-[640px] text-[14px] leading-relaxed text-txt2">{t("voiceRowBody")}</p>
               {msg && <p className="mt-2 text-[12.5px] text-txt2">{msg}</p>}
             </div>
             <div className="flex shrink-0 flex-col items-end gap-2">
@@ -235,7 +235,7 @@ export function Voice() {
           <div className="flex items-start justify-between gap-6">
             <div className="min-w-0">
               <h2 className="text-[17px] font-semibold text-txt">{t("voiceLaunchTitle")}</h2>
-              <p className="mt-1 max-w-[640px] text-[14px] leading-relaxed text-txt">{t("voiceLaunchBody")}</p>
+              <p className="mt-1 max-w-[640px] text-[14px] leading-relaxed text-txt2">{t("voiceLaunchBody")}</p>
             </div>
             <div className="shrink-0">
               <Toggle on={launch} busy={busy} onFlip={() => void flipLaunch()} label={t("voiceLaunchTitle")} />
