@@ -116,6 +116,7 @@
   --color-ring: var(--ring);
   --color-brand: var(--brand);
   --color-brand-strong: var(--brand-strong);
+  --color-field: var(--field);
   --color-brand-bg: var(--brand-bg);
   --color-brand-line: var(--brand-line);
   --color-line: var(--line);
