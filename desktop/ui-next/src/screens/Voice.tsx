@@ -1,49 +1,12 @@
 import { useEffect, useRef, useState } from "react"
 import { ValorantMark } from "@/components/ValorantMark"
+import { Toggle } from "@/components/Toggle"
 import { useI18n } from "@/lib/i18n"
 import { useApp } from "@/state/app"
 import { api } from "@/lib/ipc"
-import { cn } from "@/lib/utils"
 
 // The Valorant page: the mark and two quiet rows over the Omen artwork.
 // The artwork sits behind the UI and never takes part in layout.
-function Toggle({
-  on,
-  busy,
-  disabled,
-  onFlip,
-  label,
-}: {
-  on: boolean
-  busy: boolean
-  disabled?: boolean
-  onFlip: () => void
-  label: string
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      aria-label={label}
-      disabled={disabled || busy}
-      onClick={() => void onFlip()}
-      className={cn(
-        "relative h-[34px] w-[60px] shrink-0 rounded-full border transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60",
-        on ? "border-transparent bg-[var(--brand-vivid)]" : "border-line bg-white/[0.06]",
-      )}
-    >
-      <span
-        aria-hidden
-        className={cn(
-          "absolute top-1/2 size-[26px] -translate-y-1/2 rounded-full bg-white transition-all duration-200",
-          on ? "left-[30px]" : "left-[3px]",
-        )}
-      />
-    </button>
-  )
-}
-
 // Last engine truth, shared across mounts: switching pages unmounts this
 // view, and reopening on a blank false is the off/on blink.
 let lastVoiceRunning: boolean | null = null

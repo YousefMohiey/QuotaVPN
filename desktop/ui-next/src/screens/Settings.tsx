@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react"
 import { Power, RefreshCw, Settings2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
+import { Toggle } from "@/components/Toggle"
 import { Segmented } from "@/components/Segmented"
 import { useApp } from "@/state/app"
 import { useI18n } from "@/lib/i18n"
@@ -124,12 +124,11 @@ export function Settings() {
             <p className="mt-0.5 text-[12.5px] leading-relaxed text-txt2">{t("startupBody")}</p>
             {startupMsg && <p className="mt-1 text-[12px] text-txt2">{startupMsg}</p>}
           </div>
-          <Switch
-            checked={startup}
-            disabled={startupBusy}
-            onCheckedChange={() => void flipStartup(!startup)}
-            aria-label={t("startupTitle")}
-            className="shrink-0 data-[state=checked]:border-transparent data-[state=checked]:bg-[var(--brand-vivid)]"
+          <Toggle
+            on={startup}
+            busy={startupBusy}
+            onFlip={() => void flipStartup(!startup)}
+            label={t("startupTitle")}
           />
         </div>
       </Card>
