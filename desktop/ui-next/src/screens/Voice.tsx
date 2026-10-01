@@ -1,21 +1,62 @@
-import { useEffect, useState } from "react"
-import { Power } from "lucide-react"
-import { Panel } from "@/components/Row"
+import { useEffect, useRef, useState } from "react"
 import { ValorantMark } from "@/components/ValorantMark"
 import { useI18n } from "@/lib/i18n"
 import { useApp } from "@/state/app"
 import { api } from "@/lib/ipc"
 import { cn } from "@/lib/utils"
 
-// The Valorant helper: one job, one switch. Everything the switch needs to do
-// under the hood (routing rules, ports, engine session) stays in the engine,
-// nothing technical reaches this page.
+// The Valorant page: the mark and two quiet rows over the Omen artwork.
+// The artwork sits behind the UI and never takes part in layout.
+function Toggle({
+  on,
+  busy,
+  disabled,
+  onFlip,
+  label,
+}: {
+  on: boolean
+  busy: boolean
+  disabled?: boolean
+  onFlip: () => void
+  label: string
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      disabled={disabled || busy}
+      onClick={() => void onFlip()}
+      className={cn(
+        "relative h-[34px] w-[60px] shrink-0 rounded-full border transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60",
+        on ? "border-transparent bg-[var(--brand)]" : "border-line bg-white/[0.06]",
+      )}
+    >
+      <span
+        aria-hidden
+        className={cn(
+          "absolute top-1/2 size-[26px] -translate-y-1/2 rounded-full bg-white transition-all duration-200",
+          on ? "left-[30px]" : "left-[3px]",
+        )}
+      />
+    </button>
+  )
+}
+
 export function Voice() {
   const { t } = useI18n()
   const { card, appsMode, apps, transport } = useApp()
   const [running, setRunning] = useState(false)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState("")
+  const [launch, setLaunch] = useState(() => {
+    try {
+      return localStorage.getItem("qc-voice-launch") === "1"
+    } catch {
+      return false
+    }
+  })
 
   useEffect(() => {
     let alive = true
@@ -37,11 +78,12 @@ export function Voice() {
 
   const on = running && localStorage.getItem("qc-voice-active") === "1"
 
-  const toggle = async () => {
+  const setHelper = async (next: boolean) => {
+    if (busy) return
     setBusy(true)
     setMsg("")
     try {
-      if (on) {
+      if (!next) {
         // Turning the helper off must not disturb the rest of the session:
         // a merged session restarts with the same setup minus the voice
         // rules, a voice-only session just stops.
@@ -90,103 +132,87 @@ export function Voice() {
     }
   }
 
-  const steps: string[] = [t("voiceStep1"), t("voiceStep2"), t("voiceStep3")]
+  // "Launch with Valorant": with the flag on, the helper enables itself on
+  // app start once a card is available. There is no engine process watch, so
+  // this arms at launch rather than at the Valorant process.
+  const triedLaunch = useRef(false)
+  useEffect(() => {
+    if (triedLaunch.current) return
+    triedLaunch.current = true
+    try {
+      if (localStorage.getItem("qc-voice-launch") !== "1") return
+    } catch {
+      return
+    }
+    if (!card || on) return
+    void setHelper(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [card])
+
+  const flipLaunch = async () => {
+    const next = !launch
+    setLaunch(next)
+    try {
+      localStorage.setItem("qc-voice-launch", next ? "1" : "0")
+    } catch {
+      /* private mode */
+    }
+    if (next && !on) await setHelper(true)
+  }
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* header: the mark carries the page, the badge answers "is it on?" */}
-      <div className="flex items-center gap-3.5 px-1">
-        <span
-          className="grid size-14 shrink-0 place-items-center rounded-[16px] border border-line bg-white/[0.03]"
-          aria-hidden
-        >
-          <ValorantMark className="size-7 text-txt" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-[15px] font-semibold text-txt">{t("voiceTitle")}</h1>
-          <p className="mt-0.5 text-[12.5px] text-txt3">{t("voiceSub")}</p>
-        </div>
-        <span
-          className={cn(
-            "inline-flex h-7 shrink-0 items-center gap-2 rounded-full border px-3 text-[12px] font-medium",
-            on
-              ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong"
-              : "border-line bg-white/[0.02] text-txt2",
-          )}
-        >
-          <span className={cn("size-1.5 rounded-full", on ? "bg-brand" : "bg-white/25")} aria-hidden />
-          {on ? t("voiceBadgeOn") : t("voiceBadgeOff")}
-        </span>
+    <div className="relative">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 right-0 w-[46%] min-w-[340px] select-none [mask-image:linear-gradient(to_right,transparent_0,black_42%)]"
+      >
+        <img
+          src="/omen.jpg"
+          alt=""
+          className="h-full w-full object-cover object-right opacity-70"
+        />
       </div>
+      <div className="relative">
+        <div className="flex items-center gap-5">
+          <ValorantMark className="size-[76px] shrink-0 text-white" />
+          <div className="min-w-0">
+            <h1 className="text-[30px] font-semibold leading-tight text-txt">{t("voiceTitle")}</h1>
+            <p className="mt-1 text-[15px] text-txt2">{t("voiceTagline")}</p>
+            <p className="mt-0.5 text-[15px] font-bold text-txt">{t("voicePingBold")}</p>
+          </div>
+        </div>
 
-      {/* the one card that matters: what it is, and the switch */}
-      <Panel>
-        <div className="p-4">
-          <h2 className="text-[13.5px] font-semibold text-txt">{t("voiceCardTitle")}</h2>
-          <p className="mt-1 max-w-[62ch] text-[12.5px] leading-relaxed text-txt2">{t("voiceCardBody")}</p>
-
-          <div
-            className={cn(
-              "mt-3.5 flex flex-wrap items-center gap-3 rounded-[14px] border px-3.5 py-3 transition-colors duration-200",
-              on
-                ? "border-[var(--brand-line)] bg-[var(--brand-bg)]"
-                : "border-line bg-white/[0.02]",
-            )}
-          >
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[13px] font-semibold text-txt">{t("voiceHelper")}</span>
-                {on && <span className="size-1.5 rounded-full bg-brand" aria-hidden />}
-              </div>
-              <p className="mt-0.5 text-[12px] leading-relaxed text-txt2">
-                {on ? t("voiceHelperOn") : t("voiceHelperOff")}
-              </p>
+        <div className="mt-8 border-t border-line py-6">
+          <div className="flex items-start justify-between gap-6">
+            <div className="min-w-0">
+              <h2 className="text-[17px] font-semibold text-txt">{t("voiceRowTitle")}</h2>
+              <p className="mt-1 max-w-[560px] text-[14px] leading-relaxed text-txt2">{t("voiceRowBody")}</p>
+              {msg && <p className="mt-2 text-[12.5px] text-txt2">{msg}</p>}
             </div>
-            <button
-              type="button"
-              disabled={busy || !card}
-              onClick={() => void toggle()}
-              className={cn(
-                "flex h-10 shrink-0 items-center justify-center gap-2 rounded-[10px] border px-5 text-[13px] font-semibold transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60",
-                on
-                  ? "border-line bg-white/[0.03] text-txt hover:border-[var(--brand-line)]"
-                  : "border-[var(--brand)] bg-[var(--brand-bg)] text-brand-strong hover:border-[var(--brand)]",
+            <div className="flex shrink-0 flex-col items-end gap-2">
+              <Toggle on={on} busy={busy} disabled={!card} onFlip={() => void setHelper(!on)} label={t("voiceRowTitle")} />
+              {on && (
+                <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--green)]">
+                  <span className="size-1.5 rounded-full bg-[var(--green)]" aria-hidden />
+                  {t("voiceActive")}
+                </span>
               )}
-            >
-              <Power className="size-3.5" aria-hidden />
-              {busy ? "…" : on ? t("voiceTurnOff") : t("voiceTurnOn")}
-            </button>
+            </div>
           </div>
-
-          <p className="mt-2.5 text-[11.5px] text-txt3">{t("voiceNote")}</p>
-          {msg && <p className="mt-2 text-[11.5px] text-txt2">{msg}</p>}
         </div>
-      </Panel>
 
-      {/* three steps, no networking in sight */}
-      <Panel>
-        <div className="border-b border-line px-4 py-2.5 text-[12px] font-medium text-txt2">
-          {t("voiceHow")}
-        </div>
-        {steps.map((step, i) => (
-          <div key={i} className="flex items-center gap-3 border-b border-line px-4 py-2.5 last:border-b-0">
-            <span
-              className="grid size-5 shrink-0 place-items-center rounded-full border border-line bg-white/[0.03] text-[10.5px] font-medium text-txt3 tabular-nums"
-              aria-hidden
-            >
-              {i + 1}
-            </span>
-            <span className="min-w-0 text-[12.5px] text-txt2">{step}</span>
+        <div className="border-t border-line py-6">
+          <div className="flex items-start justify-between gap-6">
+            <div className="min-w-0">
+              <h2 className="text-[17px] font-semibold text-txt">{t("voiceLaunchTitle")}</h2>
+              <p className="mt-1 max-w-[560px] text-[14px] leading-relaxed text-txt2">{t("voiceLaunchBody")}</p>
+            </div>
+            <div className="shrink-0">
+              <Toggle on={launch} busy={busy} onFlip={() => void flipLaunch()} label={t("voiceLaunchTitle")} />
+            </div>
           </div>
-        ))}
-      </Panel>
-
-      <Panel>
-        <div className="p-4">
-          <p className="text-[12.5px] font-medium text-txt2">{t("voiceInfoTitle")}</p>
-          <p className="mt-1 max-w-[62ch] text-[12px] leading-relaxed text-txt2">{t("voiceInfoBody")}</p>
         </div>
-      </Panel>
+      </div>
     </div>
   )
 }
