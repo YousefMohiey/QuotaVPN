@@ -449,6 +449,46 @@ fn process_running(name: String) -> bool {
     }
 }
 
+/// Start-with-Windows lives in the per-user Run key, so no admin prompt is
+/// ever needed. reg.exe does the work, no new crates for three registry
+/// calls.
+const AUTOSTART_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
+const AUTOSTART_NAME: &str = "QuotaVPN";
+
+#[tauri::command]
+fn autostart_get() -> Result<bool, String> {
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let out = std::process::Command::new("reg")
+        .args(["query", AUTOSTART_KEY, "/v", AUTOSTART_NAME])
+        .output()
+        .map_err(|e| e.to_string())?;
+    if !out.status.success() {
+        return Ok(false);
+    }
+    Ok(String::from_utf8_lossy(&out.stdout).contains(&exe.display().to_string()))
+}
+
+#[tauri::command]
+fn autostart_set(on: bool) -> Result<(), String> {
+    let status = if on {
+        let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+        std::process::Command::new("reg")
+            .args(["add", AUTOSTART_KEY, "/v", AUTOSTART_NAME, "/t", "REG_SZ", "/d", &exe.display().to_string(), "/f"])
+            .status()
+            .map_err(|e| e.to_string())?
+    } else {
+        std::process::Command::new("reg")
+            .args(["delete", AUTOSTART_KEY, "/v", AUTOSTART_NAME, "/f"])
+            .status()
+            .map_err(|e| e.to_string())?
+    };
+    if status.success() {
+        Ok(())
+    } else {
+        Err("Could not update startup setting.".into())
+    }
+}
+
 #[tauri::command]
 async fn tunnel_start(
     app: tauri::AppHandle,
@@ -1508,7 +1548,9 @@ pub fn run() {
             speed_up,
             speedtest_cli_ready,
             speedtest_cli,
-            process_running
+            process_running,
+            autostart_get,
+            autostart_set
         ])
         .run(tauri::generate_context!())
         .expect("QuotaVPN failed to start");

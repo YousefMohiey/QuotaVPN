@@ -31,11 +31,11 @@
 
   /* Surfaces: charcoal-navy ladder, window base up through panels to
      controls. Separation comes from tone steps plus silver hairlines. */
-  --bg: #10141c;
-  --side: #131a29;
-  --panel: #111826;
-  --panel-hover: #161e30;
-  --field: #1a2338;
+  --bg: #141a25;
+  --side: #172032;
+  --panel: #151d2e;
+  --panel-hover: #1b2539;
+  --field: #202b45;
 
   /* Lines: one hairline weight, two strengths. */
   --line: rgb(255 255 255 / 0.08);
@@ -156,7 +156,7 @@
   }
   body {
     @apply text-foreground antialiased;
-    background: #10141c;
+    background: var(--bg);
     margin: 0;
     font-size: 13.5px;
     line-height: 1.45;

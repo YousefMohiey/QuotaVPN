@@ -59,6 +59,10 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
       return { running, error: "" } as TunnelState as T
     case "process_running":
       return false as T
+    case "autostart_get":
+      return false as T
+    case "autostart_set":
+      return undefined as T
     case "tunnel_traffic":
       if (running) {
         rx += 1_400_000 + Math.random() * 3_000_000
