@@ -57,6 +57,8 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
       return ok("Engine stopped.") as T
     case "tunnel_status":
       return { running, error: "" } as TunnelState as T
+    case "process_running":
+      return false as T
     case "tunnel_traffic":
       if (running) {
         rx += 1_400_000 + Math.random() * 3_000_000

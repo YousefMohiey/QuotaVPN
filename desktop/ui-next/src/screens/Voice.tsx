@@ -132,22 +132,44 @@ export function Voice() {
     }
   }
 
-  // "Launch with Valorant": with the flag on, the helper enables itself on
-  // app start once a card is available. There is no engine process watch, so
-  // this arms at launch rather than at the Valorant process.
-  const triedLaunch = useRef(false)
+  // "Launch with Valorant": with the flag on, the page watches for the game
+  // process and arms the helper itself when it appears, on this page or on
+  // app start. State flows through refs so one interval covers every render.
+  const watchRef = useRef({ card, on, busy })
+  watchRef.current = { card, on, busy }
+  const setHelperRef = useRef(setHelper)
+  setHelperRef.current = setHelper
   useEffect(() => {
-    if (triedLaunch.current) return
-    triedLaunch.current = true
-    try {
-      if (localStorage.getItem("qc-voice-launch") !== "1") return
-    } catch {
-      return
+    let alive = true
+    const tick = async () => {
+      try {
+        if (localStorage.getItem("qc-voice-launch") !== "1") return
+      } catch {
+        return
+      }
+      const snapshot = watchRef.current
+      if (!snapshot.card || snapshot.on || snapshot.busy) return
+      let game = false
+      try {
+        for (const exe of ["VALORANT-Win64-Shipping.exe"]) {
+          if (await api.processRunning(exe)) {
+            game = true
+            break
+          }
+        }
+      } catch {
+        return
+      }
+      if (game && alive) await setHelperRef.current(true)
     }
-    if (!card || on) return
-    void setHelper(true)
+    void tick()
+    const id = window.setInterval(() => void tick(), 5000)
+    return () => {
+      alive = false
+      window.clearInterval(id)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [card])
+  }, [])
 
   const flipLaunch = async () => {
     const next = !launch

@@ -408,6 +408,47 @@ fn read_log_tail(n: usize) -> String {
     lines[lines.len().saturating_sub(n)..].join("\n")
 }
 
+/// True when a process with this exe name is running (case-insensitive).
+/// The "Launch with Valorant" toggle leans on this: the UI polls for the
+/// game process and arms the voice helper itself when it appears.
+#[tauri::command]
+fn process_running(name: String) -> bool {
+    use windows::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
+    use windows::Win32::System::Diagnostics::ToolHelp::{
+        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W, TH32CS_SNAPPROCESS,
+    };
+    let want = name.to_lowercase();
+    if want.is_empty() {
+        return false;
+    }
+    unsafe {
+        let snapshot = match CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) {
+            Ok(h) => h,
+            Err(_) => return false,
+        };
+        if snapshot == INVALID_HANDLE_VALUE {
+            return false;
+        }
+        let mut entry = PROCESSENTRY32W::default();
+        entry.dwSize = std::mem::size_of::<PROCESSENTRY32W>() as u32;
+        let mut found = false;
+        if Process32FirstW(snapshot, &mut entry).is_ok() {
+            loop {
+                let end = entry.szExeFile.iter().position(|&c| c == 0).unwrap_or(entry.szExeFile.len());
+                if String::from_utf16_lossy(&entry.szExeFile[..end]).to_lowercase() == want {
+                    found = true;
+                    break;
+                }
+                if Process32NextW(snapshot, &mut entry).is_err() {
+                    break;
+                }
+            }
+        }
+        let _ = CloseHandle(snapshot);
+        found
+    }
+}
+
 #[tauri::command]
 async fn tunnel_start(
     app: tauri::AppHandle,
@@ -1466,7 +1507,8 @@ pub fn run() {
             speed_down,
             speed_up,
             speedtest_cli_ready,
-            speedtest_cli
+            speedtest_cli,
+            process_running
         ])
         .run(tauri::generate_context!())
         .expect("QuotaVPN failed to start");
@@ -1505,6 +1547,16 @@ mod tests {
     fn tun_octets_never_panics() {
         let (rx, tx) = super::tun_octets();
         println!("tun_octets -> {rx}/{tx}");
+    }
+
+    /// The launch watcher leans on this: a name nobody runs is false, and
+    /// Explorer (always present on a real desktop) is true.
+    #[test]
+    fn process_running_answers() {
+        assert!(!super::process_running("quotavpn-definitely-not-a-process-xyz.exe".into()));
+        assert!(!super::process_running(String::new()));
+        assert!(super::process_running("explorer.exe".into()));
+        assert!(super::process_running("EXPLORER.EXE".into()));
     }
 
     /// Same-version re-release rule: covered by unit tests in the shared
