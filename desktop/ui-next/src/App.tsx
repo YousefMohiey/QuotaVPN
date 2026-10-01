@@ -100,7 +100,7 @@ export default function App() {
             src={omenUrl}
             alt=""
             draggable={false}
-            className={`pointer-events-none fixed top-[55%] right-[-120px] z-0 h-[94%] w-auto -translate-y-1/2 select-none object-contain object-right transition-opacity duration-300 ${
+            className={`pointer-events-none fixed top-[42%] right-[-170px] z-0 h-[100%] w-auto -translate-y-1/2 select-none object-contain object-right transition-opacity duration-300 ${
               tab === "voice" ? "opacity-40" : "opacity-0"
             }`}
           />
