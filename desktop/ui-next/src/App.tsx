@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { isTauri } from "@/lib/ipc"
 import { AnimatePresence, motion } from "motion/react"
-import omenUrl from "./assets/omen.jpg"
+import omenUrl from "./assets/omen.png"
 import { Sidebar, type Tab } from "@/components/Sidebar"
 import { WindowControls } from "@/components/WindowControls"
 import { Home } from "@/screens/Home"
@@ -91,18 +91,17 @@ export default function App() {
       <div className="relative z-10 flex h-full">
         <Sidebar tab={tab} onTab={go} />
         <main id="content" className="min-w-0 flex-1 overflow-y-auto scroll-pb-6">
-          {/* The Omen wash lives here, outside the page-slide animation: a
-              fixed layer inside the sliding view gets sized to the text
-              column until the slide ends, which reads as small-then-big on
-              every switch. It stays mounted with the image decoded from app
-              start, so visiting the page is an instant crossfade, and it is
-              fully transparent anywhere else. The file itself carries baked
-              grain, which dithers the dark fade so it never bands into lines. */}
-          <div
+          {/* Omen rides here, outside the page-slide animation, as ONE image
+              with its own real transparency: no cover cropping, no mask
+              ramp, no filter, no overlay. Nothing left that can band, seam,
+              or edge. Fully transparent anywhere else. */}
+          <img
             aria-hidden
-            style={{ backgroundImage: `url(${omenUrl})` }}
-            className={`pointer-events-none fixed inset-y-0 left-[236px] right-0 z-0 select-none bg-cover bg-[position:72%_center] bg-no-repeat transition-opacity duration-300 [mask-image:linear-gradient(to_right,transparent_0,black_30%)] [filter:brightness(0.72)_saturate(0.8)] ${
-              tab === "voice" ? "opacity-50" : "opacity-0"
+            src={omenUrl}
+            alt=""
+            draggable={false}
+            className={`pointer-events-none fixed inset-y-0 right-0 z-0 h-full w-auto select-none object-contain object-right transition-opacity duration-300 ${
+              tab === "voice" ? "opacity-90" : "opacity-0"
             }`}
           />
           {/* the caption strip: pt-14 below keeps the window buttons in clear

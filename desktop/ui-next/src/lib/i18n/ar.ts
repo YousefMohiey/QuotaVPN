@@ -199,7 +199,7 @@ export const ar = {
   "voiceTitle": "فالورانت",
   "voiceRowTitle": "الدردشة الصوتية لـValorant",
   "voiceRowBody": "استخدم الدردشة الصوتية في منطقتك عبر QuotaVPN دون التأثير على اتصال لعبتك أو البينج.",
-  "voiceActive": "نشط",
+  "voiceActive": "الدردشة الصوتية نشطة",
   "voiceLaunchTitle": "التشغيل مع Valorant",
   "voiceLaunchBody": "تشغيل مساعد الدردشة الصوتية مع Valorant وإيقافه عند إغلاقها.",
   "voicePingBold": "لا يؤثر على البينج.",
