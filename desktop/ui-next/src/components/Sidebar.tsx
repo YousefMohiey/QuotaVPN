@@ -74,7 +74,7 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
               className={cn(
                 "relative flex h-10 items-center gap-3 rounded-[12px] px-3.5 text-[13.5px] transition-colors",
                 active
-                  ? "bg-white/[0.06] font-medium text-txt shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]"
+                  ? "bg-white/[0.06] font-medium text-txt"
                   : "text-txt2 hover:bg-white/[0.04] hover:text-txt",
               )}
             >
@@ -99,7 +99,7 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
           className={cn(
             "relative flex h-10 items-center gap-3 rounded-[12px] px-3.5 text-[13.5px] transition-colors",
             tab === "settings"
-              ? "bg-white/[0.06] font-medium text-txt shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]"
+              ? "bg-white/[0.06] font-medium text-txt"
               : "text-txt2 hover:bg-white/[0.04] hover:text-txt",
           )}
         >
