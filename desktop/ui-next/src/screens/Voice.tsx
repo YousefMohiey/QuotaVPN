@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react"
+import { BookOpen, Check, ChevronRight, Loader2, Mic, Rocket } from "lucide-react"
 import { ValorantMark } from "@/components/ValorantMark"
 import { Toggle } from "@/components/Toggle"
 import { useI18n } from "@/lib/i18n"
 import { useApp } from "@/state/app"
 import { api } from "@/lib/ipc"
+import { cn } from "@/lib/utils"
 
-// The Valorant page: the mark and two quiet rows over the Omen artwork.
-// The artwork sits behind the UI and never takes part in layout.
+// The Valorant page: header, then a Voice Chat card whose right panel is the
+// live connection status (and the switch), then a Launch card. The artwork
+// sits behind everything and never takes part in layout.
 // Last engine truth, shared across mounts: switching pages unmounts this
 // view, and reopening on a blank false is the off/on blink.
 let lastVoiceRunning: boolean | null = null
@@ -21,6 +24,7 @@ export function Voice() {
   }
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState("")
+  const [how, setHow] = useState(false)
   const [launch, setLaunch] = useState(() => {
     try {
       return localStorage.getItem("qc-voice-launch") === "1"
@@ -207,35 +211,117 @@ export function Voice() {
           </div>
         </div>
 
-        <div className="mt-8 py-6">
-          <div className="flex items-start justify-between gap-6">
-            <div className="min-w-0">
-              <h2 className="text-[17px] font-semibold text-txt">{t("voiceRowTitle")}</h2>
-              <p className="mt-1 max-w-[640px] text-[14px] leading-relaxed text-txt2">{t("voiceRowBody")}</p>
-              {msg && <p className="mt-2 text-[12.5px] text-txt2">{msg}</p>}
-            </div>
-            <div className="flex shrink-0 flex-col items-end gap-2">
-              <Toggle on={on} busy={busy} disabled={!card} onFlip={() => void setHelper(!on)} label={t("voiceRowTitle")} />
-              {on && (
-                <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--green)]">
-                  <span className="size-1.5 rounded-full bg-[var(--green)]" aria-hidden />
-                  {t("voiceActive")}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
+        <div className="mt-7 flex flex-col gap-5">
+          <section className="rounded-[18px] border border-line bg-panel p-5">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
+              <div className="flex min-w-0 flex-1 flex-col items-start">
+                <div className="flex items-start gap-4">
+                  <span className="grid size-11 shrink-0 place-items-center rounded-[12px] bg-white/[0.06] text-txt2">
+                    <Mic className="size-5" aria-hidden />
+                  </span>
+                  <div className="min-w-0">
+                    <h2 className="text-[17px] font-semibold text-txt">{t("voiceRowTitle")}</h2>
+                    <p className="mt-1 max-w-[430px] text-[14px] leading-relaxed text-txt2">
+                      {t("voiceRowBody")}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setHow((v) => !v)}
+                  aria-expanded={how}
+                  className="mt-4 inline-flex h-9 items-center gap-2 rounded-[10px] border border-line px-3.5 text-[13px] text-txt2 transition-colors hover:bg-white/[0.04] hover:text-txt"
+                >
+                  <BookOpen className="size-4" aria-hidden />
+                  {t("howItWorks")}
+                </button>
+                {how && (
+                  <p className="mt-3 max-w-[430px] text-[13px] leading-relaxed text-txt3">{t("howBody")}</p>
+                )}
+                {msg && <p className="mt-2 text-[12.5px] text-txt2">{msg}</p>}
+              </div>
 
-        <div className="py-6">
-          <div className="flex items-start justify-between gap-6">
-            <div className="min-w-0">
-              <h2 className="text-[17px] font-semibold text-txt">{t("voiceLaunchTitle")}</h2>
-              <p className="mt-1 max-w-[640px] text-[14px] leading-relaxed text-txt2">{t("voiceLaunchBody")}</p>
+              {/* The status panel doubles as the switch: it shows the live
+                  connection state and clicking it arms or stands down the
+                  helper. */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={on}
+                aria-label={t("voiceRowTitle")}
+                disabled={!card}
+                onClick={() => void setHelper(!on)}
+                className={cn(
+                  "w-full shrink-0 rounded-[14px] border border-line bg-black/25 p-4 text-left transition-colors lg:w-[340px]",
+                  !card ? "cursor-not-allowed opacity-60" : "hover:border-white/20",
+                )}
+              >
+                <div className="flex items-center gap-3.5">
+                  <span
+                    className={cn(
+                      "grid size-12 shrink-0 place-items-center rounded-full border-[1.5px]",
+                      on
+                        ? "border-[var(--green-line)] text-[var(--green)]"
+                        : "border-line text-txt3",
+                    )}
+                  >
+                    {busy ? (
+                      <Loader2 className="size-5 animate-spin" aria-hidden />
+                    ) : (
+                      <Mic className="size-5" aria-hidden />
+                    )}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-[16px] font-semibold text-txt">
+                      {on ? t("voiceActive") : t("voiceOffTitle")}
+                    </h3>
+                    <p className="mt-0.5 flex items-center gap-1.5 truncate text-[13px] text-txt2">
+                      <span
+                        className={cn("size-1.5 shrink-0 rounded-full", on ? "bg-[var(--green)]" : "bg-txt3")}
+                        aria-hidden
+                      />
+                      {busy ? t("voiceConnecting") : on ? t("voiceConnected") : t("voiceOffSub")}
+                    </p>
+                  </div>
+                  <ChevronRight className="size-5 shrink-0 text-txt3" aria-hidden />
+                </div>
+                {on && (
+                  <div className="mt-4 flex items-start gap-3 rounded-[10px] border border-[var(--green-line)] bg-[var(--green-bg)] p-3">
+                    <span className="grid size-6 shrink-0 place-items-center rounded-full bg-txt text-[#12251c]">
+                      <Check className="size-3.5" strokeWidth={3} aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[13.5px] font-semibold text-txt">{t("voiceReadyTitle")}</p>
+                      <p className="mt-0.5 text-[13px] text-txt2">{t("voiceReadyBody")}</p>
+                    </div>
+                  </div>
+                )}
+              </button>
             </div>
-            <div className="shrink-0">
-              <Toggle on={launch} busy={busy} onFlip={() => void flipLaunch()} label={t("voiceLaunchTitle")} />
+          </section>
+
+          <section className="rounded-[18px] border border-line bg-panel p-5">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center">
+              <div className="flex min-w-0 flex-1 items-start gap-4">
+                <span className="grid size-11 shrink-0 place-items-center rounded-[12px] bg-white/[0.06] text-txt2">
+                  <Rocket className="size-5" aria-hidden />
+                </span>
+                <div className="min-w-0">
+                  <h2 className="text-[17px] font-semibold text-txt">{t("voiceLaunchTitle")}</h2>
+                  <p className="mt-1 max-w-[430px] text-[14px] leading-relaxed text-txt2">
+                    {t("voiceLaunchBody")}
+                  </p>
+                </div>
+              </div>
+              <div className="flex w-full shrink-0 items-center gap-4 rounded-[14px] border border-line bg-black/25 p-4 lg:w-[340px]">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-[14px] font-semibold text-txt">{t("voiceLaunchTitle")}</h3>
+                  <p className="mt-0.5 text-[12.5px] leading-relaxed text-txt2">{t("launchPanelBody")}</p>
+                </div>
+                <Toggle on={launch} busy={busy} onFlip={() => void flipLaunch()} label={t("voiceLaunchTitle")} />
+              </div>
             </div>
-          </div>
+          </section>
         </div>
       </div>
     </div>
