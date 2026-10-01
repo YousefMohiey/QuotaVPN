@@ -203,8 +203,6 @@ export const en = {
   "voiceOffTitle": "Voice Chat Off",
   "voiceOffSub": "Not connected · Voice chat disabled",
   "voiceConnecting": "Connecting…",
-  "howItWorks": "How it works?",
-  "howBody": "QuotaVPN carries Valorant voice chat through your region while your game connection stays on its normal route, so your in-game ping does not change.",
   "launchPanelBody": "Automatically enable voice chat when you open Valorant.",
   "voiceLaunchTitle": "Launch with Valorant",
   "voiceLaunchBody": "Turn the Voice Chat Helper on with Valorant, and back off when it closes.",
