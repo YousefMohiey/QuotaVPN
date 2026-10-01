@@ -58,7 +58,7 @@ const STR = {
     generateCard: "Generate card", applyDomainBtn: "Apply", myCards: "My cards", serverHint: "Automatic configuration.",
     host: "Address", language: "Language", reconnect: "Reconnect", testPort: "Check server", copyLog: "Copy log",
     secStatus: "Status", secConnection: "Connection", secGeneral: "General", secProtection: "Protection",
-    tabHome: "Home", tabSpeed: "Speed", tabCards: "Cards", tabServer: "Server", tabSettings: "Settings", howTo: "How to use",
+    tabHome: "Home", tabSpeed: "Speed", tabCards: "Cards", tabServer: "Server", tabSettings: "Settings",
     tabApps: "Apps", vpnFor: "VPN for", appsAll: "All apps", appsOnly: "Only these", appsExcept: "All but these",
     appsHint: "Changes apply next time you connect.", appsSearch: "Search apps…",
     appsLoading: "Loading apps…", appsEmpty: "No applications found.",
@@ -106,8 +106,6 @@ const STR = {
     secTraffic: "Traffic and routing", routing: "App routing", back: "Back", cancel: "Cancel",
     addCard: "+ New", connecting: "Connecting…", ping: "Ping",
     sheetSearch: "Search domains…",
-    obTitle: "How QuotaVPN works", ob1: "Pick Gamerz or Streamerz.",
-    ob2: "Choose the server it rides.", ob3: "Hit Connect - back out anytime, the VPN stays on.", obGot: "Got it",
   },
   ar: {
     cardForVpn: "السيرفر", route: "البوابة", protected: "الحماية", wholeDevice: "الجهاز بالكامل",
@@ -116,7 +114,7 @@ const STR = {
     generateCard: "إنشاء بطاقة", applyDomainBtn: "تطبيق", myCards: "بطاقاتي", serverHint: "إعداد تلقائي",
     host: "العنوان", language: "اللغة", reconnect: "إعادة الاتصال", testPort: "فحص السيرفر", copyLog: "نسخ السجل",
     secStatus: "الحالة", secConnection: "الاتصال", secGeneral: "عام", secProtection: "الحماية",
-    tabHome: "الرئيسية", tabSpeed: "السرعة", tabCards: "البطاقات", tabServer: "السيرفر", tabSettings: "الإعدادات", howTo: "طريقة الاستخدام",
+    tabHome: "الرئيسية", tabSpeed: "السرعة", tabCards: "البطاقات", tabServer: "السيرفر", tabSettings: "الإعدادات",
     tabApps: "التطبيقات", vpnFor: "الـVPN لـ", appsAll: "جميع التطبيقات", appsOnly: "المحددة فقط", appsExcept: "الجميع باستثناء",
     appsHint: "سيتم تطبيق التغييرات عند الاتصال التالي.", appsSearch: "ابحث عن تطبيق…",
     appsLoading: "جارٍ تحميل التطبيقات…", appsEmpty: "لا توجد تطبيقات بهذا الاسم.",
@@ -164,8 +162,6 @@ const STR = {
     secTraffic: "الترافيك والتوجيه", routing: "توجيه التطبيقات", back: "رجوع", cancel: "إلغاء",
     addCard: "+ جديد", connecting: "جارٍ الاتصال…", ping: "البينج",
     sheetSearch: "ابحث عن دومين…",
-    obTitle: "كيف يعمل QuotaVPN", ob1: "اختر جيمرز أو ستريمرز.",
-    ob2: "اختر البطاقة من الرئيسية.", ob3: "اضغط اتصال - يمكنك الخروج من التطبيق، وسيبقى الـVPN يعمل.", obGot: "فهمت",
   },
 };
 let lang = localStorage.getItem("qc-lang") || "en";
@@ -482,7 +478,6 @@ async function refresh() {
   paintHero();
   cardsCache = st.cards;
   fillTunnelCards(st.cards);
-  maybeCoach(st.cards.length > 0);
   paintPresets();
   paintDomain();
   // Slow DNS last: the list is already painted, the IP fills in after.
@@ -1089,19 +1084,6 @@ document.querySelectorAll("#lang-seg button").forEach((b) => {
 });
 // Tap the home net rows to see the full host (toast overlay, layout never grows).
 $("ip-row").onclick = () => { if (serverHost) bar(true, serverIp && serverIp !== serverHost ? serverIp + " · " + serverHost : serverHost); };
-// First-run coach for people who never used the app. Shows once, only when
-// there are no cards yet. Dismissing remembers the choice.
-$("btn-coach").onclick = () => {
-  $("coach").hidden = true;
-  localStorage.setItem("qc-onboard", "1");
-};
-// Permanent entry to the guide, next to the other quiet tools.
-$("btn-how").onclick = () => { $("coach").hidden = false; };
-function maybeCoach(hasCards) {
-  if (!hasCards && !localStorage.getItem("qc-onboard")) $("coach").hidden = false;
-  else $("coach").hidden = true;
-}
-
 fillSniSelect();
 applyLang(lang);
 // Decorative icons stay out of the accessibility tree; state lives in text.

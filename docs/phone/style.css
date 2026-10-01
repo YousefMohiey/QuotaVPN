@@ -332,24 +332,6 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
 #apps-search { margin-bottom: 10px; }
 .apps-list .opt { min-height: 50px; }
 .apps-list .empty { text-align: center; }
-.coach {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: rgb(0 0 0 / 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-.coach[hidden] { display: none; }
-.coach-card { width: 100%; max-width: 340px; text-align: start; }
-.coach-card ol { margin: 0 0 4px; padding-inline-start: 20px; color: var(--txt2); font-size: 13px; line-height: 1.7; }
-[lang="ar"] .coach-card ol { direction: rtl; }
-.coach-card li { margin: 6px 0; }
-.coach-card li::marker { color: var(--accent-strong); font-weight: 600; }
 [lang="ar"] .stat b { line-height: 1.6; }
 
 /* Floating tab bar: same panel material as everything else. */
