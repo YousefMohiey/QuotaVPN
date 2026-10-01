@@ -44,10 +44,18 @@ function Toggle({
   )
 }
 
+// Last engine truth, shared across mounts: switching pages unmounts this
+// view, and reopening on a blank false is the off/on blink.
+let lastVoiceRunning: boolean | null = null
+
 export function Voice() {
   const { t } = useI18n()
   const { card, appsMode, apps, transport } = useApp()
-  const [running, setRunning] = useState(false)
+  const [running, setRunningState] = useState<boolean>(() => lastVoiceRunning ?? false)
+  const setRunning = (v: boolean) => {
+    lastVoiceRunning = v
+    setRunningState(v)
+  }
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState("")
   const [launch, setLaunch] = useState(() => {
@@ -186,7 +194,7 @@ export function Voice() {
     <div className="relative">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 right-0 w-[46%] min-w-[340px] select-none [mask-image:linear-gradient(to_right,transparent_0,black_42%)]"
+        className="pointer-events-none fixed inset-y-0 left-[236px] right-0 z-0 select-none [mask-image:linear-gradient(to_right,transparent_0,black_22%)]"
       >
         <img
           src="/omen.jpg"
@@ -194,12 +202,12 @@ export function Voice() {
           className="h-full w-full object-cover object-right opacity-70"
         />
       </div>
-      <div className="relative">
+      <div className="relative z-10">
         <div className="flex items-center gap-5">
-          <ValorantMark className="size-[76px] shrink-0 text-white" />
+          <ValorantMark className="size-[84px] shrink-0 text-white" />
           <div className="min-w-0">
-            <h1 className="text-[30px] font-semibold leading-tight text-txt">{t("voiceTitle")}</h1>
-            <p className="mt-1 text-[15px] text-txt2">{t("voiceTagline")}</p>
+            <h1 className="text-[34px] font-semibold leading-tight text-txt">{t("voiceTitle")}</h1>
+            <p className="mt-1 text-[15px] text-txt">{t("voiceTagline")}</p>
             <p className="mt-0.5 text-[15px] font-bold text-txt">{t("voicePingBold")}</p>
           </div>
         </div>
@@ -208,7 +216,7 @@ export function Voice() {
           <div className="flex items-start justify-between gap-6">
             <div className="min-w-0">
               <h2 className="text-[17px] font-semibold text-txt">{t("voiceRowTitle")}</h2>
-              <p className="mt-1 max-w-[560px] text-[14px] leading-relaxed text-txt2">{t("voiceRowBody")}</p>
+              <p className="mt-1 max-w-[640px] text-[14px] leading-relaxed text-txt">{t("voiceRowBody")}</p>
               {msg && <p className="mt-2 text-[12.5px] text-txt2">{msg}</p>}
             </div>
             <div className="flex shrink-0 flex-col items-end gap-2">
@@ -227,7 +235,7 @@ export function Voice() {
           <div className="flex items-start justify-between gap-6">
             <div className="min-w-0">
               <h2 className="text-[17px] font-semibold text-txt">{t("voiceLaunchTitle")}</h2>
-              <p className="mt-1 max-w-[560px] text-[14px] leading-relaxed text-txt2">{t("voiceLaunchBody")}</p>
+              <p className="mt-1 max-w-[640px] text-[14px] leading-relaxed text-txt">{t("voiceLaunchBody")}</p>
             </div>
             <div className="shrink-0">
               <Toggle on={launch} busy={busy} onFlip={() => void flipLaunch()} label={t("voiceLaunchTitle")} />
