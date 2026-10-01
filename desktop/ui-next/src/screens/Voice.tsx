@@ -207,7 +207,7 @@ export function Voice() {
           </div>
         </div>
 
-        <div className="mt-8 border-t border-line py-6">
+        <div className="mt-8 py-6">
           <div className="flex items-start justify-between gap-6">
             <div className="min-w-0">
               <h2 className="text-[17px] font-semibold text-txt">{t("voiceRowTitle")}</h2>
@@ -226,7 +226,7 @@ export function Voice() {
           </div>
         </div>
 
-        <div className="border-t border-line py-6">
+        <div className="py-6">
           <div className="flex items-start justify-between gap-6">
             <div className="min-w-0">
               <h2 className="text-[17px] font-semibold text-txt">{t("voiceLaunchTitle")}</h2>
