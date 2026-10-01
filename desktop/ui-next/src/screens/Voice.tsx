@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react"
-import omenUrl from "../assets/omen.jpg"
 import { ValorantMark } from "@/components/ValorantMark"
 import { useI18n } from "@/lib/i18n"
 import { useApp } from "@/state/app"
@@ -193,13 +192,6 @@ export function Voice() {
 
   return (
     <div className="relative">
-      {/* The artwork is a background wash, not an element: it can never
-          flash at the wrong size or shift the layout while it decodes. */}
-      <div
-        aria-hidden
-        style={{ backgroundImage: `url(${omenUrl})` }}
-        className="pointer-events-none fixed inset-y-0 left-[236px] right-0 z-0 select-none bg-cover bg-right bg-no-repeat opacity-70 [mask-image:linear-gradient(to_right,transparent_0,black_22%)]"
-      />
       <div className="relative z-10">
         <div className="flex items-center gap-5">
           <ValorantMark className="size-[84px] shrink-0 text-white" />

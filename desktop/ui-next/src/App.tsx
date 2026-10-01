@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { isTauri } from "@/lib/ipc"
 import { AnimatePresence, motion } from "motion/react"
+import omenUrl from "./assets/omen.jpg"
 import { Sidebar, type Tab } from "@/components/Sidebar"
 import { WindowControls } from "@/components/WindowControls"
 import { Home } from "@/screens/Home"
@@ -90,6 +91,27 @@ export default function App() {
       <div className="relative z-10 flex h-full">
         <Sidebar tab={tab} onTab={go} />
         <main id="content" className="min-w-0 flex-1 overflow-y-auto scroll-pb-6">
+          {/* The Omen wash lives here, outside the page-slide animation: a
+              fixed layer inside the sliding view gets sized to the text
+              column until the slide ends, which reads as small-then-big on
+              every switch. Mounted once per visit, it never moves. The grain
+              overlay dithers the dark gradient so it never bands into lines. */}
+          {tab === "voice" && (
+            <>
+              <div
+                aria-hidden
+                style={{ backgroundImage: `url(${omenUrl})` }}
+                className="pointer-events-none fixed inset-y-0 left-[236px] right-0 z-0 select-none bg-cover bg-right bg-no-repeat opacity-70 [mask-image:linear-gradient(to_right,transparent_0,black_22%)]"
+              />
+              <div
+                aria-hidden
+                style={{
+                  backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/><feColorMatrix type='saturate' values='0'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='0.5'/></svg>")`,
+                }}
+                className="pointer-events-none fixed inset-y-0 left-[236px] right-0 z-0 opacity-[0.05]"
+              />
+            </>
+          )}
           {/* the caption strip: pt-14 below keeps the window buttons in clear
               space, and this soft fade hides content that scrolls up behind
               them, so they are never in the way of a page */}
