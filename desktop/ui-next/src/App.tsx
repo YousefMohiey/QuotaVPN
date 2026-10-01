@@ -100,8 +100,8 @@ export default function App() {
             src={omenUrl}
             alt=""
             draggable={false}
-            className={`pointer-events-none fixed top-[48%] right-[-40px] z-0 h-[132%] w-auto -translate-y-1/2 select-none object-contain object-right transition-opacity duration-300 [mask-image:linear-gradient(to_left,black_0%,black_26%,rgba(0,0,0,0.6)_48%,rgba(0,0,0,0.15)_68%,transparent_88%)] [-webkit-mask-image:linear-gradient(to_left,black_0%,black_26%,rgba(0,0,0,0.6)_48%,rgba(0,0,0,0.15)_68%,transparent_88%)] ${
-              tab === "voice" ? "opacity-90" : "opacity-0"
+            className={`pointer-events-none fixed top-[48%] right-[-40px] z-0 h-[132%] w-auto -translate-y-1/2 select-none object-contain object-right transition-opacity duration-300 [mask-image:linear-gradient(to_left,black_0%,black_16%,rgba(0,0,0,0.55)_34%,rgba(0,0,0,0.12)_52%,transparent_70%)] [-webkit-mask-image:linear-gradient(to_left,black_0%,black_16%,rgba(0,0,0,0.55)_34%,rgba(0,0,0,0.12)_52%,transparent_70%)] ${
+              tab === "voice" ? "opacity-80" : "opacity-0"
             }`}
           />
           {/* the caption strip: pt-14 below keeps the window buttons in clear
