@@ -100,8 +100,8 @@ export default function App() {
             src={omenUrl}
             alt=""
             draggable={false}
-            className={`pointer-events-none fixed top-1/2 right-[-24px] z-0 h-[94%] w-auto -translate-y-1/2 select-none object-contain object-right transition-opacity duration-300 ${
-              tab === "voice" ? "opacity-55" : "opacity-0"
+            className={`pointer-events-none fixed top-[55%] right-[-120px] z-0 h-[94%] w-auto -translate-y-1/2 select-none object-contain object-right transition-opacity duration-300 ${
+              tab === "voice" ? "opacity-40" : "opacity-0"
             }`}
           />
           {/* the caption strip: pt-14 below keeps the window buttons in clear
