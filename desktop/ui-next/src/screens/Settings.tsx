@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { Power, RefreshCw, Settings2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Toggle } from "@/components/Toggle"
@@ -39,8 +39,8 @@ export function Settings() {
   const { t, lang, setLang } = useI18n()
   const { update, updateState, checkUpdates, applyUpdate, updatePct } = useApp()
   const [startup, setStartup] = useState(false)
-  const [startupBusy, setStartupBusy] = useState(false)
   const [startupMsg, setStartupMsg] = useState("")
+  const startupBusyRef = useRef(false)
 
   useEffect(() => {
     let alive = true
@@ -58,16 +58,20 @@ export function Settings() {
   }, [])
 
   const flipStartup = async (next: boolean) => {
-    if (startupBusy) return
-    setStartupBusy(true)
+    // Flip first, command second: reg.exe spawns take a moment and the
+    // switch must answer the click on the same frame. A failure reverts
+    // the flip and reports it.
+    if (startupBusyRef.current) return
+    startupBusyRef.current = true
+    setStartup(next)
     setStartupMsg("")
     try {
       await api.autostartSet(next)
-      setStartup(next)
     } catch {
+      setStartup(!next)
       setStartupMsg(t("startupFail"))
     } finally {
-      setStartupBusy(false)
+      startupBusyRef.current = false
     }
   }
 
@@ -126,7 +130,7 @@ export function Settings() {
           </div>
           <Toggle
             on={startup}
-            busy={startupBusy}
+            busy={false}
             onFlip={() => void flipStartup(!startup)}
             label={t("startupTitle")}
           />
