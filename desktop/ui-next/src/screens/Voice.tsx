@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Check, ChevronRight, Loader2, Mic, Rocket } from "lucide-react"
+import { Check, ChevronRight, Loader2, Mic } from "lucide-react"
 import { ValorantMark } from "@/components/ValorantMark"
 import { Toggle } from "@/components/Toggle"
 import { useI18n } from "@/lib/i18n"
@@ -214,13 +214,10 @@ export function Voice() {
         <div className="mt-7 flex flex-col gap-6">
           <section className="rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] p-5">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
-              <div className="flex min-w-0 flex-1 items-center gap-4">
-                <span className="grid size-11 shrink-0 place-items-center rounded-[12px] bg-white/[0.06] text-txt2">
-                  <Mic className="size-5" aria-hidden />
-                </span>
+              <div className="flex min-w-0 flex-1 items-center">
                 <div className="min-w-0">
                   <h2 className="text-[16.5px] font-semibold text-txt">{t("voiceRowTitle")}</h2>
-                  <p className="mt-1 max-w-[400px] text-[13.5px] leading-relaxed text-txt2">
+                  <p className="mt-1 max-w-[430px] text-[13.5px] leading-relaxed text-txt2">
                     {t("voiceRowBody")}
                   </p>
                   {msg && <p className="mt-2 text-[12.5px] text-txt2">{msg}</p>}
@@ -287,13 +284,10 @@ export function Voice() {
 
           <section className="rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] p-5">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
-              <div className="flex min-w-0 flex-1 items-center gap-4">
-                <span className="grid size-11 shrink-0 place-items-center rounded-[12px] bg-white/[0.06] text-txt2">
-                  <Rocket className="size-5" aria-hidden />
-                </span>
+              <div className="flex min-w-0 flex-1 items-center">
                 <div className="min-w-0">
                   <h2 className="text-[16.5px] font-semibold text-txt">{t("voiceLaunchTitle")}</h2>
-                  <p className="mt-1 max-w-[400px] text-[13.5px] leading-relaxed text-txt2">
+                  <p className="mt-1 max-w-[430px] text-[13.5px] leading-relaxed text-txt2">
                     {t("voiceLaunchBody")}
                   </p>
                 </div>
