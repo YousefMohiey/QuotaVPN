@@ -868,7 +868,9 @@ export function buildVerdicts(r: Result, t: (k: StrKey) => string): Verdict[] {
   return out
 }
 
-/** The one button that matters here: a plain ring, like the app's dial. */
+/** The one button that matters here: a translucent ring with a live blue
+    arc and a soft blue presence, the same restrained accent the rest of
+    the app uses. While a run is going, the arc travels. */
 function StartCircle({
   running,
   done,
@@ -882,6 +884,9 @@ function StartCircle({
 }) {
   const { t } = useI18n()
   const label = running ? t("stop") : done ? t("startAgain") : t("startTest")
+  const R = 84
+  const C = 2 * Math.PI * R
+  const ARC = C * 0.62
 
   return (
     <motion.button
@@ -890,26 +895,48 @@ function StartCircle({
       aria-label={label}
       whileTap={{ scale: 0.985 }}
       transition={{ type: "spring", stiffness: 460, damping: 32 }}
-      className={cn(
-        "relative grid size-[176px] place-items-center rounded-full border bg-[radial-gradient(circle_at_50%_36%,rgb(255_255_255/0.07),rgb(255_255_255/0.02)_74%)] transition-colors",
-        running
-          ? "border-[var(--brand-line)] text-brand-strong"
-          : "border-[rgb(255_255_255/0.2)] text-txt hover:border-[var(--brand-line)] hover:text-brand-strong",
-      )}
+      className="group relative grid size-[176px] place-items-center rounded-full bg-[rgb(21_29_46/0.55)] transition-colors"
     >
-      {running && (
-        <span
-          aria-hidden
-          className="absolute -inset-px rounded-full border-2 border-transparent border-t-[var(--brand)] [animation:spin_1.15s_linear_infinite]"
-        />
-      )}
-      <span className="flex flex-col items-center gap-2.5">
-        {running ? (
-          <Square className="size-7" strokeWidth={1.75} aria-hidden />
-        ) : (
-          <Play className="ms-1 size-8" strokeWidth={1.75} aria-hidden />
+      {/* the soft blue presence behind the ring, like the reference */}
+      <span
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute -inset-6 rounded-full bg-[radial-gradient(circle_at_50%_45%,rgb(46_123_246/0.24),transparent_66%)] blur-[6px] transition-opacity duration-300",
+          running ? "opacity-100" : "opacity-70 group-hover:opacity-100",
         )}
-        <span className="text-[12.5px] font-medium tracking-[0.01em]">{label}</span>
+      />
+      <svg
+        viewBox="0 0 176 176"
+        className={cn("absolute inset-0", running && "[animation:spin_2.2s_linear_infinite]")}
+        aria-hidden
+      >
+        <defs>
+          <linearGradient id="qc-arc" x1="0.12" y1="0" x2="0.92" y2="1">
+            <stop offset="0" stopColor="rgb(46 123 246 / 0.12)" />
+            <stop offset="0.45" stopColor="#2e7bf6" />
+            <stop offset="1" stopColor="#5b8def" />
+          </linearGradient>
+        </defs>
+        <circle cx="88" cy="88" r={R} fill="none" stroke="rgb(255 255 255 / 0.10)" strokeWidth="1.5" />
+        <circle
+          cx="88"
+          cy="88"
+          r={R}
+          fill="none"
+          stroke="url(#qc-arc)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeDasharray={`${ARC} ${C - ARC}`}
+          transform="rotate(-90 88 88)"
+        />
+      </svg>
+      <span className="relative flex flex-col items-center gap-2.5">
+        {running ? (
+          <Square className="size-7 text-[var(--brand-vivid)]" strokeWidth={1.75} aria-hidden />
+        ) : (
+          <Play className="ms-1 size-8 text-[var(--brand-vivid)]" strokeWidth={1.75} aria-hidden />
+        )}
+        <span className="text-[12.5px] font-medium tracking-[0.01em] text-txt">{label}</span>
       </span>
     </motion.button>
   )
