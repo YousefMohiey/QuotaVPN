@@ -166,23 +166,23 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
   }
 
   const running = phase === "ping" || phase === "download" || phase === "upload"
-  const measured = result.ping !== null || result.down !== null || result.up !== null
 
   // The reading panel slides in only after the circle has had room to move,
   // the same beat Home uses between its dial and the info panel. Mounting
   // both at once is what makes the motion feel fast and rough.
   const [showPanel, setShowPanel] = useState(false)
   useEffect(() => {
-    if (running) {
-      const id = window.setTimeout(() => setShowPanel(true), 250)
-      return () => window.clearTimeout(id)
+    if (!running) {
+      setShowPanel(false)
+      return
     }
-    setShowPanel(phase === "done" && measured)
-  }, [running, phase, measured])
+    const id = window.setTimeout(() => setShowPanel(true), 250)
+    return () => window.clearTimeout(id)
+  }, [running])
 
-  // Parked: the circle sits left and the graph shows, from the moment the
-  // test starts until the results are cleared.
-  const parked = running || (phase === "done" && measured)
+  // Parked only while measuring: when the run ends the ring goes back to
+  // the middle (Start again), so the page always settles the same way.
+  const parked = running
   // Which server the run goes to. Loaded on arrival and picked by round trip,
   // like a speed test does, so the reading uses the nearest host instead of a
   // fixed one; Cloudflare stays in the pool as the always-available entry.
@@ -645,9 +645,9 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
   ]
 
   return (
-    <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <div className="min-w-0">
+    <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-5">
+      <div className="flex items-end justify-between gap-6">
+        <div className="min-w-0 flex-1">
           <h1 className="text-[30px] font-semibold leading-tight text-txt">{t("tabSpeed")}</h1>
           <p className="mt-1 text-[15px] text-txt2">{t("speedTag")}</p>
         </div>
@@ -658,7 +658,7 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
             disabled={running}
             aria-label={t("pickServer")}
             title={t("pickServer")}
-            className="flex h-9 max-w-[260px] items-center gap-2 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt transition-colors hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] disabled:cursor-not-allowed"
+            className="flex h-9 w-[230px] items-center gap-2 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt transition-colors hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] disabled:cursor-not-allowed"
           >
             <Globe className="size-3.5 shrink-0 text-txt3" aria-hidden />
             <span className="min-w-0 truncate" dir="auto">
@@ -682,14 +682,14 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
       {/* One ring starts the run; while it runs it parks left with a spring,
           the same way Home's dial does, and the reading slides in beside it. */}
       <section className="rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)]">
-        <div className="flex min-h-[248px] items-center px-5 py-5">
+        <div className="flex min-h-[224px] items-center px-5 py-4">
           <motion.div
             layout
             transition={SPRING}
             className={cn("flex w-full items-center", parked ? "justify-start gap-7" : "justify-center")}
           >
             <motion.div layout transition={SPRING} className="flex shrink-0 items-center justify-center">
-              <StartCircle running={running} onStart={() => void run("all")} onStop={stop} />
+              <StartCircle running={running} done={phase === "done"} onStart={() => void run("all")} onStop={stop} />
             </motion.div>
 
             <AnimatePresence mode="popLayout">
@@ -753,7 +753,7 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
 
         {/* what the numbers mean, in one row, inside the same pane */}
         {verdicts.length > 0 && (
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-line px-5 py-3.5">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-line px-5 py-3">
             {verdicts.map((v) => (
               <span key={v.label} className="flex items-center gap-2 text-[12px]">
                 <v.icon className="size-3.5 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
@@ -803,9 +803,9 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
         )}
       </section>
 
-      <div className="flex items-center justify-between gap-4 px-1">
-        <p aria-live="polite" className="min-w-0 truncate text-[12px] text-txt3">
-          {hint || (!measured ? t("speedIdle") : "")}
+      <div className="flex items-center justify-end gap-4 px-1">
+        <p aria-live="polite" className="sr-only">
+          {hint}
         </p>
         {history.length > 0 && (
           <button
@@ -869,15 +869,17 @@ export function buildVerdicts(r: Result, t: (k: StrKey) => string): Verdict[] {
 /** The one button that matters here: a plain ring, like the app's dial. */
 function StartCircle({
   running,
+  done,
   onStart,
   onStop,
 }: {
   running: boolean
+  done: boolean
   onStart: () => void
   onStop: () => void
 }) {
   const { t } = useI18n()
-  const label = running ? t("stop") : t("startTest")
+  const label = running ? t("stop") : done ? t("startAgain") : t("startTest")
 
   return (
     <motion.button
@@ -933,7 +935,7 @@ function MetricTile({
       disabled={disabled}
       title={title}
       className={cn(
-        "flex min-w-0 items-center gap-3 px-4 py-3.5 text-start transition-colors",
+        "flex min-w-0 items-center gap-3 px-4 py-3 text-start transition-colors",
         !disabled && "hover:bg-white/[0.03]",
       )}
     >
@@ -968,21 +970,29 @@ function FactRow({
   lines: string[]
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-3.5 px-5 py-4">
+    <div className="flex min-w-0 items-center gap-3.5 px-5 py-3.5">
       <span className="grid size-10 shrink-0 place-items-center rounded-[12px] border border-line bg-[rgb(255_255_255/0.03)] text-brand-strong">
         <Icon className="size-[18px]" strokeWidth={1.7} aria-hidden />
       </span>
       <div className="min-w-0">
         <div className="text-[10.5px] font-medium tracking-[0.08em] text-txt3 uppercase">{title}</div>
-        <div className="mt-1 truncate text-[14px] font-semibold text-txt" dir="auto">
+        <div className={cn("mt-0.5 leading-snug font-semibold break-words text-txt", fitSize(main, true))} dir="auto">
           {main}
         </div>
         {lines.filter(Boolean).map((l, i) => (
-          <div key={i} className="truncate text-[11.5px] text-txt3" dir="auto">
+          <div key={i} className={cn("truncate text-txt3", fitSize(l, false))} dir="auto">
             {l}
           </div>
         ))}
       </div>
     </div>
   )
+}
+
+/** Long server names must fit their column: the value steps down a size as
+ *  it grows, and anything still too long wraps instead of clipping. */
+function fitSize(s: string, main: boolean): string {
+  const n = s.length
+  if (main) return n > 30 ? "text-[12px]" : n > 20 ? "text-[13px]" : "text-[14px]"
+  return n > 30 ? "text-[10px]" : n > 24 ? "text-[10.5px]" : "text-[11.5px]"
 }

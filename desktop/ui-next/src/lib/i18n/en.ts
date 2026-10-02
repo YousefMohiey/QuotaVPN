@@ -34,6 +34,7 @@ export const en = {
   "pasteTitle": "Add a card",
   "searchTargets": "Search targets…",
   "startTest": "Start test",
+  "startAgain": "Start again",
   "target": "Target",
   "targetCustom": "Custom domain…",
   "targetInternet": "Internet",

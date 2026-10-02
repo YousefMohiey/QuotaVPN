@@ -37,6 +37,7 @@ export const ar = {
   "pasteTitle": "إضافة بطاقة",
   "searchTargets": "ابحث في الأهداف…",
   "startTest": "بدء الاختبار",
+  "startAgain": "إعادة الاختبار",
   "target": "الهدف",
   "targetCustom": "نطاق مخصص…",
   "targetInternet": "الإنترنت",
