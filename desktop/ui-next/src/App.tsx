@@ -123,7 +123,7 @@ export default function App() {
                 {tab === "home" && <Home onOpenApps={() => go("apps")} />}
                 {tab === "speed" && <Speed onOpenHistory={() => go("history")} />}
                 {tab === "voice" && <Voice />}
-                {tab === "history" && <SpeedHistory onBack={() => go("speed")} onOpenResult={openResult} />}
+                {tab === "history" && <SpeedHistory onOpenResult={openResult} />}
                 {tab === "result" && <SpeedResult runAt={resultAt} onBack={() => go("history")} />}
                 {tab === "settings" && <Settings />}
                 {tab === "apps" && <Apps onBack={() => go("home")} />}

@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react"
-import { ArrowDown, ArrowLeft, ArrowUp, Check, ChevronRight, Trash2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { ArrowDown, ArrowUp, Check, ChevronRight, Trash2 } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -45,7 +44,7 @@ function RunCard({
   return (
     <div
       className={cn(
-        "glass group flex items-center rounded-[16px] transition-colors hover:border-line-strong",
+        "group flex items-center rounded-[14px] border border-line bg-[rgb(21_29_46/0.62)] transition-colors hover:border-line-strong",
         picked && "border-[var(--brand-line)] bg-[var(--brand-bg)]",
       )}
     >
@@ -53,7 +52,7 @@ function RunCard({
         type="button"
         onClick={onAct}
         aria-pressed={select ? picked : undefined}
-        className="min-w-0 flex-1 px-3.5 py-2.5 text-start"
+        className="min-w-0 flex-1 px-4 py-3 text-start"
       >
         <div className="flex items-baseline justify-between gap-3">
           <span className="text-[11px] tabular-nums text-txt3">{time}</span>
@@ -61,26 +60,26 @@ function RunCard({
             {h.target || serverLabel}
           </span>
         </div>
-        <div className="mt-1 flex items-center gap-1.5">
+        <div className="mt-1.5 flex items-center gap-1.5">
           <ArrowDown className="size-3.5 shrink-0 text-txt3" aria-hidden />
-          <span className="text-[24px] leading-none font-light tabular-nums text-txt">{num(h.down)}</span>
+          <span className="text-[22px] leading-none font-light tabular-nums text-txt">{num(h.down)}</span>
           <span className="text-[11.5px] text-txt3">{t("mbps")}</span>
         </div>
-        <div className="mt-1.5 grid grid-cols-3 divide-x divide-line text-[11px] text-txt3">
-          <span className="flex min-w-0 items-center gap-1 ps-0">
+        <div className="mt-2 grid grid-cols-3 divide-x divide-line text-[11px] text-txt3">
+          <span className="flex min-w-0 items-center gap-1">
             <ArrowUp className="size-3 shrink-0" aria-hidden />
             <span className="tabular-nums text-txt2">{num(h.up)}</span>
             <span>{t("mbps")}</span>
           </span>
-          <span className="min-w-0 truncate ps-2">
+          <span className="min-w-0 truncate ps-2.5">
             {t("pingTitle")} <span className="tabular-nums text-txt2">{num(h.ping, 0)}</span> {t("ms")}
           </span>
-          <span className="min-w-0 truncate ps-2">
+          <span className="min-w-0 truncate ps-2.5">
             {t("jitter")} <span className="tabular-nums text-txt2">{num(h.jitter, 0)}</span> {t("ms")}
           </span>
         </div>
       </button>
-      <div className="flex shrink-0 items-center gap-1 pe-3">
+      <div className="flex shrink-0 items-center gap-1 pe-3.5">
         {select ? (
           <span
             className={cn(
@@ -117,7 +116,7 @@ function RunCard({
     hanging off it, and the best numbers of the whole log above it. Selecting
     turns the cards into checkboxes so one, several or everything can go, and
     nothing is removed without a confirmation. */
-export function SpeedHistory({ onBack, onOpenResult }: { onBack: () => void; onOpenResult: (at: number) => void }) {
+export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => void }) {
   const { t } = useI18n()
   const [history, setHistory] = useState<Run[]>(() => loadHistory())
   const [selMode, setSelMode] = useState(false)
@@ -186,84 +185,79 @@ export function SpeedHistory({ onBack, onOpenResult }: { onBack: () => void; onO
 
   const num = (v: number | null) => (v === null ? "-" : v >= 100 ? v.toFixed(0) : v.toFixed(1))
 
+  const chip =
+    "flex h-9 items-center gap-1.5 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt transition-colors hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
+
   return (
-    <div className="mx-auto flex w-full max-w-[640px] flex-col gap-3">
-      <div className="flex items-center gap-3 px-1">
-        <Button variant="ghost" size="sm" className="h-8 gap-1.5 rounded-[10px] px-2.5 text-[12.5px]" onClick={onBack}>
-          <ArrowLeft className="size-3.5" aria-hidden />
-          {t("back")}
-        </Button>
-      </div>
-
-      <div className="flex items-center justify-between gap-2 px-1">
-        <div className="text-[11px] font-medium tracking-[0.08em] text-txt3 uppercase">
-          {t("history")}
-          {history.length > 0 && <span className="ms-2 font-normal tabular-nums">{history.length}</span>}
+    <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-4">
+      <div className="flex items-end justify-between gap-6">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-[30px] font-semibold leading-tight text-txt">{t("history")}</h1>
+          <p className="mt-1 text-[15px] text-txt2">{t("histTag")}</p>
         </div>
-
         {history.length > 0 && (
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 rounded-[10px] border border-line px-2.5 text-[12.5px] hover:border-line-strong"
+          <div className="flex shrink-0 items-center gap-2.5">
+            <button
+              type="button"
+              className={chip}
               onClick={() => {
                 setSelMode((v) => !v)
                 setPicked([])
               }}
             >
               {selMode ? t("done") : t("select")}
-            </Button>
+            </button>
             {!selMode && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1.5 rounded-[10px] px-2.5 text-[12.5px] text-[var(--red)] hover:bg-[var(--red-bg)]"
+              <button
+                type="button"
+                className={cn(chip, "text-[var(--red)] hover:border-[var(--red-line)] hover:bg-[var(--red-bg)]")}
                 onClick={() => setPending({ kind: "all" })}
               >
                 <Trash2 className="size-3.5" aria-hidden />
                 {t("clearAll")}
-              </Button>
+              </button>
             )}
           </div>
         )}
       </div>
 
       {history.length === 0 ? (
-        <section className="glass rounded-[20px] px-4 py-3">
-          <p className="px-1 py-6 text-[12.5px] text-txt3">{t("speedIdle")}</p>
+        <section className="flex flex-col items-center justify-center rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] px-5 py-12 text-center">
+          <p className="text-[13.5px] text-txt2">{t("histEmpty")}</p>
         </section>
       ) : (
         <>
           {/* the log in three numbers */}
-          <div className="glass grid grid-cols-3 divide-x divide-line rounded-[16px] px-1 py-2.5">
+          <section className="grid grid-cols-3 divide-x divide-line rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)]">
             {[
               { label: t("bestDown"), value: best.down, unit: t("mbps"), round: false },
               { label: t("bestUp"), value: best.up, unit: t("mbps"), round: false },
               { label: t("bestPing"), value: best.ping, unit: t("ms"), round: true },
             ].map((s) => (
-              <div key={s.label} className="flex min-w-0 flex-col items-center gap-0.5 px-1">
-                <span className="truncate text-[10.5px] text-txt3">{s.label}</span>
+              <div key={s.label} className="flex min-w-0 flex-col items-center gap-1 px-3 py-4">
+                <span className="truncate text-[10.5px] font-medium tracking-[0.08em] text-txt3 uppercase">
+                  {s.label}
+                </span>
                 <span
                   className={cn(
-                    "text-[19px] leading-none font-light tabular-nums",
+                    "text-[22px] leading-none font-light tabular-nums",
                     s.value === null ? "text-txt3" : "text-txt",
                   )}
                 >
                   {s.round ? (s.value === null ? "-" : Math.round(s.value)) : num(s.value)}
                 </span>
-                <span className="text-[10.5px] text-txt3">{s.unit}</span>
+                <span className="text-[11px] text-txt3">{s.unit}</span>
               </div>
             ))}
-          </div>
+          </section>
 
           {/* the timeline */}
-          <div className="relative mt-0.5">
+          <div className="relative">
             <span aria-hidden className="absolute inset-y-3 start-[7px] w-px bg-[var(--line)]" />
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2">
               {days.map((d) => (
                 <div key={d.key}>
-                  <div className="relative py-2">
+                  <div className="relative py-2.5">
                     <span
                       aria-hidden
                       className="absolute start-[3px] top-1/2 grid size-[15px] -translate-y-1/2 place-items-center rounded-full border border-line bg-[var(--bg)]"
@@ -275,7 +269,7 @@ export function SpeedHistory({ onBack, onOpenResult }: { onBack: () => void; onO
                         )}
                       />
                     </span>
-                    <span className="block ps-[26px] text-[11px] font-medium tracking-[0.08em] text-txt3 uppercase">
+                    <span className="block ps-[26px] text-[10.5px] font-medium tracking-[0.08em] text-txt3 uppercase">
                       {dayLabel(d.at)}
                     </span>
                   </div>
@@ -305,24 +299,24 @@ export function SpeedHistory({ onBack, onOpenResult }: { onBack: () => void; onO
 
       {/* selection bar: what will go, and the one button that does it */}
       {selMode && (
-        <div className="glass sticky bottom-0 flex items-center justify-between gap-3 rounded-[16px] px-4 py-2.5">
+        <div className="sticky bottom-0 flex items-center justify-between gap-3 rounded-[14px] border border-line bg-[rgb(21_29_46/0.9)] px-4 py-2.5 backdrop-blur-xl">
           <span className="text-[12.5px] text-txt3">
             {t("selected")}: <span className="tabular-nums text-txt2">{picked.length}</span>
           </span>
-          <Button
-            size="sm"
-            className="h-8 gap-1.5 rounded-[10px] px-3 text-[12.5px]"
+          <button
+            type="button"
             disabled={picked.length === 0}
             onClick={() => setPending({ kind: "many" })}
+            className="flex h-9 items-center gap-1.5 rounded-[10px] bg-[var(--brand-vivid)] px-3.5 text-[13px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Trash2 className="size-3.5" aria-hidden />
             {t("delete")}
-          </Button>
+          </button>
         </div>
       )}
 
       <Dialog open={pending !== null} onOpenChange={(o) => !o && setPending(null)}>
-        <DialogContent className="max-w-[360px] gap-0 overflow-hidden rounded-[var(--r-card)] p-0">
+        <DialogContent className="max-w-[360px] gap-0 overflow-hidden rounded-[16px] p-0">
           <div className="px-5 pb-4 pt-4">
             <DialogHeader className="gap-1.5">
               <DialogTitle className="text-[14px] font-semibold">{title}</DialogTitle>
@@ -332,21 +326,22 @@ export function SpeedHistory({ onBack, onOpenResult }: { onBack: () => void; onO
               {t("history")}: <span className="tabular-nums text-txt2">{rowsToGo}</span>
             </p>
           </div>
-          <div className="flex items-center justify-end gap-2 border-t border-line bg-[var(--panel)]/40 px-5 py-3">
-            <Button
-              variant="ghost"
-              className="h-[var(--ctl-h)] rounded-[var(--r-ctl)] border border-line px-4 text-[13px] hover:border-line-strong"
+          <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-3">
+            <button
+              type="button"
+              className="flex h-9 items-center rounded-[10px] border border-line px-4 text-[13px] text-txt transition-colors hover:border-line-strong"
               onClick={() => setPending(null)}
             >
               {t("cancel")}
-            </Button>
-            <Button
-              className="h-[var(--ctl-h)] gap-1.5 rounded-[var(--r-ctl)] border border-[var(--red-line)] bg-[rgb(207_112_120/0.2)] px-4 text-[13px] font-medium text-[#e6999f] hover:bg-[rgb(207_112_120/0.26)]"
+            </button>
+            <button
+              type="button"
+              className="flex h-9 items-center gap-1.5 rounded-[10px] border border-[var(--red-line)] bg-[rgb(207_112_120/0.2)] px-4 text-[13px] font-medium text-[#e6999f] transition-colors hover:bg-[rgb(207_112_120/0.26)]"
               onClick={confirm}
             >
               <Trash2 className="size-3.5" aria-hidden />
               {t("delete")}
-            </Button>
+            </button>
           </div>
         </DialogContent>
       </Dialog>

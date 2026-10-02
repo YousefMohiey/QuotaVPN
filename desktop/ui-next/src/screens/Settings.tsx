@@ -1,44 +1,55 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { Power, RefreshCw, Settings2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { RefreshCw } from "lucide-react"
 import { Toggle } from "@/components/Toggle"
 import { Segmented } from "@/components/Segmented"
 import { useApp } from "@/state/app"
 import { useI18n } from "@/lib/i18n"
 import { api } from "@/lib/ipc"
+import { cn } from "@/lib/utils"
 
-/** One settings card: icon chip plus title above an inset control row. */
-function Card({
-  icon,
+/** One control row: quiet label, title, one line of copy, control on the
+    right. Rows sit in one card and are split by hairlines, like every other
+    surface in the app. */
+function Row({
+  label,
   title,
-  sub,
-  children,
+  body,
+  control,
+  extra,
 }: {
-  icon: ReactNode
+  label: string
   title: string
-  sub: string
-  children: ReactNode
+  body: string
+  control: ReactNode
+  extra?: ReactNode
 }) {
   return (
-    <section className="glass rounded-[20px] p-4">
-      <div className="flex items-center gap-3 px-1 pb-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-[12px] bg-field text-brand-strong">
-          {icon}
-        </span>
-        <div className="min-w-0">
-          <h2 className="text-[15px] font-semibold text-txt">{title}</h2>
-          <p className="mt-0.5 text-[12.5px] text-txt2">{sub}</p>
-        </div>
+    <div className="flex items-center justify-between gap-6 px-5 py-4">
+      <div className="min-w-0">
+        <div className="text-[10.5px] font-medium tracking-[0.08em] text-txt3 uppercase">{label}</div>
+        <h3 className="mt-1 text-[14px] font-semibold text-txt">{title}</h3>
+        <p className="mt-0.5 max-w-[430px] text-[12.5px] leading-relaxed text-txt2">{body}</p>
+        {extra}
       </div>
-      <div className="rounded-[14px] border border-line bg-black/25 px-4 py-3">{children}</div>
-    </section>
+      <div className="shrink-0">{control}</div>
+    </div>
   )
 }
+
+const AUTOSTART_CACHE = "qc-autostart"
 
 export function Settings() {
   const { t, lang, setLang } = useI18n()
   const { update, updateState, checkUpdates, applyUpdate, updatePct } = useApp()
-  const [startup, setStartup] = useState(false)
+  // The cached value paints on the first frame; the engine read (a registry
+  // lookup now) reconciles a moment later.
+  const [startup, setStartup] = useState(() => {
+    try {
+      return localStorage.getItem(AUTOSTART_CACHE) === "1"
+    } catch {
+      return false
+    }
+  })
   const [startupMsg, setStartupMsg] = useState("")
   const startupBusyRef = useRef(false)
 
@@ -47,10 +58,16 @@ export function Settings() {
     api
       .autostartGet()
       .then((v) => {
-        if (alive) setStartup(v === true)
+        if (!alive) return
+        setStartup(v === true)
+        try {
+          localStorage.setItem(AUTOSTART_CACHE, v === true ? "1" : "0")
+        } catch {
+          /* private mode: the cache just does not stick */
+        }
       })
       .catch(() => {
-        /* engine without the setting: stays off */
+        /* engine without the setting: stays as shown */
       })
     return () => {
       alive = false
@@ -58,15 +75,19 @@ export function Settings() {
   }, [])
 
   const flipStartup = async (next: boolean) => {
-    // Flip first, command second: reg.exe spawns take a moment and the
-    // switch must answer the click on the same frame. A failure reverts
-    // the flip and reports it.
+    // Flip first: the switch must answer the click on the same frame. A
+    // failure reverts the flip and reports it.
     if (startupBusyRef.current) return
     startupBusyRef.current = true
     setStartup(next)
     setStartupMsg("")
     try {
       await api.autostartSet(next)
+      try {
+        localStorage.setItem(AUTOSTART_CACHE, next ? "1" : "0")
+      } catch {
+        /* ignore */
+      }
     } catch {
       setStartup(!next)
       setStartupMsg(t("startupFail"))
@@ -89,93 +110,81 @@ export function Settings() {
               : t("upCur").replace("{v}", update?.current ?? "0.2.4")
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="px-1">
-        <h1 className="text-[22px] font-semibold text-txt">{t("tabSettings")}</h1>
-        <p className="mt-0.5 text-[13px] text-txt2">{t("settingsSub")}</p>
+    <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-4">
+      <div className="min-w-0">
+        <h1 className="text-[30px] font-semibold leading-tight text-txt">{t("tabSettings")}</h1>
+        <p className="mt-1 text-[15px] text-txt2">{t("settingsSub")}</p>
       </div>
 
-      <Card
-        icon={<Settings2 className="size-5" aria-hidden />}
-        title={t("secGeneral")}
-        sub={t("secGeneralSub")}
-      >
-        <div className="flex items-center justify-between gap-6">
-          <div className="min-w-0">
-            <h3 className="text-[13.5px] font-semibold text-txt">{t("language")}</h3>
-            <p className="mt-0.5 text-[12.5px] leading-relaxed text-txt2">{t("languageBody")}</p>
-          </div>
-          <Segmented
-            id="lang"
-            value={lang}
-            onChange={(l) => setLang(l)}
-            options={[
-              { value: "en", label: "EN" },
-              { value: "ar", label: "عربي" },
-            ]}
-          />
-        </div>
-      </Card>
+      <section className="divide-y divide-line rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)]">
+        <Row
+          label={t("secGeneral")}
+          title={t("language")}
+          body={t("languageBody")}
+          control={
+            <Segmented
+              id="lang"
+              value={lang}
+              onChange={(l) => setLang(l)}
+              options={[
+                { value: "en", label: "EN" },
+                { value: "ar", label: "عربي" },
+              ]}
+            />
+          }
+        />
 
-      <Card
-        icon={<Power className="size-5" aria-hidden />}
-        title={t("secStartup")}
-        sub={t("secStartupSub")}
-      >
-        <div className="flex items-center justify-between gap-6">
-          <div className="min-w-0">
-            <h3 className="text-[13.5px] font-semibold text-txt">{t("startupTitle")}</h3>
-            <p className="mt-0.5 text-[12.5px] leading-relaxed text-txt2">{t("startupBody")}</p>
-            {startupMsg && <p className="mt-1 text-[12px] text-txt2">{startupMsg}</p>}
-          </div>
-          <Toggle
-            on={startup}
-            busy={false}
-            onFlip={() => void flipStartup(!startup)}
-            label={t("startupTitle")}
-          />
-        </div>
-      </Card>
+        <Row
+          label={t("secStartup")}
+          title={t("startupTitle")}
+          body={t("startupBody")}
+          control={
+            <Toggle
+              on={startup}
+              busy={false}
+              onFlip={() => void flipStartup(!startup)}
+              label={t("startupTitle")}
+            />
+          }
+          extra={startupMsg ? <p className="mt-1 text-[12px] text-txt2">{startupMsg}</p> : undefined}
+        />
 
-      <Card
-        icon={<RefreshCw className="size-5" aria-hidden />}
-        title={t("upTitle")}
-        sub={t("secUpdatesSub")}
-      >
-        <div className="flex items-center justify-between gap-6">
-          <div className="min-w-0">
-            <h3 className="text-[13.5px] font-semibold text-txt">{t("updRow")}</h3>
-            <p className="mt-0.5 text-[12.5px] leading-relaxed text-txt2">{t("upRowBody")}</p>
-          </div>
-          <div className="flex shrink-0 items-center gap-3">
-            <span aria-live="polite" className="text-[12px] text-txt3">
-              {updateText}
-            </span>
-            <Button
-              variant="secondary"
-              className="h-9 gap-2 rounded-[10px] px-3.5 text-[13px]"
-              onClick={() => void checkUpdates()}
-              disabled={updateState === "checking"}
-            >
-              <RefreshCw className="size-4" aria-hidden />
-              {updateState === "checking" ? t("upChecking") : t("upCheck")}
-            </Button>
-            {(updateState === "available" || updateState === "installing") && (
-              <Button
-                className="h-9 rounded-[10px] px-3.5 text-[13px]"
-                onClick={() => void applyUpdate()}
-                disabled={updateState === "installing"}
+        <Row
+          label={t("upTitle")}
+          title={t("updRow")}
+          body={t("upRowBody")}
+          control={
+            <div className="flex items-center gap-3">
+              <span aria-live="polite" className="text-[12px] text-txt3">
+                {updateText}
+              </span>
+              <button
+                type="button"
+                onClick={() => void checkUpdates()}
+                disabled={updateState === "checking"}
+                className="flex h-9 items-center gap-2 rounded-[10px] border border-line bg-white/[0.02] px-3.5 text-[13px] text-txt transition-colors hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] disabled:cursor-wait"
               >
-                {updateState === "installing"
-                  ? updatePct !== null
-                    ? `${updatePct}%`
-                    : t("upInstalling")
-                  : t("upGet")}
-              </Button>
-            )}
-          </div>
-        </div>
-      </Card>
+                <RefreshCw className={cn("size-3.5", updateState === "checking" && "animate-spin")} aria-hidden />
+                {updateState === "checking" ? t("upChecking") : t("upCheck")}
+              </button>
+              {(updateState === "available" || updateState === "installing") && (
+                <button
+                  type="button"
+                  onClick={() => void applyUpdate()}
+                  disabled={updateState === "installing"}
+                  className="flex h-9 items-center rounded-[10px] bg-[var(--brand-vivid)] px-3.5 text-[13px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
+                >
+                  {updateState === "installing"
+                    ? updatePct !== null
+                      ? `${updatePct}%`
+                      : t("upInstalling")
+                    : t("upGet")}
+                </button>
+              )}
+            </div>
+          }
+        />
+      </section>
     </div>
   )
 }

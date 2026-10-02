@@ -450,42 +450,144 @@ fn process_running(name: String) -> bool {
 }
 
 /// Start-with-Windows lives in the per-user Run key, so no admin prompt is
-/// ever needed. reg.exe does the work, no new crates for three registry
-/// calls.
-const AUTOSTART_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
+/// ever needed. Read and written through the registry API directly: spawning
+/// reg.exe for this cost a process start on the UI thread, which is exactly
+/// the lag felt when flipping the switch or opening Settings.
+const AUTOSTART_SUBKEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
 const AUTOSTART_NAME: &str = "QuotaVPN";
+
+#[cfg(windows)]
+mod autostart_reg {
+    use windows::core::PCWSTR;
+    use windows::Win32::Foundation::ERROR_SUCCESS;
+    use windows::Win32::System::Registry::{
+        RegCloseKey, RegDeleteValueW, RegGetValueW, RegOpenKeyExW, RegSetValueExW, HKEY,
+        HKEY_CURRENT_USER, KEY_SET_VALUE, REG_SZ, RRF_RT_REG_SZ,
+    };
+
+    fn wide(s: &str) -> Vec<u16> {
+        s.encode_utf16().chain(std::iter::once(0)).collect()
+    }
+
+    /// The value data (the stored exe path), or None when absent.
+    pub fn read() -> Option<String> {
+        let sub = wide(super::AUTOSTART_SUBKEY);
+        let name = wide(super::AUTOSTART_NAME);
+        let mut buf = [0u16; 2048];
+        let mut size = (buf.len() * 2) as u32;
+        let st = unsafe {
+            RegGetValueW(
+                HKEY_CURRENT_USER,
+                PCWSTR(sub.as_ptr()),
+                PCWSTR(name.as_ptr()),
+                RRF_RT_REG_SZ,
+                None,
+                Some(buf.as_mut_ptr().cast()),
+                Some(&mut size),
+            )
+        };
+        if st != ERROR_SUCCESS {
+            return None;
+        }
+        let len = ((size as usize / 2).saturating_sub(1)).min(buf.len());
+        Some(String::from_utf16_lossy(&buf[..len]))
+    }
+
+    pub fn write(exe: &str) -> Result<(), String> {
+        let sub = wide(super::AUTOSTART_SUBKEY);
+        let mut hkey = HKEY::default();
+        let st = unsafe {
+            RegOpenKeyExW(
+                HKEY_CURRENT_USER,
+                PCWSTR(sub.as_ptr()),
+                None,
+                KEY_SET_VALUE,
+                &mut hkey,
+            )
+        };
+        if st != ERROR_SUCCESS {
+            return Err("Could not open the startup key.".into());
+        }
+        let name = wide(super::AUTOSTART_NAME);
+        let data: Vec<u8> = exe
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .flat_map(|c| c.to_le_bytes())
+            .collect();
+        let st = unsafe {
+            RegSetValueExW(
+                hkey,
+                PCWSTR(name.as_ptr()),
+                None,
+                REG_SZ,
+                Some(&data),
+            )
+        };
+        let _ = unsafe { RegCloseKey(hkey) };
+        if st != ERROR_SUCCESS {
+            return Err("Could not write the startup value.".into());
+        }
+        Ok(())
+    }
+
+    pub fn remove() -> Result<(), String> {
+        let sub = wide(super::AUTOSTART_SUBKEY);
+        let mut hkey = HKEY::default();
+        let st = unsafe {
+            RegOpenKeyExW(
+                HKEY_CURRENT_USER,
+                PCWSTR(sub.as_ptr()),
+                None,
+                KEY_SET_VALUE,
+                &mut hkey,
+            )
+        };
+        if st != ERROR_SUCCESS {
+            return Err("Could not open the startup key.".into());
+        }
+        let name = wide(super::AUTOSTART_NAME);
+        let st = unsafe { RegDeleteValueW(hkey, PCWSTR(name.as_ptr())) };
+        let _ = unsafe { RegCloseKey(hkey) };
+        if st != ERROR_SUCCESS {
+            return Err("Could not remove the startup value.".into());
+        }
+        Ok(())
+    }
+}
+
+#[cfg(not(windows))]
+mod autostart_reg {
+    pub fn read() -> Option<String> {
+        None
+    }
+    pub fn write(_exe: &str) -> Result<(), String> {
+        Err("Not supported on this platform.".into())
+    }
+    pub fn remove() -> Result<(), String> {
+        Err("Not supported on this platform.".into())
+    }
+}
 
 #[tauri::command]
 fn autostart_get() -> Result<bool, String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    let out = std::process::Command::new("reg")
-        .args(["query", AUTOSTART_KEY, "/v", AUTOSTART_NAME])
-        .output()
-        .map_err(|e| e.to_string())?;
-    if !out.status.success() {
-        return Ok(false);
-    }
-    Ok(String::from_utf8_lossy(&out.stdout).contains(&exe.display().to_string()))
+    Ok(autostart_reg::read().as_deref() == Some(exe.display().to_string().as_str()))
 }
 
 #[tauri::command]
 fn autostart_set(on: bool) -> Result<(), String> {
-    let status = if on {
+    if on {
         let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-        std::process::Command::new("reg")
-            .args(["add", AUTOSTART_KEY, "/v", AUTOSTART_NAME, "/t", "REG_SZ", "/d", &exe.display().to_string(), "/f"])
-            .status()
-            .map_err(|e| e.to_string())?
+        autostart_reg::write(&exe.display().to_string())
     } else {
-        std::process::Command::new("reg")
-            .args(["delete", AUTOSTART_KEY, "/v", AUTOSTART_NAME, "/f"])
-            .status()
-            .map_err(|e| e.to_string())?
-    };
-    if status.success() {
-        Ok(())
-    } else {
-        Err("Could not update startup setting.".into())
+        autostart_reg::remove().or_else(|e| {
+            // Removing a value that is not there is success, not an error.
+            if autostart_reg::read().is_none() {
+                Ok(())
+            } else {
+                Err(e)
+            }
+        })
     }
 }
 
@@ -1589,6 +1691,24 @@ mod tests {
     fn tun_octets_never_panics() {
         let (rx, tx) = super::tun_octets();
         println!("tun_octets -> {rx}/{tx}");
+    }
+
+    /// Start-with-Windows round trip through the registry API: write a test
+    /// path, read it back, remove it, then restore whatever the machine had.
+    #[test]
+    fn autostart_round_trip() {
+        let before = super::autostart_reg::read();
+        super::autostart_reg::write("C:\\test\\quotavpn-autostart-probe.exe").unwrap();
+        assert_eq!(
+            super::autostart_reg::read().as_deref(),
+            Some("C:\\test\\quotavpn-autostart-probe.exe")
+        );
+        super::autostart_reg::remove().unwrap();
+        assert_eq!(super::autostart_reg::read(), None);
+        if let Some(prev) = before {
+            super::autostart_reg::write(&prev).unwrap();
+            assert_eq!(super::autostart_reg::read().as_deref(), Some(prev.as_str()));
+        }
     }
 
     /// The launch watcher leans on this: a name nobody runs is false, and

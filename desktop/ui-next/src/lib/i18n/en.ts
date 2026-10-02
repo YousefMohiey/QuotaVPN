@@ -218,6 +218,8 @@ export const en = {
   "voicePingBold": "Doesn’t affect your ping.",
   "voiceTagline": "Use Valorant voice chat through QuotaVPN.",
   "history": "History",
+  "histTag": "Every run this connection has taken.",
+  "histEmpty": "No runs yet. Measure one from the Speed page.",
   "histOpen": "View all",
   "today": "Today",
   "yesterday": "Yesterday",

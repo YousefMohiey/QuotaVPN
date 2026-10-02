@@ -221,6 +221,8 @@ export const ar = {
   "voicePingBold": "لا يؤثر على البينج.",
   "voiceTagline": "استخدم الدردشة الصوتية في Valorant عبر QuotaVPN.",
   "history": "السجل",
+  "histTag": "كل قياس أجراه هذا الاتصال.",
+  "histEmpty": "لا توجد قياسات بعد. ابدأ قياساً من صفحة السرعة.",
   "histOpen": "عرض الكل",
   "today": "اليوم",
   "yesterday": "أمس",
