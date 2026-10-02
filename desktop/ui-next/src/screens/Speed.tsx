@@ -645,7 +645,7 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
   ]
 
   return (
-    <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-4">
+    <div className="mx-auto flex min-h-[calc(100vh-84px)] w-full max-w-[1040px] flex-col gap-4">
       <div className="flex items-end justify-between gap-6">
         <div className="min-w-0 flex-1">
           <h1 className="text-[30px] font-semibold leading-tight text-txt">{t("tabSpeed")}</h1>
@@ -680,9 +680,11 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
       </div>
 
       {/* One ring starts the run; while it runs it parks left with a spring,
-          the same way Home's dial does, and the reading slides in beside it. */}
-      <section className="rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)]">
-        <div className="flex min-h-[224px] items-center px-5 py-3">
+          the same way Home's dial does, and the reading slides in beside it.
+          The card stretches to take the window's spare height, so the page
+          ends at the card instead of leaving an empty band below it. */}
+      <section className="flex flex-1 flex-col rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)]">
+        <div className="flex min-h-[224px] flex-1 items-center px-5 py-3">
           <motion.div
             layout
             transition={SPRING}
@@ -889,7 +891,7 @@ function StartCircle({
       whileTap={{ scale: 0.985 }}
       transition={{ type: "spring", stiffness: 460, damping: 32 }}
       className={cn(
-        "relative grid size-[224px] place-items-center rounded-full border bg-[radial-gradient(circle_at_50%_36%,rgb(255_255_255/0.07),rgb(255_255_255/0.02)_74%)] transition-colors",
+        "relative grid size-[176px] place-items-center rounded-full border bg-[radial-gradient(circle_at_50%_36%,rgb(255_255_255/0.07),rgb(255_255_255/0.02)_74%)] transition-colors",
         running
           ? "border-[var(--brand-line)] text-brand-strong"
           : "border-[rgb(255_255_255/0.2)] text-txt hover:border-[var(--brand-line)] hover:text-brand-strong",
@@ -903,9 +905,9 @@ function StartCircle({
       )}
       <span className="flex flex-col items-center gap-2.5">
         {running ? (
-          <Square className="size-8" strokeWidth={1.75} aria-hidden />
+          <Square className="size-7" strokeWidth={1.75} aria-hidden />
         ) : (
-          <Play className="ms-1 size-9" strokeWidth={1.75} aria-hidden />
+          <Play className="ms-1 size-8" strokeWidth={1.75} aria-hidden />
         )}
         <span className="text-[12.5px] font-medium tracking-[0.01em]">{label}</span>
       </span>
