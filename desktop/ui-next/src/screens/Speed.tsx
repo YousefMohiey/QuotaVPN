@@ -869,8 +869,8 @@ export function buildVerdicts(r: Result, t: (k: StrKey) => string): Verdict[] {
 }
 
 /** The one button that matters here: a frosted glass disc. No outline, no
-    arc, no glow - one translucent surface with a lit top edge, the same
-    material family as the cards, so nothing over it reads as decoration. */
+    arc, no glow - and inside it the same anatomy the voice chat cards use:
+    a hairline icon chip, a bold title, a quiet status line with one dot. */
 function StartCircle({
   running,
   done,
@@ -884,6 +884,7 @@ function StartCircle({
 }) {
   const { t } = useI18n()
   const label = running ? t("stop") : done ? t("startAgain") : t("startTest")
+  const status = running ? t("btnMeasuring") : done ? t("btnComplete") : t("btnReady")
 
   return (
     <motion.button
@@ -898,13 +899,25 @@ function StartCircle({
         running && "bg-[rgb(255_255_255/0.075)]",
       )}
     >
-      <span className="relative flex flex-col items-center gap-2.5">
-        {running ? (
-          <Square className="size-7 text-[var(--brand-vivid)]" strokeWidth={1.75} aria-hidden />
-        ) : (
-          <Play className="ms-1 size-8 text-[var(--brand-vivid)]" strokeWidth={1.75} aria-hidden />
-        )}
-        <span className="text-[12.5px] font-medium tracking-[0.01em] text-txt">{label}</span>
+      <span className="relative flex flex-col items-center gap-2">
+        <span className="grid size-12 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] transition-colors duration-200 group-hover:border-line-strong">
+          {running ? (
+            <Square className="size-[17px] text-[var(--brand-vivid)]" strokeWidth={1.9} aria-hidden />
+          ) : (
+            <Play className="ms-0.5 size-5 text-[var(--brand-vivid)]" strokeWidth={1.9} aria-hidden />
+          )}
+        </span>
+        <span className="text-[13px] font-semibold tracking-[0.01em] text-txt">{label}</span>
+        <span className="flex items-center gap-1.5 text-[11px] text-txt3">
+          <span
+            aria-hidden
+            className={cn(
+              "size-1.5 rounded-full",
+              running ? "bg-[var(--brand-vivid)]" : done ? "bg-[var(--green)]" : "bg-[var(--brand-strong)]",
+            )}
+          />
+          {status}
+        </span>
       </span>
     </motion.button>
   )
