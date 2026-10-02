@@ -868,9 +868,9 @@ export function buildVerdicts(r: Result, t: (k: StrKey) => string): Verdict[] {
   return out
 }
 
-/** The one button that matters here: a translucent ring with a live blue
-    arc and a soft blue presence, the same restrained accent the rest of
-    the app uses. While a run is going, the arc travels. */
+/** The one button that matters here. Same material as the Valorant page's
+    cards: a translucent navy disc with a hairline edge, and one lit blue
+    segment travelling along that edge while a run is going. No glow. */
 function StartCircle({
   running,
   done,
@@ -884,9 +884,9 @@ function StartCircle({
 }) {
   const { t } = useI18n()
   const label = running ? t("stop") : done ? t("startAgain") : t("startTest")
-  const R = 84
+  const R = 87
   const C = 2 * Math.PI * R
-  const ARC = C * 0.62
+  const ARC = C * 0.58
 
   return (
     <motion.button
@@ -895,39 +895,39 @@ function StartCircle({
       aria-label={label}
       whileTap={{ scale: 0.985 }}
       transition={{ type: "spring", stiffness: 460, damping: 32 }}
-      className="group relative grid size-[176px] place-items-center rounded-full bg-[rgb(21_29_46/0.55)] transition-colors"
+      className="group relative grid size-[176px] place-items-center rounded-full bg-[rgb(26_36_58/0.5)] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.07)] transition-colors duration-200 hover:bg-[rgb(29_40_64/0.54)]"
     >
-      {/* the soft blue presence behind the ring, like the reference */}
+      {/* a quiet sheen off the top edge so the disc reads as its own surface */}
       <span
         aria-hidden
-        className={cn(
-          "pointer-events-none absolute -inset-6 rounded-full bg-[radial-gradient(circle_at_50%_45%,rgb(46_123_246/0.24),transparent_66%)] blur-[6px] transition-opacity duration-300",
-          running ? "opacity-100" : "opacity-70 group-hover:opacity-100",
-        )}
+        className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(120%_120%_at_50%_0%,rgb(255_255_255/0.05),transparent_58%)]"
       />
       <svg
         viewBox="0 0 176 176"
-        className={cn("absolute inset-0", running && "[animation:spin_2.2s_linear_infinite]")}
+        className={cn("absolute inset-0", running && "[animation:spin_2.4s_linear_infinite]")}
         aria-hidden
       >
         <defs>
-          <linearGradient id="qc-arc" x1="0.12" y1="0" x2="0.92" y2="1">
-            <stop offset="0" stopColor="rgb(46 123 246 / 0.12)" />
-            <stop offset="0.45" stopColor="#2e7bf6" />
+          <linearGradient id="qc-arc" x1="0.1" y1="0.05" x2="0.9" y2="0.95">
+            <stop offset="0" stopColor="#1f59b6" stopOpacity="0.35" />
+            <stop offset="0.5" stopColor="#2e7bf6" />
             <stop offset="1" stopColor="#5b8def" />
           </linearGradient>
         </defs>
-        <circle cx="88" cy="88" r={R} fill="none" stroke="rgb(255 255 255 / 0.10)" strokeWidth="1.5" />
+        {/* the hairline edge, same weight as the card borders */}
+        <circle cx="88" cy="88" r={R} fill="none" stroke="rgb(255 255 255 / 0.085)" strokeWidth="1.6" />
+        {/* the lit segment */}
         <circle
           cx="88"
           cy="88"
           r={R}
           fill="none"
           stroke="url(#qc-arc)"
-          strokeWidth="2.5"
+          strokeWidth="2.2"
           strokeLinecap="round"
           strokeDasharray={`${ARC} ${C - ARC}`}
           transform="rotate(-90 88 88)"
+          className="opacity-90 transition-opacity duration-200 group-hover:opacity-100"
         />
       </svg>
       <span className="relative flex flex-col items-center gap-2.5">
