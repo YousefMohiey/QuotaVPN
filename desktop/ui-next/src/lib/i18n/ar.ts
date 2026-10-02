@@ -206,6 +206,7 @@ export const ar = {
   "voiceOffTitle": "الدردشة الصوتية متوقفة",
   "voiceOffSub": "غير متصل · الدردشة الصوتية معطلة",
   "voiceConnecting": "جارٍ الاتصال…",
+  "voiceDisconnecting": "جارٍ قطع الاتصال…",
   "launchPanelBody": "تفعيل الدردشة الصوتية تلقائيًا عند فتح فالورانت.",
   "voiceLaunchTitle": "التشغيل مع Valorant",
   "voiceLaunchBody": "تشغيل مساعد الدردشة الصوتية مع Valorant وإيقافه عند إغلاقها.",

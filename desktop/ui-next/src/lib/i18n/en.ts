@@ -203,6 +203,7 @@ export const en = {
   "voiceOffTitle": "Voice Chat Off",
   "voiceOffSub": "Not connected · Voice chat disabled",
   "voiceConnecting": "Connecting…",
+  "voiceDisconnecting": "Disconnecting…",
   "launchPanelBody": "Automatically enable voice chat when you open Valorant.",
   "voiceLaunchTitle": "Launch with Valorant",
   "voiceLaunchBody": "Turn the Voice Chat Helper on with Valorant, and back off when it closes.",

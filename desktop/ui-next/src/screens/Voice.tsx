@@ -261,7 +261,13 @@ export function Voice() {
                           className={cn("size-1.5 shrink-0 rounded-full", on ? "bg-[var(--green)]" : "bg-txt3")}
                           aria-hidden
                         />
-                        {busy ? t("voiceConnecting") : on ? t("voiceConnected") : t("voiceOffSub")}
+                        {busy
+                          ? on
+                            ? t("voiceDisconnecting")
+                            : t("voiceConnecting")
+                          : on
+                            ? t("voiceConnected")
+                            : t("voiceOffSub")}
                       </p>
                     </div>
                     <ChevronRight className="size-5 shrink-0 text-txt3" aria-hidden />
