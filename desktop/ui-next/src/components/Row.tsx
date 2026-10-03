@@ -14,7 +14,7 @@ export function Row({
   return (
     <div
       className={cn(
-        "flex gap-4 border-b border-line px-4 py-2.5 last:border-b-0",
+        "flex gap-4 border-b border-line px-4 py-2 last:border-b-0",
         align === "center" ? "items-center" : "items-start",
       )}
     >

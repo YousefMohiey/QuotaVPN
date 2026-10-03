@@ -349,12 +349,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   // "Launch with Valorant": the flag only watches. The game itself drives
   // the helper: appearing arms it, closing disarms it when the watcher armed
-  // it (a helper switched on by hand is left alone). This runs for the app's
-  // whole life, so switching pages can never pause the watching.
+  // it (a helper switched on by hand is left alone).
+  //
+  // Detection runs on the Rust side (`game-state`, a plain OS thread): this
+  // window spends most of its life minimized or hidden in the tray, and a
+  // hidden webview has its JS timers throttled, so an interval alone only
+  // ever fired while the user was looking at the app - which read as "the
+  // voice helper only works from the Valorant page". The slow interval below
+  // is just a fallback for a webview that missed the event.
   const voiceHelperRef = useRef(setVoiceHelper)
   voiceHelperRef.current = setVoiceHelper
   const gameWasUp = useRef(false)
-  useEffect(() => {
+  const tRef = useRef(t)
+  tRef.current = t
+  const gameTick = useCallback(async () => {
     const get = (k: string) => {
       try {
         return localStorage.getItem(k)
@@ -362,58 +370,68 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         return null
       }
     }
-    let alive = true
-    const tick = async () => {
-      try {
-        if (localStorage.getItem("qc-voice-launch") !== "1") {
-          gameWasUp.current = false
-          return
-        }
-      } catch {
-        return
-      }
-      let game = false
-      try {
-        for (const exe of ["VALORANT-Win64-Shipping.exe"]) {
-          if (await api.processRunning(exe)) {
-            game = true
-            break
-          }
-        }
-      } catch {
-        return
-      }
-      if (!alive) return
-      const on = voiceRunningRef.current && get("qc-voice-active") === "1"
-      if (game && !gameWasUp.current) {
-        // The game just appeared: arm the helper unless it is already on.
-        gameWasUp.current = true
-        if (!cardUuidRef.current || on || voiceBusyRef.current) return
-        const armed = await voiceHelperRef.current(true)
-        if (!armed) return
-        try {
-          localStorage.setItem("qc-voice-auto", "1")
-        } catch {
-          /* private mode */
-        }
-      } else if (!game && gameWasUp.current) {
-        // The game just closed: stand the watcher-armed helper down. A
-        // merged session keeps its setup minus the voice rules, a
-        // voice-only session just stops.
-        gameWasUp.current = false
-        if (get("qc-voice-auto") !== "1" || !on || voiceBusyRef.current) return
-        await voiceHelperRef.current(false)
-        try {
-          localStorage.removeItem("qc-voice-auto")
-        } catch {
-          /* private mode */
-        }
-      }
+    // Missing flag means on: the helper is the point of the app, so only an
+    // explicit off switch stands it down.
+    if (get("qc-voice-launch") === "0") {
+      gameWasUp.current = false
+      return
     }
-    void tick()
-    const id = window.setInterval(() => void tick(), 5000)
+    let game = false
+    try {
+      game = await api.processRunning("VALORANT-Win64-Shipping.exe")
+    } catch {
+      return
+    }
+    const on = voiceRunningRef.current && get("qc-voice-active") === "1"
+    if (game && !gameWasUp.current) {
+      // The game just appeared: arm the helper unless it is already on.
+      gameWasUp.current = true
+      if (!cardUuidRef.current || on || voiceBusyRef.current) return
+      const armed = await voiceHelperRef.current(true)
+      if (!armed) return
+      try {
+        localStorage.setItem("qc-voice-auto", "1")
+      } catch {
+        /* private mode */
+      }
+      setVoiceMsg(tRef.current("voiceAutoOn"))
+    } else if (!game && gameWasUp.current) {
+      // The game just closed: stand the watcher-armed helper down. A merged
+      // session keeps its setup minus the voice rules, a voice-only session
+      // just stops.
+      gameWasUp.current = false
+      if (get("qc-voice-auto") !== "1" || !on || voiceBusyRef.current) return
+      await voiceHelperRef.current(false)
+      try {
+        localStorage.removeItem("qc-voice-auto")
+      } catch {
+        /* private mode */
+      }
+      setVoiceMsg(tRef.current("voiceAutoOff"))
+    }
+  }, [])
+  const gameTickRef = useRef(gameTick)
+  gameTickRef.current = gameTick
+  useEffect(() => {
+    void gameTickRef.current()
+    const id = window.setInterval(() => void gameTickRef.current(), 15000)
+    let dead = false
+    let un: (() => void) | undefined
+    if (isTauri()) {
+      void (async () => {
+        try {
+          const { listen } = await import("@tauri-apps/api/event")
+          const u = await listen("game-state", () => void gameTickRef.current())
+          if (dead) u()
+          else un = u
+        } catch {
+          /* the fallback interval still covers a visible window */
+        }
+      })()
+    }
     return () => {
-      alive = false
+      dead = true
+      un?.()
       window.clearInterval(id)
     }
   }, [])

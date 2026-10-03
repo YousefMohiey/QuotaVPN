@@ -868,11 +868,10 @@ export function buildVerdicts(r: Result, t: (k: StrKey) => string): Verdict[] {
   return out
 }
 
-/** The one button that matters here ("Option 4 - smooth sweep"): a frosted
-    glass disc, one lit sweep with a bulbous head riding its edge over a
-    faint boundary ring, and a press that answers with a tactile dip, a
-    pulse, a soft flash and one fast lap before the run takes over. The
-    sweep keeps orbiting on its own; the motion only ever reports state. */
+/** The one button that matters here: a frosted glass disc with the action
+    inside, no ring, no arc (owner call: the blue line around it is gone).
+    A press still answers: the disc flashes, a pulse leaves the edge, and
+    the icon and label swap through a small morph. */
 function StartCircle({
   running,
   done,
@@ -886,22 +885,12 @@ function StartCircle({
 }) {
   const { t } = useI18n()
   const label = running ? t("stop") : done ? t("startAgain") : t("startTest")
-  const ringRef = useRef<HTMLDivElement | null>(null)
   const [pulse, setPulse] = useState(0)
   const [flash, setFlash] = useState(0)
 
   const press = () => {
     setPulse((p) => p + 1)
     setFlash((f) => f + 1)
-    // Starting gets one extra lap that eases out: the sweep visibly whips
-    // around and settles back into its slow orbit. Owner call: this runs
-    // regardless of the system's reduced-motion setting.
-    if (!running) {
-      ringRef.current?.animate(
-        [{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }],
-        { duration: 900, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
-      )
-    }
     if (running) onStop()
     else onStart()
   }
@@ -939,46 +928,6 @@ function StartCircle({
           className="qc-pulse pointer-events-none absolute inset-[8px] rounded-full border-[1.5px] border-[rgb(46_123_246/0.7)] opacity-0"
         />
       )}
-      {/* the sweep: a faint boundary ring, the lit arc, and its bulbous head */}
-      <div ref={ringRef} className="absolute inset-0">
-        <svg viewBox="0 0 208 208" className="qc-orbit absolute inset-0" aria-hidden>
-          <defs>
-            <linearGradient id="qc-sweep" gradientUnits="userSpaceOnUse" x1="119.3" y1="17.3" x2="180.2" y2="148">
-              <stop offset="0" stopColor="#2e7bf6" stopOpacity="0" />
-              <stop offset="0.35" stopColor="#2e7bf6" stopOpacity="0.35" />
-              <stop offset="0.78" stopColor="#2e7bf6" stopOpacity="0.9" />
-              <stop offset="1" stopColor="#2e7bf6" stopOpacity="1" />
-            </linearGradient>
-          </defs>
-          <circle cx="104" cy="104" r="95" fill="none" stroke="rgb(255 255 255 / 0.055)" strokeWidth="2.5" />
-          {/* the glow the reference asks for: a wide soft pass under the core */}
-          <circle
-            cx="104"
-            cy="104"
-            r="88"
-            fill="none"
-            stroke="#2e7bf6"
-            strokeOpacity="0.22"
-            strokeWidth="12"
-            strokeLinecap="round"
-            strokeDasharray="168.9 384"
-            transform="rotate(280 104 104)"
-          />
-          <circle
-            cx="104"
-            cy="104"
-            r="88"
-            fill="none"
-            stroke="url(#qc-sweep)"
-            strokeWidth="4.6"
-            strokeLinecap="round"
-            strokeDasharray="168.9 384"
-            transform="rotate(280 104 104)"
-          />
-          <circle cx="180.2" cy="148" r="7" fill="#2e7bf6" fillOpacity="0.22" />
-          <circle cx="180.2" cy="148" r="3.1" fill="#2e7bf6" />
-        </svg>
-      </div>
       <span className="relative flex flex-col items-center gap-2.5">
         <motion.span
           key={running ? "stop" : "go"}

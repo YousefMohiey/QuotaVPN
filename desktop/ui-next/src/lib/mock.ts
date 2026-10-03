@@ -80,7 +80,15 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
     case "tunnel_apps":
       return JSON.stringify(APPS.map((label) => ({ pkg: label.toLowerCase().replace(/\s+/g, "") + ".exe", label }))) as T
     case "resolve_host":
-      return "197.44.211.84" as T
+      // The hero resolves the server name only while connected, and the
+      // world then sees the server's address.
+      return "80.225.89.162" as T
+    case "net_info":
+      // Exit facts for the demo: through the tunnel the world sees the
+      // server, otherwise it sees the local address.
+      return (running
+        ? { ip: "80.225.89.162", isp: "Oracle Cloud", place: "Milan, Italy" }
+        : { ip: "197.44.211.84", isp: "WE", place: "Cairo, Egypt" }) as T
     case "check_update": {
       // The "update ready" reminder appears only when asked for (?upd=1);
       // the real check reports available only when GitHub says so.

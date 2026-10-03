@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { ArrowLeft, Check, Search } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Panel } from "@/components/Row"
 import { Segmented } from "@/components/Segmented"
 import { useApp, type AppsMode } from "@/state/app"
@@ -10,6 +8,10 @@ import { cn } from "@/lib/utils"
 
 type Row = { pkg: string; label: string }
 
+// The App routing page in the app's card language: a real page header, one
+// controls card (mode, search, bulk actions, live summary), then the list as
+// rows on dividers with a checkbox per app. Picking any row while "All apps"
+// is on flips the mode instead of ignoring the tap.
 export function Apps({ onBack }: { onBack: () => void }) {
   const { t } = useI18n()
   const { appsMode, setAppsMode, apps, setApps, loadApps } = useApp()
@@ -101,79 +103,82 @@ export function Apps({ onBack }: { onBack: () => void }) {
   const bulkOff = appsMode === "all"
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* sticky summary bar: back, mode, search and the live summary stay up
-          on the page background while the list scrolls beneath them */}
-      <div className="sticky top-0 z-10 flex flex-col gap-3 bg-[var(--bg)] pb-3">
-        <div className="flex items-center gap-3 px-1">
-          <Button variant="ghost" size="sm" className="h-8 gap-1.5 rounded-[10px] px-2.5 text-[12.5px]" onClick={onBack}>
-            <ArrowLeft className="size-3.5" aria-hidden />
-            {t("back")}
-          </Button>
-        </div>
+    <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-3">
+      <div className="px-1">
+        <button
+          type="button"
+          onClick={onBack}
+          className="mb-1.5 inline-flex items-center gap-1.5 rounded-[10px] px-2 py-1 text-[12px] text-txt3 transition-colors hover:bg-white/[0.04] hover:text-txt2"
+        >
+          <ArrowLeft className="size-3.5" aria-hidden />
+          {t("back")}
+        </button>
+        <h1 className="text-[30px] font-semibold leading-tight text-txt">{t("routing")}</h1>
+        <p className="mt-1 text-[15px] text-txt2">{t("appsHint")}</p>
+      </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-          <Segmented
-            id="apps-mode"
-            value={appsMode}
-            onChange={(m: AppsMode) => setAppsMode(m)}
-            options={[
-              { value: "all", label: t("appsAll") },
-              { value: "allow", label: t("appsOnly") },
-              { value: "block", label: t("appsExcept") },
-            ]}
-          />
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative">
-              <Search className="absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-txt3" aria-hidden />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") setQuery("")
-                  else if (e.key === "ArrowDown") {
-                    e.preventDefault()
-                    moveFocus(0)
-                  }
-                }}
-                placeholder={t("appsSearch")}
-                aria-label={t("appsSearch")}
-                className="h-9 w-[240px] rounded-[10px] border-line bg-white/[0.02] ps-8 text-[13px]"
-              />
+      {/* the controls stay up while the list scrolls beneath them */}
+      <div className="sticky top-0 z-10 bg-[var(--bg)] pb-3">
+        <Panel>
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3">
+            <Segmented
+              id="apps-mode"
+              value={appsMode}
+              onChange={(m: AppsMode) => setAppsMode(m)}
+              options={[
+                { value: "all", label: t("appsAll") },
+                { value: "allow", label: t("appsOnly") },
+                { value: "block", label: t("appsExcept") },
+              ]}
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative">
+                <Search className="absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-txt3" aria-hidden />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") setQuery("")
+                    else if (e.key === "ArrowDown") {
+                      e.preventDefault()
+                      moveFocus(0)
+                    }
+                  }}
+                  placeholder={t("appsSearch")}
+                  aria-label={t("appsSearch")}
+                  className="h-9 w-[220px] rounded-[10px] border border-line bg-white/[0.02] ps-8 text-[13px] text-txt outline-none transition-colors placeholder:text-txt3 focus:border-[var(--brand-line)]"
+                />
+              </div>
+              <button
+                type="button"
+                disabled={bulkOff || filtered.length === 0}
+                onClick={selectMatches}
+                className="h-8 rounded-[10px] px-2.5 text-[12px] text-txt2 transition-colors hover:bg-white/[0.04] hover:text-txt disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-txt2"
+              >
+                {q
+                  ? t("appsSelectMatches").replace("{m}", String(filtered.length))
+                  : t("appsSelectAll").replace("{t}", String(list.length))}
+              </button>
+              <button
+                type="button"
+                disabled={bulkOff || apps.length === 0}
+                onClick={() => setApps([])}
+                className="h-8 rounded-[10px] px-2.5 text-[12px] text-txt2 transition-colors hover:bg-white/[0.04] hover:text-txt disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-txt2"
+              >
+                {t("appsClearSel")}
+              </button>
             </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-9 gap-1.5 rounded-[10px] px-2.5 text-[12px]"
-              disabled={bulkOff || filtered.length === 0}
-              onClick={selectMatches}
-            >
-              {q
-                ? t("appsSelectMatches").replace("{m}", String(filtered.length))
-                : t("appsSelectAll").replace("{t}", String(list.length))}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-9 gap-1.5 rounded-[10px] px-2.5 text-[12px]"
-              disabled={bulkOff || apps.length === 0}
-              onClick={() => setApps([])}
-            >
-              {t("appsClearSel")}
-            </Button>
           </div>
-        </div>
-
-        <p aria-live="polite" className="mt-1 px-1 text-[12px] text-txt3" dir="auto">
-          {summary}
-        </p>
+          <p aria-live="polite" className="border-t border-line px-4 py-2 text-[12px] text-txt3" dir="auto">
+            {summary}
+          </p>
+        </Panel>
       </div>
 
       <Panel>
         <div
           role="listbox"
           aria-multiselectable="true"
-          className="p-2"
           onFocus={() => setListActive(true)}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) setListActive(false)
@@ -182,56 +187,65 @@ export function Apps({ onBack }: { onBack: () => void }) {
           {filtered.length === 0 ? (
             <p className="px-4 py-6 text-[12.5px] text-txt3">{loading ? t("appsLoading") : t("appsEmpty")}</p>
           ) : (
-            <div className="flex flex-col gap-2">
-              {filtered.map((row, i) => {
-                const on = apps.includes(row.pkg)
-                const focused = i === activeIdx && listActive
-                return (
-                  <button
-                    key={row.pkg}
-                    ref={(el) => {
-                      rowRefs.current[i] = el
-                    }}
-                    type="button"
-                    role="checkbox"
-                    aria-checked={on}
-                    tabIndex={i === activeIdx ? 0 : -1}
-                    onClick={() => toggle(row.pkg)}
-                    onFocus={() => setFocusIdx(i)}
-                    onKeyDown={(e) => {
-                      if (e.key === "ArrowDown") {
-                        e.preventDefault()
-                        moveFocus(i + 1)
-                      } else if (e.key === "ArrowUp") {
-                        e.preventDefault()
-                        moveFocus(i - 1)
-                      } else if (e.key === "Home") {
-                        e.preventDefault()
-                        moveFocus(0)
-                      } else if (e.key === "End") {
-                        e.preventDefault()
-                        moveFocus(filtered.length - 1)
-                      } else if (e.key === " ") {
-                        e.preventDefault()
-                        toggle(row.pkg)
-                      }
-                    }}
+            filtered.map((row, i) => {
+              const on = apps.includes(row.pkg)
+              const focused = i === activeIdx && listActive
+              return (
+                <button
+                  key={row.pkg}
+                  ref={(el) => {
+                    rowRefs.current[i] = el
+                  }}
+                  type="button"
+                  role="checkbox"
+                  aria-checked={on}
+                  tabIndex={i === activeIdx ? 0 : -1}
+                  onClick={() => toggle(row.pkg)}
+                  onFocus={() => setFocusIdx(i)}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault()
+                      moveFocus(i + 1)
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault()
+                      moveFocus(i - 1)
+                    } else if (e.key === "Home") {
+                      e.preventDefault()
+                      moveFocus(0)
+                    } else if (e.key === "End") {
+                      e.preventDefault()
+                      moveFocus(filtered.length - 1)
+                    } else if (e.key === " ") {
+                      e.preventDefault()
+                      toggle(row.pkg)
+                    }
+                  }}
+                  className={cn(
+                    "flex w-full scroll-mt-36 items-center gap-3 border-b border-line px-4 py-2.5 text-start transition-colors last:border-b-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-line)]",
+                    appsMode === "all" && "opacity-70",
+                    focused ? "bg-white/[0.04]" : "hover:bg-white/[0.02]",
+                  )}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className={cn("block truncate text-[13.5px]", on ? "text-txt" : "text-txt2")} dir="auto">
+                      {row.label}
+                    </span>
+                    <span className="block truncate text-[11px] text-txt3" dir="auto">
+                      {row.pkg}
+                    </span>
+                  </span>
+                  <span
+                    aria-hidden
                     className={cn(
-                      "flex w-full scroll-mt-32 items-center justify-between gap-4 rounded-[12px] border border-line px-3.5 py-2.5 text-start transition-colors focus-visible:border-[var(--brand-line)] focus-visible:outline-2 focus-visible:outline-[var(--brand-line)] focus-visible:-outline-offset-2",
-                      appsMode === "all" && "opacity-70",
-                      on ? "border-line-strong bg-[var(--brand-bg)]" : "bg-white/[0.02] hover:border-[var(--brand-line)]",
-                      focused && "border-[var(--brand-line)]",
+                      "grid size-[18px] shrink-0 place-items-center rounded-full border-[1.5px] transition-colors",
+                      on ? "border-[var(--brand)] bg-[var(--brand)]" : "border-line-strong",
                     )}
                   >
-                    <span className="min-w-0">
-                      <span className={cn("block truncate text-[13px]", on ? "text-txt" : "text-txt2")} dir="auto">{row.label}</span>
-                      <span className="block truncate text-[11px] text-txt3" dir="auto">{row.pkg}</span>
-                    </span>
-                    {on && <Check className="size-4 shrink-0 text-brand-strong" aria-hidden />}
-                  </button>
-                )
-              })}
-            </div>
+                    {on && <Check className="size-3 text-white" strokeWidth={3} aria-hidden />}
+                  </span>
+                </button>
+              )
+            })
           )}
         </div>
       </Panel>

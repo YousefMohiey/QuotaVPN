@@ -24,9 +24,11 @@ export function Voice() {
   } = useApp()
   const [launch, setLaunch] = useState(() => {
     try {
-      return localStorage.getItem("qc-voice-launch") === "1"
+      // Missing flag means on: only an explicit off switch stands the
+      // auto-connect down, and the Rust-side watcher reads it the same way.
+      return localStorage.getItem("qc-voice-launch") !== "0"
     } catch {
-      return false
+      return true
     }
   })
 

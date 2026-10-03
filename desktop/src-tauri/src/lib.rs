@@ -172,6 +172,26 @@ async fn probe_server(state: tauri::State<'_, State>) -> Result<CmdResult, Strin
     Ok(CmdResult { ok: true, msg: "Connected - server ready.".into() })
 }
 
+/// Watches for the game while the app runs and emits `game-state` on every
+/// transition. This lives here, not in the webview: the window spends most
+/// of its life minimized or hidden in the tray, and a hidden webview has its
+/// JS timers throttled to a crawl, so a JS interval only ever fires while
+/// the user is looking at the app - which read as "the voice helper only
+/// works from the Valorant page". A plain OS thread cannot be throttled.
+fn spawn_game_watch(app: tauri::AppHandle) {
+    std::thread::spawn(move || {
+        let mut up = false;
+        loop {
+            let now = process_running("VALORANT-Win64-Shipping.exe".into());
+            if now != up {
+                up = now;
+                let _ = app.emit("game-state", serde_json::json!({ "running": now }));
+            }
+            std::thread::sleep(std::time::Duration::from_secs(3));
+        }
+    });
+}
+
 /// One refresh per app build: list the server's clients and re-add every local
 /// card it does not know. Silent, detached, and the marker is only written on
 /// success, so a launch with no network simply retries on the next one.
@@ -1553,6 +1573,8 @@ pub fn run() {
             // server so a wiped or rebuilt server heals on launch, not only
             // when the user connects.
             spawn_launch_refresh(app.handle().clone());
+            // The Valorant watcher: an OS thread, never a webview timer.
+            spawn_game_watch(app.handle().clone());
             // Window-state reconciler: an undecorated window no longer reports
             // a 0x0 size while minimized, and hide/show/minimize events arrive
             // in orders that are easy to get wrong, so poll the real state a

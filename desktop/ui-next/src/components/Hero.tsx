@@ -5,7 +5,7 @@ import { useI18n } from "@/lib/i18n"
 import { useApp } from "@/state/app"
 import { api } from "@/lib/ipc"
 import { Dial, type DialState } from "./Dial"
-import { displayHost, fmtBytes, fmtDuration } from "@/lib/format"
+import { displayHost, fmtBytes, fmtDuration, mbps } from "@/lib/format"
 
 const EASE_OUT = [0.1, 0.9, 0.2, 1] as const
 const SPRING = { type: "spring", stiffness: 320, damping: 34 } as const
@@ -95,7 +95,7 @@ export function Hero() {
   useTick(1000, connected)
 
   return (
-    <section className="glass rounded-[24px] p-5">
+    <section className="glass rounded-[24px] p-4">
       <div className="flex min-h-[208px] items-center">
         <motion.div
           layout
@@ -155,14 +155,18 @@ export function Hero() {
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.36, ease: EASE_OUT, delay: 0.12 }}
                     >
-                      <Traffic rx={rx} tx={tx} />
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        <StatTile
-                          label={t("sessLabel")}
-                          value={sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
-                          sub={"⁨↓ " + fmtBytes(rx) + "⁩   ⁨↑ " + fmtBytes(tx) + "⁩"}
-                        />
-                        <StatTile label={t("yourIp")} value={serverAddr || displayHost(serverIp)} />
+                      <div className="mt-3 flex items-stretch gap-3">
+                        <div className="min-w-0 flex-1">
+                          <Traffic rx={rx} tx={tx} />
+                        </div>
+                        <div className="grid w-[212px] shrink-0 grid-rows-2 gap-2">
+                          <StatTile
+                            label={t("sessLabel")}
+                            value={sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
+                            sub={"⁨↓ " + fmtBytes(rx) + "⁩   ⁨↑ " + fmtBytes(tx) + "⁩"}
+                          />
+                          <StatTile label={t("yourIp")} value={serverAddr || displayHost(serverIp)} />
+                        </div>
                       </div>
                     </motion.div>
                   )}
@@ -178,15 +182,19 @@ export function Hero() {
 
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-[12px] border border-line bg-white/[0.02] px-3.5 py-2.5">
-      <div className="text-[11px] text-txt3">{label}</div>
-      <div className="mt-1 truncate text-[13px] font-medium tabular-nums text-txt">{value}</div>
-      {sub && <div className="mt-0.5 truncate text-[11.5px] tabular-nums text-txt3">{sub}</div>}
+    <div className="rounded-[12px] border border-line bg-white/[0.02] px-3 py-2">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="shrink-0 text-[11px] text-txt3">{label}</span>
+        <span className="truncate text-[13px] font-medium tabular-nums text-txt">{value}</span>
+      </div>
+      {sub && <div className="mt-0.5 truncate text-[11px] tabular-nums text-txt3">{sub}</div>}
     </div>
   )
 }
 
-/** Live rate + rolling sparkline from the adapter counters. */
+/** Live rate + rolling sparkline from the adapter counters. The block
+    reads like the reference: label row with the peak, the big number,
+    then the graph. */
 function Traffic({ rx, tx }: { rx: number; tx: number }) {
   const { t } = useI18n()
   const hist = useRef<number[]>([])
@@ -202,13 +210,13 @@ function Traffic({ rx, tx }: { rx: number; tx: number }) {
     }
   }, [rx, tx])
 
-  const { line, area, rate } = useMemo(() => {
+  const { line, area, rate, peak } = useMemo(() => {
     const values = hist.current.length ? hist.current : [0, 0]
-    const peak = Math.max(1, ...values)
+    const max = Math.max(1, ...values)
     const w = 260
     const h = 44
     const step = w / Math.max(1, values.length - 1)
-    const pts = values.map((v, i) => [i * step, h - (v / peak) * (h - 8) - 3] as const)
+    const pts = values.map((v, i) => [i * step, h - (v / max) * (h - 8) - 3] as const)
     const d = pts
       .map(([x, y], i) => `${i ? "L" : "M"} ${x.toFixed(1)} ${y.toFixed(1)}`)
       .join(" ")
@@ -216,17 +224,24 @@ function Traffic({ rx, tx }: { rx: number; tx: number }) {
     return {
       line: d,
       area: `${d} L ${w} ${h} L 0 ${h} Z`,
-      rate: current > 0 ? fmtBytes(current) + "/s" : "-",
+      rate: rateText(current),
+      peak: rateText(Math.max(0, ...values)),
     }
   }, [rx, tx])
 
   return (
-    <div className="mt-4">
+    <div>
       <div className="flex items-baseline justify-between gap-3">
         <span className="text-[11.5px] tracking-[0.04em] text-txt3">{t("liveLabel")}</span>
-        <span className="text-[12.5px] text-txt2">{rate}</span>
+        <span className="text-[11.5px] tabular-nums text-txt3">
+          {t("peakLbl")} {peak.num} {peak.unit}
+        </span>
       </div>
-      <svg viewBox="0 0 260 44" preserveAspectRatio="none" className="mt-1 h-[44px] w-full" aria-hidden>
+      <div className="mt-1 flex items-baseline gap-1.5">
+        <span className="text-[20px] font-semibold leading-none tabular-nums text-txt">{rate.num}</span>
+        <span className="text-[12px] text-txt2">{rate.unit}</span>
+      </div>
+      <svg viewBox="0 0 260 44" preserveAspectRatio="none" className="mt-1.5 h-[30px] w-full" aria-hidden>
         <path d={area} fill="var(--brand-bg)" />
         <path
           d={line}
@@ -239,4 +254,12 @@ function Traffic({ rx, tx }: { rx: number; tx: number }) {
       </svg>
     </div>
   )
+}
+
+/** Bytes per second as the live number: Mbps once it is a real rate,
+    KB/s below that. Used for both the big value and the peak. */
+function rateText(bps: number): { num: string; unit: string } {
+  const m = (Math.max(0, bps) * 8) / 1e6
+  if (m >= 1) return { num: mbps(m), unit: "Mbps" }
+  return { num: String(Math.round(Math.max(0, bps) / 1024)), unit: "KB/s" }
 }

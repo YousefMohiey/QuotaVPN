@@ -321,17 +321,9 @@
   display: none;
 }
 
-/* The speed button: the sweep orbits on its own, and every press answers
-   with a pulse, a flash and (on start) one fast lap. Owner call: this
-   motion always runs - it is the button's identity, so it deliberately
-   does NOT collapse under prefers-reduced-motion (Windows machines with
-   "Animation effects" off report reduce, and the owner hit exactly that:
-   the sweep froze). */
-@keyframes qc-orbit {
-  to {
-    transform: rotate(360deg);
-  }
-}
+/* The speed button: every press answers with a pulse and a flash. Owner
+   call: the orbit arc is gone (the blue line around the button), and the
+   press motion always runs regardless of prefers-reduced-motion. */
 @keyframes qc-pulse {
   from {
     transform: scale(1);
@@ -349,9 +341,6 @@
   to {
     opacity: 0;
   }
-}
-.qc-orbit {
-  animation: qc-orbit 8s linear infinite;
 }
 .qc-pulse {
   animation: qc-pulse 750ms cubic-bezier(0.16, 1, 0.3, 1) forwards;

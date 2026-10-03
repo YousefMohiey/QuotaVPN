@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { ChevronDown, ChevronRight, Gamepad2, TriangleAlert, Tv } from "lucide-react"
+import { useEffect, useState } from "react"
+import { ArrowUpDown, ChevronDown, ChevronRight, Gamepad2, Globe, MapPin, TriangleAlert, Tv, type LucideIcon } from "lucide-react"
 import { Hero } from "@/components/Hero"
 import { PickerDialog, type PickerItem } from "@/components/PickerDialog"
 import { Panel, Row } from "@/components/Row"
@@ -8,12 +8,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useApp, type PresetKind } from "@/state/app"
 import { useI18n } from "@/lib/i18n"
+import { netInfo } from "@/lib/ipc"
+import { displayHost } from "@/lib/format"
 import { CUSTOM_SNI, DEFAULT_SNI, SNIS, labelForSni } from "@/lib/snis"
 import { cn } from "@/lib/utils"
 
 export function Home({ onOpenApps }: { onOpenApps: () => void }) {
   const { t } = useI18n()
-  const { cards, card, pickCard, preset, setPreset, ensurePresetCard, applyDomain, transport, setTransport, appsMode, apps } = useApp()
+  const { cards, card, pickCard, preset, setPreset, ensurePresetCard, applyDomain, transport, setTransport, appsMode, apps, connected, serverIp } = useApp()
   // Domain control: the everyday choice lives here, not in the card list.
   const [domainOpen, setDomainOpen] = useState(false)
   const [customOpen, setCustomOpen] = useState(false)
@@ -44,6 +46,41 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
   // In-flight preset creation: the preset flips instantly, the tap below
   // creates and selects the missing card without any connection.
   const [creating, setCreating] = useState<PresetKind | null>(null)
+
+  // Footer facts: the exit address while connected, plus the server's
+  // location (remembered across sessions so it survives a disconnect).
+  const [exit, setExit] = useState<{ ip: string; place: string } | null>(null)
+  const [srvPlace, setSrvPlace] = useState<string>(() => {
+    try {
+      return localStorage.getItem("qc-srv-place") || ""
+    } catch {
+      return ""
+    }
+  })
+  useEffect(() => {
+    let alive = true
+    void netInfo()
+      .then((n) => {
+        if (alive && n) setExit({ ip: n.ip, place: n.place })
+      })
+      .catch(() => {
+        /* the facts fall back to what we already know */
+      })
+    return () => {
+      alive = false
+    }
+  }, [connected])
+  useEffect(() => {
+    if (!connected || !exit?.place) return
+    setSrvPlace(exit.place)
+    try {
+      localStorage.setItem("qc-srv-place", exit.place)
+    } catch {
+      /* private mode */
+    }
+  }, [connected, exit])
+  const placeText = connected ? exit?.place || srvPlace || displayHost(serverIp) : srvPlace || "-"
+  const ipText = exit?.ip || "-"
 
   const routing =
     appsMode === "all"
@@ -84,19 +121,37 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   void ensurePresetCard(kind).finally(() => setCreating(null))
                 }}
                 className={cn(
-                  "flex min-h-[68px] flex-col items-start justify-center gap-1 rounded-[14px] border px-3.5 py-2.5 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
+                  "flex min-h-[58px] items-center gap-3 rounded-[14px] border px-3.5 py-2 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
                   isActive
-                    ? "border-[var(--brand-line)] bg-[var(--brand-bg)] shadow-[inset_0_1px_0_rgb(255_255_255/0.08)]"
+                    ? "border-[var(--brand-line)] bg-[var(--brand-bg)]"
                     : "border-line bg-white/[0.02] hover:border-[var(--brand-line)]",
                 )}
               >
-                <span className="flex min-w-0 max-w-full items-center gap-2">
-                  <Icon className={cn("size-4 shrink-0", isActive ? "text-brand-strong" : "text-txt3")} aria-hidden />
-                  <span className={cn("truncate text-[13.5px] font-semibold", isActive ? "text-txt" : "text-txt2")} dir="auto">
+                <span
+                  className={cn(
+                    "grid size-9 shrink-0 place-items-center rounded-[10px] border transition-colors",
+                    isActive
+                      ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong"
+                      : "border-line bg-white/[0.03] text-txt3",
+                  )}
+                >
+                  <Icon className="size-4" aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className={cn("block truncate text-[13.5px] font-semibold", isActive ? "text-txt" : "text-txt2")} dir="auto">
                     {t(kind === "Gamerz" ? "kindGamerz" : "kindStreamerz")}
                   </span>
+                  <span className="block truncate font-mono text-[11px] tabular-nums text-txt3">{sni}</span>
                 </span>
-                <span className="w-full truncate ps-[24px] font-mono text-[11px] tabular-nums text-txt3">{sni}</span>
+                <span
+                  aria-hidden
+                  className={cn(
+                    "grid size-[18px] shrink-0 place-items-center rounded-full border-[1.5px] transition-colors",
+                    isActive ? "border-[var(--brand)]" : "border-line-strong",
+                  )}
+                >
+                  {isActive && <span className="size-2 rounded-full bg-[var(--brand)]" />}
+                </span>
               </button>
             )
           })}
@@ -184,6 +239,19 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
         </Row>
       </Panel>
 
+      {/* the footer facts, one card each on the app material: where the
+          server sits, the address the world sees, and the live state */}
+      <div className="grid grid-cols-3 gap-3">
+        <Fact icon={Globe} label={t("srvLocation")} value={placeText} />
+        <Fact icon={MapPin} label={t("yourIp")} value={ipText} />
+        <Fact
+          icon={ArrowUpDown}
+          label={t("statusLbl")}
+          value={connected ? t("connected") : t("notConnected")}
+          dot={connected}
+        />
+      </div>
+
       <PickerDialog
         open={domainOpen}
         onOpenChange={setDomainOpen}
@@ -200,6 +268,38 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
           void applyDomain(v)
         }}
       />
+    </div>
+  )
+}
+
+/** One footer fact: icon tile, quiet label, one value line. */
+function Fact({
+  icon: Icon,
+  label,
+  value,
+  dot,
+}: {
+  icon: LucideIcon
+  label: string
+  value: string
+  dot?: boolean
+}) {
+  return (
+    <div className="glass flex items-center gap-3 rounded-[16px] px-3.5 py-2">
+      <span className="grid size-9 shrink-0 place-items-center rounded-[11px] border border-line bg-white/[0.03] text-brand-strong">
+        <Icon className="size-4" aria-hidden />
+      </span>
+      <div className="min-w-0">
+        <div className="text-[11px] text-txt3">{label}</div>
+        <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-txt">
+          {dot !== undefined && (
+            <span className={cn("size-1.5 shrink-0 rounded-full", dot ? "bg-[var(--green)]" : "bg-txt3")} aria-hidden />
+          )}
+          <span className="truncate" dir="auto">
+            {value}
+          </span>
+        </div>
+      </div>
     </div>
   )
 }
