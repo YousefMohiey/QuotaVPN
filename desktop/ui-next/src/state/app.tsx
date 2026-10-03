@@ -59,6 +59,11 @@ type Value = {
   checkUpdates: () => void
   applyUpdate: () => void
   loadApps: () => Promise<Array<{ pkg: string; label: string }>>
+  voiceRunning: boolean
+  voiceOn: boolean
+  voiceBusy: boolean
+  voiceMsg: string
+  setVoiceHelper: (next: boolean) => Promise<boolean>
 }
 
 const Ctx = createContext<Value | null>(null)
@@ -115,6 +120,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const cardUuidRef = useRef("")
   cardsRef.current = cards
   cardUuidRef.current = cardUuid
+
+  // ---- voice helper (Valorant) ------------------------------------------
+  // The helper's truth lives here, not on the Voice page: the game watcher
+  // must keep arming and standing the helper down while the user is on any
+  // other page, and the engine status must survive page switches.
+  const [voiceRunning, setVoiceRunning] = useState(false)
+  const [voiceBusy, setVoiceBusy] = useState(false)
+  const [voiceMsg, setVoiceMsg] = useState("")
+  const voiceBusyRef = useRef(false)
+  const voiceRunningRef = useRef(false)
+  voiceBusyRef.current = voiceBusy
+  voiceRunningRef.current = voiceRunning
 
   // ---- boot ------------------------------------------------------------
   useEffect(() => {
@@ -248,6 +265,168 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setPresetState(p)
     write("qc-preset", p)
   }, [])
+
+  // Engine status for the helper: polled app-wide, independent of the main
+  // switch (a voice-only session runs the engine with the switch off).
+  useEffect(() => {
+    let alive = true
+    const poll = async () => {
+      try {
+        const st = await api.status()
+        if (alive) setVoiceRunning(st.running)
+      } catch {
+        /* engine not reachable yet */
+      }
+    }
+    void poll()
+    const id = window.setInterval(() => void poll(), 2000)
+    return () => {
+      alive = false
+      window.clearInterval(id)
+    }
+  }, [])
+
+  const setVoiceHelper = useCallback(
+    async (next: boolean): Promise<boolean> => {
+      if (voiceBusyRef.current) return false
+      voiceBusyRef.current = true
+      setVoiceBusy(true)
+      setVoiceMsg("")
+      try {
+        if (!next) {
+          // Turning the helper off must not disturb the rest of the session:
+          // a merged session restarts with the same setup minus the voice
+          // rules, a voice-only session just stops.
+          const merged = localStorage.getItem("qc-voice-merged") === "1"
+          if (merged && card) {
+            const r = await api.start(card.uuid, appsMode, apps, transport, false)
+            if (!r.ok) setVoiceMsg(r.msg)
+          } else {
+            const r = await api.stop()
+            setVoiceRunning(false)
+            if (!r.ok) setVoiceMsg(r.msg)
+          }
+          localStorage.removeItem("qc-voice-active")
+          localStorage.removeItem("qc-voice-merged")
+          return true
+        }
+        if (!card) {
+          setVoiceMsg(t("needCard"))
+          return false
+        }
+        // A running session keeps its configuration and gains the voice
+        // rules; with nothing running this starts a voice-only session.
+        const merged = voiceRunningRef.current
+        const r = await api.start(card.uuid, merged ? appsMode : "allow", merged ? apps : [], transport, true)
+        if (r.ok) {
+          localStorage.setItem("qc-voice-active", "1")
+          localStorage.setItem("qc-voice-merged", merged ? "1" : "0")
+          setVoiceRunning(true)
+          return true
+        }
+        // A cold start can report failure a moment before the engine is
+        // actually routing: check once more and adopt it when it came up.
+        await new Promise((res) => window.setTimeout(res, 2500))
+        const st = await api.status().catch(() => null)
+        if (st?.running) {
+          localStorage.setItem("qc-voice-active", "1")
+          localStorage.setItem("qc-voice-merged", merged ? "1" : "0")
+          setVoiceRunning(true)
+          return true
+        }
+        setVoiceMsg(r.msg)
+        return false
+      } catch (e) {
+        setVoiceMsg(typeof e === "string" ? e : String(e))
+        return false
+      } finally {
+        voiceBusyRef.current = false
+        setVoiceBusy(false)
+      }
+    },
+    [card, appsMode, apps, transport, t],
+  )
+
+  // "Launch with Valorant": the flag only watches. The game itself drives
+  // the helper: appearing arms it, closing disarms it when the watcher armed
+  // it (a helper switched on by hand is left alone). This runs for the app's
+  // whole life, so switching pages can never pause the watching.
+  const voiceHelperRef = useRef(setVoiceHelper)
+  voiceHelperRef.current = setVoiceHelper
+  const gameWasUp = useRef(false)
+  useEffect(() => {
+    const get = (k: string) => {
+      try {
+        return localStorage.getItem(k)
+      } catch {
+        return null
+      }
+    }
+    let alive = true
+    const tick = async () => {
+      try {
+        if (localStorage.getItem("qc-voice-launch") !== "1") {
+          gameWasUp.current = false
+          return
+        }
+      } catch {
+        return
+      }
+      let game = false
+      try {
+        for (const exe of ["VALORANT-Win64-Shipping.exe"]) {
+          if (await api.processRunning(exe)) {
+            game = true
+            break
+          }
+        }
+      } catch {
+        return
+      }
+      if (!alive) return
+      const on = voiceRunningRef.current && get("qc-voice-active") === "1"
+      if (game && !gameWasUp.current) {
+        // The game just appeared: arm the helper unless it is already on.
+        gameWasUp.current = true
+        if (!cardUuidRef.current || on || voiceBusyRef.current) return
+        const armed = await voiceHelperRef.current(true)
+        if (!armed) return
+        try {
+          localStorage.setItem("qc-voice-auto", "1")
+        } catch {
+          /* private mode */
+        }
+      } else if (!game && gameWasUp.current) {
+        // The game just closed: stand the watcher-armed helper down. A
+        // merged session keeps its setup minus the voice rules, a
+        // voice-only session just stops.
+        gameWasUp.current = false
+        if (get("qc-voice-auto") !== "1" || !on || voiceBusyRef.current) return
+        await voiceHelperRef.current(false)
+        try {
+          localStorage.removeItem("qc-voice-auto")
+        } catch {
+          /* private mode */
+        }
+      }
+    }
+    void tick()
+    const id = window.setInterval(() => void tick(), 5000)
+    return () => {
+      alive = false
+      window.clearInterval(id)
+    }
+  }, [])
+
+  const voiceOn =
+    voiceRunning &&
+    (() => {
+      try {
+        return localStorage.getItem("qc-voice-active") === "1"
+      } catch {
+        return false
+      }
+    })()
 
   const connect = useCallback(async () => {
     teardownRef.current += 1
@@ -739,6 +918,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     checkUpdates,
     applyUpdate,
     loadApps,
+    voiceRunning,
+    voiceOn,
+    voiceBusy,
+    voiceMsg,
+    setVoiceHelper,
   }
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

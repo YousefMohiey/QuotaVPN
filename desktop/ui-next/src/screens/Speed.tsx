@@ -868,10 +868,11 @@ export function buildVerdicts(r: Result, t: (k: StrKey) => string): Verdict[] {
   return out
 }
 
-/** The one button that matters here. The owner's final look: a frosted
-    glass disc with two lit blue arcs travelling around it on a faint
-    track. The arcs orbit continuously and pick up speed while a run is
-    going, so the motion itself tells the state - no glow anywhere. */
+/** The one button that matters here. The owner's final look ("Option 4 -
+    smooth sweep"): a frosted glass disc with ONE lit blue arc riding its
+    edge, fading from nothing at the tail to bright at the head, plus a
+    faint boundary ring just outside. The sweep orbits continuously, so
+    the button reads as alive with no glow anywhere. */
 function StartCircle({
   running,
   done,
@@ -904,48 +905,26 @@ function StartCircle({
           running && "bg-[rgb(255_255_255/0.075)]",
         )}
       />
-      {/* the ring: a faint track with two lit arcs riding it, orbiting */}
-      <svg
-        viewBox="0 0 208 208"
-        className="absolute inset-0 [animation:spin_8s_linear_infinite]"
-        aria-hidden
-      >
+      {/* one smooth sweep orbiting on the disc's edge, with a faint ring outside */}
+      <svg viewBox="0 0 208 208" className="absolute inset-0 [animation:spin_8s_linear_infinite]" aria-hidden>
         <defs>
-          <linearGradient id="qc-arc-a" gradientUnits="userSpaceOnUse" x1="104" y1="4" x2="198" y2="138.2">
+          <linearGradient id="qc-sweep" gradientUnits="userSpaceOnUse" x1="119.3" y1="17.3" x2="192" y2="104">
             <stop offset="0" stopColor="#2e7bf6" stopOpacity="0" />
-            <stop offset="0.32" stopColor="#2e7bf6" stopOpacity="0.9" />
-            <stop offset="0.68" stopColor="#5b8def" stopOpacity="0.9" />
-            <stop offset="1" stopColor="#5b8def" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="qc-arc-b" gradientUnits="userSpaceOnUse" x1="69.8" y1="198" x2="46.6" y2="22.1">
-            <stop offset="0" stopColor="#2e7bf6" stopOpacity="0" />
-            <stop offset="0.32" stopColor="#2e7bf6" stopOpacity="0.9" />
-            <stop offset="0.68" stopColor="#5b8def" stopOpacity="0.9" />
-            <stop offset="1" stopColor="#5b8def" stopOpacity="0" />
+            <stop offset="0.45" stopColor="#2e7bf6" stopOpacity="0.45" />
+            <stop offset="1" stopColor="#2e7bf6" stopOpacity="1" />
           </linearGradient>
         </defs>
-        <circle cx="104" cy="104" r="100" fill="none" stroke="rgb(255 255 255 / 0.04)" strokeWidth="2.5" />
+        <circle cx="104" cy="104" r="95" fill="none" stroke="rgb(255 255 255 / 0.055)" strokeWidth="2.5" />
         <circle
           cx="104"
           cy="104"
-          r="100"
+          r="88"
           fill="none"
-          stroke="url(#qc-arc-a)"
-          strokeWidth="3.2"
+          stroke="url(#qc-sweep)"
+          strokeWidth="3.8"
           strokeLinecap="round"
-          strokeDasharray="192 436.3"
-          transform="rotate(-90 104 104)"
-        />
-        <circle
-          cx="104"
-          cy="104"
-          r="100"
-          fill="none"
-          stroke="url(#qc-arc-b)"
-          strokeWidth="3.2"
-          strokeLinecap="round"
-          strokeDasharray="218.2 410.1"
-          transform="rotate(110 104 104)"
+          strokeDasharray="122.9 430"
+          transform="rotate(280 104 104)"
         />
       </svg>
       <span className="relative flex flex-col items-center gap-2.5">
