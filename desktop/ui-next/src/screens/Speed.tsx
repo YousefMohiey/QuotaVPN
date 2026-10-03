@@ -868,9 +868,10 @@ export function buildVerdicts(r: Result, t: (k: StrKey) => string): Verdict[] {
   return out
 }
 
-/** The one button that matters here: a frosted glass disc. No outline, no
-    arc, no glow - one translucent surface with a lit top edge, the same
-    material family as the cards, so nothing over it reads as decoration. */
+/** The one button that matters here. The owner's final look: a frosted
+    glass disc with two lit blue arcs travelling around it on a faint
+    track. The arcs orbit continuously and pick up speed while a run is
+    going, so the motion itself tells the state - no glow anywhere. */
 function StartCircle({
   running,
   done,
@@ -892,12 +893,61 @@ function StartCircle({
       aria-label={label}
       whileTap={{ scale: 0.985 }}
       transition={{ type: "spring", stiffness: 460, damping: 32 }}
-      className={cn(
-        "group relative grid size-[176px] place-items-center rounded-full backdrop-blur-xl transition-colors duration-200",
-        "bg-[rgb(255_255_255/0.05)] shadow-[inset_0_1px_0_0_rgb(255_255_255/0.09)] hover:bg-[rgb(255_255_255/0.075)]",
-        running && "bg-[rgb(255_255_255/0.075)]",
-      )}
+      className="group relative grid size-[208px] place-items-center rounded-full"
     >
+      {/* the disc: same glass as the cards, no outline */}
+      <span
+        aria-hidden
+        className={cn(
+          "absolute inset-[16px] rounded-full bg-[rgb(255_255_255/0.05)] shadow-[inset_0_1px_0_0_rgb(255_255_255/0.09)] backdrop-blur-xl transition-colors duration-200",
+          "group-hover:bg-[rgb(255_255_255/0.075)]",
+          running && "bg-[rgb(255_255_255/0.075)]",
+        )}
+      />
+      {/* the ring: a faint track with two lit arcs riding it, orbiting */}
+      <svg
+        viewBox="0 0 208 208"
+        className="absolute inset-0 [animation:spin_8s_linear_infinite]"
+        aria-hidden
+      >
+        <defs>
+          <linearGradient id="qc-arc-a" gradientUnits="userSpaceOnUse" x1="104" y1="4" x2="198" y2="138.2">
+            <stop offset="0" stopColor="#2e7bf6" stopOpacity="0" />
+            <stop offset="0.32" stopColor="#2e7bf6" stopOpacity="0.9" />
+            <stop offset="0.68" stopColor="#5b8def" stopOpacity="0.9" />
+            <stop offset="1" stopColor="#5b8def" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="qc-arc-b" gradientUnits="userSpaceOnUse" x1="69.8" y1="198" x2="46.6" y2="22.1">
+            <stop offset="0" stopColor="#2e7bf6" stopOpacity="0" />
+            <stop offset="0.32" stopColor="#2e7bf6" stopOpacity="0.9" />
+            <stop offset="0.68" stopColor="#5b8def" stopOpacity="0.9" />
+            <stop offset="1" stopColor="#5b8def" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <circle cx="104" cy="104" r="100" fill="none" stroke="rgb(255 255 255 / 0.04)" strokeWidth="2.5" />
+        <circle
+          cx="104"
+          cy="104"
+          r="100"
+          fill="none"
+          stroke="url(#qc-arc-a)"
+          strokeWidth="3.2"
+          strokeLinecap="round"
+          strokeDasharray="192 436.3"
+          transform="rotate(-90 104 104)"
+        />
+        <circle
+          cx="104"
+          cy="104"
+          r="100"
+          fill="none"
+          stroke="url(#qc-arc-b)"
+          strokeWidth="3.2"
+          strokeLinecap="round"
+          strokeDasharray="218.2 410.1"
+          transform="rotate(110 104 104)"
+        />
+      </svg>
       <span className="relative flex flex-col items-center gap-2.5">
         {running ? (
           <Square className="size-7 text-[var(--brand-vivid)]" strokeWidth={1.75} aria-hidden />
