@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { AnimatePresence, motion, useReducedMotion } from "motion/react"
+import { AnimatePresence, motion } from "motion/react"
 import { Activity, ArrowDown, ArrowUp, ChevronDown, ChevronRight, Cloud, Gauge, Gamepad2, Globe, History, Play, RefreshCw, Server, Square, Tv, Video, Wifi } from "lucide-react"
 import { PickerDialog } from "@/components/PickerDialog"
 import { SpeedGraph } from "@/components/SpeedGraph"
@@ -885,7 +885,6 @@ function StartCircle({
   onStop: () => void
 }) {
   const { t } = useI18n()
-  const reduce = useReducedMotion()
   const label = running ? t("stop") : done ? t("startAgain") : t("startTest")
   const ringRef = useRef<HTMLDivElement | null>(null)
   const [pulse, setPulse] = useState(0)
@@ -895,8 +894,9 @@ function StartCircle({
     setPulse((p) => p + 1)
     setFlash((f) => f + 1)
     // Starting gets one extra lap that eases out: the sweep visibly whips
-    // around and settles back into its slow orbit.
-    if (!running && !reduce) {
+    // around and settles back into its slow orbit. Owner call: this runs
+    // regardless of the system's reduced-motion setting.
+    if (!running) {
       ringRef.current?.animate(
         [{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }],
         { duration: 900, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
@@ -982,7 +982,7 @@ function StartCircle({
       <span className="relative flex flex-col items-center gap-2.5">
         <motion.span
           key={running ? "stop" : "go"}
-          initial={reduce ? false : { opacity: 0, scale: 0.7, rotate: running ? -80 : 80 }}
+          initial={{ opacity: 0, scale: 0.7, rotate: running ? -80 : 80 }}
           animate={{ opacity: 1, scale: 1, rotate: 0 }}
           transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
           className="grid place-items-center"
@@ -995,7 +995,7 @@ function StartCircle({
         </motion.span>
         <motion.span
           key={label}
-          initial={reduce ? false : { opacity: 0, y: 3 }}
+          initial={{ opacity: 0, y: 3 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
           className="text-[12.5px] font-medium tracking-[0.01em] text-txt"
