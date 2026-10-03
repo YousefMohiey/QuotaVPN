@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { AnimatePresence, motion } from "motion/react"
+import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { Activity, ArrowDown, ArrowUp, ChevronDown, ChevronRight, Cloud, Gauge, Gamepad2, Globe, History, Play, RefreshCw, Server, Square, Tv, Video, Wifi } from "lucide-react"
 import { PickerDialog } from "@/components/PickerDialog"
 import { SpeedGraph } from "@/components/SpeedGraph"
@@ -868,11 +868,11 @@ export function buildVerdicts(r: Result, t: (k: StrKey) => string): Verdict[] {
   return out
 }
 
-/** The one button that matters here. The owner's final look ("Option 4 -
-    smooth sweep"): a frosted glass disc with ONE lit blue arc riding its
-    edge, fading from nothing at the tail to bright at the head, plus a
-    faint boundary ring just outside. The sweep orbits continuously, so
-    the button reads as alive with no glow anywhere. */
+/** The one button that matters here ("Option 4 - smooth sweep"): a frosted
+    glass disc, one lit sweep with a bulbous head riding its edge over a
+    faint boundary ring, and a press that answers with a tactile dip, a
+    pulse, a soft flash and one fast lap before the run takes over. The
+    sweep keeps orbiting on its own; the motion only ever reports state. */
 function StartCircle({
   running,
   done,
@@ -885,15 +885,34 @@ function StartCircle({
   onStop: () => void
 }) {
   const { t } = useI18n()
+  const reduce = useReducedMotion()
   const label = running ? t("stop") : done ? t("startAgain") : t("startTest")
+  const ringRef = useRef<HTMLDivElement | null>(null)
+  const [pulse, setPulse] = useState(0)
+  const [flash, setFlash] = useState(0)
+
+  const press = () => {
+    setPulse((p) => p + 1)
+    setFlash((f) => f + 1)
+    // Starting gets one extra lap that eases out: the sweep visibly whips
+    // around and settles back into its slow orbit.
+    if (!running && !reduce) {
+      ringRef.current?.animate(
+        [{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }],
+        { duration: 900, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
+      )
+    }
+    if (running) onStop()
+    else onStart()
+  }
 
   return (
     <motion.button
       type="button"
-      onClick={running ? onStop : onStart}
+      onClick={press}
       aria-label={label}
-      whileTap={{ scale: 0.985 }}
-      transition={{ type: "spring", stiffness: 460, damping: 32 }}
+      whileTap={{ scale: 0.97 }}
+      transition={{ type: "spring", stiffness: 520, damping: 30 }}
       className="group relative grid size-[208px] place-items-center rounded-full"
     >
       {/* the disc: same glass as the cards, no outline */}
@@ -905,35 +924,84 @@ function StartCircle({
           running && "bg-[rgb(255_255_255/0.075)]",
         )}
       />
-      {/* one smooth sweep orbiting on the disc's edge, with a faint ring outside */}
-      <svg viewBox="0 0 208 208" className="absolute inset-0 [animation:spin_8s_linear_infinite]" aria-hidden>
-        <defs>
-          <linearGradient id="qc-sweep" gradientUnits="userSpaceOnUse" x1="119.3" y1="17.3" x2="192" y2="104">
-            <stop offset="0" stopColor="#2e7bf6" stopOpacity="0" />
-            <stop offset="0.45" stopColor="#2e7bf6" stopOpacity="0.45" />
-            <stop offset="1" stopColor="#2e7bf6" stopOpacity="1" />
-          </linearGradient>
-        </defs>
-        <circle cx="104" cy="104" r="95" fill="none" stroke="rgb(255 255 255 / 0.055)" strokeWidth="2.5" />
-        <circle
-          cx="104"
-          cy="104"
-          r="88"
-          fill="none"
-          stroke="url(#qc-sweep)"
-          strokeWidth="3.8"
-          strokeLinecap="round"
-          strokeDasharray="122.9 430"
-          transform="rotate(280 104 104)"
+      {/* press feedback: a soft flash inside the disc, a pulse outside it */}
+      {flash > 0 && (
+        <span
+          key={flash}
+          aria-hidden
+          className="qc-flash pointer-events-none absolute inset-[16px] rounded-full bg-[rgb(255_255_255/0.09)] opacity-0"
         />
-      </svg>
+      )}
+      {pulse > 0 && (
+        <span
+          key={pulse}
+          aria-hidden
+          className="qc-pulse pointer-events-none absolute inset-[8px] rounded-full border-[1.5px] border-[rgb(46_123_246/0.7)] opacity-0"
+        />
+      )}
+      {/* the sweep: a faint boundary ring, the lit arc, and its bulbous head */}
+      <div ref={ringRef} className="absolute inset-0">
+        <svg viewBox="0 0 208 208" className="qc-orbit absolute inset-0" aria-hidden>
+          <defs>
+            <linearGradient id="qc-sweep" gradientUnits="userSpaceOnUse" x1="119.3" y1="17.3" x2="180.2" y2="148">
+              <stop offset="0" stopColor="#2e7bf6" stopOpacity="0" />
+              <stop offset="0.35" stopColor="#2e7bf6" stopOpacity="0.35" />
+              <stop offset="0.78" stopColor="#2e7bf6" stopOpacity="0.9" />
+              <stop offset="1" stopColor="#2e7bf6" stopOpacity="1" />
+            </linearGradient>
+          </defs>
+          <circle cx="104" cy="104" r="95" fill="none" stroke="rgb(255 255 255 / 0.055)" strokeWidth="2.5" />
+          {/* the glow the reference asks for: a wide soft pass under the core */}
+          <circle
+            cx="104"
+            cy="104"
+            r="88"
+            fill="none"
+            stroke="#2e7bf6"
+            strokeOpacity="0.22"
+            strokeWidth="12"
+            strokeLinecap="round"
+            strokeDasharray="168.9 384"
+            transform="rotate(280 104 104)"
+          />
+          <circle
+            cx="104"
+            cy="104"
+            r="88"
+            fill="none"
+            stroke="url(#qc-sweep)"
+            strokeWidth="4.6"
+            strokeLinecap="round"
+            strokeDasharray="168.9 384"
+            transform="rotate(280 104 104)"
+          />
+          <circle cx="180.2" cy="148" r="7" fill="#2e7bf6" fillOpacity="0.22" />
+          <circle cx="180.2" cy="148" r="3.1" fill="#2e7bf6" />
+        </svg>
+      </div>
       <span className="relative flex flex-col items-center gap-2.5">
-        {running ? (
-          <Square className="size-7 text-[var(--brand-vivid)]" strokeWidth={1.75} aria-hidden />
-        ) : (
-          <Play className="ms-1 size-8 text-[var(--brand-vivid)]" strokeWidth={1.75} aria-hidden />
-        )}
-        <span className="text-[12.5px] font-medium tracking-[0.01em] text-txt">{label}</span>
+        <motion.span
+          key={running ? "stop" : "go"}
+          initial={reduce ? false : { opacity: 0, scale: 0.7, rotate: running ? -80 : 80 }}
+          animate={{ opacity: 1, scale: 1, rotate: 0 }}
+          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          className="grid place-items-center"
+        >
+          {running ? (
+            <Square className="size-7 text-[var(--brand-vivid)]" strokeWidth={1.75} aria-hidden />
+          ) : (
+            <Play className="ms-1 size-8 text-[var(--brand-vivid)]" strokeWidth={1.75} aria-hidden />
+          )}
+        </motion.span>
+        <motion.span
+          key={label}
+          initial={reduce ? false : { opacity: 0, y: 3 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+          className="text-[12.5px] font-medium tracking-[0.01em] text-txt"
+        >
+          {label}
+        </motion.span>
       </span>
     </motion.button>
   )
