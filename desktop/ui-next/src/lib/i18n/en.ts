@@ -164,6 +164,8 @@ export const en = {
   "serverLabel": "Server",
   "serverReady": "Server ready",
   "sessLabel": "Session",
+  "setupTitle": "Connection setup",
+  "setupBody": "Pick what this VPN is for, the server it rides, and how it carries your traffic.",
   "sheetSearch": "Search servers…",
   "spPer": "/s",
   "speedIdle": "Run a test to measure the connection through the server.",

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { ArrowLeft, Check, Search } from "lucide-react"
-import { Panel } from "@/components/Row"
 import { Segmented } from "@/components/Segmented"
 import { useApp, type AppsMode } from "@/state/app"
 import { useI18n } from "@/lib/i18n"
@@ -119,7 +118,7 @@ export function Apps({ onBack }: { onBack: () => void }) {
 
       {/* the controls stay up while the list scrolls beneath them */}
       <div className="sticky top-0 z-10 bg-[var(--bg)] pb-3">
-        <Panel>
+        <div className="overflow-hidden rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)]">
           <div className="flex flex-wrap items-center justify-between gap-3 p-3">
             <Segmented
               id="apps-mode"
@@ -172,10 +171,10 @@ export function Apps({ onBack }: { onBack: () => void }) {
           <p aria-live="polite" className="border-t border-line px-4 py-2 text-[12px] text-txt3" dir="auto">
             {summary}
           </p>
-        </Panel>
+        </div>
       </div>
 
-      <Panel>
+      <div className="overflow-hidden rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)]">
         <div
           role="listbox"
           aria-multiselectable="true"
@@ -248,7 +247,7 @@ export function Apps({ onBack }: { onBack: () => void }) {
             })
           )}
         </div>
-      </Panel>
+      </div>
     </div>
   )
 }

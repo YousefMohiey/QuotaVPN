@@ -167,6 +167,8 @@ export const ar = {
   "serverLabel": "الخادم",
   "serverReady": "الخادم جاهز",
   "sessLabel": "المدة",
+  "setupTitle": "إعداد الاتصال",
+  "setupBody": "اختر استخدام الـVPN، والخادم الذي يمر عليه، وطريقة نقل الترافيك.",
   "sheetSearch": "ابحث عن خادم…",
   "spPer": "/ث",
   "speedIdle": "ابدأ قياساً لمعرفة سرعة الاتصال عبر بطاقتك.",

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
+import { ArrowUpDown, Globe, MapPin, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/lib/i18n"
 import { useApp } from "@/state/app"
-import { api } from "@/lib/ipc"
+import { api, netInfo } from "@/lib/ipc"
 import { Dial, type DialState } from "./Dial"
 import { displayHost, fmtBytes, fmtDuration, mbps } from "@/lib/format"
 
@@ -20,6 +21,12 @@ function useTick(ms: number, on: boolean) {
   }, [ms, on])
 }
 
+/**
+ * The connection card: the dial parks left the moment Connect is pressed
+ * and the reading column takes its place behind the same hairline divider
+ * the Valorant cards use. The footer strip carries the three connection
+ * facts, so the page is two calm cards instead of a stack of boxes.
+ */
 export function Hero() {
   const { t } = useI18n()
   const { phase, connected, busy, toggle, card, rx, tx, sessionStart, serverIp, status } = useApp()
@@ -55,6 +62,41 @@ export function Hero() {
       if (timer) window.clearTimeout(timer)
     }
   }, [connected, serverIp])
+
+  // Footer facts: the exit address while connected, plus the server's
+  // location (remembered across sessions so it survives a disconnect).
+  const [exit, setExit] = useState<{ ip: string; place: string; isp: string } | null>(null)
+  const [srvPlace, setSrvPlace] = useState<string>(() => {
+    try {
+      return localStorage.getItem("qc-srv-place") || ""
+    } catch {
+      return ""
+    }
+  })
+  useEffect(() => {
+    let alive = true
+    void netInfo()
+      .then((n) => {
+        if (alive && n) setExit({ ip: n.ip, place: n.place, isp: n.isp })
+      })
+      .catch(() => {
+        /* the facts fall back to what we already know */
+      })
+    return () => {
+      alive = false
+    }
+  }, [connected])
+  useEffect(() => {
+    if (!connected || !exit?.place) return
+    setSrvPlace(exit.place)
+    try {
+      localStorage.setItem("qc-srv-place", exit.place)
+    } catch {
+      /* private mode */
+    }
+  }, [connected, exit])
+  const placeText = connected ? exit?.place || srvPlace || displayHost(serverIp) : srvPlace || "-"
+  const ipText = exit?.ip || "-"
 
   // The dial parks left from the moment Connect is pressed, and starts its
   // way back the moment Disconnect is pressed, not when the engine answers.
@@ -95,12 +137,12 @@ export function Hero() {
   useTick(1000, connected)
 
   return (
-    <section className="glass rounded-[24px] p-4">
-      <div className="flex min-h-[208px] items-center">
+    <section className="rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] p-5">
+      <div className="flex min-h-[190px] items-center">
         <motion.div
           layout
           transition={SPRING}
-          className={cn("flex w-full items-center", dialLeft ? "justify-start gap-8" : "justify-center")}
+          className={cn("flex w-full items-center", dialLeft ? "justify-start gap-7" : "justify-center")}
         >
           <motion.div layout transition={SPRING} className="flex shrink-0 flex-col items-center text-center">
             <Dial state={state} onClick={toggle} disabled={busy} />
@@ -122,7 +164,7 @@ export function Hero() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 12 }}
                 transition={{ duration: 0.32, ease: EASE_OUT, delay: 0.06 }}
-                className="min-w-0 flex-1"
+                className="min-w-0 flex-1 lg:border-l lg:border-line lg:pl-6"
               >
                 <div className="flex items-center gap-2">
                   <span
@@ -156,16 +198,16 @@ export function Hero() {
                       transition={{ duration: 0.36, ease: EASE_OUT, delay: 0.12 }}
                     >
                       <div className="mt-3 flex items-stretch gap-3">
-                        <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 flex-1 flex-col justify-center">
                           <Traffic rx={rx} tx={tx} />
                         </div>
-                        <div className="grid w-[212px] shrink-0 grid-rows-2 gap-2">
+                        <div className="flex w-[200px] shrink-0 flex-col justify-center gap-2">
                           <StatTile
                             label={t("sessLabel")}
                             value={sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
                             sub={"⁨↓ " + fmtBytes(rx) + "⁩   ⁨↑ " + fmtBytes(tx) + "⁩"}
                           />
-                          <StatTile label={t("yourIp")} value={serverAddr || displayHost(serverIp)} />
+                          <StatTile label={t("yourIp")} value={serverAddr || displayHost(serverIp)} sub={exit?.isp || undefined} />
                         </div>
                       </div>
                     </motion.div>
@@ -176,7 +218,51 @@ export function Hero() {
           </AnimatePresence>
         </motion.div>
       </div>
+
+      {/* the connection facts, a quiet strip inside the same card */}
+      <div className="mt-5 grid grid-cols-3 gap-4 border-t border-line pt-4">
+        <Fact icon={Globe} label={t("srvLocation")} value={placeText} />
+        <Fact icon={MapPin} label={t("yourIp")} value={ipText} />
+        <Fact
+          icon={ArrowUpDown}
+          label={t("statusLbl")}
+          value={connected ? t("connected") : t("notConnected")}
+          dot={connected}
+        />
+      </div>
     </section>
+  )
+}
+
+/** One footer fact: icon tile, quiet label, one value line. */
+function Fact({
+  icon: Icon,
+  label,
+  value,
+  dot,
+}: {
+  icon: LucideIcon
+  label: string
+  value: string
+  dot?: boolean
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-3">
+      <span className="grid size-9 shrink-0 place-items-center rounded-[10px] border border-line bg-white/[0.03] text-brand-strong">
+        <Icon className="size-4" aria-hidden />
+      </span>
+      <div className="min-w-0">
+        <div className="text-[11px] text-txt3">{label}</div>
+        <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-txt">
+          {dot !== undefined && (
+            <span className={cn("size-1.5 shrink-0 rounded-full", dot ? "bg-[var(--green)]" : "bg-txt3")} aria-hidden />
+          )}
+          <span className="truncate" dir="auto">
+            {value}
+          </span>
+        </div>
+      </div>
+    </div>
   )
 }
 
