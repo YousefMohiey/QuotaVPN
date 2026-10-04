@@ -866,7 +866,9 @@ function optRow(main, sub, selected, onclick) {
   b.onclick = onclick;
   return b;
 }
+let sheetHideT = 0;
 function openSheet(which) {
+  clearTimeout(sheetHideT);
   sheetFor = which;
   const list = $("sheet-list");
   list.innerHTML = "";
@@ -935,6 +937,9 @@ function openSheet(which) {
 
 // Custom server: the same sheet, one field and an action.
 function openCustomDomain() {
+  // The caller closes the sni sheet first, which schedules a hide 200ms out;
+  // cancel it or the form vanishes the moment it appears.
+  clearTimeout(sheetHideT);
   sheetFor = "custom";
   const list = $("sheet-list");
   list.innerHTML = "";
@@ -976,7 +981,7 @@ function closeSheet() {
   $("tunnel-card-btn").setAttribute("aria-expanded", "false");
   const sh = $("sheet");
   sh.classList.remove("open");
-  setTimeout(() => { sh.hidden = true; $("sheet-back").hidden = true; }, 200);
+  sheetHideT = setTimeout(() => { sh.hidden = true; $("sheet-back").hidden = true; }, 200);
 }
 $("tunnel-card-btn").onclick = () => openSheet("sni");
 $("sheet-back").onclick = closeSheet;
@@ -997,7 +1002,9 @@ if (rowHomeRouting) {
 }
 const tunnelCardBtn = $("tunnel-card-btn");
 if (tunnelCardBtn) tunnelCardBtn.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openSheet("sni"); } };
-$("btn-apps-back").onclick = () => goTab("settings");
+// Back goes where the view was opened from: the routing row lives on Home
+// and in Settings, and the Android back gesture already behaves this way.
+$("btn-apps-back").onclick = () => goTab(tabHist.length > 1 ? tabHist[tabHist.length - 2] : "settings");
 
 
 async function pollTunnel() {
