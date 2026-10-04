@@ -49,7 +49,6 @@
 
     <div class="card" id="setup-card">
       <h2 data-i18n="setupTitle">Connection setup</h2>
-      <p class="setup-body" data-i18n="setupBody">Pick what this VPN is for, the server it rides, and how it carries your traffic.</p>
       <div class="presets" id="presets">
         <button type="button" class="preset" data-kind="Gamerz" aria-pressed="false">
           <span class="preset-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 11h4M8 9v4"/><path d="M15.5 12h.01M17.5 10h.01"/><rect x="2" y="6" width="20" height="12" rx="4"/></svg></span>
@@ -72,9 +71,11 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
         </div>
       </div>
-      <label data-i18n="transport" id="transport-label">Connection</label>
-      <div class="seg" id="transport-seg"><button data-transport="vless" class="on" data-i18n="trStandard">Standard</button><button data-transport="hy2" data-i18n="trGame">Hysteria2</button><button data-transport="wg" data-i18n="trWg">WireGuard</button></div>
-      <p class="hint" id="transport-note"></p>
+      <div class="tblock">
+        <label data-i18n="transport" id="transport-label">Connection</label>
+        <div class="seg" id="transport-seg"><button data-transport="vless" class="on" data-i18n="trStandard">Standard</button><button data-transport="hy2" data-i18n="trGame">Hysteria2</button><button data-transport="wg" data-i18n="trWg">WireGuard</button></div>
+        <p class="hint" id="transport-note"></p>
+      </div>
       <select id="tunnel-card" hidden></select>
       <select id="card-sni-select" hidden></select>
       <input id="card-sni" hidden autocomplete="off" />
@@ -171,7 +172,7 @@
       <p data-i18n="settingsSub">Customize your QuotaVPN experience.</p>
     </div>
 
-    <button class="sec setting nav" id="row-routing">
+    <button class="sec setting" id="row-routing">
       <span class="set-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9"/><path d="M17 6h3"/><path d="M4 12h3"/><path d="M11 12h9"/><path d="M4 18h7"/><path d="M15 18h5"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="13" cy="18" r="2"/></svg></span>
       <span class="set-txt"><b data-i18n="routing">App routing</b><i id="routing-sub"></i></span>
       <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
@@ -189,25 +190,22 @@
       <div class="set-row">
         <span class="set-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z"/><path d="M9.5 12l1.8 1.8L15 10"/></svg></span>
         <span class="set-txt"><b data-i18n="ksTitle">Kill switch</b><i data-i18n="ksHint">Kill switch: turn on Always-on VPN in the system settings. If the VPN drops, internet stops instead of leaking.</i></span>
+        <button id="btn-vpn-settings" class="chip" data-i18n="openVpnSettings">Open</button>
       </div>
-      <button id="btn-vpn-settings" class="second" data-i18n="openVpnSettings">Open VPN settings</button>
-    </div>
-
-    <div class="sec setting">
       <div class="set-row">
         <span class="set-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 5.5h2"/><path d="M12 18.5h.01"/></svg></span>
-        <span class="set-txt"><b data-i18n="bgTitle">Background running</b><i id="bg-hint" data-i18n="bgHint">Some phones stop the VPN when you swipe the app away. Allow background running so it stays on.</i></span>
+        <span class="set-txt"><b data-i18n="bgTitle">Background running</b><i id="bg-hint" data-i18n="bgHint">Keep the VPN on when you swipe the app away.</i></span>
+        <button id="btn-bg" class="chip" data-i18n="bgBtnAllow">Allow</button>
       </div>
-      <button id="btn-bg" class="second" data-i18n="bgBtnAllow">Allow background running</button>
     </div>
 
     <div class="sec setting">
       <div class="set-row">
         <span class="set-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.63-6.36"/><path d="M21 3v6h-6"/></svg></span>
         <span class="set-txt"><b data-i18n="updTitle">Updates</b><i id="upd-state" data-i18n="updIdle">Not checked yet.</i></span>
+        <button id="btn-check-upd" class="chip" data-i18n="updCheck">Check</button>
+        <button id="btn-get-upd" class="chip brand" data-i18n="updGet" hidden>Install</button>
       </div>
-      <button id="btn-check-upd" class="second" data-i18n="updCheck">Check for updates</button>
-      <button id="btn-get-upd" class="second" data-i18n="updGet" hidden>Download and install</button>
     </div>
 
     <div class="sec setting about">

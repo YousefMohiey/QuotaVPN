@@ -101,7 +101,16 @@ body {
 main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex; flex-direction: column; gap: 12px; padding-bottom: calc(84px + env(safe-area-inset-bottom)); flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; justify-content: flex-start; }
 .view { display: none; flex-direction: column; gap: 12px; }
 #view-connect > .hero, #view-connect > .card { flex-shrink: 0; }
-.view.on { display: flex; margin: 0; width: 100%; }
+#setup-card { display: flex; flex-direction: column; }
+#setup-card > * { margin: 0; }
+#setup-card > * + * { margin-top: 12px; }
+.tblock { display: flex; flex-direction: column; gap: 12px; }
+.tblock .hint { margin: 0 2px; }
+/* Short pages centre as a group when there is room to spare; the auto
+   margins collapse to zero the moment the content needs the height. */
+#view-connect.on > .hero { margin-top: auto; }
+#view-connect.on > #setup-card { margin-bottom: auto; }
+.view.on { display: flex; margin: 0; width: 100%; flex: 1 1 auto; min-height: 0; }
 #view-connect.on { flex: 1 1 auto; min-height: 0; }
 
 /* The shared surface: the desktop's card material - translucent navy, one
@@ -565,6 +574,7 @@ button:disabled { opacity: 0.45; }
 .speed-top{display:flex; align-items:flex-start; justify-content:space-between; gap:12px}
 .speed-title{font-size:13px; font-weight:600; color:var(--txt)}
 .speed-sub{margin-top:2px; font-size:11.5px; color:var(--txt3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.speed-sec{flex:1 1 auto; display:flex; flex-direction:column}
 .speed-sec .iconbtn{width:36px; height:36px; min-height:36px; padding:0; flex:0 0 36px; display:grid; place-items:center; border-radius:10px; border:1px solid var(--line); background:rgb(255 255 255 / 0.02); color:var(--txt2)}
 .speed-sec .iconbtn.spin svg{animation:qcspin 900ms linear infinite}
 @keyframes qcspin{to{transform:rotate(360deg)}}
@@ -582,23 +592,23 @@ button:disabled { opacity: 0.45; }
 .speed-b{margin-top:4px; font-size:14.5px; font-weight:600; color:var(--txt); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .speed-s{margin-top:2px; font-size:12px; color:var(--txt2); font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .speed-s3{font-size:11.5px; color:var(--txt3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.speed-read{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-top:12px}
+.speed-read{flex:1 1 auto; display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:12px; padding:10px 0}
 .speed-big{display:flex; align-items:baseline; gap:8px}
 .speed-big b{font-size:44px; font-weight:300; line-height:1; letter-spacing:-0.02em; color:var(--txt); font-variant-numeric:tabular-nums}
 .speed-big span{font-size:13px; color:var(--txt3)}
 .speed-cap{margin-top:7px; font-size:12.5px; color:var(--txt3)}
 .speed-peak{font-size:11px; color:var(--txt3); font-variant-numeric:tabular-nums}
-.speed-bars{display:flex; align-items:flex-end; gap:2px; height:56px; margin-top:10px; padding-bottom:1px; border-bottom:1px solid var(--line-top)}
+.speed-bars{display:flex; align-items:flex-end; gap:2px; height:84px; margin-top:16px; padding-bottom:1px; border-bottom:1px solid var(--line-top)}
 .speed-bars span{flex:1 1 0; min-width:0; height:2px; border-radius:3px 3px 0 0; transition:height 140ms linear, background 200ms linear}
-.speed-hint2{margin-top:8px; min-height:15px; font-size:12px; color:var(--txt3)}
-.speed-stats{display:grid; grid-template-columns:repeat(4,1fr); margin-top:10px; border-top:1px solid var(--line)}
+.speed-hint2{margin-top:10px; min-height:15px; font-size:12px; color:var(--txt3)}
+.speed-stats{display:grid; grid-template-columns:repeat(4,1fr); margin-top:14px; border-top:1px solid var(--line)}
 .sstat{appearance:none; background:none; border:0; padding:8px 2px; display:flex; flex-direction:column; align-items:flex-start; gap:3px; color:inherit; text-align:start; min-width:0}
 .sstat + .sstat{border-left:1px solid var(--line); padding-left:10px}
 .sstat span{font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--txt3)}
 .sstat b{font-size:14px; font-weight:600; color:var(--txt); font-variant-numeric:tabular-nums}
 .sstat i{font-style:normal; font-size:10px; color:var(--txt3); margin-left:2px}
 .sstat:disabled{opacity:0.7}
-.speed-runrow{display:flex; align-items:center; gap:10px; margin-top:12px}
+.speed-runrow{display:flex; align-items:center; gap:10px; margin-top:16px}
 #sp-run{flex:1; height:44px; display:flex; align-items:center; justify-content:center; gap:8px; border-radius:14px; border:1px solid transparent; background:var(--accent); color:#fff; font-size:13.5px; font-weight:600}
 #sp-run svg{width:14px; height:14px}
 #sp-run:active{filter:brightness(1.08)}
@@ -612,22 +622,27 @@ button:disabled { opacity: 0.45; }
 .sp-hist .empty{margin:4px 2px}
 
 /* Settings: a header, then one card per setting - icon chip, title, one
-   quiet line, and the control under it. Nothing floats at the top alone. */
-.set-head { margin: 2px 2px 12px; }
-.set-head h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; color: var(--txt); }
-.set-head p { margin: 4px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--txt2); }
-.setting { padding: 12px 14px; }
-.set-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.set-ico { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 10px; background: rgb(255 255 255 / 0.03); color: var(--accent-strong); }
-.set-ico svg { width: 16px; height: 16px; }
-.set-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.set-txt b { font-size: 13.5px; font-weight: 600; line-height: 1.35; color: var(--txt); }
-.set-txt i { font-style: normal; font-size: 11.5px; line-height: 1.4; color: var(--txt3); }
+   quiet line, the control as a chip at the end of the row. Rows are 52 tall
+   on a hairline rhythm; the About card closes the page at its bottom. */
+.set-head { margin: 0 2px 12px; }
+.set-head h1 { margin: 0; font-size: 19px; line-height: 1.25; font-weight: 600; letter-spacing: -0.01em; color: var(--txt); }
+.set-head p { margin: 3px 0 0; font-size: 12.5px; line-height: 1.4; color: var(--txt2); }
+.setting { padding: 10px 14px; }
+.set-row { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 64px; padding: 10px 0; }
+.set-row + .set-row { border-top: 1px solid var(--line); }
+.set-ico { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 10px; background: rgb(255 255 255 / 0.03); color: var(--accent-strong); }
+.set-ico svg { width: 15px; height: 15px; }
+.set-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.set-txt b { font-size: 13.5px; font-weight: 600; line-height: 1.3; color: var(--txt); }
+.set-txt i { font-style: normal; font-size: 11.5px; line-height: 1.35; color: var(--txt3); }
 .setting .chev { width: 16px; height: 16px; color: var(--txt3); flex: none; }
-button.setting { width: 100%; text-align: start; }
-.setting .second { margin-top: 10px; }
-.setting.about .srvrow { border-top: 1px solid var(--line); margin-top: 10px; padding: 8px 2px; }
-.setting.about .srvrow + .srvrow { margin-top: 0; }
+button.setting { width: 100%; text-align: start; display: flex; align-items: center; gap: 10px; min-height: 64px; }
+.chip { flex: none; min-height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line-strong); background: rgb(255 255 255 / 0.02); color: var(--txt); font-size: 12.5px; font-weight: 600; }
+.chip.brand { border-color: var(--accent-line); background: var(--accent-bg); color: var(--accent-strong); }
+.chip[hidden] { display: none; }
+.setting.about { margin-top: auto; }
+.setting.about .srvrow { border-top: 1px solid var(--line); padding: 11px 2px; margin: 0; }
+.setting.about .srvrow:last-child { padding-bottom: 10px; }
 .setting.about .srvrow b { text-align: end; }
 
 /* Speed history: the entry row on the speed page, and the full page behind
