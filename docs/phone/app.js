@@ -663,6 +663,8 @@ function appDisplay(a) {
 function renderAppsList(filter) {
   const list = $("apps-list");
   list.innerHTML = "";
+  // In "all apps" the rows are a reference, not a checklist: dim them.
+  list.classList.toggle("mode-all", appsMode === "all");
   const q = (filter || "").trim().toLowerCase();
   const items = appsCache
     .filter((a) => {
@@ -847,7 +849,7 @@ $("tunnel-card").onchange = () => {
 };
 
 // Glass bottom sheet replaces both native popups (card picker + SNI picker).
-const CHECK_SVG = `<svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>`;
+const CHECK_SVG = `<span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>`;
 let sheetFor = null;
 function currentTab() {
   const v = document.querySelector(".view.on");
@@ -873,7 +875,10 @@ function optRow(main, sub, selected, onclick) {
   b.setAttribute("aria-selected", selected ? "true" : "false");
   const m = document.createElement("span");
   m.className = "meta";
-  m.textContent = main;
+  const tt = document.createElement("span");
+  tt.className = "t";
+  tt.textContent = main;
+  m.append(tt);
   if (sub) {
     const s = document.createElement("span");
     s.className = "sub";

@@ -33,6 +33,11 @@
   --panel-hover: #161e30;
   --card: #111826;
   --field: #1a2338;
+  /* The one shared material, same tokens as the desktop: flat dark frosted
+     fill, lit edge, inner thickness, outer float. */
+  --glass-fill: rgb(16 20 28 / 0.55);
+  --glass-line: rgb(255 255 255 / 0.12);
+  --glass-blur: blur(20px) saturate(150%);
   /* lines */
   --line: rgb(255 255 255 / 0.08);
   --line-strong: rgb(255 255 255 / 0.14);
@@ -116,9 +121,14 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
 /* The shared surface: the desktop's card material - translucent navy, one
    hairline, one radius. The same recipe the Valorant cards use. */
 .sec, .hero, .card {
-  background: rgb(21 29 46 / 0.62);
-  border: 1px solid var(--line);
+  background: var(--glass-fill);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-line);
   border-radius: var(--r-card);
+  box-shadow:
+    inset 0 -12px 24px rgb(0 0 0 / 0.18),
+    0 24px 60px rgb(0 0 0 / 0.35);
 }
 .sec { padding: 12px 14px 14px; }
 /* The setup card: story, package rows, controls - one calm column. */
@@ -305,8 +315,10 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--panel);
-  border: 1px solid var(--line-strong);
+  background: rgb(18 24 36 / 0.85);
+  backdrop-filter: blur(30px) saturate(150%);
+  -webkit-backdrop-filter: blur(30px) saturate(150%);
+  border: 1px solid var(--glass-line);
   border-radius: var(--r-lg);
   box-shadow: inset 0 -12px 24px rgb(0 0 0 / 0.18), 0 30px 70px rgb(0 0 0 / 0.5);
   transform: translateY(-50%) scale(0.97);
@@ -316,8 +328,12 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
 .sheet.open { transform: translateY(-50%) scale(1); opacity: 1; }
 .sheet[hidden] { display: none; }
 .sheet-title { padding: 16px 16px 8px; font-size: 14px; font-weight: 600; letter-spacing: -0.01em; color: var(--txt); }
-#sheet-search { margin: 0 8px 8px; }
+#sheet-search { margin: 0; }
 #sheet-search[hidden] { display: none; }
+.searchwrap { position: relative; display: flex; align-items: center; margin: 0 8px 8px; }
+.searchwrap svg { position: absolute; inset-inline-start: 10px; width: 14px; height: 14px; color: var(--txt3); pointer-events: none; }
+.searchwrap input { width: 100%; margin: 0; padding-inline-start: 32px; }
+.searchwrap:has(input[hidden]) { display: none; }
 .sheet-list { overflow-y: auto; overscroll-behavior: contain; padding: 0 8px 12px; }
 /* Form dialog: same centered shell, room for fields and actions. */
 #nc-back { z-index: 27; }
@@ -336,12 +352,22 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
 .opt:active { background: rgb(255 255 255 / 0.05); transform: none; filter: none; }
 .opt[aria-selected="true"] { background: var(--accent-bg); }
 .opt .meta { flex: 1; min-width: 0; }
+.opt .t { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sheet-list .opt .meta { font-size: 13px; }
 .opt .sub { display: block; font-size: 12px; font-weight: 400; color: var(--txt3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.opt .check { width: 22px; height: 22px; flex: none; margin-inline-start: auto; color: var(--accent-strong); visibility: hidden; }
-.opt[aria-selected="true"] .check { visibility: visible; }
-/* Picker lists show ghost boxes so rows read as tappable. */
-.apps-list .opt .check, .sheet-list .opt .check { visibility: visible; opacity: 0.30; }
-.apps-list .opt[aria-selected="true"] .check, .sheet-list .opt[aria-selected="true"] .check { opacity: 1; }
+/* Selection marks, two shapes: the sheet pickers carry one check on the
+   chosen row only; app rows carry a checkbox each, empty until picked
+   (the desktop's own anatomy: 18px circle, 1.5px edge, filled brand blue
+   with a white check when on). */
+.opt .check { flex: none; margin-inline-start: auto; color: #fff; }
+.opt .check svg { stroke-width: 2.8; }
+.sheet-list .opt .check { width: 22px; height: 22px; visibility: hidden; }
+.sheet-list .opt[aria-selected="true"] .check { visibility: visible; }
+.apps-list .opt .check { width: 18px; height: 18px; display: grid; place-items: center; border: 1.5px solid var(--line-strong); border-radius: 50%; }
+.apps-list .opt .check svg { width: 12px; height: 12px; opacity: 0; }
+.apps-list .opt[aria-selected="true"] .check { border-color: var(--accent); background: var(--accent); }
+.apps-list .opt[aria-selected="true"] .check svg { opacity: 1; }
+.apps-list.mode-all .opt { opacity: 0.7; }
 .opt.dim { color: var(--txt2); }
 .opt.navrow { margin: 0 0 8px; }
 .opt .roottitle { display: block; font-size: 14px; font-weight: 600; line-height: 1.3; }
@@ -356,9 +382,9 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
 #apps-seg button { font-size: 11px; padding-left: 4px; padding-right: 4px; }
 #view-apps.on { margin: 0; flex: 1 1 auto; min-height: 0; }
 #view-apps .sec { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.searchwrap.apps { margin: 0 0 10px; }
 .apps-list { display: flex; flex-direction: column; gap: 6px; flex: 1 1 auto; min-height: 0; max-height: none; overflow-y: auto; overscroll-behavior: contain; }
-.appsstatus { margin: 8px 2px 10px; font-size: 12.5px; font-weight: 600; color: var(--accent-strong); }
-#apps-search { margin-bottom: 10px; }
+.appsstatus { margin: 8px 2px 10px; font-size: 12px; font-weight: 500; color: var(--txt3); }
 .apps-list .opt { min-height: 50px; }
 .apps-list .empty { text-align: center; }
 [lang="ar"] .stat b { line-height: 1.6; }
@@ -372,8 +398,10 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
   display: flex;
   gap: 4px;
   padding: 6px;
-  background: var(--bg1);
-  border: 1px solid var(--line);
+  background: rgb(16 20 28 / 0.72);
+  backdrop-filter: blur(26px) saturate(150%);
+  -webkit-backdrop-filter: blur(26px) saturate(150%);
+  border: 1px solid var(--glass-line);
   border-radius: var(--r-lg);
   box-shadow: var(--sh-panel);
   z-index: 5;
@@ -395,8 +423,8 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
 .tabbar button span { font-size: 11.5px; font-weight: 500; }
 .tabbar button.on {
   color: var(--txt);
-  background: rgb(255 255 255 / 0.06);
-  border-color: var(--line);
+  background: rgb(255 255 255 / 0.09);
+  border-color: var(--line-strong);
 }
 .tabbar button.on svg { color: var(--accent-strong); }
 .tabbar button:active { transform: scale(0.97); }
@@ -620,6 +648,21 @@ button:disabled { opacity: 0.45; }
 .sp-row .when{flex:1; min-width:0; color:var(--txt3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .sp-row .val{color:var(--txt2); font-variant-numeric:tabular-nums; flex:none}
 .sp-hist .empty{margin:4px 2px}
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgb(255 255 255 / 0.12); border-radius: 2px; }
+
+/* Fallback when the system asks for less transparency. */
+@media (prefers-reduced-transparency: reduce) {
+  .sec, .hero, .card, .tabbar, .sheet {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .sec, .hero, .card { background: rgb(16 20 28 / 0.96); }
+  .tabbar { background: rgb(16 20 28 / 0.98); }
+  .sheet { background: rgb(18 24 36 / 0.98); }
+}
 
 /* Settings: a header, then one card per setting - icon chip, title, one
    quiet line, the control as a chip at the end of the row. Rows are 52 tall
