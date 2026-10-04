@@ -28,14 +28,16 @@ struct UiState {
     ssh_user: String,
     ssh_port: u16,
     cards: Vec<Card>,
+    version: String,
 }
 
-fn snapshot(cfg: &AppConfig) -> UiState {
+fn snapshot(cfg: &AppConfig, version: &str) -> UiState {
     UiState {
         server_ip: cfg.server_ip.clone(),
         ssh_user: cfg.ssh_user.clone(),
         ssh_port: cfg.ssh_port,
         cards: cfg.cards.clone(),
+        version: version.to_string(),
     }
 }
 
@@ -90,8 +92,8 @@ fn initial_config() -> AppConfig {
 }
 
 #[tauri::command]
-fn get_state(state: tauri::State<State>) -> UiState {
-    snapshot(&state.0.lock().unwrap())
+fn get_state(app: tauri::AppHandle, state: tauri::State<State>) -> UiState {
+    snapshot(&state.0.lock().unwrap(), &app.package_info().version.to_string())
 }
 
 #[tauri::command]

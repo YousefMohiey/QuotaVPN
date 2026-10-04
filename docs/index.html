@@ -292,12 +292,12 @@
   }
 
   /* a live iframe swallows swipes on touch, so the Windows build shows its
-     still there and the phone build stays the interactive one */
+     still there; the phone build stays the interactive one - that demo is
+     the only way to try the app without installing it. */
   @media (max-width:760px), (hover:none){
     .stage{aspect-ratio:2644/1744}
     .stage iframe{display:none}
     .stage .still{display:block}
-    .phone-screen iframe{pointer-events:none}
     .build h2 span{display:block; margin-top:3px}
     #windows .touch-note{display:block; margin:12px 0 0; font-size:13px; color:var(--txt3)}
     /* the desktop build needs a wide screen, so its fullscreen link would

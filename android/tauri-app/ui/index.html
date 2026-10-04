@@ -126,9 +126,26 @@
         <button type="button" id="sp-stop" hidden data-i18n="stop">Stop</button>
       </div>
     </div>
-    <div class="sec">
-      <h2><span data-i18n="spHistory">Recent runs</span> <span class="count" id="sp-count"></span></h2>
-      <div class="sp-hist" id="sp-hist"></div>
+    <button type="button" class="sechistory" id="btn-speed-history">
+      <span class="sh-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5l3.2 1.9"/></svg></span>
+      <span class="sh-txt"><b data-i18n="history">History</b><i id="hist-sub">No runs yet.</i></span>
+      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+  </section>
+
+  <section class="view" id="view-history">
+    <div class="sec hist-sec">
+      <button class="backrow" id="btn-hist-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><span data-i18n="back">Back</span></button>
+      <div class="hist-head">
+        <h2 data-i18n="history">History</h2>
+        <button type="button" class="hist-clear" id="btn-hist-clear" data-i18n="clearAll">Clear all</button>
+      </div>
+      <div class="hist-best" id="hist-best">
+        <div class="hb"><span data-i18n="bestDown">Best down</span><b id="hb-down">-</b><i data-i18n="mbps">Mbps</i></div>
+        <div class="hb"><span data-i18n="bestUp">Best up</span><b id="hb-up">-</b><i data-i18n="mbps">Mbps</i></div>
+        <div class="hb"><span data-i18n="bestPing">Best ping</span><b id="hb-ping">-</b><i data-i18n="ms">ms</i></div>
+      </div>
+      <div class="hist-list" id="hist-list"></div>
     </div>
   </section>
 
@@ -149,25 +166,60 @@
   </section>
 
   <section class="view" id="view-settings">
-    <div class="sec">
-      <h2 data-i18n="secTraffic">Traffic and routing</h2>
-      <button class="opt navrow" id="row-routing"><span class="meta"><span class="roottitle" data-i18n="routing">App routing</span><span class="sub" id="routing-sub"></span></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
-      <p class="hint" data-i18n="ksHint">Kill switch: turn on Always-on VPN in the system settings. If the VPN drops, internet stops instead of leaking.</p>
+    <div class="set-head">
+      <h1 data-i18n="tabSettings">Settings</h1>
+      <p data-i18n="settingsSub">Customize your QuotaVPN experience.</p>
+    </div>
+
+    <button class="sec setting nav" id="row-routing">
+      <span class="set-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9"/><path d="M17 6h3"/><path d="M4 12h3"/><path d="M11 12h9"/><path d="M4 18h7"/><path d="M15 18h5"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="13" cy="18" r="2"/></svg></span>
+      <span class="set-txt"><b data-i18n="routing">App routing</b><i id="routing-sub"></i></span>
+      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+
+    <div class="sec setting">
+      <div class="set-row">
+        <span class="set-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.6 3.8 5.6 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg></span>
+        <span class="set-txt"><b data-i18n="language">Language</b><i data-i18n="languageBody">Choose your preferred language.</i></span>
+        <div class="seg langseg" id="lang-seg"><button data-lang="en" class="on">EN</button><button data-lang="ar">عربي</button></div>
+      </div>
+    </div>
+
+    <div class="sec setting">
+      <div class="set-row">
+        <span class="set-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z"/><path d="M9.5 12l1.8 1.8L15 10"/></svg></span>
+        <span class="set-txt"><b data-i18n="ksTitle">Kill switch</b><i data-i18n="ksHint">Kill switch: turn on Always-on VPN in the system settings. If the VPN drops, internet stops instead of leaking.</i></span>
+      </div>
       <button id="btn-vpn-settings" class="second" data-i18n="openVpnSettings">Open VPN settings</button>
-      <p class="hint" id="bg-hint" data-i18n="bgHint">Some phones stop the VPN when you swipe the app away. Allow background running so it stays on.</p>
+    </div>
+
+    <div class="sec setting">
+      <div class="set-row">
+        <span class="set-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 5.5h2"/><path d="M12 18.5h.01"/></svg></span>
+        <span class="set-txt"><b data-i18n="bgTitle">Background running</b><i id="bg-hint" data-i18n="bgHint">Some phones stop the VPN when you swipe the app away. Allow background running so it stays on.</i></span>
+      </div>
       <button id="btn-bg" class="second" data-i18n="bgBtnAllow">Allow background running</button>
     </div>
-    <div class="sec">
-      <h2 data-i18n="secGeneral">General</h2>
-      <div class="srvrow"><span data-i18n="language">Language</span><div class="seg langseg" id="lang-seg"><button data-lang="en" class="on">EN</button><button data-lang="ar">عربي</button></div></div>
-    </div>
-    <div class="sec">
-      <h2 data-i18n="updTitle">Updates</h2>
-      <p class="hint" id="upd-state" data-i18n="updIdle">Not checked yet.</p>
+
+    <div class="sec setting">
+      <div class="set-row">
+        <span class="set-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.63-6.36"/><path d="M21 3v6h-6"/></svg></span>
+        <span class="set-txt"><b data-i18n="updTitle">Updates</b><i id="upd-state" data-i18n="updIdle">Not checked yet.</i></span>
+      </div>
       <button id="btn-check-upd" class="second" data-i18n="updCheck">Check for updates</button>
       <button id="btn-get-upd" class="second" data-i18n="updGet" hidden>Download and install</button>
     </div>
+
+    <div class="sec setting about">
+      <div class="set-row">
+        <span class="set-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.5h.01"/></svg></span>
+        <span class="set-txt"><b data-i18n="aboutTitle">About</b><i data-i18n="aboutBody">The build you are running and the server it rides.</i></span>
+      </div>
+      <div class="srvrow"><span data-i18n="versionLbl">Version</span><b id="set-version" dir="ltr">-</b></div>
+      <div class="srvrow"><span data-i18n="cardForVpn">Server</span><b id="set-server" dir="ltr">-</b></div>
+    </div>
   </section>
+
 </main>
 
 

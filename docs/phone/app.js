@@ -88,6 +88,10 @@ const STR = {
     spStart: "Start test", spStop: "Stop", spPing: "Ping", spJitter: "Jitter", spDown: "Down", spUp: "Up",
     spHint: "Tests the route the card on Home is using.",
     spHistory: "Recent runs", spNone: "No runs yet.",
+    settingsSub: "Customize your QuotaVPN experience.", languageBody: "Choose your preferred language.", ksTitle: "Kill switch", bgTitle: "Background running",
+    aboutTitle: "About", aboutBody: "The build you are running and the server it rides.", versionLbl: "Version",
+    history: "History", histEmpty: "No runs yet. Measure one from the Speed page.", clearAll: "Clear all",
+    bestDown: "Best down", bestUp: "Best up", bestPing: "Best ping", delete: "Delete", today: "Today", yesterday: "Yesterday", runs: "runs",
     updOut: "{v} is out.", updLatest: "{v} is the latest.", updFail: "Could not reach GitHub.",
     updDownloading: "Downloading the update…", updOpened: "Installer opened. Confirm to update.",
     updAllow: "Allow installs from QuotaVPN in the screen that opened, then tap again.",
@@ -146,6 +150,10 @@ const STR = {
     spStart: "ابدأ الاختبار", spStop: "إيقاف", spPing: "بينج", spJitter: "تذبذب", spDown: "تحميل", spUp: "رفع",
     spHint: "بيختبر المسار اللي بطاقتك في الرئيسية بتستخدمه.",
     spHistory: "آخر الاختبارات", spNone: "مفيش اختبارات لسه.",
+    settingsSub: "خصّص تجربة QuotaVPN.", languageBody: "اختر لغتك المفضلة.", ksTitle: "مانع التسرب", bgTitle: "العمل في الخلفية",
+    aboutTitle: "حول التطبيق", aboutBody: "النسخة التي تعمل والسيرفر الذي تمر عليه.", versionLbl: "الإصدار",
+    history: "السجل", histEmpty: "لا توجد قياسات بعد. ابدأ قياساً من صفحة السرعة.", clearAll: "حذف الكل",
+    bestDown: "أفضل تنزيل", bestUp: "أفضل رفع", bestPing: "أفضل استجابة", delete: "حذف", today: "اليوم", yesterday: "أمس", runs: "قياسات",
     updOut: "الإصدار {v} متاح.", updLatest: "{v} هو الأحدث.", updFail: "تعذر الوصول إلى GitHub.",
     updDownloading: "جارٍ تنزيل التحديث…", updOpened: "تم فتح المثبّت. أكّد التحديث.",
     updAllow: "اسمح بتثبيت التطبيقات من QuotaVPN من الشاشة المفتوحة ثم أعد المحاولة.",
@@ -210,6 +218,7 @@ function applyLang(l) {
   });
   // Dynamic regions (empty state, profile picker) only rebuild in refresh.
   refresh();
+  setTimeout(() => { try { spPaintHistory(); } catch (e) {} }, 0);
 }
 let kind = "Gamerz";
 let busy = false;
@@ -494,6 +503,8 @@ async function refresh() {
   if (!st || !st.cards) return;
   serverHost = st.server_ip || "";
   serverIp = "";
+  if (st.version) appVersion = String(st.version);
+  paintAbout();
   paintHero();
   cardsCache = st.cards;
   fillTunnelCards(st.cards);
@@ -743,6 +754,14 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) pain
 paintBg();
 // Updates: check GitHub releases; install downloads the APK and opens the
 // system installer (Android always asks one confirmation tap).
+let appVersion = "";
+// About card: the build and the server, the two facts a settings page owes.
+function paintAbout() {
+  const v = $("set-version");
+  if (v) v.textContent = appVersion || "-";
+  const s = $("set-server");
+  if (s) s.textContent = serverHost ? maskHost(serverHost) : "-";
+}
 let updApk = "", updBusy = false;
 async function runUpdateCheck() {
   if (updBusy) return;
@@ -1538,35 +1557,140 @@ function spLoad() {
     return Array.isArray(a) ? a : [];
   } catch (e) { return []; }
 }
-function spPaintHistory() {
-  const box = $("sp-hist");
-  if (!box) return;
+// The history page, the desktop's log in phone clothes: the speed page holds
+// one row that opens it, the page itself carries the best numbers and the runs
+// grouped by day, each with a two-tap delete, plus one for the whole log.
+const TRASH_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M6 7l1 12h10l1-12"/></svg>';
+const DOWN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v13"/><path d="M6 12l6 6 6-6"/></svg>';
+function histSave(list) {
+  try { localStorage.setItem(SP_HIST, JSON.stringify(list.slice(0, 100))); } catch (e) {}
+}
+function histDayKey(at) {
+  const d = new Date(at);
+  return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+}
+function histDayLabel(at) {
+  const now = Date.now();
+  if (histDayKey(at) === histDayKey(now)) return t("today");
+  if (histDayKey(at) === histDayKey(now - 86400000)) return t("yesterday");
+  return new Date(at).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-GB", { day: "numeric", month: "short" });
+}
+function histNum(v, round) {
+  if (v == null) return "-";
+  return round ? String(Math.round(v)) : (v >= 100 ? v.toFixed(0) : v.toFixed(1));
+}
+// Two taps to destroy: the first arms the button, the second acts; any other
+// armed button stands down and the arm expires on its own.
+let histArmT = 0;
+function armThen(el, fn) {
+  if (el.classList.contains("armed")) {
+    clearTimeout(histArmT);
+    el.classList.remove("armed");
+    fn();
+    return;
+  }
+  document.querySelectorAll(".armed").forEach((x) => x.classList.remove("armed"));
+  el.classList.add("armed");
+  clearTimeout(histArmT);
+  histArmT = setTimeout(() => el.classList.remove("armed"), 2600);
+}
+function paintHistButton() {
+  const n = spLoad().length;
+  const sub = $("hist-sub");
+  if (sub) sub.textContent = n ? n + " " + t("runs") : t("spNone");
+}
+function histCard(r) {
+  const card = document.createElement("div");
+  card.className = "hist-card";
+  const main = document.createElement("div");
+  main.className = "hc-main";
+  const top = document.createElement("div");
+  top.className = "hc-top";
+  const when = document.createElement("span");
+  when.className = "hc-time";
+  const d = new Date(r.at || Date.now());
+  when.textContent = d.toLocaleTimeString(lang === "ar" ? "ar-EG" : "en-GB", { hour: "2-digit", minute: "2-digit" });
+  const tgt = document.createElement("span");
+  tgt.className = "hc-target";
+  tgt.dir = "auto";
+  tgt.textContent = r.target || t("targetServer");
+  top.append(when, tgt);
+  const big = document.createElement("div");
+  big.className = "hc-big";
+  big.innerHTML = DOWN_SVG;
+  const dn = document.createElement("b");
+  dn.textContent = histNum(r.down);
+  const un = document.createElement("i");
+  un.textContent = t("mbps");
+  big.append(dn, un);
+  const stats = document.createElement("div");
+  stats.className = "hc-stats";
+  const s1 = document.createElement("span");
+  const b1 = document.createElement("b");
+  b1.textContent = histNum(r.up);
+  s1.append("\u2191 ", b1, " " + t("mbps"));
+  const s2 = document.createElement("span");
+  const b2 = document.createElement("b");
+  b2.textContent = histNum(r.ping, true);
+  s2.append(t("pingTitle") + " ", b2, " " + t("ms"));
+  const s3 = document.createElement("span");
+  const b3 = document.createElement("b");
+  b3.textContent = histNum(r.jitter, true);
+  s3.append(t("jitter") + " ", b3, " " + t("ms"));
+  stats.append(s1, s2, s3);
+  main.append(top, big, stats);
+  const del = document.createElement("button");
+  del.type = "button";
+  del.className = "hc-del";
+  del.setAttribute("aria-label", t("delete"));
+  del.innerHTML = TRASH_SVG;
+  del.onclick = () => armThen(del, () => {
+    histSave(spLoad().filter((x) => x.at !== r.at));
+    paintHistory();
+  });
+  card.append(main, del);
+  return card;
+}
+function paintHistory() {
+  paintHistButton();
   const list = spLoad();
-  const cnt = $("sp-count");
-  if (cnt) cnt.textContent = list.length ? "(" + list.length + ")" : "";
+  const clear = $("btn-hist-clear");
+  if (clear) clear.hidden = !list.length;
+  const best = { down: null, up: null, ping: null };
+  for (const r of list) {
+    if (typeof r.down === "number" && (best.down === null || r.down > best.down)) best.down = r.down;
+    if (typeof r.up === "number" && (best.up === null || r.up > best.up)) best.up = r.up;
+    if (typeof r.ping === "number" && (best.ping === null || r.ping < best.ping)) best.ping = r.ping;
+  }
+  const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
+  set("hb-down", histNum(best.down));
+  set("hb-up", histNum(best.up));
+  set("hb-ping", histNum(best.ping, true));
+  const box = $("hist-list");
+  if (!box) return;
   box.innerHTML = "";
   if (!list.length) {
     const p = document.createElement("p");
     p.className = "empty";
-    p.textContent = t("spNone");
+    p.textContent = t("histEmpty");
     box.append(p);
     return;
   }
-  for (const r of list.slice(0, 8)) {
-    const row = document.createElement("div");
-    row.className = "sp-row";
-    const d = new Date(r.at || Date.now());
-    const when = d.toLocaleTimeString(lang === "ar" ? "ar-EG" : "en-GB", { hour: "2-digit", minute: "2-digit" });
-    const day = d.toLocaleDateString(lang === "ar" ? "ar-EG" : "en-GB", { day: "numeric", month: "short" });
-    const left = document.createElement("span");
-    left.className = "when";
-    left.textContent = when + " · " + day;
-    const right = document.createElement("span");
-    right.className = "val";
-    right.textContent = "↓ " + spNum(r.down, "mbps") + "  ↑ " + spNum(r.up, "mbps") + " " + t("mbps");
-    row.append(left, right);
-    box.append(row);
+  let day = "";
+  for (const r of list) {
+    const key = histDayKey(r.at || Date.now());
+    if (key !== day) {
+      day = key;
+      const h = document.createElement("div");
+      h.className = "hist-day";
+      h.textContent = histDayLabel(r.at || Date.now());
+      box.append(h);
+    }
+    box.append(histCard(r));
   }
+}
+function spPaintHistory() {
+  paintHistory();
 }
 function spStore() {
   const list = spLoad();
@@ -1746,6 +1870,9 @@ function spStop() {
   spPaintReadout();
 }
 
+$("btn-speed-history").onclick = () => { goTab("history"); spPaintHistory(); };
+$("btn-hist-back").onclick = () => goTab("speed");
+$("btn-hist-clear").onclick = () => armThen($("btn-hist-clear"), () => { histSave([]); paintHistory(); });
 $("sp-run").onclick = () => { void spRun("all"); };
 $("sp-stop").onclick = spStop;
 // Same job as the desktop's refresh button: re-read the connection you are on
@@ -1779,6 +1906,7 @@ let spNetLoaded = false;
 const qcGoTab = goTab;
 goTab = function (name, push) {
   qcGoTab(name, push);
+  if (name === "history") spPaintHistory();
   if (name === "speed") {
     spPaintTarget();
     spPaintReadout();
