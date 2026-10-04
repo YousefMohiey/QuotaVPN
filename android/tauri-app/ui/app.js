@@ -96,6 +96,8 @@ const STR = {
     bgBtnAllow: "Allow background running",
     bgBtnStop: "Disallow background running",
     vpnConnected: "VPN Connected", serverReady: "Server ready", notConnected: "Not connected",
+    setupTitle: "Connection setup", setupBody: "Pick what this VPN is for, the server it rides, and how it carries your traffic.",
+    srvLocation: "Server location", statusLbl: "Status", srvRetry: "That server did not answer, trying another",
     working: "Working…", talking: "Talking to the server.", trafficThru: "All traffic goes through ",
     readySub: "Server is set up. Pick a card and connect.", idleSub: "Pick a card and connect.",
     connect: "Connect", disconnect: "Disconnect", connected: "Connected",
@@ -152,6 +154,8 @@ const STR = {
     bgBtnAllow: "السماح بالعمل في الخلفية",
     bgBtnStop: "إيقاف العمل في الخلفية",
     vpnConnected: "الـVPN يعمل", serverReady: "السيرفر جاهز", notConnected: "غير متصل",
+    setupTitle: "إعداد الاتصال", setupBody: "اختر استخدام الـVPN، والخادم الذي يمر عليه، وطريقة نقل الترافيك.",
+    srvLocation: "موقع الخادم", statusLbl: "الحالة", srvRetry: "لم يستجب هذا الخادم، جارٍ تجربة خادم آخر",
     working: "جارٍ العمل…", talking: "جارٍ التواصل مع السيرفر…", trafficThru: "كل الترافيك يمر عبر ",
     readySub: "السيرفر جاهز. اختار بطاقة واتصل.", idleSub: "اختار بطاقة واتصل.",
     connect: "اتصال", disconnect: "قطع الاتصال", connected: "متصل",
@@ -370,11 +374,11 @@ function paintHero() {
   const hero = $("hero");
   hero.classList.toggle("idle", !vpnOn && !connected);
   hero.classList.toggle("connecting", busy);
-  // The IP lives only in the home net rows.
-  // Home net row: the IP lives inside the hero, only while connected.
-  $("home-ip").textContent = maskHost(serverIp || serverHost);
-  $("ip-row").hidden = !vpnOn;
+  // The facts strip: the same three facts in every state. The IP shows the
+  // address the world sees while the tunnel is up, a dash when it is not.
+  $("home-ip").textContent = vpnOn ? maskHost(serverIp || serverHost) : "-";
   $("session-line").hidden = !vpnOn;
+  paintFactStatus();
   if (busy) {
     $("hero-state").textContent = t("working");
     $("hero-sub").textContent = t("talking");
@@ -407,6 +411,21 @@ function paintHero() {
     $("hero-sub").textContent = "";
     $("btn-label").textContent = t("connect");
   }
+}
+
+// One status line for the facts strip, driven by the same flags as the dial.
+function paintFactStatus() {
+  const el = $("fact-status");
+  if (el) el.textContent = busy ? t("working") : vpnOn ? t("vpnConnected") : t("notConnected");
+  const dot = $("fact-dot");
+  if (dot) dot.classList.toggle("on", !!vpnOn && !busy);
+}
+// The server's location, remembered across sessions like the desktop's.
+function paintFactPlace() {
+  let place = "";
+  try { place = localStorage.getItem("qc-srv-place") || ""; } catch (e) {}
+  const el = $("fact-place");
+  if (el) el.textContent = place || "-";
 }
 
 let busyWatch = 0;
@@ -887,6 +906,10 @@ function openSheet(which) {
     $("sheet-search").hidden = true;
     const spb = $("sheet-primary");
     if (spb) spb.hidden = true;
+    // Un-hide before the class lands: a hidden dialog never opens, which is
+    // what made the server picker look dead on the phone.
+    $("sheet-back").hidden = false;
+    $("sheet").hidden = false;
     requestAnimationFrame(() => requestAnimationFrame(() => $("sheet").classList.add("open")));
     try { history.pushState({ qcSheet: true }, ""); } catch (e) {}
     return;
@@ -1036,6 +1059,8 @@ $("btn-connect").onclick = async () => {
         await pollTunnel();
       }
       paintHero();
+      // The exit facts changed with the state; re-read them like the desktop.
+      void spResolveNet();
     } finally { setBusy(false); }
     return;
   }
@@ -1075,6 +1100,7 @@ $("btn-connect").onclick = async () => {
     if (!vpnOn) await pollTunnel();
     if (vpnError) bar(false, "VPN failed: " + vpnError);
     paintHero();
+    void spResolveNet();
   } finally { setBusy(false); }
 };
 
@@ -1108,6 +1134,9 @@ document.querySelectorAll("svg").forEach((s) => s.setAttribute("aria-hidden", "t
   if (serverHost && !connected) await doProbe();
   await pollTunnel();
   setInterval(pollTunnel, 4000);
+  // Resolve the exit facts once at open, so the home facts strip and the
+  // speed panel read real values before the speed tab is ever visited.
+  void spResolveNet();
 })();
 
 // ---------------------------------------------------------------------------
@@ -1258,8 +1287,10 @@ async function spPickFastest(pool) {
     return !!(u && u.samples && u.samples.length && u.mbps > 0);
   };
   if (await okBoth(best)) return best;
-  for (const s of cands) {
-    if (s === best) continue;
+  // Runners up: a server can answer a ping and still serve nothing, so prove
+  // bytes on the next few before falling back to Cloudflare.
+  const rest = ranked.map((o) => o.s).filter((s) => s !== best);
+  for (const s of rest.slice(0, 3)) {
     if (await okBoth(s)) return s;
   }
   return SP_CF;
@@ -1275,11 +1306,12 @@ function spTargetDef() {
   if (spChoose === "own") { const own = spOwnServer(); if (own) return own; }
   return SP_CF;
 }
-function spTargetLabel() { const d = spTargetDef(); return (spSim() || d.id === "cloudflare") ? t("srvAuto") : d.label; }
-function spTargetNote() { const d = spTargetDef(); return (spSim() || d.id === "cloudflare") ? t("srvAutoNote") : (d.detail || ""); }
+// Auto reads as "Nearest server"; a server picked by hand reads as itself.
+function spTargetLabel() { const d = spTargetDef(); return (spChoose === "auto" || d.id === "cloudflare") ? t("srvAuto") : d.label; }
+function spTargetNote() { const d = spTargetDef(); return (spChoose === "auto" || d.id === "cloudflare") ? t("srvAutoNote") : (d.detail || ""); }
 /// Load the pool and pick, the way the desktop does on open and on refresh.
 async function spRefreshTarget() {
-  if (spSim() || spPicking) return;
+  if (spPicking) return;
   spPicking = true;
   const note = $("sp-note");
   if (note) note.textContent = t("findingServer");
@@ -1288,7 +1320,10 @@ async function spRefreshTarget() {
     if (spChoose === "own") {
       spTarget = spOwnServer() || SP_CF;
     } else if (spChoose !== "auto") {
-      spTarget = spFindInPool(spChoose) || (await spPickFastest(pool));
+      spTarget = spFindInPool(spChoose) || (spSim() ? (pool[0] || SP_CF) : await spPickFastest(pool));
+    } else if (spSim()) {
+      // The site copy has no probes to run; the nearest pool entry stands in.
+      spTarget = pool[0] || SP_CF;
     } else {
       spTarget = await spPickFastest(pool);
     }
@@ -1422,6 +1457,10 @@ function paintNet(n) {
   if (ip) ip.textContent = n ? (n.ip || "") : "";
   const place = $("sp-place");
   if (place) place.textContent = n ? (n.place || "") : "";
+  if (n && n.place) {
+    try { localStorage.setItem("qc-srv-place", n.place); } catch (e) {}
+  }
+  paintFactPlace();
 }
 // Same two resolvers the desktop falls back to, and only if the native one
 // came back empty (a rate limit on the exit address, usually).
@@ -1639,17 +1678,39 @@ async function spRun(which) {
   const signal = spCtl.signal;
   spPaintRunState();
   void spResolveNet();
+  // Fresh readings for a fresh run: the tiles fill as the phases land.
+  spLast = { ping: null, jitter: null, down: null, up: null };
   try {
     const want = which === "all" ? ["ping", "down", "up"] : which === "ping2" ? ["ping"] : [which];
-    const runTarget = spTargetDef();
-    for (const w of want) {
-      if (signal.aborted) break;
-      try {
-        await spRunPhase(w, signal, runTarget);
-      } catch (e) {
+    // Same walk as the desktop: if the picked server answers nothing, the run
+    // moves down the pool and finishes on Cloudflare, which answers anywhere.
+    const cands = [];
+    const addCand = (s) => { if (s && !cands.some((c) => c.id === s.id)) cands.push(s); };
+    addCand(spTargetDef());
+    addCand(SP_CF);
+    for (const s of spPool.slice(0, 4)) addCand(s);
+    for (let attempt = 0; attempt < cands.length && attempt < 3; attempt++) {
+      const runTarget = cands[attempt];
+      if (attempt > 0) {
+        spSamples = [];
+        spPeak = 0;
+        spPaintReadout();
+      }
+      for (const w of want) {
         if (signal.aborted) break;
+        try {
+          await spRunPhase(w, signal, runTarget);
+        } catch (e) {
+          if (signal.aborted) break;
+          const hint = $("sp-hint");
+          if (hint) hint.textContent = t("noReply");
+        }
+      }
+      const got = spLast.down != null || spLast.up != null;
+      if (got || which !== "all") break;
+      if (attempt === 0) {
         const hint = $("sp-hint");
-        if (hint) hint.textContent = t("noReply");
+        if (hint) hint.textContent = t("srvRetry");
       }
     }
     if (!signal.aborted) {
@@ -1703,6 +1764,7 @@ spPaintTarget();
 spPaintReadout();
 spPaintHistory();
 spPaintRunState();
+paintFactPlace();
 
 // Repaint the screen whenever its tab comes up, and resolve the exit network
 // the first time it is opened (values may have changed while it was hidden).

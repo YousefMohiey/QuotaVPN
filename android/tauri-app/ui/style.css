@@ -60,6 +60,7 @@
   --streamerz: #a7b0bf;
   /* shape, as on the desktop */
   --r-lg: 20px;
+  --r-card: 16px;
   --r-md: 12px;
   --r-in: 8px;
   --r-ctl: 10px;
@@ -97,19 +98,25 @@ body {
 .pill.warn { color: var(--amber); border-color: var(--amber-line); background: var(--amber-bg); }
 
 /* Each tab scrolls inside the screen: nothing can slide under the tab bar. */
-main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex; flex-direction: column; gap: 12px; padding-bottom: calc(96px + env(safe-area-inset-bottom)); flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; justify-content: flex-start; }
+main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex; flex-direction: column; gap: 12px; padding-bottom: calc(84px + env(safe-area-inset-bottom)); flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; justify-content: flex-start; }
 .view { display: none; flex-direction: column; gap: 12px; }
+#view-connect > .hero, #view-connect > .card { flex-shrink: 0; }
 .view.on { display: flex; margin: 0; width: 100%; }
 #view-connect.on { flex: 1 1 auto; min-height: 0; }
 
-/* The shared surface: the desktop's panel, one hairline, one soft float. */
-.sec, .hero {
-  background: var(--panel);
+/* The shared surface: the desktop's card material - translucent navy, one
+   hairline, one radius. The same recipe the Valorant cards use. */
+.sec, .hero, .card {
+  background: rgb(21 29 46 / 0.62);
   border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  box-shadow: var(--sh-panel);
+  border-radius: var(--r-card);
 }
 .sec { padding: 12px 14px 14px; }
+/* The setup card: story, package rows, controls - one calm column. */
+.card { padding: 14px 14px 12px; }
+.card h2 { margin: 0 2px 4px; font-size: 14.5px; line-height: 1.25; font-weight: 600; letter-spacing: -0.01em; color: var(--txt); }
+.setup-body { margin: 0 2px 10px; font-size: 12.5px; line-height: 1.5; color: var(--txt2); }
+[lang="ar"] .setup-body { line-height: 1.6; }
 .sec h2 {
   margin: 0 2px 10px;
   font-size: 13.5px;
@@ -119,7 +126,7 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
   color: var(--txt);
 }
 .count { color: var(--txt3); font-weight: 600; }
-.hint { margin: 0 2px 8px; font-size: 12.5px; color: var(--txt2); line-height: 1.5; }
+.hint { margin: 0 2px 6px; font-size: 12.5px; color: var(--txt2); line-height: 1.4; }
 [lang="ar"] .hint { line-height: 1.55; }
 .hint:empty { display: none; }
 .hint.warn-note { color: var(--amber); }
@@ -141,23 +148,35 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: auto 0;
-  padding: 14px 14px 14px;
+  margin: 0;
+  padding: 12px 14px 6px;
   text-align: center;
   position: relative;
   overflow: hidden;
   border-radius: var(--r-lg);
 }
-.hero > label, .hero > .pick, .hero > .session, .hero > .seg, .hero > .homenet { align-self: stretch; }
+.hero > label, .hero > .pick, .hero > .session, .hero > .seg, .hero > .homenet, .hero > .facts { align-self: stretch; }
 .hero > .hint, .hero > .warnbox { align-self: stretch; text-align: start; }
 .hero > .hint { margin-bottom: 8px; }
 /* Home net rows: flat divider rows for the IP. */
-.homenet { margin: 2px 0 10px; border-top: 1px solid var(--line); }
+.homenet { margin: 12px 0 0; border-top: 1px solid var(--line); }
 .homenet[hidden] { display: none; }
-.homenet-row { display: flex; align-items: center; gap: 8px; padding: 10px 2px; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+.homenet-row { display: flex; align-items: center; gap: 8px; padding: 6px 2px; border-bottom: 1px solid var(--line); font-size: 12.5px; line-height: 1.3; }
 .homenet-row[hidden] { display: none; }
-.homenet-label { color: var(--txt3); font-size: 11.5px; font-weight: 500; letter-spacing: 0.01em; flex: none; }
+.homenet-label { color: var(--txt3); font-size: 11.5px; line-height: 1.3; font-weight: 500; letter-spacing: 0.01em; flex: none; }
 .homenet-row b { flex: 1; min-width: 0; text-align: end; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Connection facts: the desktop's footer strip - three columns, each an icon
+   tile over a quiet label and one value line. */
+.facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0 0; border-top: 1px solid var(--line); padding-top: 10px; }
+.fact { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; padding: 0; }
+.fact-ico { width: 22px; height: 22px; flex: none; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 7px; background: rgb(255 255 255 / 0.03); color: var(--accent-strong); }
+.fact-ico svg { width: 12px; height: 12px; }
+.fact-txt { min-width: 0; width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: start; }
+.fact-txt i { font-style: normal; font-size: 11px; line-height: 1.25; color: var(--txt3); }
+.fact-txt b { max-width: 100%; font-size: 12.5px; line-height: 1.3; font-weight: 570; color: var(--txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.fact-status { display: inline-flex; align-items: center; gap: 5px; }
+.fact-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--txt3); flex: none; }
+.fact-dot.on { background: var(--green); }
 .minibtn { min-height: 40px; min-width: 64px; padding: 6px 14px; font-size: 12.5px; border-radius: var(--r-ctl); }
 /* Live status pill: quiet idle, blue working, green on. */
 .hero-state { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; color: var(--txt2); background: rgb(255 255 255 / 0.03); border: 1px solid var(--line); border-radius: 999px; padding: 6px 13px; margin: 2px 0 8px; }
@@ -167,14 +186,14 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
 .hero.connecting .hero-state { color: var(--accent-strong); border-color: var(--accent-line); background: var(--accent-bg); }
 .hero.connecting .hero-state .livedot { background: var(--accent-strong); animation: pulse 1.1s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
-.hero-sub { font-size: 12.5px; color: var(--txt2); margin: 2px 0 10px; line-height: 1.5; position: relative; }
+.hero-sub { font-size: 12.5px; color: var(--txt2); margin: 2px 0 6px; line-height: 1.45; position: relative; }
 .hero-sub:empty { display: none; }
-.hero label { text-align: left; margin: 6px 2px; }
+.hero label { text-align: left; margin: 6px 2px 4px; }
 #tunnel-card { margin: 2px 0 12px; text-align: left; }
 /* The dial, ported from the desktop: a plain ring, state told by colour alone. */
 .hero-btn {
-  width: 168px;
-  height: 168px;
+  width: 126px;
+  height: 126px;
   border-radius: 50%;
   margin: 10px 0 0;
   background: radial-gradient(circle at 50% 36%, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.02) 74%);
@@ -186,7 +205,7 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
   position: relative;
   transition: transform 160ms cubic-bezier(0.1, 0.9, 0.2, 1), border-color 200ms, background 200ms;
 }
-.hero-btn .power { width: 40px; height: 40px; position: relative; z-index: 1; }
+.hero-btn .power { width: 34px; height: 34px; position: relative; z-index: 1; }
 .hero-btn:active { transform: scale(0.985); }
 .hero.connecting .hero-btn { border-color: var(--accent-line); color: var(--accent-strong); }
 .hero.connecting .hero-btn::after {
@@ -201,7 +220,7 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
 @keyframes spin { to { transform: rotate(360deg); } }
 .hero.connected .hero-btn { border-color: var(--green-line); color: var(--green); background: var(--green-bg); }
 /* Action label lives below the icon, never cramped inside. */
-.btn-action { font-size: 13.5px; font-weight: 570; color: var(--txt2); margin: 8px 0 6px; }
+.btn-action { font-size: 13.5px; line-height: 1.3; font-weight: 570; color: var(--txt2); margin: 6px 0 4px; }
 .hero.connected .btn-action { color: var(--green); }
 .hero.connecting .btn-action { color: var(--accent-strong); }
 /* Live session strip, only while connected. Technical LTR data in every language. */
@@ -212,10 +231,11 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
   gap: 10px;
   direction: ltr;
   font-size: 12px;
+  line-height: 1.3;
   font-weight: 570;
   color: var(--txt2);
   font-variant-numeric: tabular-nums;
-  margin: 0 0 8px;
+  margin: 0 0 6px;
 }
 .session[hidden] { display: none; }
 .session .sep { width: 3px; height: 3px; border-radius: 50%; background: var(--txt3); }
@@ -510,7 +530,7 @@ button:disabled { opacity: 0.45; }
 .langseg { flex: 0 0 148px; margin: 0; }
 .langseg button { min-height: 40px; font-size: 12.5px; }
 #transport-seg { flex: none; align-self: stretch; min-width: 0; padding: 3px; border-radius: var(--r-ctl); }
-#transport-seg button { min-height: 38px; font-size: 11.5px; padding-left: 4px; padding-right: 4px; }
+#transport-seg button { min-height: 36px; font-size: 11.5px; padding: 4px; line-height: 1.3; }
 [lang="ar"] label, [lang="ar"] .hero label { text-align: right; }
 [lang="ar"] #tunnel-card { text-align: right; }
 [lang="ar"] button.second { font-size: 13.5px; }
@@ -594,23 +614,27 @@ button:disabled { opacity: 0.45; }
 /* Preset pair: the two packages side by side, exactly like the desktop's
    two-up. The user picks a package and the server it rides; the card behind
    it is created on demand and never shown. */
-.presets{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0 4px; width:100%}
-.preset{display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:4px; min-height:64px;
-  padding:10px 12px; border-radius:var(--r-card,16px); border:1px solid var(--line); background:rgb(255 255 255 / 0.02); color:var(--txt2); text-align:start}
-.preset.on{border-color:var(--accent-line); background:var(--accent-bg); color:var(--txt); box-shadow:inset 0 1px 0 rgb(255 255 255 / 0.08)}
-.preset-name{display:flex; align-items:center; gap:6px; font-size:13.5px; font-weight:600; min-width:0; max-width:100%}
-.preset-name svg{width:16px; height:16px; flex:none}
-.preset.on .preset-name svg{color:var(--accent-strong)}
-.preset-sni{width:100%; font-size:11px; color:var(--txt3); font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-inline-start:22px}
-[lang="ar"] .preset-sni{padding-inline-start:0; padding-inline-end:22px}
+/* Preset rows: the desktop's package rows - icon tile, name, the domain it
+   rides, and the radio that says which one is on. */
+.presets{display:flex; flex-direction:column; gap:8px; margin:10px 0 2px; width:100%}
+.preset{display:flex; flex-direction:row; align-items:center; gap:10px; min-height:52px;
+  padding:8px 10px; border-radius:14px; border:1px solid var(--line); background:rgb(255 255 255 / 0.02); color:var(--txt2); text-align:start}
+.preset.on{border-color:var(--accent-line); background:var(--accent-bg); color:var(--txt)}
+.preset-ico{width:34px; height:34px; flex:none; display:grid; place-items:center; border:1px solid var(--line); border-radius:10px; background:rgb(255 255 255 / 0.03); color:var(--txt3)}
+.preset-ico svg{width:16px; height:16px}
+.preset.on .preset-ico{color:var(--accent-strong); border-color:var(--accent-line); background:var(--accent-bg)}
+.preset-txt{flex:1; min-width:0}
+.preset-name{display:flex; align-items:center; font-size:13.5px; font-weight:600; min-width:0; max-width:100%; line-height:1.35}
+.preset-sni{display:block; width:100%; font-size:11px; line-height:1.35; color:var(--txt3); font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.preset-radio{width:18px; height:18px; flex:none; display:grid; place-items:center; border:1.5px solid var(--line-strong); border-radius:50%}
+.preset.on .preset-radio{border-color:var(--accent)}
+.preset-dot{width:8px; height:8px; border-radius:50%; background:var(--accent); opacity:0}
+.preset.on .preset-dot{opacity:1}
 .preset:disabled{opacity:.6}
 .preset:active{transform:scale(0.985)}
 
 /* Home mirrors the Windows home: the dial carries state alone, the package
-   cards wear the desktop glass, and server, routing and IP read as flat
-   divider rows instead of boxes. */
+   rows and the facts strip wear the desktop card language. */
 .hero-state{display:none}
-.presets{margin:14px 0 6px}
-.preset{border-radius:20px; border-color:rgb(255 255 255 / 0.12); background:rgba(16, 20, 28, 0.55)}
 #tunnel-card-btn{cursor:pointer}
 .homenet-row svg{width:15px; height:15px; color:var(--txt3); flex:none}

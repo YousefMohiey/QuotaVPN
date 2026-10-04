@@ -32,14 +32,35 @@
         <span>↑ <span id="sess-tx">0 B</span></span>
       </div>
       <div class="hero-sub" id="hero-sub">Pick a card and connect.</div>
+      <div class="facts" id="conn-facts">
+        <div class="fact">
+          <span class="fact-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.6 3.8 5.6 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg></span>
+          <span class="fact-txt"><i data-i18n="srvLocation">Server location</i><b id="fact-place" dir="auto">-</b></span>
+        </div>
+        <div class="fact" id="ip-row" role="button" tabindex="0">
+          <span class="fact-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>
+          <span class="fact-txt"><i data-i18n="yourIp">Your IP</i><b id="home-ip" dir="ltr">-</b></span>
+        </div>
+        <div class="fact">
+          <span class="fact-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v12"/><path d="M3 8l4-4 4 4"/><path d="M17 20V8"/><path d="M21 16l-4 4-4-4"/></svg></span>
+          <span class="fact-txt"><i data-i18n="statusLbl">Status</i><b class="fact-status"><span class="fact-dot" id="fact-dot"></span><span id="fact-status">Not connected</span></b></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="setup-card">
+      <h2 data-i18n="setupTitle">Connection setup</h2>
+      <p class="setup-body" data-i18n="setupBody">Pick what this VPN is for, the server it rides, and how it carries your traffic.</p>
       <div class="presets" id="presets">
         <button type="button" class="preset" data-kind="Gamerz" aria-pressed="false">
-          <span class="preset-name"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 11h4M8 9v4"/><path d="M15.5 12h.01M17.5 10h.01"/><rect x="2" y="6" width="20" height="12" rx="4"/></svg><span data-i18n="kindGamerz">Gamerz</span></span>
-          <span class="preset-sni" dir="ltr"></span>
+          <span class="preset-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 11h4M8 9v4"/><path d="M15.5 12h.01M17.5 10h.01"/><rect x="2" y="6" width="20" height="12" rx="4"/></svg></span>
+          <span class="preset-txt"><span class="preset-name"><span data-i18n="kindGamerz">Gamerz</span></span><span class="preset-sni" dir="ltr"></span></span>
+          <span class="preset-radio" aria-hidden="true"><span class="preset-dot"></span></span>
         </button>
         <button type="button" class="preset" data-kind="Streamerz" aria-pressed="false">
-          <span class="preset-name"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M8 3l4 4 4-4"/></svg><span data-i18n="kindStreamerz">Streamerz</span></span>
-          <span class="preset-sni" dir="ltr"></span>
+          <span class="preset-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M8 3l4 4 4-4"/></svg></span>
+          <span class="preset-txt"><span class="preset-name"><span data-i18n="kindStreamerz">Streamerz</span></span><span class="preset-sni" dir="ltr"></span></span>
+          <span class="preset-radio" aria-hidden="true"><span class="preset-dot"></span></span>
         </button>
       </div>
       <div class="homenet" id="home-rows">
@@ -51,7 +72,6 @@
           <span class="homenet-label" data-i18n="routing">App routing</span><b id="home-routing-sub" dir="ltr"></b>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
         </div>
-        <div class="homenet-row" id="ip-row"><span class="homenet-label" data-i18n="yourIp">Your IP</span><b id="home-ip" dir="ltr">-</b></div>
       </div>
       <label data-i18n="transport" id="transport-label">Connection</label>
       <div class="seg" id="transport-seg"><button data-transport="vless" class="on" data-i18n="trStandard">Standard</button><button data-transport="hy2" data-i18n="trGame">Hysteria2</button><button data-transport="wg" data-i18n="trWg">WireGuard</button></div>

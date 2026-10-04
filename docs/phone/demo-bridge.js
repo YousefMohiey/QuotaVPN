@@ -67,7 +67,17 @@
       return ok("Card revoked.");
     },
     resolve_host: () => "197.44.211.84",
-    net_info: () => ({ ip: "197.44.211.84", isp: "Demo route", place: "" }),
+    net_info: () => (running
+      ? { ip: "80.225.89.162", isp: "Oracle Cloud", place: "Milan, Italy" }
+      : { ip: "197.44.211.84", isp: "WE", place: "Cairo, Egypt" }),
+    // The picker lists the same fallback pool the desktop preview uses.
+    speed_servers: () => JSON.stringify({
+      librespeed: [
+        { name: "Frankfurt, Germany (Clouvider)", server: "https://fra.speedtest.clouvider.net/backend", dlURL: "garbage.php", ulURL: "empty.php", pingURL: "empty.php", sponsorName: "Clouvider" },
+        { name: "Prague, Czech Republic (Turris)", server: "https://librespeed.turris.cz", dlURL: "backend/garbage.php", ulURL: "backend/empty.php", pingURL: "backend/empty.php", sponsorName: "Turris" },
+        { name: "Roma, Italy (GARR)", server: "https://st-be-rm2.infra.garr.it", dlURL: "garbage.php", ulURL: "empty.php", pingURL: "empty.php", sponsorName: "Consortium GARR" },
+      ],
+    }),
     check_update: () => ({ current: "0.3.5", latest: "0.3.5", available: false, apk_url: "", url: "#" }),
     apply_update: () => ({}),
   };
