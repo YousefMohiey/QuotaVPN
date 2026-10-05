@@ -1722,15 +1722,12 @@ function spStore() {
 }
 
 function spPaintRunState() {
-  // One disc does both: it starts the run, and while the run is live it
-  // stops it. The icon and the word swap together.
   const btn = $("sp-run");
-  if (btn) {
-    btn.disabled = false;
-    btn.classList.toggle("stopping", !!spCtl);
-  }
+  if (btn) btn.disabled = !!spCtl;
   const lbl = $("sp-run-label");
-  if (lbl) lbl.textContent = spCtl ? t("stop") : t("startTest");
+  if (lbl) lbl.textContent = spCtl ? t("measuring") : t("startTest");
+  const stop = $("sp-stop");
+  if (stop) stop.hidden = !spCtl;
   document.querySelectorAll(".sstat").forEach((b) => { b.disabled = !!spCtl; });
 }
 
@@ -1898,7 +1895,8 @@ function spStop() {
 $("btn-speed-history").onclick = () => { goTab("history"); spPaintHistory(); };
 $("btn-hist-back").onclick = () => goTab("speed");
 $("btn-hist-clear").onclick = () => armThen($("btn-hist-clear"), () => { histSave([]); paintHistory(); });
-$("sp-run").onclick = () => { if (spCtl) spStop(); else void spRun("all"); };
+$("sp-run").onclick = () => { void spRun("all"); };
+$("sp-stop").onclick = spStop;
 // Same job as the desktop's refresh button: re-read the connection you are on
 // and repaint the target panel, with the icon turning while it works.
 $("sp-refresh").onclick = () => {
