@@ -28,10 +28,11 @@ export function Dial({
       transition={{ type: "spring", stiffness: 460, damping: 32 }}
       className={cn(
         "relative grid size-[172px] place-items-center rounded-full border transition-[background-color,border-color,box-shadow] duration-300 disabled:opacity-70",
-        /* the glass: a light translucent pane, frosted by the scene behind
-           it, with a lit top edge and a soft floor shadow */
-        "bg-[rgb(255_255_255/0.055)] backdrop-blur-[16px] backdrop-saturate-150",
-        "shadow-[inset_0_1px_0_rgb(255_255_255/0.16),inset_0_-18px_36px_rgb(0_0_0/0.22),0_18px_44px_rgb(0_0_0/0.35)]",
+        /* the glass: a light translucent pane with a soft sheen at the
+           top, a lit edge, inner thickness and a real float underneath */
+        "bg-[rgb(255_255_255/0.07)] backdrop-blur-[16px] backdrop-saturate-150",
+        "bg-[radial-gradient(120%_120%_at_50%_0%,rgb(255_255_255/0.13),transparent_55%)]",
+        "shadow-[inset_0_1px_0_rgb(255_255_255/0.25),inset_0_-22px_44px_rgb(0_0_0/0.28),0_22px_50px_rgb(0_0_0/0.45)]",
         state === "on"
           ? "border-[var(--green-line)] text-[var(--green)]"
           : state === "connecting"
