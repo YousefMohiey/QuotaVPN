@@ -104,7 +104,7 @@ export const en = {
   "idleSub": "Pick a card and connect.",
   "inUse": "In use",
   "jitter": "Jitter",
-  "kindGamerz": "Gamerz / PS",
+  "kindGamerz": "Gamerz",
   "kindStreamerz": "Streamerz",
   "ksFoot": "Kill switch on. If the VPN drops, traffic stops instead of leaking.",
   "ksHint": "Kill switch: turn on Always-on VPN in the system settings. If the VPN drops, internet stops instead of leaking.",

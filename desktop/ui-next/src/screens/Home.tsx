@@ -56,13 +56,13 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
   const routingCount = appsMode !== "all" && apps.length ? ` · ${apps.length}` : ""
 
   return (
-    <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-3">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1040px] flex-col gap-3">
       <Hero />
 
-      <section className="rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] p-5">
+      <section className="flex min-h-[186px] flex-1 flex-col justify-center rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] p-5">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
           {/* the story, and the one choice that shapes it */}
-          <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex min-w-0 flex-1 flex-col justify-center">
             <div>
               <h2 className="text-[16.5px] font-semibold text-txt">{t("setupTitle")}</h2>
               <p className="mt-1 max-w-[430px] text-[13.5px] leading-relaxed text-txt2">{t("setupBody")}</p>

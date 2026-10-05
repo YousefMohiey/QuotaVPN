@@ -355,10 +355,12 @@
 .dial-arc {
   fill: none;
   stroke: var(--brand-vivid);
-  stroke-width: 2.6;
+  stroke-width: 3;
   stroke-linecap: round;
   stroke-dasharray: 148 148;
-  transform: rotate(-90deg) scale(-1, 1);
+  /* rotate(90) puts the swept half on the LEFT, like the mockup: the
+     dash starts at 3 o'clock, so a clockwise quarter lands it 12-to-6. */
+  transform: rotate(90deg);
   transform-origin: center;
   transition: stroke 0.3s ease;
 }

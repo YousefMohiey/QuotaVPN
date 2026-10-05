@@ -27,12 +27,16 @@ export function Dial({
       whileTap={disabled ? undefined : { scale: 0.985 }}
       transition={{ type: "spring", stiffness: 460, damping: 32 }}
       className={cn(
-        "relative grid size-[172px] place-items-center rounded-full border bg-white/[0.03] shadow-[inset_0_1px_0_rgb(255_255_255/0.07)] transition-colors disabled:opacity-70",
+        "relative grid size-[172px] place-items-center rounded-full border transition-[background-color,border-color,box-shadow] duration-300 disabled:opacity-70",
+        /* the glass: a light translucent pane, frosted by the scene behind
+           it, with a lit top edge and a soft floor shadow */
+        "bg-[rgb(255_255_255/0.055)] backdrop-blur-[16px] backdrop-saturate-150",
+        "shadow-[inset_0_1px_0_rgb(255_255_255/0.16),inset_0_-18px_36px_rgb(0_0_0/0.22),0_18px_44px_rgb(0_0_0/0.35)]",
         state === "on"
           ? "border-[var(--green-line)] text-[var(--green)]"
           : state === "connecting"
             ? "border-[var(--brand-line)] text-brand-strong"
-            : "border-[rgb(255_255_255/0.18)] text-txt hover:border-[var(--brand-line)]",
+            : "border-[rgb(255_255_255/0.16)] text-txt hover:border-[var(--brand-line)] hover:bg-[rgb(255_255_255/0.08)]",
       )}
     >
       <svg aria-hidden viewBox="0 0 100 100" className="pointer-events-none absolute -inset-[5px] size-[calc(100%+10px)]">
@@ -53,7 +57,7 @@ export function Dial({
         />
       )}
       <span className="flex flex-col items-center gap-2.5">
-        <Power className="size-[34px]" strokeWidth={1.6} aria-hidden />
+        <Power className="size-[38px]" strokeWidth={1.7} aria-hidden />
       </span>
     </motion.button>
   )

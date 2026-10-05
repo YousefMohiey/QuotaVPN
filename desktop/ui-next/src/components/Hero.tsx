@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
-import { ArrowUpDown, Globe, MapPin, type LucideIcon } from "lucide-react"
+import { Activity, Globe, Network, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/lib/i18n"
 import { useApp } from "@/state/app"
@@ -21,10 +21,11 @@ function useTick(ms: number, on: boolean) {
 }
 
 /**
- * The connection card: the dial parks left the moment Connect is pressed
- * and the reading column takes its place behind the same hairline divider
- * the Valorant cards use. The footer strip carries the three connection
- * facts, so the page is two calm cards instead of a stack of boxes.
+ * The connection card: the glass dial on the left, the state and the big
+ * action word beside it. The live session (rate, graph, timers) opens a
+ * full-width block under the row once connected, and the three connection
+ * facts sit along the card's floor. Nothing here is sized to the window,
+ * so no column ever gets crushed.
  */
 export function Hero() {
   const { t } = useI18n()
@@ -106,8 +107,8 @@ export function Hero() {
   useTick(1000, connected)
 
   return (
-    <section className="rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] p-5">
-      <div className="flex min-h-[190px] items-center gap-5">
+    <section className="flex flex-1 flex-col justify-center rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] p-5">
+      <div className="flex min-h-[180px] items-center gap-6">
         <div className="flex shrink-0 items-center justify-center">
           <Dial state={state} onClick={toggle} disabled={busy} />
         </div>
@@ -137,46 +138,47 @@ export function Hero() {
             {connected ? hostLine : t("clickToConnect")}
           </p>
           {status ? (
-            <div className="mt-2 max-w-[430px] text-[11.5px] leading-snug text-txt3">{status}</div>
+            <div className="mt-2 max-w-[520px] text-[11.5px] leading-snug text-txt3">{status}</div>
           ) : null}
-
-          <AnimatePresence>
-            {connected && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.36, ease: EASE_OUT, delay: 0.12 }}
-              >
-                <div className="mt-3 flex items-stretch gap-3">
-                  <div className="flex min-w-0 flex-1 flex-col justify-center">
-                    <Traffic rx={rx} tx={tx} />
-                  </div>
-                  <div className="flex w-[200px] shrink-0 flex-col justify-center gap-2">
-                    <StatTile
-                      label={t("sessLabel")}
-                      value={sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
-                      sub={"⁨↓ " + fmtBytes(rx) + "⁩   ⁨↑ " + fmtBytes(tx) + "⁩"}
-                    />
-                    <StatTile label={t("yourIp")} value={serverAddr || displayHost(serverIp)} sub={exit?.isp || undefined} />
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
+      </div>
 
-        {/* the connection facts, one quiet row behind the same hairline */}
-        <div className="flex shrink-0 items-center gap-4 border-l border-line pl-5">
-          <Fact icon={Globe} label={t("srvLocation")} value={placeText} />
-          <Fact icon={MapPin} label={t("yourIp")} value={ipText} />
-          <Fact
-            icon={ArrowUpDown}
-            label={t("statusLbl")}
-            value={connected ? t("connected") : t("notConnected")}
-            dot={connected}
-          />
-        </div>
+      <AnimatePresence>
+        {connected && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.36, ease: EASE_OUT, delay: 0.12 }}
+          >
+            {/* the live session, full width so the graph gets real room */}
+            <div className="mt-3.5 flex items-stretch gap-4 border-t border-line pt-3.5">
+              <div className="flex min-w-0 flex-1 flex-col justify-center">
+                <Traffic rx={rx} tx={tx} />
+              </div>
+              <div className="flex w-[220px] shrink-0 flex-col justify-center gap-2">
+                <StatTile
+                  label={t("sessLabel")}
+                  value={sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
+                  sub={"⁨↓ " + fmtBytes(rx) + "⁩   ⁨↑ " + fmtBytes(tx) + "⁩"}
+                />
+                <StatTile label={t("yourIp")} value={serverAddr || displayHost(serverIp)} sub={exit?.isp || undefined} />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* the connection facts: a calm strip along the card's floor */}
+      <div className="mt-3.5 grid grid-cols-3 gap-4 border-t border-line pt-3.5">
+        <Fact icon={Globe} label={t("srvLocation")} value={placeText} />
+        <Fact icon={Network} label={t("yourIp")} value={ipText} />
+        <Fact
+          icon={Activity}
+          label={t("statusLbl")}
+          value={connected ? t("connected") : t("notConnected")}
+          dot={connected}
+        />
       </div>
     </section>
   )
@@ -195,15 +197,15 @@ function Fact({
   dot?: boolean
 }) {
   return (
-    <div className="flex w-[114px] min-w-0 items-center gap-1.5">
-      <span className="grid size-[24px] shrink-0 place-items-center rounded-[8px] border border-line bg-white/[0.03] text-brand-strong">
-        <Icon className="size-[12px]" aria-hidden />
+    <div className="flex min-w-0 items-center gap-2.5">
+      <span className="grid size-[30px] shrink-0 place-items-center rounded-[9px] border border-line bg-white/[0.03] text-brand-strong">
+        <Icon className="size-[15px]" aria-hidden />
       </span>
       <div className="min-w-0">
-        <div className="whitespace-nowrap text-[10.5px] text-txt3">{label}</div>
-        <div className="mt-0.5 flex items-center gap-1 text-[11px] text-txt">
+        <div className="whitespace-nowrap text-[11px] text-txt3">{label}</div>
+        <div className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-txt">
           {dot !== undefined && (
-            <span className={cn("size-[5px] shrink-0 rounded-full", dot ? "bg-[var(--green)]" : "bg-[var(--red)]")} aria-hidden />
+            <span className={cn("size-[6px] shrink-0 rounded-full", dot ? "bg-[var(--green)]" : "bg-[var(--red)]")} aria-hidden />
           )}
           <span className="truncate" dir="auto">
             {value}
@@ -275,13 +277,13 @@ function Traffic({ rx, tx }: { rx: number; tx: number }) {
         <span className="text-[20px] font-semibold leading-none tabular-nums text-txt">{rate.num}</span>
         <span className="text-[12px] text-txt2">{rate.unit}</span>
       </div>
-      <svg viewBox="0 0 260 44" preserveAspectRatio="none" className="mt-1.5 h-[30px] w-full" aria-hidden>
+      <svg viewBox="0 0 260 44" preserveAspectRatio="none" className="mt-2 h-[48px] w-full" aria-hidden>
         <path d={area} fill="var(--brand-bg)" />
         <path
           d={line}
           fill="none"
           stroke="var(--brand)"
-          strokeWidth="1.6"
+          strokeWidth="2"
           strokeLinejoin="round"
           strokeLinecap="round"
         />
