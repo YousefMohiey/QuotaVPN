@@ -356,8 +356,12 @@ $("infobar-x").onclick = () => { $("infobar").hidden = true; };
 // which fires popstate). History exhausted = close UI, VPN service lives on.
 let tabHist = ["connect"];
 function goTab(name, push) {
-  document.querySelectorAll(".tabbar button").forEach((x) =>
-    x.classList.toggle("on", x.dataset.tab === name));
+  // Sub-pages (apps, history) belong to the tab they were opened from, so
+  // the bar keeps that tab lit instead of going blank.
+  const isTab = ["connect", "speed", "settings"].includes(name);
+  document.querySelectorAll(".tabbar button").forEach((x) => {
+    if (isTab) x.classList.toggle("on", x.dataset.tab === name);
+  });
   document.querySelectorAll(".view").forEach((v) =>
     v.classList.toggle("on", v.id === "view-" + name));
   if (name === "settings") paintBg();
@@ -389,40 +393,39 @@ function paintHero() {
   $("session-line").hidden = !vpnOn;
   paintFactStatus();
   if (busy) {
-    $("hero-state").textContent = t("working");
+    setTxt("hero-state", t("working"));
     $("hero-sub").textContent = t("talking");
     return;
   }
   if (vpnOn) {
     hero.classList.remove("ready");
     hero.classList.add("connected");
-    $("hero-state").textContent = t("vpnConnected");
+    setTxt("hero-state", t("vpnConnected"));
     // bdi isolates the Latin card name so nothing jumps sides. Arabic takes
     // no trailing period; English keeps its full stop.
-    $("hero-sub").innerHTML = "";
-    $("hero-sub").append(
-      document.createTextNode(t("trafficThru")),
-      (() => { const b = document.createElement("bdi"); b.textContent = vpnCardName || "your card"; return b; })(),
-    );
-    if (lang === "en") $("hero-sub").append(document.createTextNode("."));
+    $("hero-sub").textContent = "";
     $("btn-label").textContent = t("disconnect");
     tickSession();
   } else if (connected) {
     hero.classList.add("ready");
     hero.classList.remove("connected");
-    $("hero-state").textContent = t("ready");
+    setTxt("hero-state", t("ready"));
     $("hero-sub").textContent = "";
     $("btn-label").textContent = t("connect");
   } else {
     hero.classList.add("ready");
     hero.classList.remove("connected");
-    $("hero-state").textContent = t("notConnected");
+    setTxt("hero-state", t("notConnected"));
     $("hero-sub").textContent = "";
     $("btn-label").textContent = t("connect");
   }
 }
 
 // One status line for the facts strip, driven by the same flags as the dial.
+function setTxt(id, v) {
+  const el = $(id);
+  if (el) el.textContent = v;
+}
 function paintFactStatus() {
   const el = $("fact-status");
   if (el) el.textContent = busy ? t("working") : vpnOn ? t("vpnConnected") : t("notConnected");
