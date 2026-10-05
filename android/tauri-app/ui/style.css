@@ -108,7 +108,7 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
 #view-connect > .hero, #view-connect > .card { flex-shrink: 0; }
 #setup-card { display: flex; flex-direction: column; }
 #setup-card > * { margin: 0; }
-#setup-card > * + * { margin-top: 16px; }
+#setup-card > * + * { margin-top: 12px; }
 .tblock { display: flex; flex-direction: column; gap: 12px; }
 .tblock .hint { margin: 0 2px; }
 /* Short pages centre as a group when there is room to spare; the auto
@@ -132,8 +132,9 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
 }
 .sec { padding: 12px 14px 14px; }
 /* The setup card: story, package rows, controls - one calm column. */
-.card { padding: 20px 16px 16px; }
-.card h2 { margin: 0 2px 4px; font-size: 14.5px; line-height: 1.25; font-weight: 600; letter-spacing: -0.01em; color: var(--txt); }
+.card { padding: 14px 16px 12px; }
+.setup-sub { margin: 3px 2px 0; font-size: 12px; line-height: 1.4; color: var(--txt3); }
+.card h2 { margin: 0 2px 0; font-size: 14.5px; line-height: 1.25; font-weight: 600; letter-spacing: -0.01em; color: var(--txt); }
 .setup-body { margin: 0 2px 10px; font-size: 12.5px; line-height: 1.5; color: var(--txt2); }
 [lang="ar"] .setup-body { line-height: 1.6; }
 .sec h2 {
@@ -162,13 +163,23 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
 .srvrow span { color: var(--txt2); font-size: 12.5px; flex: none; }
 .srvrow b { font-weight: 570; flex: 1; min-width: 0; text-align: end; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+.app-head { display: flex; align-items: center; gap: 10px; padding: 2px 2px 0; }
+.ah-logo { width: 34px; height: 34px; flex: none; border-radius: 9px; }
+.ah-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.15; }
+.ah-txt b { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; color: var(--txt); }
+.ah-txt i { font-style: normal; font-size: 11px; color: var(--txt3); }
+.ah-chip { flex: none; display: flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 10px; border-radius: 11px; border: 1px solid var(--line); background: rgb(255 255 255 / 0.03); color: var(--txt2); font-size: 12.5px; }
+.ah-chip svg { width: 14px; height: 14px; color: var(--accent-strong); flex: none; }
+.ah-chip .chev { width: 13px; height: 13px; color: var(--txt3); }
+.ah-chip:active { background: rgb(255 255 255 / 0.06); }
+
 /* Hero: status up top, one switch below. Compact: Home never scrolls. */
 .hero {
   display: flex;
   flex-direction: column;
   align-items: center;
   margin: 0;
-  padding: 20px 14px 14px;
+  padding: 14px 14px 12px;
   text-align: center;
   position: relative;
   overflow: hidden;
@@ -180,13 +191,23 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
 /* Home net rows: flat divider rows for the IP. */
 .homenet { margin: 12px 0 0; border-top: 1px solid var(--line); }
 .homenet[hidden] { display: none; }
-.homenet-row { display: flex; align-items: center; gap: 8px; padding: 13px 2px; border-bottom: 1px solid var(--line); font-size: 12.5px; line-height: 1.3; }
+.row-ico { width: 26px; height: 26px; flex: none; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 9px; background: rgb(255 255 255 / 0.03); color: var(--txt2); }
+.row-ico svg { width: 13px; height: 13px; }
+.homenet-row { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--line); font-size: 12.5px; line-height: 1.3; }
 .homenet-row[hidden] { display: none; }
-.homenet-label { color: var(--txt3); font-size: 11.5px; line-height: 1.3; font-weight: 500; letter-spacing: 0.01em; flex: none; }
+.homenet-label { color: var(--txt2); font-size: 13px; line-height: 1.3; font-weight: 500; flex: none; }
+.ct-head { display: inline-flex; align-items: center; gap: 6px; align-self: stretch; }
+.ct-head .info-i { display: grid; place-items: center; width: 15px; height: 15px; color: var(--txt3); }
+.ct-head .info-i svg { width: 13px; height: 13px; }
 .homenet-row b { flex: 1; min-width: 0; text-align: end; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Connection facts: the desktop's footer strip - three columns, each an icon
    tile over a quiet label and one value line. */
-.facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 18px 0 0; border-top: 1px solid var(--line); padding-top: 15px; }
+.facts-panel { display: grid; grid-template-columns: repeat(3, 1fr); padding: 9px 11px; }
+.facts-panel .fact { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 0; }
+.facts-panel .fact + .fact { border-left: 1px solid var(--line); padding-left: 10px; }
+.fact-ico { width: 26px; height: 26px; flex: none; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 9px; background: rgb(255 255 255 / 0.03); color: var(--accent-strong); }
+.fact-ico svg { width: 13px; height: 13px; }
+.fact-ico .ip-mark { font-size: 9.5px; font-weight: 700; letter-spacing: 0.02em; color: var(--accent-strong); }
 .fact { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; padding: 0; }
 .fact-txt { min-width: 0; width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: start; }
 .fact-txt i { font-style: normal; font-size: 11px; line-height: 1.25; color: var(--txt3); }
@@ -196,14 +217,18 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
 .fact-dot.on { background: var(--green); }
 .minibtn { min-height: 40px; min-width: 64px; padding: 6px 14px; font-size: 12.5px; border-radius: var(--r-ctl); }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.hero-line { display: inline-flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px; margin: 4px 0 0; font-size: 12.5px; color: var(--txt2); }
+.hl-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); flex: none; }
+.hero.connected .hl-dot { background: var(--green); }
+.hero.connecting .hl-dot { background: var(--accent-strong); animation: pulse 1.1s ease-in-out infinite; }
 .hero-sub { font-size: 12.5px; color: var(--txt2); margin: 2px 0 6px; line-height: 1.45; position: relative; }
 .hero-sub:empty { display: none; }
 .hero label { text-align: left; margin: 6px 2px 4px; }
 #tunnel-card { margin: 2px 0 12px; text-align: left; }
 /* The dial, ported from the desktop: a plain ring, state told by colour alone. */
 .hero-btn {
-  width: 180px;
-  height: 180px;
+  width: 128px;
+  height: 128px;
   border-radius: 50%;
   margin: 14px 0 0;
   background: radial-gradient(circle at 50% 36%, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.02) 74%);
@@ -215,7 +240,11 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
   position: relative;
   transition: transform 160ms cubic-bezier(0.1, 0.9, 0.2, 1), border-color 200ms, background 200ms;
 }
-.hero-btn .power { width: 50px; height: 50px; position: relative; z-index: 1; }
+.hero-btn .power { width: 36px; height: 36px; position: relative; z-index: 1; }
+.dial-arc { position: absolute; inset: -4px; width: calc(100% + 8px); height: calc(100% + 8px); pointer-events: none; }
+.dial-arc circle { fill: none; stroke: var(--accent-strong); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 148 148; transform: rotate(-90deg) scale(-1, 1); transform-origin: center; }
+.hero.connected .dial-arc circle { stroke: var(--green); }
+.hero.connecting .dial-arc circle { stroke: var(--accent-strong); animation: pulse 1.1s ease-in-out infinite; }
 .hero-btn:active { transform: scale(0.985); }
 .hero.connecting .hero-btn { border-color: var(--accent-line); color: var(--accent-strong); }
 .hero.connecting .hero-btn::after {
@@ -230,10 +259,12 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
 @keyframes spin { to { transform: rotate(360deg); } }
 .hero.connected .hero-btn { border-color: var(--green-line); color: var(--green); background: var(--green-bg); }
 /* Action label lives below the icon, never cramped inside. */
-.btn-action { font-size: 13.5px; line-height: 1.3; font-weight: 570; color: var(--txt2); margin: 6px 0 4px; }
+.btn-action { font-size: 18px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; color: var(--txt); margin: 7px 0 0; }
 .hero.connected .btn-action { color: var(--green); }
 .hero.connecting .btn-action { color: var(--accent-strong); }
 /* Live session strip, only while connected. Technical LTR data in every language. */
+.hero-line .session { display: inline-flex; align-items: center; gap: 6px; }
+.hero-line .session[hidden] { display: none; }
 .session {
   display: flex;
   align-items: center;
@@ -413,10 +444,12 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
 .tabbar button svg { width: 21px; height: 21px; }
 .tabbar button span { font-size: 11.5px; font-weight: 500; }
 .tabbar button.on {
-  color: var(--txt);
-  background: rgb(255 255 255 / 0.09);
-  border-color: var(--line-strong);
+  color: var(--accent-strong);
+  background: rgb(255 255 255 / 0.06);
+  border-color: transparent;
 }
+.tabbar button.on span { color: var(--accent-strong); }
+.tabbar button.on::after { content: ""; width: 16px; height: 2px; border-radius: 2px; background: var(--accent-strong); margin-top: 1px; }
 .tabbar button.on svg { color: var(--accent-strong); }
 .tabbar button:active { transform: scale(0.97); }
 
@@ -463,18 +496,21 @@ button:disabled { opacity: 0.45; }
 /* Segmented control: the desktop's transport picker. */
 .seg {
   display: flex;
-  gap: 3px;
+  gap: 0;
   margin: 2px 0 2px;
   padding: 3px;
   background: rgb(255 255 255 / 0.02);
   border: 1px solid var(--line);
-  border-radius: var(--r-ctl);
+  border-radius: 13px;
 }
-.seg button { flex: 1; font-weight: 500; border: none; background: transparent; color: var(--txt3); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seg button { flex: 1; font-weight: 500; border: none; background: transparent; color: var(--txt3); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: 10px; }
+.seg button + button { border-left: 1px solid var(--line); border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.seg button.on + button { border-left-color: transparent; }
 .seg button.on {
-  background: rgb(255 255 255 / 0.10);
-  color: var(--txt);
-  box-shadow: none;
+  background: linear-gradient(180deg, var(--accent-hi), var(--accent));
+  color: #fff;
+  border-left-color: transparent;
+  box-shadow: 0 0 0 1px rgb(91 141 239 / 0.45), 0 4px 14px rgb(31 89 182 / 0.35);
 }
 .seg button.on.gamerz { background: var(--accent-bg); color: var(--accent-strong); }
 .seg button.on.streamerz { background: var(--accent-bg); color: var(--accent-strong); }
@@ -731,7 +767,7 @@ button.setting { width: 100%; text-align: start; display: flex; align-items: cen
 /* Preset rows: the desktop's package rows - icon tile, name, the domain it
    rides, and the radio that says which one is on. */
 .presets{display:grid; grid-template-columns:1fr 1fr; gap:8px; width:100%}
-.preset{display:flex; flex-direction:row; align-items:center; gap:9px; min-height:76px;
+.preset{display:flex; flex-direction:row; align-items:center; gap:9px; min-height:64px;
   padding:9px 11px; border-radius:13px; border:1px solid var(--line); background:rgb(255 255 255 / 0.02); color:var(--txt2); text-align:start}
 .preset.on{border-color:var(--accent-line); background:var(--accent-bg); color:var(--txt)}
 .preset-ico{width:30px; height:30px; flex:none; display:grid; place-items:center; border:1px solid var(--line); border-radius:9px; background:rgb(255 255 255 / 0.03); color:var(--txt3)}
@@ -740,6 +776,10 @@ button.setting { width: 100%; text-align: start; display: flex; align-items: cen
 .preset-txt{flex:1; min-width:0}
 .preset-name{display:flex; align-items:center; font-size:13px; font-weight:600; min-width:0; max-width:100%; line-height:1.3}
 .preset-sni{display:block; width:100%; font-size:10.5px; line-height:1.3; color:var(--txt3); font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.preset-radio{width:18px; height:18px; flex:none; display:grid; place-items:center; border:1.5px solid var(--line-strong); border-radius:50%}
+.preset.on .preset-radio{border-color:var(--accent-strong)}
+.preset-dot{width:9px; height:9px; border-radius:50%; background:var(--accent-strong); opacity:0}
+.preset.on .preset-dot{opacity:1}
 .preset:disabled{opacity:.6}
 .preset:active{transform:scale(0.985)}
 

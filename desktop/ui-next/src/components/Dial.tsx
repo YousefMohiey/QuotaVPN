@@ -35,6 +35,17 @@ export function Dial({
             : "border-[rgb(255_255_255/0.18)] text-txt hover:border-[var(--brand-line)]",
       )}
     >
+      <svg aria-hidden viewBox="0 0 100 100" className="pointer-events-none absolute -inset-[5px] size-[calc(100%+10px)]">
+        <circle
+          cx="50"
+          cy="50"
+          r="47"
+          className={cn(
+            "dial-arc",
+            state === "on" ? "dial-arc-on" : state === "connecting" ? "dial-arc-connecting" : "",
+          )}
+        />
+      </svg>
       {state === "connecting" && (
         <span
           aria-hidden
@@ -42,8 +53,7 @@ export function Dial({
         />
       )}
       <span className="flex flex-col items-center gap-2.5">
-        <Power className="size-[30px]" strokeWidth={1.6} aria-hidden />
-        <span className="text-[12.5px] font-medium tracking-[0.01em]">{label}</span>
+        <Power className="size-[34px]" strokeWidth={1.6} aria-hidden />
       </span>
     </motion.button>
   )

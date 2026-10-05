@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react"
-import { ChevronDown, ChevronRight, Gamepad2, TriangleAlert, Tv } from "lucide-react"
+import { ChevronDown, ChevronRight, Gamepad2, LayoutGrid, Server as ServerIcon, TriangleAlert, Tv, type LucideIcon } from "lucide-react"
 import { Hero } from "@/components/Hero"
 import { PickerDialog, type PickerItem } from "@/components/PickerDialog"
 import { Segmented } from "@/components/Segmented"
@@ -92,7 +92,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     className={cn(
                       "flex min-h-[56px] items-center gap-3 rounded-[14px] border px-3.5 py-2 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
                       isActive
-                        ? "border-[var(--brand-line)] bg-[var(--brand-bg)]"
+                        ? "border-[var(--brand-line)] bg-[var(--brand-bg)] shadow-[0_0_0_1px_var(--brand-line),0_8px_22px_rgb(31_89_182/0.28)]"
                         : "border-line bg-white/[0.02] hover:border-[var(--brand-line)]",
                     )}
                   >
@@ -129,7 +129,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
 
           {/* the controls, one continuous column */}
           <div className="flex shrink-0 flex-col justify-center gap-3 lg:w-[436px] lg:border-l lg:border-line lg:pl-6">
-            <ControlRow label={t("domainSni")}>
+            <ControlRow label={t("domainSni")} icon={ServerIcon}>
               {customOpen ? (
                 <div className="flex w-full items-center gap-2">
                   <Input
@@ -166,7 +166,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
               )}
             </ControlRow>
 
-            <ControlRow label={t("routing")}>
+            <ControlRow label={t("routing")} icon={LayoutGrid}>
               <button
                 type="button"
                 onClick={onOpenApps}
@@ -183,21 +183,22 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
               </button>
             </ControlRow>
 
-            <ControlRow label={t("transport")} align="start">
+            <ControlRow label={t("transport") + " \u24d8"} align="start">
               <div>
                 <Segmented
                   id="transport"
                   value={transport}
                   onChange={setTransport}
+                  fill
                   options={[
                     { value: "vless", label: t("trStandard") },
-                    { value: "wg", label: t("trWg") },
                     { value: "hy2", label: "Hysteria2" },
+                    { value: "wg", label: t("trWg") },
                   ]}
                 />
-                <p className="mt-1.5 text-[11.5px] text-txt3">
-                  {transport === "vless" ? t("trNoteVless") : transport === "wg" ? t("trNoteWg") : t("trNoteHy2")}
-                </p>
+                {transport !== "vless" && (
+                  <p className="mt-2.5 text-[11.5px] text-txt3">{transport === "wg" ? t("trNoteWg") : t("trNoteHy2")}</p>
+                )}
                 {transport !== "vless" && (
                   <p
                     role="status"
@@ -233,19 +234,28 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
   )
 }
 
-/** One control row: a quiet label, then the control that fills the rest. */
+/** One control row: a quiet label with its glyph, then the control. */
 function ControlRow({
   label,
   children,
   align = "center",
+  icon: Icon,
 }: {
   label: string
   children: ReactNode
   align?: "center" | "start"
+  icon?: LucideIcon
 }) {
   return (
     <div className={cn("flex gap-3", align === "center" ? "items-center" : "items-start")}>
-      <div className="w-[96px] shrink-0 pt-[2px] text-[12.5px] text-txt2">{label}</div>
+      <div className="flex w-[138px] shrink-0 items-center gap-2 pt-[2px] text-[12px] text-txt2">
+        {Icon && (
+          <span className="grid size-[26px] shrink-0 place-items-center rounded-[8px] border border-line bg-white/[0.03] text-txt2">
+            <Icon className="size-[13px]" aria-hidden />
+          </span>
+        )}
+        <span className="min-w-0 truncate">{label}</span>
+      </div>
       <div className="min-w-0 flex-1">{children}</div>
     </div>
   )

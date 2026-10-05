@@ -9,7 +9,6 @@ import { Dial, type DialState } from "./Dial"
 import { displayHost, fmtBytes, fmtDuration, mbps } from "@/lib/format"
 
 const EASE_OUT = [0.1, 0.9, 0.2, 1] as const
-const SPRING = { type: "spring", stiffness: 320, damping: 34 } as const
 
 /** A one-second heartbeat for the session clock; polling still drives data. */
 function useTick(ms: number, on: boolean) {
@@ -98,137 +97,86 @@ export function Hero() {
   const placeText = connected ? exit?.place || srvPlace || displayHost(serverIp) : srvPlace || "-"
   const ipText = exit?.ip || "-"
 
-  // The dial parks left from the moment Connect is pressed, and starts its
-  // way back the moment Disconnect is pressed, not when the engine answers.
-  const active = phase === "connecting" || phase === "on"
+  // The dial sits left in every state, like the mockup: the word column
+  // beside it tells the state and carries the session once connected.
   const state: DialState = phase === "on" ? "on" : phase === "connecting" ? "connecting" : "idle"
   const name = card?.name.split(" (")[0] ?? ""
-
-  // The info panel waits for the dial to land first. Mounting both at once
-  // is what made the motion feel fast and rough, so the panel fades in
-  // only after the slide has had room to travel.
-  const [showInfo, setShowInfo] = useState(false)
-  useEffect(() => {
-    if (!active) {
-      setShowInfo(false)
-      return
-    }
-    const id = window.setTimeout(() => setShowInfo(true), 250)
-    return () => window.clearTimeout(id)
-  }, [active])
-
-  // Disconnect plays in order too: the panel exits first and the dial only
-  // starts home once the exit is nearly done, never both at once.
-  const [dialLeft, setDialLeft] = useState(false)
-  useEffect(() => {
-    if (active) {
-      setDialLeft(true)
-      return
-    }
-    if (phase === "stopping") {
-      // Short hold only: the panel exit leads by a beat, then the dial
-      // answers at once. A long hold here reads as a dead pause.
-      const id = window.setTimeout(() => setDialLeft(false), 140)
-      return () => window.clearTimeout(id)
-    }
-    setDialLeft(false)
-  }, [active, phase])
+  const hostLine = [name, displayHost(card?.sni)].filter(Boolean).join(" · ")
 
   useTick(1000, connected)
 
   return (
     <section className="rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] p-5">
-      <div className="flex min-h-[190px] items-center">
-        <motion.div
-          layout
-          transition={SPRING}
-          className={cn("flex w-full items-center", dialLeft ? "justify-start gap-7" : "justify-center")}
-        >
-          <motion.div layout transition={SPRING} className="flex shrink-0 flex-col items-center text-center">
-            <Dial state={state} onClick={toggle} disabled={busy} />
-            {!connected && (
-              <div className="mt-3 max-w-[190px] truncate text-center text-[12.5px] text-txt2" dir="auto">{name}</div>
-            )}
-            {status ? (
-              <div className={cn("max-w-[280px] text-center text-[11.5px] leading-snug text-txt3", connected ? "mt-3" : "mt-2")}>
-                {status}
-              </div>
-            ) : null}
-          </motion.div>
+      <div className="flex min-h-[190px] items-center gap-5">
+        <div className="flex shrink-0 items-center justify-center">
+          <Dial state={state} onClick={toggle} disabled={busy} />
+        </div>
 
-          <AnimatePresence mode="popLayout">
-            {showInfo && (
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span
+              aria-hidden
+              className={cn(
+                "size-1.5 rounded-full",
+                connected
+                  ? "bg-[var(--green)]"
+                  : state === "connecting"
+                    ? "pulse-dot bg-[var(--brand)]"
+                    : "bg-[var(--red)]",
+              )}
+            />
+            <span className="text-[12.5px] text-txt2">
+              {connected ? t("connected") : state === "connecting" ? t("working") : t("notConnected")}
+            </span>
+          </div>
+
+          <h1 className="mt-1.5 truncate text-[22px] font-semibold tracking-[-0.01em] text-txt">
+            {connected ? t("disconnect") : state === "connecting" ? t("working") : t("connect")}
+          </h1>
+          <p className="mt-1 truncate text-[12.5px] text-txt3" dir="auto">
+            {connected ? hostLine : t("clickToConnect")}
+          </p>
+          {status ? (
+            <div className="mt-2 max-w-[430px] text-[11.5px] leading-snug text-txt3">{status}</div>
+          ) : null}
+
+          <AnimatePresence>
+            {connected && (
               <motion.div
-                key="info"
-                initial={{ opacity: 0, x: 16 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 12 }}
-                transition={{ duration: 0.32, ease: EASE_OUT, delay: 0.06 }}
-                className="min-w-0 flex-1 lg:border-l lg:border-line lg:pl-6"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.36, ease: EASE_OUT, delay: 0.12 }}
               >
-                <div className="flex items-center gap-2">
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "size-1.5 rounded-full",
-                      connected ? "bg-[var(--green)]" : "pulse-dot bg-[var(--brand)]",
-                    )}
-                  />
-                  <span className="text-[12.5px] text-txt2">
-                    {connected ? t("connected") : phase === "on" ? t("connecting") : t("working")}
-                  </span>
-                  {card && (
-                    <span className="rounded-full border border-line-strong px-2 py-[3px] text-[11px] text-txt3">
-                      {card.card_type === "Streamerz" ? t("kindStreamerz") : t("kindGamerz")}
-                    </span>
-                  )}
+                <div className="mt-3 flex items-stretch gap-3">
+                  <div className="flex min-w-0 flex-1 flex-col justify-center">
+                    <Traffic rx={rx} tx={tx} />
+                  </div>
+                  <div className="flex w-[200px] shrink-0 flex-col justify-center gap-2">
+                    <StatTile
+                      label={t("sessLabel")}
+                      value={sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
+                      sub={"⁨↓ " + fmtBytes(rx) + "⁩   ⁨↑ " + fmtBytes(tx) + "⁩"}
+                    />
+                    <StatTile label={t("yourIp")} value={serverAddr || displayHost(serverIp)} sub={exit?.isp || undefined} />
+                  </div>
                 </div>
-
-                <h1 className="mt-2 truncate text-[22px] font-semibold tracking-[-0.01em] text-txt">{name}</h1>
-                <p className="mt-1 truncate text-[12.5px] text-txt3">
-                  {connected ? displayHost(card?.sni) : t("talking")}
-                </p>
-
-                <AnimatePresence>
-                  {connected && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.36, ease: EASE_OUT, delay: 0.12 }}
-                    >
-                      <div className="mt-3 flex items-stretch gap-3">
-                        <div className="flex min-w-0 flex-1 flex-col justify-center">
-                          <Traffic rx={rx} tx={tx} />
-                        </div>
-                        <div className="flex w-[200px] shrink-0 flex-col justify-center gap-2">
-                          <StatTile
-                            label={t("sessLabel")}
-                            value={sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
-                            sub={"⁨↓ " + fmtBytes(rx) + "⁩   ⁨↑ " + fmtBytes(tx) + "⁩"}
-                          />
-                          <StatTile label={t("yourIp")} value={serverAddr || displayHost(serverIp)} sub={exit?.isp || undefined} />
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </motion.div>
             )}
           </AnimatePresence>
-        </motion.div>
-      </div>
+        </div>
 
-      {/* the connection facts, a quiet strip inside the same card */}
-      <div className="mt-5 grid grid-cols-3 gap-4 border-t border-line pt-4">
-        <Fact icon={Globe} label={t("srvLocation")} value={placeText} />
-        <Fact icon={MapPin} label={t("yourIp")} value={ipText} />
-        <Fact
-          icon={ArrowUpDown}
-          label={t("statusLbl")}
-          value={connected ? t("connected") : t("notConnected")}
-          dot={connected}
-        />
+        {/* the connection facts, one quiet row behind the same hairline */}
+        <div className="flex shrink-0 items-center gap-4 border-l border-line pl-5">
+          <Fact icon={Globe} label={t("srvLocation")} value={placeText} />
+          <Fact icon={MapPin} label={t("yourIp")} value={ipText} />
+          <Fact
+            icon={ArrowUpDown}
+            label={t("statusLbl")}
+            value={connected ? t("connected") : t("notConnected")}
+            dot={connected}
+          />
+        </div>
       </div>
     </section>
   )
@@ -247,15 +195,15 @@ function Fact({
   dot?: boolean
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-3">
-      <span className="grid size-9 shrink-0 place-items-center rounded-[10px] border border-line bg-white/[0.03] text-brand-strong">
-        <Icon className="size-4" aria-hidden />
+    <div className="flex w-[114px] min-w-0 items-center gap-1.5">
+      <span className="grid size-[24px] shrink-0 place-items-center rounded-[8px] border border-line bg-white/[0.03] text-brand-strong">
+        <Icon className="size-[12px]" aria-hidden />
       </span>
       <div className="min-w-0">
-        <div className="text-[11px] text-txt3">{label}</div>
-        <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-txt">
+        <div className="whitespace-nowrap text-[10.5px] text-txt3">{label}</div>
+        <div className="mt-0.5 flex items-center gap-1 text-[11px] text-txt">
           {dot !== undefined && (
-            <span className={cn("size-1.5 shrink-0 rounded-full", dot ? "bg-[var(--green)]" : "bg-txt3")} aria-hidden />
+            <span className={cn("size-[5px] shrink-0 rounded-full", dot ? "bg-[var(--green)]" : "bg-[var(--red)]")} aria-hidden />
           )}
           <span className="truncate" dir="auto">
             {value}

@@ -63,7 +63,7 @@ const STR = {
     appsHint: "Changes apply next time you connect.", appsSearch: "Search apps…",
     appsLoading: "Loading apps…", appsEmpty: "No applications found.",
     appsNeedPick: "Pick at least one app first.", appsPicked: "Applies next time you connect.",
-    transport: "Connection", trStandard: "Standard", trGame: "Hysteria2", trWg: "WireGuard",
+    transport: "Connection type", trStandard: "Standard", trGame: "Hysteria2", trWg: "WireGuard",
     trNoteVless: "Standard (Default traffic).",
     trNoteHy2: "Hysteria2 spends from your general quota, not your package.",
     trNoteWg: "WireGuard spends from your general quota, not your package.",
@@ -82,6 +82,7 @@ const STR = {
     peak: "Peak", yourConn: "Your connection", targetServer: "Server", findingServer: "Finding the nearest server",
     srvName: "QuotaVPN server", srvOwnNote: "Through the QuotaVPN server", pingTitle: "Ping", jitter: "Jitter",
     chDown: "Down", chUp: "Up", mbps: "Mbps", ms: "ms", idle: "idle", done: "Done",
+    setupSub: "Choose a preset or configure your connection.",
     measuring: "Measuring…", stop: "Stop", refresh: "Refresh", startTest: "Start test",
     pingHint: "Best of 8 samples through the active path.", downHint: "Download through the active path.",
     upHint: "Upload through the active path.", noReply: "No reply.", cfName: "Cloudflare", srvPublic: "Public reference", pickServer: "Speed test server", srvAuto: "Nearest server", srvAutoNote: "Picked for you", viaReference: "(measured against the public reference)", cfDetail: "Cloudflare's own test endpoints",
@@ -144,6 +145,7 @@ const STR = {
     peak: "الذروة", yourConn: "اتصالك", targetServer: "الخادم", findingServer: "جارٍ العثور على أقرب خادم",
     srvName: "خادم QuotaVPN", srvOwnNote: "عبر خادم QuotaVPN", pingTitle: "زمن الاستجابة", jitter: "التذبذب",
     chDown: "تنزيل", chUp: "رفع", mbps: "ميجابت", ms: "مللي ثانية", idle: "خامل", done: "تم",
+    setupSub: "اختر حزمة أو اضبط اتصالك.",
     measuring: "جارٍ القياس…", stop: "إيقاف", refresh: "تحديث", startTest: "بدء الاختبار",
     pingHint: "أفضل 8 محاولات عبر المسار الحالي.", downHint: "قياس التحميل من الخادم عبر المسار الحالي.",
     upHint: "قياس الرفع إلى الخادم عبر المسار الحالي.", noReply: "لا يوجد رد.", cfName: "Cloudflare", srvPublic: "مرجع عام", pickServer: "خادم اختبار السرعة", srvAuto: "أقرب خادم", srvAutoNote: "يُختار تلقائيًا", viaReference: "(قياس عبر المرجع العام)", cfDetail: "نقاط اختبار Cloudflare نفسها",
@@ -437,8 +439,11 @@ function setTxt(id, v) {
   if (el) el.textContent = v;
 }
 function paintFactStatus() {
+  const txt = busy ? t("working") : vpnOn ? t("vpnConnected") : t("notConnected");
   const el = $("fact-status");
-  if (el) el.textContent = busy ? t("working") : vpnOn ? t("vpnConnected") : t("notConnected");
+  if (el) el.textContent = txt;
+  const line = $("hl-txt");
+  if (line) line.textContent = vpnOn && !busy ? "" : txt;
   const dot = $("fact-dot");
   if (dot) dot.classList.toggle("on", !!vpnOn && !busy);
 }
@@ -448,6 +453,8 @@ function paintFactPlace() {
   try { place = localStorage.getItem("qc-srv-place") || ""; } catch (e) {}
   const el = $("fact-place");
   if (el) el.textContent = place || "-";
+  const chip = $("ah-place-txt");
+  if (chip) chip.textContent = place || "-";
 }
 
 let busyWatch = 0;
@@ -517,6 +524,8 @@ async function refresh() {
   serverHost = st.server_ip || "";
   serverIp = "";
   if (st.version) appVersion = String(st.version);
+  const hv = $("ah-ver");
+  if (hv) hv.textContent = "v" + appVersion;
   paintAbout();
   paintHero();
   cardsCache = st.cards;
@@ -1153,6 +1162,7 @@ document.querySelectorAll("#lang-seg button").forEach((b) => {
   b.onclick = () => applyLang(b.dataset.lang);
 });
 // Tap the home net rows to see the full host (toast overlay, layout never grows).
+$("ah-place").onclick = () => { const row = $("tunnel-card-btn"); if (row) row.click(); };
 $("ip-row").onclick = () => { if (serverHost) bar(true, serverIp && serverIp !== serverHost ? serverIp + " · " + serverHost : serverHost); };
 fillSniSelect();
 applyLang(lang);
