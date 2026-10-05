@@ -218,7 +218,17 @@ function applyLang(l) {
   });
   // Dynamic regions (empty state, profile picker) only rebuild in refresh.
   refresh();
-  setTimeout(() => { try { spPaintHistory(); } catch (e) {} }, 0);
+  // Labels the speed screen owns live further down the file; repaint them
+  // once the script has finished loading, never during boot.
+  setTimeout(() => {
+    try {
+      spSetPhase(spPhase, spCapKey, spHintKey);
+      spPaintReadout();
+      spPaintRunState();
+      paintHistButton();
+      spPaintHistory();
+    } catch (e) {}
+  }, 0);
 }
 let kind = "Gamerz";
 let busy = false;
@@ -1194,6 +1204,8 @@ let spCtl = null;
 let spSamples = [];
 let spPeak = 0;
 let spPhase = "idle";
+let spCapKey = "idle";
+let spHintKey = "";
 let spGateAt = 0;
 let spNet = null;
 let spLast = { ping: null, jitter: null, down: null, up: null };
@@ -1449,6 +1461,8 @@ function spPush(v, force) {
 }
 function spSetPhase(phase, capKey, hintKey) {
   spPhase = phase;
+  spCapKey = capKey || spCapKey;
+  spHintKey = hintKey || "";
   const cap = $("sp-cap");
   if (cap) cap.textContent = t(capKey);
   const hint = $("sp-hint");
@@ -1708,12 +1722,15 @@ function spStore() {
 }
 
 function spPaintRunState() {
+  // One disc does both: it starts the run, and while the run is live it
+  // stops it. The icon and the word swap together.
   const btn = $("sp-run");
-  if (btn) btn.disabled = !!spCtl;
+  if (btn) {
+    btn.disabled = false;
+    btn.classList.toggle("stopping", !!spCtl);
+  }
   const lbl = $("sp-run-label");
-  if (lbl) lbl.textContent = spCtl ? t("measuring") : t("startTest");
-  const stop = $("sp-stop");
-  if (stop) stop.hidden = !spCtl;
+  if (lbl) lbl.textContent = spCtl ? t("stop") : t("startTest");
   document.querySelectorAll(".sstat").forEach((b) => { b.disabled = !!spCtl; });
 }
 
@@ -1881,8 +1898,7 @@ function spStop() {
 $("btn-speed-history").onclick = () => { goTab("history"); spPaintHistory(); };
 $("btn-hist-back").onclick = () => goTab("speed");
 $("btn-hist-clear").onclick = () => armThen($("btn-hist-clear"), () => { histSave([]); paintHistory(); });
-$("sp-run").onclick = () => { void spRun("all"); };
-$("sp-stop").onclick = spStop;
+$("sp-run").onclick = () => { if (spCtl) spStop(); else void spRun("all"); };
 // Same job as the desktop's refresh button: re-read the connection you are on
 // and repaint the target panel, with the icon turning while it works.
 $("sp-refresh").onclick = () => {

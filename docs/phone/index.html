@@ -33,12 +33,15 @@
       <div class="hero-sub" id="hero-sub">Pick a card and connect.</div>
       <div class="facts" id="conn-facts">
         <div class="fact">
+          <span class="fact-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.6 3.8 5.6 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg></span>
           <span class="fact-txt"><i data-i18n="srvLocation">Server location</i><b id="fact-place" dir="auto">-</b></span>
         </div>
         <div class="fact" id="ip-row" role="button" tabindex="0">
+          <span class="fact-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>
           <span class="fact-txt"><i data-i18n="yourIp">Your IP</i><b id="home-ip" dir="ltr">-</b></span>
         </div>
         <div class="fact">
+          <span class="fact-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v12"/><path d="M3 8l4-4 4 4"/><path d="M17 20V8"/><path d="M21 16l-4 4-4-4"/></svg></span>
           <span class="fact-txt"><i data-i18n="statusLbl">Status</i><b class="fact-status"><span class="fact-dot" id="fact-dot"></span><span id="fact-status">Not connected</span></b></span>
         </div>
       </div>
@@ -87,12 +90,14 @@
       </div>
       <div class="speed-net">
         <div class="speed-netcol">
+          <span class="sico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 9.2a15 15 0 0 1 19 0"/><path d="M6 12.6a10 10 0 0 1 12 0"/><path d="M9.4 16a5 5 0 0 1 5.2 0"/><circle cx="12" cy="19.3" r="0.9"/></svg></span>
           <div class="speed-lab" data-i18n="yourConn">Your connection</div>
           <div class="speed-b" id="sp-isp">-</div>
           <div class="speed-s" id="sp-ip" dir="ltr"></div>
           <div class="speed-s3" id="sp-place"></div>
         </div>
         <button type="button" class="speed-netcol tap" id="sp-server-panel" aria-haspopup="dialog">
+          <span class="sico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01"/><path d="M7 16.5h.01"/></svg></span>
           <span class="speed-lab"><span data-i18n="targetServer">Server</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
           <span class="speed-b" id="sp-target">-</span>
           <span class="speed-s" id="sp-host" dir="ltr"></span>
@@ -109,14 +114,13 @@
       <div class="speed-bars" id="sp-bars" aria-hidden="true"></div>
       <div class="speed-hint2" id="sp-hint"></div>
       <div class="speed-stats">
-        <button type="button" class="sstat" data-which="ping"><span data-i18n="pingTitle">Ping</span><b id="sp-ping">-</b><i data-i18n="ms">ms</i></button>
-        <button type="button" class="sstat" data-which="ping2"><span data-i18n="jitter">Jitter</span><b id="sp-jit">-</b><i data-i18n="ms">ms</i></button>
-        <button type="button" class="sstat" data-which="down"><span data-i18n="chDown">Down</span><b id="sp-down">-</b><i data-i18n="mbps">Mbps</i></button>
-        <button type="button" class="sstat" data-which="up"><span data-i18n="chUp">Up</span><b id="sp-up">-</b><i data-i18n="mbps">Mbps</i></button>
+        <button type="button" class="sstat" data-which="ping"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 18.5a9 9 0 1 1 15 0"/><path d="M12 14.5l4.4-4.4"/><circle cx="12" cy="14.5" r="1.3"/></svg></span><span data-i18n="pingTitle">Ping</span><b id="sp-ping">-</b><i data-i18n="ms">ms</i></button>
+        <button type="button" class="sstat" data-which="ping2"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l2.5-6.5 4 13L16 12h5"/></svg></span><span data-i18n="jitter">Jitter</span><b id="sp-jit">-</b><i data-i18n="ms">ms</i></button>
+        <button type="button" class="sstat" data-which="down"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.5v14"/><path d="M6.5 13l5.5 5.5L17.5 13"/></svg></span><span data-i18n="chDown">Down</span><b id="sp-down">-</b><i data-i18n="mbps">Mbps</i></button>
+        <button type="button" class="sstat" data-which="up"><span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19.5v-14"/><path d="M6.5 11l5.5-5.5L17.5 11"/></svg></span><span data-i18n="chUp">Up</span><b id="sp-up">-</b><i data-i18n="mbps">Mbps</i></button>
       </div>
       <div class="speed-runrow">
-        <button type="button" id="sp-run"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span id="sp-run-label" data-i18n="startTest">Start test</span></button>
-        <button type="button" id="sp-stop" hidden data-i18n="stop">Stop</button>
+        <button type="button" id="sp-run" aria-label="Start test"><svg class="ico-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><svg class="ico-stop" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/></svg><span id="sp-run-label" data-i18n="startTest">Start test</span></button>
       </div>
     </div>
     <button type="button" class="sechistory" id="btn-speed-history">
