@@ -13,4 +13,5 @@ for f in app.js index.html style.css; do
 done
 cp -r "$SRC/fonts" "$DST/"
 cp "$SRC/icon.png" "$DST/icon.png"
+cp "$SRC/logo.png" "$DST/logo.png"
 echo "synced $SRC -> $DST"

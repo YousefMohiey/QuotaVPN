@@ -66,7 +66,7 @@
       if (i >= 0) cards.splice(i, 1);
       return ok("Card revoked.");
     },
-    resolve_host: () => "197.44.211.84",
+    resolve_host: () => "80.225.89.162",
     net_info: () => (running
       ? { ip: "80.225.89.162", isp: "Oracle Cloud", place: "Milan, Italy" }
       : { ip: "197.44.211.84", isp: "WE", place: "Cairo, Egypt" }),
