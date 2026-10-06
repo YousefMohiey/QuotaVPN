@@ -9,7 +9,7 @@ import { Dial, type DialState } from "./Dial"
 import { displayHost, fmtBytes, fmtDuration, mbps } from "@/lib/format"
 
 const EASE_OUT = [0.1, 0.9, 0.2, 1] as const
-const SPRING = { type: "spring", stiffness: 320, damping: 34 } as const
+const SPRING = { type: "spring", stiffness: 170, damping: 26 } as const
 
 /** A one-second heartbeat for the session clock; polling still drives data. */
 function useTick(ms: number, on: boolean) {
@@ -113,7 +113,7 @@ export function Hero() {
       setShowInfo(false)
       return
     }
-    const id = window.setTimeout(() => setShowInfo(true), 250)
+    const id = window.setTimeout(() => setShowInfo(true), 420)
     return () => window.clearTimeout(id)
   }, [active])
 
@@ -126,7 +126,7 @@ export function Hero() {
     if (phase === "stopping") {
       // Short hold only: the zone exit leads by a beat, then the dial
       // answers at once. A long hold here reads as a dead pause.
-      const id = window.setTimeout(() => setDialLeft(false), 140)
+      const id = window.setTimeout(() => setDialLeft(false), 340)
       return () => window.clearTimeout(id)
     }
     setDialLeft(false)
@@ -144,27 +144,27 @@ export function Hero() {
         >
           <motion.div layout transition={SPRING} className="flex shrink-0 flex-col items-center text-center">
             <Dial state={state} onClick={toggle} disabled={busy} />
-            <AnimatePresence>
-              {!active && phase !== "stopping" && (
-                <motion.div
-                  key="idle"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.25, ease: EASE_OUT }}
-                  className="flex flex-col items-center"
+            <motion.div
+              initial={false}
+              animate={{
+                height: dialLeft ? 0 : "auto",
+                marginTop: dialLeft ? 0 : 18,
+                opacity: dialLeft ? 0 : 1,
+              }}
+              transition={{ duration: 0.4, ease: EASE_OUT }}
+              className={cn("overflow-hidden", dialLeft && "pointer-events-none")}
+            >
+              <div className="flex flex-col items-center">
+                <button
+                  type="button"
+                  onClick={toggle}
+                  className="mt-2 text-[24px] font-semibold tracking-[-0.01em] text-txt transition-colors duration-200 hover:text-brand-strong"
                 >
-                  <button
-                    type="button"
-                    onClick={toggle}
-                    className="mt-5 text-[24px] font-semibold tracking-[-0.01em] text-txt transition-colors duration-200 hover:text-brand-strong"
-                  >
-                    {t("connect")}
-                  </button>
-                  <p className="mt-1.5 text-[13px] text-txt3">{t("clickToConnect")}</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  {t("connect")}
+                </button>
+                <p className="mt-1.5 text-[13px] text-txt3">{t("clickToConnect")}</p>
+              </div>
+            </motion.div>
           </motion.div>
 
           <AnimatePresence mode="popLayout">
@@ -174,7 +174,7 @@ export function Hero() {
                 initial={{ opacity: 0, x: 16 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 12 }}
-                transition={{ duration: 0.32, ease: EASE_OUT, delay: 0.06 }}
+                transition={{ duration: 0.28, ease: EASE_OUT, delay: 0.05 }}
                 className="min-w-0 flex-1"
               >
                 <div className="flex items-center gap-2">
@@ -312,15 +312,18 @@ function Traffic({ rx, tx }: { rx: number; tx: number }) {
     const max = Math.max(1, ...values)
     const w = 260
     const h = 44
-    const step = w / Math.max(1, values.length - 1)
+    // A fixed step keeps the trace anchored to the left as the window fills
+    // instead of stretching a two point wedge across the whole width.
+    const step = w / 59
     const pts = values.map((v, i) => [i * step, h - (v / max) * (h - 8) - 3] as const)
     const d = pts
       .map(([x, y], i) => `${i ? "L" : "M"} ${x.toFixed(1)} ${y.toFixed(1)}`)
       .join(" ")
     const current = values[values.length - 1] || 0
+    const endX = (values.length - 1) * step
     return {
       line: d,
-      area: `${d} L ${w} ${h} L 0 ${h} Z`,
+      area: `${d} L ${endX.toFixed(1)} ${h} L 0 ${h} Z`,
       rate: rateText(current),
       peak: rateText(Math.max(0, ...values)),
     }

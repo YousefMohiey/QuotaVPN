@@ -60,14 +60,13 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
       <Hero />
 
       <section className="flex min-h-[186px] flex-1 flex-col justify-center rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] p-5">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
-          {/* the story, and the one choice that shapes it */}
-          <div className="flex min-w-0 flex-1 flex-col justify-center">
-            <div>
-              <h2 className="text-[16.5px] font-semibold text-txt">{t("setupTitle")}</h2>
-              <p className="mt-1 max-w-[430px] text-[13.5px] leading-relaxed text-txt2">{t("setupBody")}</p>
-            </div>
-            <div className="mt-4 flex flex-col gap-2.5">
+        <div>
+          <h2 className="text-[16.5px] font-semibold text-txt">{t("setupTitle")}</h2>
+          <p className="mt-1 max-w-[430px] text-[13.5px] leading-relaxed text-txt2">{t("setupBody")}</p>
+        </div>
+        <div className="mt-4 flex flex-col gap-5 lg:flex-row lg:items-stretch">
+          {/* the presets */}
+          <div className="flex min-w-0 flex-1 flex-col gap-2.5">
               {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
                 const mine = cards.find((c) => c.card_type === kind)
                 const sni = mine?.sni ?? DEFAULT_SNI[kind]
@@ -124,7 +123,6 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   </button>
                 )
               })}
-            </div>
           </div>
 
           {/* the controls, one continuous column */}
@@ -249,11 +247,16 @@ function ControlRow({
   return (
     <div className={cn("flex gap-3", align === "center" ? "items-center" : "items-start")}>
       <div className="flex w-[138px] shrink-0 items-center gap-2 pt-[2px] text-[12px] text-txt2">
-        {Icon && (
-          <span className="grid size-[26px] shrink-0 place-items-center rounded-[8px] border border-line bg-white/[0.03] text-txt2">
-            <Icon className="size-[13px]" aria-hidden />
-          </span>
-        )}
+        {/* the icon slot is reserved even without an icon so every label
+            starts on the same x, rows included */}
+        <span
+          className={cn(
+            "grid size-[26px] shrink-0 place-items-center rounded-[8px]",
+            Icon && "border border-line bg-white/[0.03] text-txt2",
+          )}
+        >
+          {Icon ? <Icon className="size-[13px]" aria-hidden /> : null}
+        </span>
         <span className="min-w-0 truncate">{label}</span>
       </div>
       <div className="min-w-0 flex-1">{children}</div>
