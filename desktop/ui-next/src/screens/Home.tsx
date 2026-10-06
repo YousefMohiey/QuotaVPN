@@ -92,7 +92,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     className={cn(
                       "flex min-h-[56px] items-center gap-3 rounded-[14px] border px-3.5 py-2 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
                       isActive
-                        ? "border-[var(--brand-line)] bg-[var(--brand-bg)] shadow-[0_0_0_1px_var(--brand-line),0_8px_22px_rgb(31_89_182/0.28)]"
+                        ? "border-[var(--brand-line)] bg-[var(--brand-bg)]"
                         : "border-line bg-white/[0.02] hover:border-[var(--brand-line)]",
                     )}
                   >

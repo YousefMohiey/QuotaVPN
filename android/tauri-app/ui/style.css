@@ -496,21 +496,18 @@ button:disabled { opacity: 0.45; }
 /* Segmented control: the desktop's transport picker. */
 .seg {
   display: flex;
-  gap: 0;
+  gap: 3px;
   margin: 2px 0 2px;
   padding: 3px;
   background: rgb(255 255 255 / 0.02);
   border: 1px solid var(--line);
-  border-radius: 13px;
+  border-radius: var(--r-ctl);
 }
-.seg button { flex: 1; font-weight: 500; border: none; background: transparent; color: var(--txt3); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: 10px; }
-.seg button + button { border-left: 1px solid var(--line); border-top-left-radius: 0; border-bottom-left-radius: 0; }
-.seg button.on + button { border-left-color: transparent; }
+.seg button { flex: 1; font-weight: 500; border: none; background: transparent; color: var(--txt3); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .seg button.on {
-  background: linear-gradient(180deg, var(--accent-hi), var(--accent));
-  color: #fff;
-  border-left-color: transparent;
-  box-shadow: 0 0 0 1px rgb(91 141 239 / 0.45), 0 4px 14px rgb(31 89 182 / 0.35);
+  background: rgb(255 255 255 / 0.10);
+  color: var(--txt);
+  box-shadow: none;
 }
 .seg button.on.gamerz { background: var(--accent-bg); color: var(--accent-strong); }
 .seg button.on.streamerz { background: var(--accent-bg); color: var(--accent-strong); }

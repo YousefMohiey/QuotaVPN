@@ -27,30 +27,17 @@ export function Dial({
       whileTap={disabled ? undefined : { scale: 0.985 }}
       transition={{ type: "spring", stiffness: 460, damping: 32 }}
       className={cn(
-        "relative grid size-[172px] place-items-center rounded-full border transition-[background-color,border-color,box-shadow] duration-300 disabled:opacity-70",
-        /* the glass: a light translucent pane with a soft sheen at the
-           top, a lit edge, inner thickness and a real float underneath */
-        "bg-[rgb(255_255_255/0.07)] backdrop-blur-[16px] backdrop-saturate-150",
-        "bg-[radial-gradient(120%_120%_at_50%_0%,rgb(255_255_255/0.13),transparent_55%)]",
-        "shadow-[inset_0_1px_0_rgb(255_255_255/0.25),inset_0_-22px_44px_rgb(0_0_0/0.28),0_22px_50px_rgb(0_0_0/0.45)]",
+        "relative grid size-[172px] place-items-center rounded-full border transition-colors duration-300 disabled:opacity-70",
+        /* a hint of glass: translucent fill, one lit line, nothing else */
+        "bg-white/[0.05] backdrop-blur-[14px] backdrop-saturate-150",
+        "shadow-[inset_0_1px_0_rgb(255_255_255/0.10)]",
         state === "on"
           ? "border-[var(--green-line)] text-[var(--green)]"
           : state === "connecting"
             ? "border-[var(--brand-line)] text-brand-strong"
-            : "border-[rgb(255_255_255/0.16)] text-txt hover:border-[var(--brand-line)] hover:bg-[rgb(255_255_255/0.08)]",
+            : "border-[rgb(255_255_255/0.14)] text-txt hover:border-[rgb(255_255_255/0.26)]",
       )}
     >
-      <svg aria-hidden viewBox="0 0 100 100" className="pointer-events-none absolute -inset-[5px] size-[calc(100%+10px)]">
-        <circle
-          cx="50"
-          cy="50"
-          r="47"
-          className={cn(
-            "dial-arc",
-            state === "on" ? "dial-arc-on" : state === "connecting" ? "dial-arc-connecting" : "",
-          )}
-        />
-      </svg>
       {state === "connecting" && (
         <span
           aria-hidden
