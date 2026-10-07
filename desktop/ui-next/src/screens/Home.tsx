@@ -89,7 +89,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                       void ensurePresetCard(kind).finally(() => setCreating(null))
                     }}
                     className={cn(
-                      "flex min-h-[56px] items-center gap-3 rounded-[14px] border px-3.5 py-2 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
+                      "flex min-h-[56px] items-center gap-3 rounded-[12px] border px-3.5 py-2 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
                       isActive
                         ? "border-[var(--brand-line)] bg-[var(--brand-bg)]"
                         : "border-line bg-white/[0.02] hover:border-[var(--brand-line)]",

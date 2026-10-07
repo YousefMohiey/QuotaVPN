@@ -197,6 +197,10 @@
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
+  /* Radius scale, kept to five steps: cards 16, rows and tiles 12, controls
+     10, chips and icon boxes 8, dialogs 20. Micro parts (checkbox 5, tooltip
+     arrow 2) keep their own. */
+
   @media (prefers-reduced-motion: reduce) {
     /* Windows reports this for a plain "animation effects off" preference,
        so only endless decorative loops stand down; state motion still plays. */

@@ -288,7 +288,7 @@ function Fact({
 }) {
   return (
     <div className="flex min-w-0 items-center gap-2.5">
-      <span className="grid size-[30px] shrink-0 place-items-center rounded-[9px] border border-line bg-white/[0.03] text-brand-strong">
+      <span className="grid size-[30px] shrink-0 place-items-center rounded-[8px] border border-line bg-white/[0.03] text-brand-strong">
         <Icon className="size-[15px]" aria-hidden />
       </span>
       <div className="min-w-0">

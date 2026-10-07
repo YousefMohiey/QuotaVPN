@@ -44,7 +44,7 @@ function RunCard({
   return (
     <div
       className={cn(
-        "group flex items-center rounded-[14px] border border-line bg-[rgb(21_29_46/0.62)] transition-colors hover:border-line-strong",
+        "group flex items-center rounded-[12px] border border-line bg-[rgb(21_29_46/0.62)] transition-colors hover:border-line-strong",
         picked && "border-[var(--brand-line)] bg-[var(--brand-bg)]",
       )}
     >
@@ -299,7 +299,7 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
 
       {/* selection bar: what will go, and the one button that does it */}
       {selMode && (
-        <div className="sticky bottom-0 flex items-center justify-between gap-3 rounded-[14px] border border-line bg-[rgb(21_29_46/0.9)] px-4 py-2.5 backdrop-blur-xl">
+        <div className="sticky bottom-0 flex items-center justify-between gap-3 rounded-[12px] border border-line bg-[rgb(21_29_46/0.9)] px-4 py-2.5 backdrop-blur-xl">
           <span className="text-[12.5px] text-txt3">
             {t("selected")}: <span className="tabular-nums text-txt2">{picked.length}</span>
           </span>
