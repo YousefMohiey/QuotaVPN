@@ -174,8 +174,9 @@ export function Apps({ onBack }: { onBack: () => void }) {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)]">
+      <div>
         <div
+          className="flex flex-col gap-2"
           role="listbox"
           aria-multiselectable="true"
           onFocus={() => setListActive(true)}
@@ -220,13 +221,9 @@ export function Apps({ onBack }: { onBack: () => void }) {
                     }
                   }}
                   className={cn(
-                    "flex w-full scroll-mt-36 items-center gap-3 border-b border-line px-4 py-2.5 text-start transition-colors last:border-b-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-line)]",
+                    "flex w-full scroll-mt-36 items-center gap-3 rounded-[12px] border border-line bg-[rgb(21_29_46/0.62)] px-4 py-2.5 text-start transition-colors hover:border-line-strong focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-line)]",
                     appsMode === "all" && "opacity-70",
-                    on
-                      ? "bg-[var(--brand-bg)]"
-                      : focused
-                        ? "bg-white/[0.04]"
-                        : "hover:bg-white/[0.02]",
+                    on ? "border-[var(--brand-line)] bg-[var(--brand-bg)]" : focused && "bg-white/[0.04]",
                   )}
                 >
                   <span className="min-w-0 flex-1">
@@ -240,7 +237,7 @@ export function Apps({ onBack }: { onBack: () => void }) {
                   <span
                     aria-hidden
                     className={cn(
-                      "grid size-[18px] shrink-0 place-items-center rounded-full border-[1.5px] transition-colors",
+                      "grid size-4 shrink-0 place-items-center rounded-[5px] border transition-colors",
                       on ? "border-[var(--brand-line)] bg-[var(--brand-bg)]" : "border-line-strong",
                     )}
                   >
