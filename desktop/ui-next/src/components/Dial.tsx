@@ -44,9 +44,11 @@ export function Dial({
           className="absolute -inset-px rounded-full border-2 border-transparent border-t-[var(--brand)] [animation:spin_1.15s_linear_infinite]"
         />
       )}
-      <span className="flex flex-col items-center gap-2">
-        <Power className="size-[38px]" strokeWidth={1.7} aria-hidden />
-        <span className="text-[15px] font-semibold tracking-[-0.01em]">{label}</span>
+      {/* the old button, word for word: a size-8 power over a 12.5 label,
+          with the same 2.5 gap, so the word sits the way it always did */}
+      <span className="flex flex-col items-center gap-2.5">
+        <Power className="size-8" strokeWidth={1.75} aria-hidden />
+        <span className="text-[12.5px] font-medium tracking-[0.01em]">{label}</span>
       </span>
     </motion.button>
   )

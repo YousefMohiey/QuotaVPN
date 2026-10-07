@@ -138,7 +138,7 @@ async fn probe_server(state: tauri::State<'_, State>) -> Result<CmdResult, Strin
     let (host, user, port, key) = {
         let cfg = state.0.lock().unwrap();
         if cfg.server_ip.is_empty() {
-            return Ok(CmdResult { ok: false, msg: "No server set up.".into() });
+            return Ok(CmdResult { ok: false, msg: "No server set up".into() });
         }
         (cfg.server_ip.clone(), cfg.ssh_user.clone(), cfg.ssh_port, cfg.private_key.clone())
     };
@@ -169,7 +169,7 @@ async fn probe_server(state: tauri::State<'_, State>) -> Result<CmdResult, Strin
             let _ = server::add_client(&host, port, &user, &key, &u).await;
         }
     }
-    Ok(CmdResult { ok: true, msg: "Connected - server ready.".into() })
+    Ok(CmdResult { ok: true, msg: "Connected - server ready".into() })
 }
 
 /// Watches for the game while the app runs and emits `game-state` on every
@@ -234,7 +234,7 @@ async fn generate_card(
     let (host, user, port, key) = {
         let cfg = state.0.lock().unwrap();
         if cfg.server_ip.is_empty() {
-            return Ok(CmdResult { ok: false, msg: "Set up your server first.".into() });
+            return Ok(CmdResult { ok: false, msg: "Set up your server first".into() });
         }
         (cfg.server_ip.clone(), cfg.ssh_user.clone(), cfg.ssh_port, cfg.private_key.clone())
     };
@@ -266,7 +266,7 @@ async fn generate_card(
             let _ = server::add_client(&h, port, &u, &k, &id).await;
         });
     }
-    Ok(CmdResult { ok: true, msg: "Card created.".into() })
+    Ok(CmdResult { ok: true, msg: "Card created".into() })
 }
 
 #[tauri::command]
@@ -279,7 +279,7 @@ async fn import_card(
 ) -> Result<CmdResult, String> {
     let uuid = uuid.trim().to_string();
     if uuid.is_empty() {
-        return Ok(CmdResult { ok: false, msg: "That card link has no id.".into() });
+        return Ok(CmdResult { ok: false, msg: "That card link has no id".into() });
     }
     let sni = if sni.trim().is_empty() {
         (if kind == "Gamerz" { "ea.com" } else { "youtube.com" }).to_string()
@@ -295,7 +295,7 @@ async fn import_card(
             c.card_type = kind;
             c.sni = sni;
             cfg.save();
-            return Ok(CmdResult { ok: true, msg: "Card updated.".into() });
+            return Ok(CmdResult { ok: true, msg: "Card updated".into() });
         }
         cfg.cards.push(Card {
             name,
@@ -320,7 +320,7 @@ async fn import_card(
             let _ = server::add_client(&h, port, &u, &k, &id).await;
         });
     }
-    Ok(CmdResult { ok: true, msg: "Card added.".into() })
+    Ok(CmdResult { ok: true, msg: "Card added".into() })
 }
 
 #[tauri::command]
@@ -339,7 +339,7 @@ async fn revoke_card(state: tauri::State<'_, State>, uuid: String) -> Result<Cmd
         let _ = server::wg_del(&h, port, &u, &k, &id).await;
         let _ = server::remove_client(&h, port, &u, &k, &id).await;
     });
-    Ok(CmdResult { ok: true, msg: "Card revoked.".into() })
+    Ok(CmdResult { ok: true, msg: "Card revoked".into() })
 }
 
 #[tauri::command]
@@ -348,9 +348,9 @@ async fn copy_card(state: tauri::State<'_, State>, app: tauri::AppHandle, uuid: 
     match cfg.cards.iter().find(|c| c.uuid == uuid) {
         Some(c) => {
             let _ = app.clipboard().write_text(build_link(&c.uuid, &cfg.server_ip, &c.sni, &c.name));
-            Ok(CmdResult { ok: true, msg: "Link copied.".into() })
+            Ok(CmdResult { ok: true, msg: "Link copied".into() })
         }
-        None => Ok(CmdResult { ok: false, msg: "Card not found.".into() }),
+        None => Ok(CmdResult { ok: false, msg: "Card not found".into() }),
     }
 }
 
@@ -360,7 +360,7 @@ async fn copy_card(state: tauri::State<'_, State>, app: tauri::AppHandle, uuid: 
 async fn set_card_sni(state: tauri::State<'_, State>, uuid: String, sni: String) -> Result<CmdResult, String> {
     let sni = sni.trim().to_string();
     if sni.is_empty() {
-        return Ok(CmdResult { ok: false, msg: "Pick a domain first.".into() });
+        return Ok(CmdResult { ok: false, msg: "Pick a domain first".into() });
     }
     let mut cfg = state.0.lock().unwrap();
     let found = cfg.cards.iter_mut().find(|c| c.uuid == uuid);
@@ -368,9 +368,9 @@ async fn set_card_sni(state: tauri::State<'_, State>, uuid: String, sni: String)
         Some(c) => {
             c.sni = sni;
             cfg.save();
-            Ok(CmdResult { ok: true, msg: "Domain updated.".into() })
+            Ok(CmdResult { ok: true, msg: "Domain updated".into() })
         }
-        None => Ok(CmdResult { ok: false, msg: "Card not found.".into() }),
+        None => Ok(CmdResult { ok: false, msg: "Card not found".into() }),
     }
 }
 
@@ -526,7 +526,7 @@ mod autostart_reg {
             )
         };
         if st != ERROR_SUCCESS {
-            return Err("Could not open the startup key.".into());
+            return Err("Could not open the startup key".into());
         }
         let name = wide(super::AUTOSTART_NAME);
         let data: Vec<u8> = exe
@@ -545,7 +545,7 @@ mod autostart_reg {
         };
         let _ = unsafe { RegCloseKey(hkey) };
         if st != ERROR_SUCCESS {
-            return Err("Could not write the startup value.".into());
+            return Err("Could not write the startup value".into());
         }
         Ok(())
     }
@@ -563,13 +563,13 @@ mod autostart_reg {
             )
         };
         if st != ERROR_SUCCESS {
-            return Err("Could not open the startup key.".into());
+            return Err("Could not open the startup key".into());
         }
         let name = wide(super::AUTOSTART_NAME);
         let st = unsafe { RegDeleteValueW(hkey, PCWSTR(name.as_ptr())) };
         let _ = unsafe { RegCloseKey(hkey) };
         if st != ERROR_SUCCESS {
-            return Err("Could not remove the startup value.".into());
+            return Err("Could not remove the startup value".into());
         }
         Ok(())
     }
@@ -581,10 +581,10 @@ mod autostart_reg {
         None
     }
     pub fn write(_exe: &str) -> Result<(), String> {
-        Err("Not supported on this platform.".into())
+        Err("Not supported on this platform".into())
     }
     pub fn remove() -> Result<(), String> {
-        Err("Not supported on this platform.".into())
+        Err("Not supported on this platform".into())
     }
 }
 
@@ -626,7 +626,7 @@ async fn tunnel_start(
         let state = app.state::<State>();
         let cfg = state.0.lock().unwrap();
         let Some(card) = cfg.cards.iter().find(|c| c.uuid == uuid).cloned() else {
-            return Ok(CmdResult { ok: false, msg: "Card not found.".into() });
+            return Ok(CmdResult { ok: false, msg: "Card not found".into() });
         };
         (
             cfg.server_ip.clone(),
@@ -637,7 +637,7 @@ async fn tunnel_start(
         )
     };
     if host.is_empty() {
-        return Ok(CmdResult { ok: false, msg: "Set up your server first.".into() });
+        return Ok(CmdResult { ok: false, msg: "Set up your server first".into() });
     }
     let t = match transport.as_deref().unwrap_or("vless") {
         "hy2" => "hy2",
@@ -734,7 +734,7 @@ async fn tunnel_start(
         }
     }
     if !vpn::is_elevated() {
-        return Ok(CmdResult { ok: false, msg: "Run QuotaVPN as administrator, then connect.".into() });
+        return Ok(CmdResult { ok: false, msg: "Run QuotaVPN as administrator, then connect".into() });
     }
     let voice_on = voice.unwrap_or(false);
     // The session keeps whatever normal configuration the app was using and
@@ -779,7 +779,7 @@ async fn tunnel_start(
         if *engine.0.lock().unwrap() != Some(pid) {
             // A stop during settle clears the pid: drop our engine, report stopped.
             vpn::request_graceful_stop(pid);
-            return Ok(CmdResult { ok: false, msg: "Stopped.".into() });
+            return Ok(CmdResult { ok: false, msg: "Stopped".into() });
         }
         if !pid_alive(pid) {
             break;
@@ -794,13 +794,13 @@ async fn tunnel_start(
         // Clear whatever the warmup window cached, failed lookups included,
         // so the checks right after connect get fresh answers.
         flush_dns_cache();
-        Ok(CmdResult { ok: true, msg: format!("VPN on - {} carries the traffic.", card.name) })
+        Ok(CmdResult { ok: true, msg: format!("VPN on - {} carries the traffic", card.name) })
     } else if pid_alive(pid) {
         // Alive but not routing yet: keep it running and let the status poll
         // adopt it once the routes land, instead of killing a healthy engine.
         Ok(CmdResult {
             ok: false,
-            msg: "The tunnel is still starting - give it a few seconds or connect again.".into(),
+            msg: "The tunnel is still starting - give it a few seconds or connect again".into(),
         })
     } else {
         *engine.0.lock().unwrap() = None;
@@ -815,7 +815,7 @@ async fn tunnel_stop(engine: tauri::State<'_, Engine>) -> Result<CmdResult, Stri
     stop_engine(&engine);
     // Drop the tunnel's DNS answers so normal resolution resumes cleanly.
     flush_dns_cache();
-    Ok(CmdResult { ok: true, msg: "VPN off.".into() })
+    Ok(CmdResult { ok: true, msg: "VPN off".into() })
 }
 
 #[tauri::command]
@@ -927,12 +927,12 @@ async fn tunnel_log() -> Result<String, String> {
 async fn tunnel_copy_log(app: tauri::AppHandle) -> Result<CmdResult, String> {
     let lines = read_log_tail(300);
     if lines.trim().is_empty() {
-        return Ok(CmdResult { ok: false, msg: "No log yet - connect the VPN first.".into() });
+        return Ok(CmdResult { ok: false, msg: "No log yet - connect the VPN first".into() });
     }
     app.clipboard()
         .write_text(lines)
         .map_err(|e| e.to_string())?;
-    Ok(CmdResult { ok: true, msg: "Log copied - paste it to Cypher.".into() })
+    Ok(CmdResult { ok: true, msg: "Log copied - paste it to Cypher".into() })
 }
 
 /// Curated Windows processes for per-app routing (exe name + label).
@@ -1021,7 +1021,7 @@ async fn tunnel_probe(app: tauri::AppHandle) -> Result<CmdResult, String> {
         guard.server_ip.clone()
     };
     if host.is_empty() {
-        return Ok(CmdResult { ok: false, msg: "No server set.".into() });
+        return Ok(CmdResult { ok: false, msg: "No server set".into() });
     }
     let target = format!("{host}:443");
     let conn = tokio::time::timeout(
@@ -1030,9 +1030,9 @@ async fn tunnel_probe(app: tauri::AppHandle) -> Result<CmdResult, String> {
     )
     .await;
     match conn {
-        Ok(Ok(_)) => Ok(CmdResult { ok: true, msg: format!("{target} reachable.") }),
+        Ok(Ok(_)) => Ok(CmdResult { ok: true, msg: format!("{target} reachable") }),
         Ok(Err(e)) => Ok(CmdResult { ok: false, msg: format!("{target} refused: {e}") }),
-        Err(_) => Ok(CmdResult { ok: false, msg: format!("{target} timed out (blocked?).") }),
+        Err(_) => Ok(CmdResult { ok: false, msg: format!("{target} timed out (blocked?)") }),
     }
 }
 
@@ -1635,7 +1635,7 @@ async fn apply_update(app: tauri::AppHandle) -> Result<String, String> {
         .check()
         .await
         .map_err(|e| format!("check failed: {e}"))?
-        .ok_or_else(|| "Already on the latest build.".to_string())?;
+        .ok_or_else(|| "Already on the latest build".to_string())?;
     // Same guard as the check: an equal version number with a feed build
     // stamp that is missing, empty or identical to this build is not an
     // update, so refuse before the installer touches anything.
@@ -1645,10 +1645,10 @@ async fn apply_update(app: tauri::AppHandle) -> Result<String, String> {
             BUILD_STAMP,
         )
     {
-        return Err("This build is already current.".to_string());
+        return Err("This build is already current".to_string());
     }
     if UPDATE_BUSY.swap(true, std::sync::atomic::Ordering::SeqCst) {
-        return Err("An update is already installing.".to_string());
+        return Err("An update is already installing".to_string());
     }
     {
         let eng = app.state::<Engine>();

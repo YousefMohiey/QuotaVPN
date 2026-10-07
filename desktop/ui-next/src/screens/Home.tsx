@@ -65,81 +65,67 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
           <p className="mt-1 max-w-[430px] text-[13.5px] leading-relaxed text-txt2">{t("setupBody")}</p>
         </div>
         <div className="mt-4 flex flex-col gap-5 lg:flex-row lg:items-stretch">
-          {/* the presets: two cards, each one carrying its own story */}
-          <div className="flex min-w-0 flex-1 flex-col">
-            <h3 className="text-[13.5px] font-semibold text-txt">{t("presetHeading")}</h3>
-            <div className="mt-2.5 grid grid-cols-2 gap-3">
-              {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
-                const mine = cards.find((c) => c.card_type === kind)
-                const sni = mine?.sni ?? DEFAULT_SNI[kind]
-                const isActive = preset === kind
-                const Icon = kind === "Gamerz" ? Gamepad2 : Tv
-                const tags =
-                  kind === "Gamerz"
-                    ? [t("tagGaming"), t("tagLowLatency"), t("tagEaGames")]
-                    : [t("tagStreaming"), t("tagVideoPlatforms"), t("tagHighStability")]
-                return (
-                  <button
-                    key={kind}
-                    type="button"
-                    aria-pressed={isActive}
-                    disabled={creating !== null}
-                    onClick={() => {
-                      if (creating) return
-                      if (mine) {
-                        setPreset(kind)
-                        pickCard(mine.uuid)
-                        return
-                      }
-                      setCreating(kind)
-                      void ensurePresetCard(kind).finally(() => setCreating(null))
-                    }}
+          {/* the presets: two stacked rows, each carrying its own story */}
+          <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+            {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
+              const mine = cards.find((c) => c.card_type === kind)
+              const sni = mine?.sni ?? DEFAULT_SNI[kind]
+              const isActive = preset === kind
+              const Icon = kind === "Gamerz" ? Gamepad2 : Tv
+              return (
+                <button
+                  key={kind}
+                  type="button"
+                  aria-pressed={isActive}
+                  disabled={creating !== null}
+                  onClick={() => {
+                    if (creating) return
+                    if (mine) {
+                      setPreset(kind)
+                      pickCard(mine.uuid)
+                      return
+                    }
+                    setCreating(kind)
+                    void ensurePresetCard(kind).finally(() => setCreating(null))
+                  }}
+                  className={cn(
+                    "flex items-center gap-3 rounded-[12px] border p-4 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
+                    isActive
+                      ? "border-[var(--brand-line)] bg-[var(--brand-bg)]"
+                      : "border-line bg-white/[0.02] hover:border-[var(--brand-line)]",
+                  )}
+                >
+                  <span
                     className={cn(
-                      "flex min-h-[132px] flex-col rounded-[12px] border p-3.5 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
+                      "grid size-11 shrink-0 place-items-center rounded-[10px] border transition-colors",
                       isActive
-                        ? "border-[var(--brand-line)] bg-[var(--brand-bg)]"
-                        : "border-line bg-white/[0.02] hover:border-[var(--brand-line)]",
+                        ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong"
+                        : "border-line bg-white/[0.03] text-txt3",
                     )}
                   >
-                    <span className="flex items-center justify-between gap-2">
-                      <span
-                        className={cn(
-                          "grid size-9 shrink-0 place-items-center rounded-[10px] border transition-colors",
-                          isActive
-                            ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong"
-                            : "border-line bg-white/[0.03] text-txt3",
-                        )}
-                      >
-                        <Icon className="size-4" aria-hidden />
-                      </span>
-                      <span
-                        aria-hidden
-                        className={cn(
-                          "grid size-[18px] shrink-0 place-items-center rounded-full border-[1.5px] transition-colors",
-                          isActive ? "border-[var(--brand)]" : "border-line-strong",
-                        )}
-                      >
-                        {isActive && <span className="size-2 rounded-full bg-[var(--brand)]" />}
-                      </span>
-                    </span>
+                    <Icon className="size-[19px]" aria-hidden />
+                  </span>
+                  <span className="min-w-0 flex-1">
                     <span
-                      className={cn("mt-2.5 block truncate text-[13.5px] font-semibold", isActive ? "text-txt" : "text-txt2")}
+                      className={cn("block truncate text-[14.5px] font-semibold", isActive ? "text-txt" : "text-txt2")}
                       dir="auto"
                     >
                       {t(kind === "Gamerz" ? "kindGamerz" : "kindStreamerz")}
                     </span>
-                    <span className="mt-0.5 block truncate font-mono text-[11px] text-txt3">{sni}</span>
-                    <span className="mt-auto flex flex-wrap gap-1 pt-3">
-                      {tags.map((tag) => (
-                        <span key={tag} className="rounded-full border border-line px-1.5 py-[2px] text-[10px] text-txt3">
-                          {tag}
-                        </span>
-                      ))}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
+                    <span className="mt-1 block truncate font-mono text-[11.5px] text-txt3">{sni}</span>
+                  </span>
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "grid size-[18px] shrink-0 place-items-center rounded-full border-[1.5px] transition-colors",
+                      isActive ? "border-[var(--brand)]" : "border-line-strong",
+                    )}
+                  >
+                    {isActive && <span className="size-2 rounded-full bg-[var(--brand)]" />}
+                  </span>
+                </button>
+              )
+            })}
           </div>
 
           {/* the controls, one continuous column */}
@@ -179,7 +165,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   onClick={() => setDomainOpen(true)}
                   className="group flex h-10 w-full items-center justify-between gap-3 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt transition-colors duration-200 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
                 >
-                  <span className="truncate" dir="auto">{domText}</span>
+                  <span className={cn("truncate", domText.length > 17 && "text-[11px]")} dir="auto">{domText}</span>
                   <ChevronDown className="size-4 shrink-0 text-txt2 transition-[color,transform] duration-200 group-hover:translate-y-px group-hover:text-brand-strong" aria-hidden />
                 </button>
               )}

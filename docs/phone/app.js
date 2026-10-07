@@ -16,7 +16,7 @@ async function call(cmd, args) {
   try {
     return await invoke(cmd, args);
   } catch (e) {
-    return { ok: false, msg: "Failed: " + (e && e.message ? e.message : e) };
+    return { ok: false, msg: "Failed:" + (e && e.message ? e.message : e) };
   }
 }
 
@@ -54,128 +54,128 @@ const STR = {
   en: {
     cardForVpn: "Server", route: "Gateway", protected: "Protected", wholeDevice: "Whole device",
     yourIp: "Your IP", newCard: "New card", cardName: "Card name", exName: "e.g. Yousef, PC, phone",
-    domainSni: "Domain", customDomain: "custom domain…", customDomainOpt: "Custom domain…",
-    generateCard: "Generate card", applyDomainBtn: "Apply", myCards: "My cards", serverHint: "Automatic configuration.",
+    domainSni: "Domain", customDomain: "custom domain", customDomainOpt: "Custom domain",
+    generateCard: "Generate card", applyDomainBtn: "Apply", myCards: "My cards", serverHint: "Automatic configuration",
     host: "Address", language: "Language", reconnect: "Reconnect", testPort: "Check server", copyLog: "Copy log",
     secStatus: "Status", secConnection: "Connection", secGeneral: "General", secProtection: "Protection",
     tabHome: "Home", tabSpeed: "Speed", tabCards: "Cards", tabServer: "Server", tabSettings: "Settings",
     tabApps: "Apps", vpnFor: "VPN for", appsAll: "All apps", appsOnly: "Only these", appsExcept: "All but these",
-    appsHint: "Changes apply next time you connect.", appsSearch: "Search apps…",
-    appsLoading: "Loading apps…", appsEmpty: "No applications found.",
-    appsNeedPick: "Pick at least one app first.", appsPicked: "Applies next time you connect.",
+    appsHint: "Changes apply next time you connect", appsSearch: "Search apps",
+    appsLoading: "Loading apps", appsEmpty: "No applications found",
+    appsNeedPick: "Pick at least one app first", appsPicked: "Applies next time you connect",
     transport: "Connection type", trStandard: "Standard", trGame: "Hysteria2", trWg: "WireGuard",
-    trNoteVless: "Standard (Default traffic).",
-    trNoteHy2: "Hysteria2 spends from your general quota, not your package.",
-    trNoteWg: "WireGuard spends from your general quota, not your package.",
-    wgWarnT: "WireGuard spends from your general quota, not your package.",
-    wgWarnB: "Usage on this mode will not count from your Gamerz/Streamerz quota. Use Standard mode for packages.",
-    hyWarnT: "Hysteria2 spends from your general quota, not your package.",
-    hyWarnB: "Usage on this mode counts from general quota. Use Standard mode for packages.",
+    trNoteVless: "Standard (Default traffic)",
+    trNoteHy2: "Hysteria2 spends from your general quota, not your package",
+    trNoteWg: "WireGuard spends from your general quota, not your package",
+    wgWarnT: "WireGuard spends from your general quota, not your package",
+    wgWarnB: "Usage on this mode will not count from your Gamerz/Streamerz quota. Use Standard mode for packages",
+    hyWarnT: "Hysteria2 spends from your general quota, not your package",
+    hyWarnB: "Usage on this mode counts from general quota. Use Standard mode for packages",
     appsStatusAll: "VPN covers all apps", appsStatusAllow: "VPN only for", appsStatusBlock: "VPN for all except",
     appsPending: " - reconnect to use it",
-    ksHint: "Turn on Always-on VPN in system settings so a drop never leaks.",
+    ksHint: "Turn on Always-on VPN in system settings so a drop never leaks",
     openVpnSettings: "Open",
     updTitle: "Updates", updCheck: "Check", updGet: "Install",
-    updIdle: "Not checked yet.", updChecking: "Checking…",
+    updIdle: "Not checked yet", updChecking: "Checking",
     spReady: "Ready to test", spPinging: "Measuring ping", spDowning: "Measuring download",
-    spUping: "Measuring upload", spDone: "Result", spFail: "No reply from the server.",
+    spUping: "Measuring upload", spDone: "Result", spFail: "No reply from the server",
     peak: "Peak", yourConn: "Your connection", targetServer: "Server", findingServer: "Finding the nearest server",
     srvName: "QuotaVPN server", srvOwnNote: "Through the QuotaVPN server", pingTitle: "Ping", jitter: "Jitter",
     chDown: "Down", chUp: "Up", mbps: "Mbps", ms: "ms", idle: "idle", done: "Done",
-    setupSub: "Choose a preset or configure your connection.",
-    measuring: "Measuring…", stop: "Stop", refresh: "Refresh", startTest: "Start test",
-    pingHint: "Best of 8 samples through the active path.", downHint: "Download through the active path.",
-    upHint: "Upload through the active path.", noReply: "No reply.", cfName: "Cloudflare", srvPublic: "Public reference", pickServer: "Speed test server", srvAuto: "Nearest server", srvAutoNote: "Picked for you", viaReference: "(measured against the public reference)", cfDetail: "Cloudflare's own test endpoints",
+    setupSub: "Choose a preset or configure your connection",
+    measuring: "Measuring", stop: "Stop", refresh: "Refresh", startTest: "Start test",
+    pingHint: "Best of 8 samples through the active path", downHint: "Download through the active path",
+    upHint: "Upload through the active path", noReply: "No reply", cfName: "Cloudflare", srvPublic: "Public reference", pickServer: "Speed test server", srvAuto: "Nearest server", srvAutoNote: "Picked for you", viaReference: "(measured against the public reference)", cfDetail: "Cloudflare's own test endpoints",
     spStart: "Start test", spStop: "Stop", spPing: "Ping", spJitter: "Jitter", spDown: "Down", spUp: "Up",
-    spHint: "Tests the route the card on Home is using.",
-    spHistory: "Recent runs", spNone: "No runs yet.",
-    settingsSub: "Customize your QuotaVPN experience.", languageBody: "Choose your preferred language.", ksTitle: "Kill switch", bgTitle: "Background running",
-    aboutTitle: "About", aboutBody: "The build you are running and the server it rides.", versionLbl: "Version",
-    history: "History", histEmpty: "No runs yet. Measure one from the Speed page.", clearAll: "Clear all",
+    spHint: "Tests the route the card on Home is using",
+    spHistory: "Recent runs", spNone: "No runs yet",
+    settingsSub: "Customize your QuotaVPN experience", languageBody: "Choose your preferred language", ksTitle: "Kill switch", bgTitle: "Background running",
+    aboutTitle: "About", aboutBody: "The build you are running and the server it rides", versionLbl: "Version",
+    history: "History", histEmpty: "No runs yet. Measure one from the Speed page", clearAll: "Clear all",
     bestDown: "Best down", bestUp: "Best up", bestPing: "Best ping", delete: "Delete", today: "Today", yesterday: "Yesterday", runs: "runs",
-    updOut: "{v} is out.", updLatest: "{v} is the latest.", updFail: "Could not reach GitHub.",
-    updDownloading: "Downloading the update…", updOpened: "Installer opened. Confirm to update.",
-    updAllow: "Allow installs from QuotaVPN in the screen that opened, then tap again.",
-    bgHint: "Keep the VPN on when you swipe the app away.",
-    bgHintOn: "The VPN stays on when you swipe the app away.",
+    updOut: "{v} is out", updLatest: "{v} is the latest", updFail: "Could not reach GitHub",
+    updDownloading: "Downloading the update", updOpened: "Installer opened. Confirm to update",
+    updAllow: "Allow installs from QuotaVPN in the screen that opened, then tap again",
+    bgHint: "Keep the VPN on when you swipe the app away",
+    bgHintOn: "The VPN stays on when you swipe the app away",
     bgBtnAllow: "Allow",
     bgBtnStop: "Disallow",
     vpnConnected: "VPN Connected", serverReady: "Server ready", notConnected: "Not connected",
-    setupTitle: "Connection setup", setupBody: "Pick what this VPN is for, the server it rides, and how it carries your traffic.",
+    setupTitle: "Connection setup", setupBody: "Pick what this VPN is for, the server it rides, and how it carries your traffic",
     srvLocation: "Server location", statusLbl: "Status", srvRetry: "That server did not answer, trying another",
-    working: "Working…", talking: "Talking to the server.", trafficThru: "All traffic goes through ",
-    readySub: "Server is set up. Pick a card and connect.", idleSub: "Pick a card and connect.",
+    working: "Working", talking: "Talking to the server", trafficThru: "All traffic goes through",
+    readySub: "Server is set up. Pick a card and connect", idleSub: "Pick a card and connect",
     connect: "Connect", disconnect: "Disconnect", connected: "Connected",
     vpnOn: "vpn on", ready: "ready", idle: "idle",
-    copy: "Copy", revoke: "Revoke", revokeSure: "Sure?", inUse: "In use", kindGamerz: "Gamerz", kindStreamerz: "Streamerz",
-    noCards: "No active cards yet. Tap + to generate your first card.", firstCard: "+ New card", noCardsOpt: "No cards - generate one first",
-    needCard: "Generate a card first, then connect.", stopping: "Stopping…",
+    copy: "Copy", revoke: "Revoke", revokeSure: "Sure", inUse: "In use", kindGamerz: "Gamerz", kindStreamerz: "Streamerz",
+    noCards: "No active cards yet. Tap + to generate your first card", firstCard: "+ New card", noCardsOpt: "No cards - generate one first",
+    needCard: "Generate a card first, then connect", stopping: "Stopping",
     secTraffic: "Traffic and routing", routing: "App routing", back: "Back", cancel: "Cancel",
-    addCard: "+ New", connecting: "Connecting…", ping: "Ping",
-    sheetSearch: "Search domains…",
+    addCard: "+ New", connecting: "Connecting", ping: "Ping",
+    sheetSearch: "Search domains",
   },
   ar: {
     cardForVpn: "السيرفر", route: "البوابة", protected: "الحماية", wholeDevice: "الجهاز بالكامل",
     yourIp: "عنوان الـIP", newCard: "بطاقة جديدة", cardName: "اسم البطاقة", exName: "مثال: يوسف، الموبايل، اللابتوب",
-    domainSni: "الدومين", customDomain: "دومين مخصص…", customDomainOpt: "دومين مخصص…",
+    domainSni: "الدومين", customDomain: "دومين مخصص", customDomainOpt: "دومين مخصص",
     generateCard: "إنشاء بطاقة", applyDomainBtn: "تطبيق", myCards: "بطاقاتي", serverHint: "إعداد تلقائي",
     host: "العنوان", language: "اللغة", reconnect: "إعادة الاتصال", testPort: "فحص السيرفر", copyLog: "نسخ السجل",
     secStatus: "الحالة", secConnection: "الاتصال", secGeneral: "عام", secProtection: "الحماية",
     tabHome: "الرئيسية", tabSpeed: "السرعة", tabCards: "البطاقات", tabServer: "السيرفر", tabSettings: "الإعدادات",
     tabApps: "التطبيقات", vpnFor: "الـVPN لـ", appsAll: "جميع التطبيقات", appsOnly: "المحددة فقط", appsExcept: "الجميع باستثناء",
-    appsHint: "سيتم تطبيق التغييرات عند الاتصال التالي.", appsSearch: "ابحث عن تطبيق…",
-    appsLoading: "جارٍ تحميل التطبيقات…", appsEmpty: "لا توجد تطبيقات بهذا الاسم.",
-    appsNeedPick: "اختر تطبيقاً واحداً على الأقل أولاً.", appsPicked: "سيتم التطبيق عند الاتصال التالي.",
+    appsHint: "سيتم تطبيق التغييرات عند الاتصال التالي", appsSearch: "ابحث عن تطبيق",
+    appsLoading: "جارٍ تحميل التطبيقات", appsEmpty: "لا توجد تطبيقات بهذا الاسم",
+    appsNeedPick: "اختر تطبيقاً واحداً على الأقل أولاً", appsPicked: "سيتم التطبيق عند الاتصال التالي",
     transport: "الاتصال", trStandard: "عادي", trGame: "Hysteria2", trWg: "WireGuard",
     trNoteVless: "العادي (الترافيك الافتراضي)",
-    trNoteHy2: "Hysteria2: يُحتسب من الباقة العامة، وليس من باقتك.",
-    trNoteWg: "WireGuard: يُحتسب من الباقة العامة، وليس من باقتك.",
-    wgWarnT: "WireGuard: يُحتسب من الباقة العامة، وليس من باقتك.",
+    trNoteHy2: "Hysteria2: يُحتسب من الباقة العامة، وليس من باقتك",
+    trNoteWg: "WireGuard: يُحتسب من الباقة العامة، وليس من باقتك",
+    wgWarnT: "WireGuard: يُحتسب من الباقة العامة، وليس من باقتك",
     wgWarnB: "الاستخدام في هذا الوضع لن يُحتسب من باقة جيمرز/ستريمرز. استخدم الوضع العادي للباقات",
-    hyWarnT: "Hysteria2: يُحتسب من الباقة العامة، وليس من باقتك.",
+    hyWarnT: "Hysteria2: يُحتسب من الباقة العامة، وليس من باقتك",
     hyWarnB: "الاستخدام في هذا الوضع يُحتسب من الباقة العامة. استخدم الوضع العادي للباقات",
     appsStatusAll: "الـVPN مفعّل لجميع التطبيقات", appsStatusAllow: "الـVPN للتطبيقات المحددة فقط", appsStatusBlock: "الـVPN للجميع باستثناء",
     appsPending: " - أعد الاتصال لتفعيله",
-    ksHint: "فعّل Always-on VPN من إعدادات النظام حتى لا يتسرب الاتصال عند الانقطاع.",
+    ksHint: "فعّل Always-on VPN من إعدادات النظام حتى لا يتسرب الاتصال عند الانقطاع",
     openVpnSettings: "فتح",
     updTitle: "التحديثات", updCheck: "تحقق", updGet: "تثبيت",
-    updIdle: "لم يتم التحقق بعد.", updChecking: "جارٍ التحقق…",
+    updIdle: "لم يتم التحقق بعد", updChecking: "جارٍ التحقق",
     spReady: "جاهز للاختبار", spPinging: "قياس البينج", spDowning: "قياس التحميل",
-    spUping: "قياس الرفع", spDone: "النتيجة", spFail: "مفيش رد من السيرفر.",
+    spUping: "قياس الرفع", spDone: "النتيجة", spFail: "مفيش رد من السيرفر",
     peak: "الذروة", yourConn: "اتصالك", targetServer: "الخادم", findingServer: "جارٍ العثور على أقرب خادم",
     srvName: "خادم QuotaVPN", srvOwnNote: "عبر خادم QuotaVPN", pingTitle: "زمن الاستجابة", jitter: "التذبذب",
     chDown: "تنزيل", chUp: "رفع", mbps: "ميجابت", ms: "مللي ثانية", idle: "خامل", done: "تم",
-    setupSub: "اختر حزمة أو اضبط اتصالك.",
-    measuring: "جارٍ القياس…", stop: "إيقاف", refresh: "تحديث", startTest: "بدء الاختبار",
-    pingHint: "أفضل 8 محاولات عبر المسار الحالي.", downHint: "قياس التحميل من الخادم عبر المسار الحالي.",
-    upHint: "قياس الرفع إلى الخادم عبر المسار الحالي.", noReply: "لا يوجد رد.", cfName: "Cloudflare", srvPublic: "مرجع عام", pickServer: "خادم اختبار السرعة", srvAuto: "أقرب خادم", srvAutoNote: "يُختار تلقائيًا", viaReference: "(قياس عبر المرجع العام)", cfDetail: "نقاط اختبار Cloudflare نفسها",
+    setupSub: "اختر حزمة أو اضبط اتصالك",
+    measuring: "جارٍ القياس", stop: "إيقاف", refresh: "تحديث", startTest: "بدء الاختبار",
+    pingHint: "أفضل 8 محاولات عبر المسار الحالي", downHint: "قياس التحميل من الخادم عبر المسار الحالي",
+    upHint: "قياس الرفع إلى الخادم عبر المسار الحالي", noReply: "لا يوجد رد", cfName: "Cloudflare", srvPublic: "مرجع عام", pickServer: "خادم اختبار السرعة", srvAuto: "أقرب خادم", srvAutoNote: "يُختار تلقائيًا", viaReference: "(قياس عبر المرجع العام)", cfDetail: "نقاط اختبار Cloudflare نفسها",
     spStart: "ابدأ الاختبار", spStop: "إيقاف", spPing: "بينج", spJitter: "تذبذب", spDown: "تحميل", spUp: "رفع",
-    spHint: "بيختبر المسار اللي بطاقتك في الرئيسية بتستخدمه.",
-    spHistory: "آخر الاختبارات", spNone: "مفيش اختبارات لسه.",
-    settingsSub: "خصّص تجربة QuotaVPN.", languageBody: "اختر لغتك المفضلة.", ksTitle: "مانع التسرب", bgTitle: "العمل في الخلفية",
-    aboutTitle: "حول التطبيق", aboutBody: "النسخة التي تعمل والسيرفر الذي تمر عليه.", versionLbl: "الإصدار",
-    history: "السجل", histEmpty: "لا توجد قياسات بعد. ابدأ قياساً من صفحة السرعة.", clearAll: "حذف الكل",
+    spHint: "بيختبر المسار اللي بطاقتك في الرئيسية بتستخدمه",
+    spHistory: "آخر الاختبارات", spNone: "مفيش اختبارات لسه",
+    settingsSub: "خصّص تجربة QuotaVPN", languageBody: "اختر لغتك المفضلة", ksTitle: "مانع التسرب", bgTitle: "العمل في الخلفية",
+    aboutTitle: "حول التطبيق", aboutBody: "النسخة التي تعمل والسيرفر الذي تمر عليه", versionLbl: "الإصدار",
+    history: "السجل", histEmpty: "لا توجد قياسات بعد. ابدأ قياساً من صفحة السرعة", clearAll: "حذف الكل",
     bestDown: "أفضل تنزيل", bestUp: "أفضل رفع", bestPing: "أفضل استجابة", delete: "حذف", today: "اليوم", yesterday: "أمس", runs: "قياسات",
-    updOut: "الإصدار {v} متاح.", updLatest: "{v} هو الأحدث.", updFail: "تعذر الوصول إلى GitHub.",
-    updDownloading: "جارٍ تنزيل التحديث…", updOpened: "تم فتح المثبّت. أكّد التحديث.",
-    updAllow: "اسمح بتثبيت التطبيقات من QuotaVPN من الشاشة المفتوحة ثم أعد المحاولة.",
-    bgHint: "أبقِ الـVPN يعمل عند إغلاق التطبيق.",
-    bgHintOn: "الـVPN يبقى يعمل عند إغلاق التطبيق.",
+    updOut: "الإصدار {v} متاح", updLatest: "{v} هو الأحدث", updFail: "تعذر الوصول إلى GitHub",
+    updDownloading: "جارٍ تنزيل التحديث", updOpened: "تم فتح المثبّت. أكّد التحديث",
+    updAllow: "اسمح بتثبيت التطبيقات من QuotaVPN من الشاشة المفتوحة ثم أعد المحاولة",
+    bgHint: "أبقِ الـVPN يعمل عند إغلاق التطبيق",
+    bgHintOn: "الـVPN يبقى يعمل عند إغلاق التطبيق",
     bgBtnAllow: "اسمح",
     bgBtnStop: "أوقف",
     vpnConnected: "الـVPN يعمل", serverReady: "السيرفر جاهز", notConnected: "غير متصل",
-    setupTitle: "إعداد الاتصال", setupBody: "اختر استخدام الـVPN، والخادم الذي يمر عليه، وطريقة نقل الترافيك.",
+    setupTitle: "إعداد الاتصال", setupBody: "اختر استخدام الـVPN، والخادم الذي يمر عليه، وطريقة نقل الترافيك",
     srvLocation: "موقع الخادم", statusLbl: "الحالة", srvRetry: "لم يستجب هذا الخادم، جارٍ تجربة خادم آخر",
-    working: "جارٍ العمل…", talking: "جارٍ التواصل مع السيرفر…", trafficThru: "كل الترافيك يمر عبر ",
-    readySub: "السيرفر جاهز. اختار بطاقة واتصل.", idleSub: "اختار بطاقة واتصل.",
+    working: "جارٍ العمل", talking: "جارٍ التواصل مع السيرفر", trafficThru: "كل الترافيك يمر عبر",
+    readySub: "السيرفر جاهز. اختار بطاقة واتصل", idleSub: "اختار بطاقة واتصل",
     connect: "اتصال", disconnect: "قطع الاتصال", connected: "متصل",
     vpnOn: "شغال", ready: "جاهز", idle: "خامل",
-    copy: "نسخ", revoke: "حذف", revokeSure: "متأكد؟", inUse: "قيد الاستخدام", kindGamerz: "جيمرز", kindStreamerz: "ستريمرز",
-    noCards: "لا توجد بطاقات حتى الآن. اضغط على + لإنشاء بطاقتك الأولى.", firstCard: "+ بطاقة جديدة", noCardsOpt: "لا توجد بطاقات - أنشئ بطاقة أولاً",
-    needCard: "أنشئ بطاقة أولاً ثم اتصل.", stopping: "جارٍ الإيقاف…",
+    copy: "نسخ", revoke: "حذف", revokeSure: "متأكد", inUse: "قيد الاستخدام", kindGamerz: "جيمرز", kindStreamerz: "ستريمرز",
+    noCards: "لا توجد بطاقات حتى الآن. اضغط على + لإنشاء بطاقتك الأولى", firstCard: "+ بطاقة جديدة", noCardsOpt: "لا توجد بطاقات - أنشئ بطاقة أولاً",
+    needCard: "أنشئ بطاقة أولاً ثم اتصل", stopping: "جارٍ الإيقاف",
     secTraffic: "الترافيك والتوجيه", routing: "توجيه التطبيقات", back: "رجوع", cancel: "إلغاء",
-    addCard: "+ جديد", connecting: "جارٍ الاتصال…", ping: "البينج",
-    sheetSearch: "ابحث عن دومين…",
+    addCard: "+ جديد", connecting: "جارٍ الاتصال", ping: "البينج",
+    sheetSearch: "ابحث عن دومين",
   },
 };
 let lang = localStorage.getItem("qc-lang") || "en";
@@ -337,17 +337,17 @@ async function applyDomain(sni) {
 let barTimer = 0;
 // Rust sends English status lines; show them in Arabic when that is the UI language.
 const RUST_AR = {
-  "Connected - server ready.": "السيرفر جاهز.",
-  "No server set up.": "جهّز السيرفر الأول.",
-  "The server is not set up yet.": "الخادم غير مهيأ بعد.",
-  "No server set.": "جهّز السيرفر الأول.",
-  "Card not found.": "البطاقة مش موجودة.",
+  "Connected - server ready": "السيرفر جاهز",
+  "No server set up": "جهّز السيرفر الأول",
+  "The server is not set up yet": "الخادم غير مهيأ بعد",
+  "No server set": "جهّز السيرفر الأول",
+  "Card not found": "البطاقة مش موجودة",
 };
 function localizeRust(text) {
   if (lang !== "ar" || typeof text !== "string") return text;
-  if (/ reachable\.$/.test(text)) return "السيرفر متاح.";
-  if (/ refused: /.test(text)) return "السيرفر رفض الاتصال.";
-  if (/ timed out \(blocked\?\)\.$/.test(text)) return "السيرفر مردش (محجوب؟).";
+  if (/ reachable\.$/.test(text)) return "السيرفر متاح";
+  if (/ refused: /.test(text)) return "السيرفر رفض الاتصال";
+  if (/ timed out \(blocked\?\)\.$/.test(text)) return "السيرفر مردش (محجوب؟)";
   return RUST_AR[text] || text;
 }
 function bar(ok, text) {
@@ -355,7 +355,7 @@ function bar(ok, text) {
   if (ok) return;
   const el = $("infobar");
   el.hidden = false;
-  el.className = "bar " + (ok ? "ok" : "err");
+  el.className = "bar" + (ok ? "ok" : "err");
   $("infobar-icon").textContent = ok ? "✓" : "⚠";
   $("infobar-text").textContent = localizeRust(text);
   clearTimeout(barTimer);
@@ -933,7 +933,7 @@ function openSheet(which) {
     }));
     const own = spOwnServer();
     if (own) {
-      list.append(optRow(own.label + " · " + own.host, own.detail, cur === "own", () => {
+      list.append(optRow(own.label + " ·" + own.host, own.detail, cur === "own", () => {
         spChoose = "own";
         try { localStorage.setItem("qc-speed-target", "own"); } catch (e) {}
         spTarget = own;
@@ -943,7 +943,7 @@ function openSheet(which) {
     }
     for (const s of spPool.slice(0, 12)) {
       if (s.id === "own" || s.id === "cloudflare") continue;
-      list.append(optRow(s.label + " · " + s.host, s.detail, cur === s.id, () => {
+      list.append(optRow(s.label + " ·" + s.host, s.detail, cur === s.id, () => {
         spChoose = s.id;
         try { localStorage.setItem("qc-speed-target", s.id); } catch (e) {}
         spTarget = s;
@@ -966,7 +966,7 @@ function openSheet(which) {
   const kindNow = activeKind();
   const cur = (activeCard() && activeCard().sni) || DEFAULT_SNI[kindNow];
   SNIS[kindNow].forEach(([label, domain]) => {
-    list.append(optRow(label + " · " + domain, "", domain === cur, () => { closeSheet(); void applyDomain(domain); }));
+    list.append(optRow(label + " ·" + domain, "", domain === cur, () => { closeSheet(); void applyDomain(domain); }));
   });
   list.append(optRow(t("customDomainOpt"), "", false, () => { closeSheet(); openCustomDomain(); }));
   $("tunnel-card-btn").setAttribute("aria-expanded", "true");
@@ -1060,7 +1060,7 @@ async function pollTunnel() {
     vpnOn = !!st.running;
     vpnError = st.error || "";
     if (!vpnOn) connectEpoch = 0;
-    if (was && !vpnOn && vpnError) bar(false, "VPN stopped: " + vpnError);
+    if (was && !vpnOn && vpnError) bar(false, "VPN stopped:" + vpnError);
     if (was !== vpnOn) paintHero();
   } catch (e) { /* bridge hiccup, try next round */ }
 }
@@ -1151,7 +1151,7 @@ $("btn-connect").onclick = async () => {
       if (vpnOn) break;
     }
     if (!vpnOn) await pollTunnel();
-    if (vpnError) bar(false, "VPN failed: " + vpnError);
+    if (vpnError) bar(false, "VPN failed:" + vpnError);
     paintHero();
     void spResolveNet();
   } finally { setBusy(false); }
@@ -1163,7 +1163,7 @@ document.querySelectorAll("#lang-seg button").forEach((b) => {
 });
 // Tap the home net rows to see the full host (toast overlay, layout never grows).
 $("ah-place").onclick = () => { const row = $("tunnel-card-btn"); if (row) row.click(); };
-$("ip-row").onclick = () => { if (serverHost) bar(true, serverIp && serverIp !== serverHost ? serverIp + " · " + serverHost : serverHost); };
+$("ip-row").onclick = () => { if (serverHost) bar(true, serverIp && serverIp !== serverHost ? serverIp + " ·" + serverHost : serverHost); };
 fillSniSelect();
 applyLang(lang);
 // Decorative icons stay out of the accessibility tree; state lives in text.
@@ -1228,7 +1228,7 @@ let spLast = { ping: null, jitter: null, down: null, up: null };
 const SP_CF = {
   id: "cloudflare",
   label: "Cloudflare",
-  detail: "Cloudflare, Inc.",
+  detail: "Cloudflare, Inc",
   host: "speed.cloudflare.com",
   ping: "https://speed.cloudflare.com/__down?bytes=10000",
   down: ["https://speed.cloudflare.com/__down?bytes=52428800"],
@@ -1267,8 +1267,8 @@ function spFromOokla(e) {
   const km = typeof e.distance === "number" ? Math.round(e.distance) : null;
   return {
     id: "ookla-" + (String(e.host || "").trim() || base),
-    label: [sponsor, place].filter(Boolean).join(" · ") || spDisplayHost(base),
-    detail: [country, km !== null ? km + " km" : ""].filter(Boolean).join(" · "),
+    label: [sponsor, place].filter(Boolean).join(" ·") || spDisplayHost(base),
+    detail: [country, km !== null ? km + " km" : ""].filter(Boolean).join(" ·"),
     host: spDisplayHost(base),
     ping: base + "/latency.txt",
     down: [base + "/random7000x7000.jpg", base + "/random2000x2000.jpg", base + "/random1000x1000.jpg"],
@@ -1489,7 +1489,7 @@ function spPaintTarget() {
   if (note) note.textContent = spTargetNote();
   const sub = $("sp-sub");
   if (sub) {
-    try { sub.textContent = activeKind() + ((d.id === "cloudflare" || !d.host) ? "" : " · " + d.host); } catch (e) { sub.textContent = (d.id === "cloudflare" || !d.host) ? "-" : d.host; }
+    try { sub.textContent = activeKind() + ((d.id === "cloudflare" || !d.host) ? "" : " ·" + d.host); } catch (e) { sub.textContent = (d.id === "cloudflare" || !d.host) ? "-" : d.host; }
   }
 }
 
@@ -1524,8 +1524,8 @@ function paintNet(n) {
 // came back empty (a rate limit on the exit address, usually).
 async function netInfoFallback() {
   const tries = [
-    { url: "https://ipwho.is/", pick: (j) => (j && j.success !== false && j.ip) ? { isp: (j.connection && j.connection.isp) || j.ip, ip: j.ip, place: [j.city, j.country].filter(Boolean).join(", ") } : null },
-    { url: "https://ipapi.co/json/", pick: (j) => (j && j.ip) ? { isp: j.org || j.ip, ip: j.ip, place: [j.city, j.country_name].filter(Boolean).join(", ") } : null },
+    { url: "https://ipwho.is/", pick: (j) => (j && j.success !== false && j.ip) ? { isp: (j.connection && j.connection.isp) || j.ip, ip: j.ip, place: [j.city, j.country].filter(Boolean).join(",") } : null },
+    { url: "https://ipapi.co/json/", pick: (j) => (j && j.ip) ? { isp: j.org || j.ip, ip: j.ip, place: [j.city, j.country_name].filter(Boolean).join(",") } : null },
   ];
   for (const s of tries) {
     try {

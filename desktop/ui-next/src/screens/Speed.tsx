@@ -688,7 +688,7 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
           <motion.div
             layout
             transition={SPRING}
-            className={cn("flex w-full items-center", parked ? "justify-start gap-7" : "justify-center")}
+            className={cn("flex min-h-[172px] w-full items-center", parked ? "justify-start gap-8" : "justify-center")}
           >
             <motion.div layout transition={SPRING} className="flex shrink-0 items-center justify-center">
               <StartCircle running={running} done={phase === "done"} onStart={() => void run("all")} onStop={stop} />
@@ -901,7 +901,7 @@ function StartCircle({
       transition={{ type: "spring", stiffness: 460, damping: 32 }}
       className={cn(
         /* the same frame as the Home dial: translucent fill, one lit line */
-        "group relative grid size-[208px] place-items-center rounded-full border transition-colors duration-300",
+        "group relative grid size-[172px] place-items-center rounded-full border transition-colors duration-300",
         "bg-white/[0.05] backdrop-blur-[14px] backdrop-saturate-150",
         "shadow-[inset_0_1px_0_rgb(255_255_255/0.10)]",
         running

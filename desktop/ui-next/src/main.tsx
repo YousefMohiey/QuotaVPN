@@ -13,9 +13,12 @@ window.addEventListener("contextmenu", (e) => e.preventDefault())
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    {/* Windows' animation-effects preference stands the springs down: motion
-        collapses transforms to instant and keeps the opacity fades. */}
-    <MotionConfig reducedMotion="user">
+    {/* The springs always run. Windows reports "reduce motion" for a plain
+        animation-effects-off preference, and this app was collapsing its
+        park glide to an instant jump on machines that do; the owner wants
+        the dial to travel, so the OS preference is deliberately not
+        consulted here. */}
+    <MotionConfig reducedMotion="never">
       <I18nProvider>
         <AppStateProvider>
           <TooltipProvider>

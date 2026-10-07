@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
-import { Activity, Globe, Network, type LucideIcon } from "lucide-react"
+import { Activity, ChevronDown, Globe, Network, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { flagFor } from "@/lib/flags"
 import { useI18n } from "@/lib/i18n"
@@ -68,6 +68,8 @@ export function Hero() {
   // Footer facts: where this machine appears from, read off its public
   // address. The lookup races its providers on the Rust side, and the last
   // answer is cached so a launch never starts on a dash.
+  const [geoNonce, setGeoNonce] = useState(0)
+  const [geoBusy, setGeoBusy] = useState(false)
   const [geo, setGeo] = useState<{ ip: string; place: string; isp: string } | null>(() => {
     try {
       const raw = localStorage.getItem("qc-geo")
@@ -79,12 +81,14 @@ export function Hero() {
   useEffect(() => {
     let alive = true
     let timer: number | undefined
+    setGeoBusy(true)
     const grab = (n: number) => {
       void netInfo()
         .then((v) => {
           if (!alive) return
           if (v && v.ip) {
             setGeo(v)
+            setGeoBusy(false)
             try {
               localStorage.setItem("qc-geo", JSON.stringify(v))
             } catch {
@@ -93,9 +97,11 @@ export function Hero() {
             return
           }
           if (n < 2) timer = window.setTimeout(() => grab(n + 1), 2500)
+          else setGeoBusy(false)
         })
         .catch(() => {
           if (alive && n < 2) timer = window.setTimeout(() => grab(n + 1), 2500)
+          else setGeoBusy(false)
         })
     }
     grab(0)
@@ -103,7 +109,7 @@ export function Hero() {
       alive = false
       if (timer) window.clearTimeout(timer)
     }
-  }, [connected])
+  }, [connected, geoNonce])
   const placeShown = geo?.place ? flagFor(geo.place) + geo.place : "-"
   const ipText = geo?.ip || "-"
 
@@ -223,7 +229,17 @@ export function Hero() {
 
       {/* the connection facts: three even columns on dividers */}
       <div className="mt-4 grid grid-cols-3 border-t border-line pt-4">
-        <Fact icon={Globe} label={t("yourLocation")} value={placeShown} />
+        <Fact
+          icon={Globe}
+          label={t("yourLocation")}
+          value={placeShown}
+          chevron
+          busy={geoBusy}
+          onClick={() => {
+            setGeoBusy(true)
+            setGeoNonce((n) => n + 1)
+          }}
+        />
         <Fact
           icon={Network}
           label={t("yourIp")}
@@ -244,6 +260,8 @@ export function Hero() {
 }
 
 /** One footer fact: icon tile, quiet label, one value line. */
+/** One footer fact: icon tile, quiet label, one value line. The location
+    cell carries a chevron and re-detects the address when tapped. */
 function Fact({
   icon: Icon,
   label,
@@ -251,6 +269,9 @@ function Fact({
   dot,
   className,
   valueClass,
+  chevron,
+  busy,
+  onClick,
 }: {
   icon: LucideIcon
   label: string
@@ -258,9 +279,12 @@ function Fact({
   dot?: boolean
   className?: string
   valueClass?: string
+  chevron?: boolean
+  busy?: boolean
+  onClick?: () => void
 }) {
-  return (
-    <div className={cn("flex min-w-0 items-center gap-2.5", className)}>
+  const body = (
+    <>
       <span className="grid size-[30px] shrink-0 place-items-center rounded-[8px] border border-line bg-white/[0.03] text-brand-strong">
         <Icon className="size-[15px]" aria-hidden />
       </span>
@@ -275,8 +299,30 @@ function Fact({
           </span>
         </div>
       </div>
-    </div>
+      {chevron && (
+        <ChevronDown
+          aria-hidden
+          className={cn(
+            "ms-auto size-4 shrink-0 text-txt3 transition-transform duration-300",
+            busy && "rotate-180",
+          )}
+        />
+      )}
+    </>
   )
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        className={cn("flex min-w-0 items-center gap-2.5 text-start", className)}
+      >
+        {body}
+      </button>
+    )
+  }
+  return <div className={cn("flex min-w-0 items-center gap-2.5", className)}>{body}</div>
 }
 
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
