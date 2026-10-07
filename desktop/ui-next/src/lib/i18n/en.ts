@@ -178,7 +178,6 @@ export const en = {
   "tabSettings": "Settings",
   "tabSpeed": "Speed",
   "talking": "Talking to the server.",
-  "clickToConnect": "Click to connect to QuotaVPN",
   "testPort": "Check server",
   "thruTitle": "Throughput",
   "trGame": "Game",

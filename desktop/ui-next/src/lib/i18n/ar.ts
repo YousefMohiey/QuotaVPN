@@ -181,7 +181,6 @@ export const ar = {
   "tabSettings": "الإعدادات",
   "tabSpeed": "السرعة",
   "talking": "جارٍ التواصل مع الخادم…",
-  "clickToConnect": "اضغط للاتصال بـQuotaVPN",
   "testPort": "فحص الخادم",
   "thruTitle": "السرعة الفعلية",
   "trGame": "ألعاب",

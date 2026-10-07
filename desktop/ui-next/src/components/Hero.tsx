@@ -183,7 +183,7 @@ export function Hero() {
               transition={{ duration: 0.3, ease: EASE_OUT }}
               className={cn(!textOpen && "pointer-events-none")}
             >
-              <div ref={textRef} className="mt-[18px] flex flex-col items-center pt-2">
+              <div ref={textRef} className="mt-[18px] flex flex-col items-center">
                 <button
                   type="button"
                   onClick={toggle}
@@ -191,7 +191,6 @@ export function Hero() {
                 >
                   {t("connect")}
                 </button>
-                <p className="mt-1.5 text-[13px] text-txt3">{t("clickToConnect")}</p>
               </div>
             </motion.div>
           </motion.div>
