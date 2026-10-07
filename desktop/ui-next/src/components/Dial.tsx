@@ -44,8 +44,9 @@ export function Dial({
           className="absolute -inset-px rounded-full border-2 border-transparent border-t-[var(--brand)] [animation:spin_1.15s_linear_infinite]"
         />
       )}
-      <span className="flex flex-col items-center gap-2.5">
+      <span className="flex flex-col items-center gap-2">
         <Power className="size-[38px]" strokeWidth={1.7} aria-hidden />
+        <span className="text-[15px] font-semibold tracking-[-0.01em]">{label}</span>
       </span>
     </motion.button>
   )

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { Activity, Globe, Network, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { flagFor } from "@/lib/flags"
 import { useI18n } from "@/lib/i18n"
 import { useApp } from "@/state/app"
 import { api, netInfo } from "@/lib/ipc"
@@ -97,6 +98,7 @@ export function Hero() {
     }
   }, [connected, exit])
   const placeText = connected ? exit?.place || srvPlace || displayHost(serverIp) : srvPlace || "-"
+  const placeShown = flagFor(placeText) + placeText
   const ipText = exit?.ip || "-"
 
   // The dial starts centered and parks left the moment Connect is pressed.
@@ -132,33 +134,6 @@ export function Hero() {
     setDialLeft(false)
   }, [active, phase])
 
-  const [textOpen, setTextOpen] = useState(true)
-  useEffect(() => {
-    if (dialLeft) {
-      setTextOpen(false)
-      return
-    }
-    // the text waits for the dial to land before it opens
-    const id = window.setTimeout(() => setTextOpen(true), 560)
-    return () => window.clearTimeout(id)
-  }, [dialLeft])
-
-  const textRef = useRef<HTMLDivElement>(null)
-  const [textH, setTextH] = useState(0)
-  useEffect(() => {
-    const el = textRef.current
-    if (!el) return
-    const measure = () => setTextH(el.offsetHeight)
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-  // The text keeps its space in flow while parked, so the card height never
-  // moves and the glide never fights a reflow. The dial drops by half the
-  // block it no longer shares with, landing centered on the zone.
-  const dialDrop = (18 + textH) / 2
-
   useTick(1000, connected)
 
   return (
@@ -169,30 +144,8 @@ export function Hero() {
           transition={SPRING}
           className={cn("flex w-full items-center", dialLeft ? "justify-start gap-6" : "justify-center")}
         >
-          <motion.div layout transition={SPRING} className="flex shrink-0 flex-col items-center text-center">
-            <motion.div
-              animate={{ y: dialLeft ? dialDrop : 0 }}
-              transition={SPRING}
-              className="flex flex-col items-center"
-            >
-              <Dial state={state} onClick={toggle} disabled={busy} />
-            </motion.div>
-            <motion.div
-              initial={false}
-              animate={{ opacity: textOpen ? 1 : 0 }}
-              transition={{ duration: 0.3, ease: EASE_OUT }}
-              className={cn(!textOpen && "pointer-events-none")}
-            >
-              <div ref={textRef} className="mt-[18px] flex flex-col items-center">
-                <button
-                  type="button"
-                  onClick={toggle}
-                  className="text-[24px] font-semibold tracking-[-0.01em] text-txt transition-colors duration-200 hover:text-brand-strong"
-                >
-                  {t("connect")}
-                </button>
-              </div>
-            </motion.div>
+          <motion.div layout transition={SPRING} className="flex shrink-0 items-center justify-center">
+            <Dial state={state} onClick={toggle} disabled={busy} />
           </motion.div>
 
           <AnimatePresence mode="popLayout">
@@ -218,10 +171,7 @@ export function Hero() {
                   </span>
                 </div>
 
-                <h1 className="mt-2 truncate text-[24px] font-semibold tracking-[-0.01em] text-txt">
-                  {connected ? t("disconnect") : t("working")}
-                </h1>
-                <p className="mt-1 truncate text-[13px] text-txt3" dir="auto">
+                <p className="mt-2 truncate text-[15px] font-medium text-txt" dir="auto">
                   {connected ? hostLine : t("talking")}
                 </p>
                 {status ? (
@@ -246,7 +196,7 @@ export function Hero() {
                             value={sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
                             sub={"⁨↓ " + fmtBytes(rx) + "⁩   ⁨↑ " + fmtBytes(tx) + "⁩"}
                           />
-                          <StatTile label={t("srvLocation")} value={placeText} sub={serverAddr || ipText} />
+                          <StatTile label={t("srvLocation")} value={placeShown} sub={serverAddr || ipText} />
                         </div>
                       </div>
                     </motion.div>
@@ -260,7 +210,7 @@ export function Hero() {
 
       {/* the connection facts: a calm strip along the card's floor */}
       <div className="mt-4 grid grid-cols-3 gap-4 border-t border-line pt-4">
-        <Fact icon={Globe} label={t("srvLocation")} value={placeText} />
+        <Fact icon={Globe} label={t("srvLocation")} value={placeShown} />
         <Fact icon={Network} label={t("yourIp")} value={ipText} />
         <Fact
           icon={Activity}
