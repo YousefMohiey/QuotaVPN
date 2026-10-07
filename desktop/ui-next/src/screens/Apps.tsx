@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { ArrowLeft, Check, Search } from "lucide-react"
+import { Check, ChevronRight, Info, Search } from "lucide-react"
 import { Segmented } from "@/components/Segmented"
 import { useApp, type AppsMode } from "@/state/app"
 import { useI18n } from "@/lib/i18n"
+import { useAppIcons } from "@/lib/appicons"
 import { cn } from "@/lib/utils"
 
 type Row = { pkg: string; label: string }
 
-// The App routing page in the app's card language: a real page header, one
-// controls card (mode, search, bulk actions, live summary), then the list as
-// rows on dividers with a checkbox per app. Picking any row while "All apps"
-// is on flips the mode instead of ignoring the tap.
+// The App routing page in the app's card language: a breadcrumb and a real
+// page header, one controls card (mode, search, bulk actions), then the
+// applications card whose rows carry each app's own icon and checkbox.
+// Picking any row while "All apps" is on flips the mode instead of ignoring
+// the tap.
 export function Apps({ onBack }: { onBack: () => void }) {
   const { t } = useI18n()
   const { appsMode, setAppsMode, apps, setApps, loadApps } = useApp()
@@ -87,6 +89,8 @@ export function Apps({ onBack }: { onBack: () => void }) {
     setApps(filtered.map((r) => r.pkg))
   }
 
+  const iconOf = useAppIcons(useMemo(() => list.map((r) => r.pkg), [list]))
+
   const activeIdx = filtered.length === 0 ? 0 : Math.min(focusIdx, filtered.length - 1)
   const q = query.trim()
   const summary = loading
@@ -104,22 +108,30 @@ export function Apps({ onBack }: { onBack: () => void }) {
   return (
     <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-3">
       <div className="px-1">
-        <button
-          type="button"
-          onClick={onBack}
-          className="mb-1.5 inline-flex items-center gap-1.5 rounded-[10px] px-2 py-1 text-[12px] text-txt3 transition-colors hover:bg-white/[0.04] hover:text-txt2"
-        >
-          <ArrowLeft className="size-3.5" aria-hidden />
-          {t("back")}
-        </button>
-        <h1 className="text-[30px] font-semibold leading-tight text-txt">{t("routing")}</h1>
-        <p className="mt-1 text-[15px] text-txt2">{t("appsHint")}</p>
+        <nav aria-label="Breadcrumb" className="flex items-center gap-0.5 text-[12px]">
+          <button
+            type="button"
+            onClick={onBack}
+            className="rounded-[8px] px-1.5 py-0.5 text-txt3 transition-colors hover:bg-white/[0.04] hover:text-txt2"
+          >
+            {t("tabHome")}
+          </button>
+          <ChevronRight className="size-3.5 shrink-0 text-txt3" aria-hidden />
+          <span className="px-1.5 py-0.5 text-txt2">{t("routing")}</span>
+        </nav>
+        <h1 className="mt-2 text-[30px] font-semibold leading-tight text-txt">{t("routing")}</h1>
+        <p className="mt-1 text-[15px] text-txt2">{t("appsBody")}</p>
+        <p className="mt-0.5 text-[13px] text-txt3">{t("appsHint")}</p>
       </div>
 
       {/* the controls stay up while the list scrolls beneath them */}
       <div className="sticky top-0 z-10 bg-[var(--bg)] pb-3">
         <div className="overflow-hidden rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)]">
-          <div className="flex flex-wrap items-center justify-between gap-3 p-3">
+          <div className="flex flex-wrap items-center gap-2 p-3">
+            <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-txt">
+              {t("appsModeLbl")}
+              <Info className="size-3.5 text-txt3" aria-hidden />
+            </span>
             <Segmented
               id="apps-mode"
               value={appsMode}
@@ -130,53 +142,61 @@ export function Apps({ onBack }: { onBack: () => void }) {
                 { value: "block", label: t("appsExcept") },
               ]}
             />
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative">
-                <Search className="absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-txt3" aria-hidden />
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") setQuery("")
-                    else if (e.key === "ArrowDown") {
-                      e.preventDefault()
-                      moveFocus(0)
-                    }
-                  }}
-                  placeholder={t("appsSearch")}
-                  aria-label={t("appsSearch")}
-                  className="h-9 w-[220px] rounded-[10px] border border-line bg-white/[0.02] ps-8 text-[13px] text-txt outline-none transition-colors placeholder:text-txt3 focus:border-[var(--brand-line)]"
-                />
-              </div>
-              <button
-                type="button"
-                disabled={bulkOff || filtered.length === 0}
-                onClick={selectMatches}
-                className="h-8 rounded-[10px] px-2.5 text-[12px] text-txt2 transition-colors hover:bg-white/[0.04] hover:text-txt disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-txt2"
-              >
-                {q
-                  ? t("appsSelectMatches").replace("{m}", String(filtered.length))
-                  : t("appsSelectAll").replace("{t}", String(list.length))}
-              </button>
-              <button
-                type="button"
-                disabled={bulkOff || apps.length === 0}
-                onClick={() => setApps([])}
-                className="h-8 rounded-[10px] px-2.5 text-[12px] text-txt2 transition-colors hover:bg-white/[0.04] hover:text-txt disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-txt2"
-              >
-                {t("appsClearSel")}
-              </button>
+            <span aria-hidden className="hidden h-6 w-px shrink-0 bg-white/[0.08] lg:block" />
+            <div className="relative min-w-[120px] flex-1">
+              <Search className="absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-txt3" aria-hidden />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setQuery("")
+                  else if (e.key === "ArrowDown") {
+                    e.preventDefault()
+                    moveFocus(0)
+                  }
+                }}
+                placeholder={t("appsSearch")}
+                aria-label={t("appsSearch")}
+                className="h-9 w-full rounded-[10px] border border-line bg-white/[0.02] ps-8 text-[13px] text-txt outline-none transition-colors placeholder:text-txt3 focus:border-[var(--brand-line)]"
+              />
             </div>
+            <button
+              type="button"
+              disabled={bulkOff || filtered.length === 0}
+              onClick={selectMatches}
+              className="h-9 shrink-0 rounded-[10px] border border-[var(--brand-line)] px-2.5 text-[12px] text-brand-strong transition-colors hover:bg-[var(--brand-bg)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              {q
+                ? t("appsSelectMatches").replace("{m}", String(filtered.length))
+                : t("appsSelectAll").replace("{t}", String(list.length))}
+            </button>
+            <button
+              type="button"
+              disabled={bulkOff || apps.length === 0}
+              onClick={() => setApps([])}
+              className="h-9 shrink-0 rounded-[10px] border border-line px-2.5 text-[12px] text-[rgb(207_112_120/0.8)] transition-colors hover:border-[var(--red-line)] hover:bg-[var(--red-bg)] hover:text-[var(--red)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line disabled:hover:bg-transparent disabled:hover:text-[rgb(207_112_120/0.8)]"
+            >
+              {t("appsClearSel")}
+            </button>
           </div>
-          <p aria-live="polite" className="border-t border-line px-4 py-2 text-[12px] text-txt3" dir="auto">
-            {summary}
-          </p>
         </div>
       </div>
 
-      <div>
+      <div className="overflow-hidden rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)]">
+        <div className="flex flex-wrap items-start justify-between gap-3 px-4 pb-3 pt-3.5">
+          <div className="min-w-0">
+            <h2 className="text-[15px] font-semibold text-txt">{t("appsListTitle")}</h2>
+            <p aria-live="polite" className="mt-0.5 text-[12px] text-txt3" dir="auto">
+              {summary}
+            </p>
+          </div>
+          <span className="shrink-0 text-[12px] tabular-nums text-txt3" dir="auto">
+            {apps.length} / {list.length} {t("selOf")}
+          </span>
+        </div>
+
         <div
-          className="flex flex-col gap-2"
+          className="flex flex-col gap-2 px-3 pb-3"
           role="listbox"
           aria-multiselectable="true"
           onFocus={() => setListActive(true)}
@@ -185,11 +205,12 @@ export function Apps({ onBack }: { onBack: () => void }) {
           }}
         >
           {filtered.length === 0 ? (
-            <p className="px-4 py-6 text-[12.5px] text-txt3">{loading ? t("appsLoading") : t("appsEmpty")}</p>
+            <p className="px-1 py-6 text-[12.5px] text-txt3">{loading ? t("appsLoading") : t("appsEmpty")}</p>
           ) : (
             filtered.map((row, i) => {
               const on = apps.includes(row.pkg)
               const focused = i === activeIdx && listActive
+              const icon = iconOf(row.pkg)
               return (
                 <button
                   key={row.pkg}
@@ -221,11 +242,23 @@ export function Apps({ onBack }: { onBack: () => void }) {
                     }
                   }}
                   className={cn(
-                    "flex w-full scroll-mt-36 items-center gap-3 rounded-[12px] border border-line bg-[rgb(21_29_46/0.62)] px-4 py-2.5 text-start transition-colors hover:border-line-strong focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-line)]",
+                    "flex w-full scroll-mt-36 items-center gap-3 rounded-[12px] border border-line bg-[rgb(21_29_46/0.62)] px-3.5 py-2.5 text-start transition-colors hover:border-line-strong focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-line)]",
                     appsMode === "all" && "opacity-70",
                     on ? "border-[var(--brand-line)] bg-[var(--brand-bg)]" : focused && "bg-white/[0.04]",
                   )}
                 >
+                  <span
+                    aria-hidden
+                    className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-[8px] border border-line bg-white/[0.03]"
+                  >
+                    {icon ? (
+                      <img src={icon} alt="" draggable={false} className="size-5 select-none" />
+                    ) : (
+                      <span className="text-[12px] font-semibold uppercase text-txt3">
+                        {row.label.slice(0, 1)}
+                      </span>
+                    )}
+                  </span>
                   <span className="min-w-0 flex-1">
                     <span className={cn("block truncate text-[13.5px]", on ? "text-txt" : "text-txt2")} dir="auto">
                       {row.label}

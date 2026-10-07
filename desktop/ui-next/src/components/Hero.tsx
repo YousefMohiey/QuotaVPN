@@ -65,41 +65,47 @@ export function Hero() {
     }
   }, [connected, serverIp])
 
-  // Footer facts: the exit address while connected, plus the server's
-  // location (remembered across sessions so it survives a disconnect).
-  const [exit, setExit] = useState<{ ip: string; place: string; isp: string } | null>(null)
-  const [srvPlace, setSrvPlace] = useState<string>(() => {
+  // Footer facts: where this machine appears from, read off its public
+  // address. The lookup races its providers on the Rust side, and the last
+  // answer is cached so a launch never starts on a dash.
+  const [geo, setGeo] = useState<{ ip: string; place: string; isp: string } | null>(() => {
     try {
-      return localStorage.getItem("qc-srv-place") || ""
+      const raw = localStorage.getItem("qc-geo")
+      return raw ? (JSON.parse(raw) as { ip: string; place: string; isp: string }) : null
     } catch {
-      return ""
+      return null
     }
   })
   useEffect(() => {
     let alive = true
-    void netInfo()
-      .then((n) => {
-        if (alive && n) setExit({ ip: n.ip, place: n.place, isp: n.isp })
-      })
-      .catch(() => {
-        /* the facts fall back to what we already know */
-      })
+    let timer: number | undefined
+    const grab = (n: number) => {
+      void netInfo()
+        .then((v) => {
+          if (!alive) return
+          if (v && v.ip) {
+            setGeo(v)
+            try {
+              localStorage.setItem("qc-geo", JSON.stringify(v))
+            } catch {
+              /* private mode */
+            }
+            return
+          }
+          if (n < 2) timer = window.setTimeout(() => grab(n + 1), 2500)
+        })
+        .catch(() => {
+          if (alive && n < 2) timer = window.setTimeout(() => grab(n + 1), 2500)
+        })
+    }
+    grab(0)
     return () => {
       alive = false
+      if (timer) window.clearTimeout(timer)
     }
   }, [connected])
-  useEffect(() => {
-    if (!connected || !exit?.place) return
-    setSrvPlace(exit.place)
-    try {
-      localStorage.setItem("qc-srv-place", exit.place)
-    } catch {
-      /* private mode */
-    }
-  }, [connected, exit])
-  const placeText = connected ? exit?.place || srvPlace || displayHost(serverIp) : srvPlace || "-"
-  const placeShown = flagFor(placeText) + placeText
-  const ipText = exit?.ip || "-"
+  const placeShown = geo?.place ? flagFor(geo.place) + geo.place : "-"
+  const ipText = geo?.ip || "-"
 
   // The dial starts centered and parks left the moment Connect is pressed.
   // The reading zone fades in beside it only after the slide has had room
@@ -142,10 +148,10 @@ export function Hero() {
         <motion.div
           layout
           transition={SPRING}
-          className={cn("flex w-full items-center", dialLeft ? "justify-start gap-6" : "justify-center")}
+          className={cn("flex w-full items-center", dialLeft ? "justify-start gap-8" : "justify-center")}
         >
           <motion.div layout transition={SPRING} className="flex shrink-0 items-center justify-center">
-            <Dial state={state} onClick={toggle} disabled={busy} />
+            <Dial state={state} onClick={toggle} disabled={busy && phase !== "connecting"} />
           </motion.div>
 
           <AnimatePresence mode="popLayout">
@@ -175,7 +181,7 @@ export function Hero() {
                   {connected ? hostLine : t("talking")}
                 </p>
                 {status ? (
-                  <div className="mt-2 max-w-[520px] text-[11.5px] leading-snug text-txt3">{status}</div>
+                  <div className="mt-2 max-w-[520px] select-text text-[11.5px] leading-snug text-txt3">{status}</div>
                 ) : null}
 
                 <AnimatePresence>
@@ -208,15 +214,22 @@ export function Hero() {
         </motion.div>
       </div>
 
-      {/* the connection facts: a calm strip along the card's floor */}
-      <div className="mt-4 grid grid-cols-3 gap-4 border-t border-line pt-4">
-        <Fact icon={Globe} label={t("srvLocation")} value={placeShown} />
-        <Fact icon={Network} label={t("yourIp")} value={ipText} />
+      {/* the connection facts: three even columns on dividers */}
+      <div className="mt-4 grid grid-cols-3 border-t border-line pt-4">
+        <Fact icon={Globe} label={t("yourLocation")} value={placeShown} />
+        <Fact
+          icon={Network}
+          label={t("yourIp")}
+          value={ipText}
+          className="border-s border-line ps-4"
+          valueClass="select-text"
+        />
         <Fact
           icon={Activity}
           label={t("statusLbl")}
           value={connected ? t("connected") : t("notConnected")}
           dot={connected}
+          className="border-s border-line ps-4"
         />
       </div>
     </section>
@@ -229,14 +242,18 @@ function Fact({
   label,
   value,
   dot,
+  className,
+  valueClass,
 }: {
   icon: LucideIcon
   label: string
   value: string
   dot?: boolean
+  className?: string
+  valueClass?: string
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-2.5">
+    <div className={cn("flex min-w-0 items-center gap-2.5", className)}>
       <span className="grid size-[30px] shrink-0 place-items-center rounded-[8px] border border-line bg-white/[0.03] text-brand-strong">
         <Icon className="size-[15px]" aria-hidden />
       </span>
@@ -246,7 +263,7 @@ function Fact({
           {dot !== undefined && (
             <span className={cn("size-[6px] shrink-0 rounded-full", dot ? "bg-[var(--green)]" : "bg-[var(--red)]")} aria-hidden />
           )}
-          <span className="truncate" dir="auto">
+          <span className={cn("truncate", valueClass)} dir="auto">
             {value}
           </span>
         </div>

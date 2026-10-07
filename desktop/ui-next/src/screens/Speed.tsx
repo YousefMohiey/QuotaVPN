@@ -868,10 +868,9 @@ export function buildVerdicts(r: Result, t: (k: StrKey) => string): Verdict[] {
   return out
 }
 
-/** The one button that matters here: a frosted glass disc with the action
-    inside, no ring, no arc (owner call: the blue line around it is gone).
-    A press still answers: the disc flashes, a pulse leaves the edge, and
-    the icon and label swap through a small morph. */
+/** The one button that matters here: the Home dial's frame, a translucent
+    glass ring with the action inside. A press still answers: the ring
+    flashes softly and the icon and label swap through a small morph. */
 function StartCircle({
   running,
   done,
@@ -885,11 +884,9 @@ function StartCircle({
 }) {
   const { t } = useI18n()
   const label = running ? t("stop") : done ? t("startAgain") : t("startTest")
-  const [pulse, setPulse] = useState(0)
   const [flash, setFlash] = useState(0)
 
   const press = () => {
-    setPulse((p) => p + 1)
     setFlash((f) => f + 1)
     if (running) onStop()
     else onStart()
@@ -900,32 +897,24 @@ function StartCircle({
       type="button"
       onClick={press}
       aria-label={label}
-      whileTap={{ scale: 0.97 }}
-      transition={{ type: "spring", stiffness: 520, damping: 30 }}
-      className="group relative grid size-[208px] place-items-center rounded-full"
+      whileTap={{ scale: 0.985 }}
+      transition={{ type: "spring", stiffness: 460, damping: 32 }}
+      className={cn(
+        /* the same frame as the Home dial: translucent fill, one lit line */
+        "group relative grid size-[208px] place-items-center rounded-full border transition-colors duration-300",
+        "bg-white/[0.05] backdrop-blur-[14px] backdrop-saturate-150",
+        "shadow-[inset_0_1px_0_rgb(255_255_255/0.10)]",
+        running
+          ? "border-[rgb(255_255_255/0.26)]"
+          : "border-[rgb(255_255_255/0.14)] hover:border-[rgb(255_255_255/0.26)]",
+      )}
     >
-      {/* the disc: same glass as the cards, no outline */}
-      <span
-        aria-hidden
-        className={cn(
-          "absolute inset-[16px] rounded-full bg-[rgb(255_255_255/0.05)] shadow-[inset_0_1px_0_0_rgb(255_255_255/0.09)] backdrop-blur-xl transition-colors duration-200",
-          "group-hover:bg-[rgb(255_255_255/0.075)]",
-          running && "bg-[rgb(255_255_255/0.075)]",
-        )}
-      />
-      {/* press feedback: a soft flash inside the disc, a pulse outside it */}
+      {/* press feedback: a soft flash inside the glass */}
       {flash > 0 && (
         <span
           key={flash}
           aria-hidden
-          className="qc-flash pointer-events-none absolute inset-[16px] rounded-full bg-[rgb(255_255_255/0.09)] opacity-0"
-        />
-      )}
-      {pulse > 0 && (
-        <span
-          key={pulse}
-          aria-hidden
-          className="qc-pulse pointer-events-none absolute inset-[8px] rounded-full border-[1.5px] border-[rgb(46_123_246/0.7)] opacity-0"
+          className="qc-flash pointer-events-none absolute inset-px rounded-full bg-[rgb(255_255_255/0.09)] opacity-0"
         />
       )}
       <span className="relative flex flex-col items-center gap-2.5">

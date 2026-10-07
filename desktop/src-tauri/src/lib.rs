@@ -1066,67 +1066,308 @@ fn join_place(city: Option<&str>, country: Option<&str>) -> String {
     }
 }
 
+/// One provider's answer. The two JSON services carry the provider and the
+/// place; Cloudflare's trace carries the bare address.
+async fn net_from_ipwho(client: &reqwest::Client) -> Option<NetInfo> {
+    let r = client.get("https://ipwho.is/").send().await.ok()?;
+    let v = r.json::<serde_json::Value>().await.ok()?;
+    if v.get("success").and_then(|x| x.as_bool()) == Some(false) {
+        return None;
+    }
+    let ip = v.get("ip").and_then(|x| x.as_str())?.to_string();
+    if ip.is_empty() {
+        return None;
+    }
+    let isp = v
+        .pointer("/connection/isp")
+        .and_then(|x| x.as_str())
+        .or_else(|| v.pointer("/connection/org").and_then(|x| x.as_str()))
+        .unwrap_or("")
+        .to_string();
+    let place = join_place(
+        v.get("city").and_then(|x| x.as_str()),
+        v.get("country").and_then(|x| x.as_str()),
+    );
+    Some(NetInfo { ip, isp, place })
+}
+
+async fn net_from_ipapi(client: &reqwest::Client) -> Option<NetInfo> {
+    let r = client.get("https://ipapi.co/json/").send().await.ok()?;
+    let v = r.json::<serde_json::Value>().await.ok()?;
+    let ip = v.get("ip").and_then(|x| x.as_str())?.to_string();
+    if ip.is_empty() {
+        return None;
+    }
+    let isp = v.get("org").and_then(|x| x.as_str()).unwrap_or("").to_string();
+    let place = join_place(
+        v.get("city").and_then(|x| x.as_str()),
+        v.get("country_name").and_then(|x| x.as_str()),
+    );
+    Some(NetInfo { ip, isp, place })
+}
+
+async fn net_from_cf(client: &reqwest::Client) -> Option<NetInfo> {
+    let r = client.get("https://cloudflare.com/cdn-cgi/trace").send().await.ok()?;
+    let body = r.text().await.ok()?;
+    let ip = body.lines().find_map(|l| l.strip_prefix("ip="))?.trim().to_string();
+    if ip.is_empty() {
+        return None;
+    }
+    Some(NetInfo { ip, isp: String::new(), place: String::new() })
+}
+
 #[tauri::command]
 async fn net_info() -> Option<NetInfo> {
+    // The two JSON providers are raced against each other: whichever answers
+    // first wins and a blocked or slow one simply hands the job over. Waiting
+    // on them one after another is what used to leave this line lagging
+    // seconds behind the rest of the window. Cloudflare backs both up with
+    // the bare address.
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(8))
+        .timeout(std::time::Duration::from_secs(6))
         .user_agent("QuotaVPN")
         .build()
         .ok()?;
+    tokio::select! {
+        r = net_from_ipwho(&client) => r.or(net_from_ipapi(&client).await).or(net_from_cf(&client).await),
+        r = net_from_ipapi(&client) => r.or(net_from_ipwho(&client).await).or(net_from_cf(&client).await),
+    }
+}
 
-    if let Ok(r) = client.get("https://ipwho.is/").send().await {
-        if let Ok(v) = r.json::<serde_json::Value>().await {
-            if v.get("success").and_then(|x| x.as_bool()) != Some(false) {
-                if let Some(ip) = v.get("ip").and_then(|x| x.as_str()) {
-                    if !ip.is_empty() {
-                        let isp = v
-                            .pointer("/connection/isp")
-                            .and_then(|x| x.as_str())
-                            .or_else(|| v.pointer("/connection/org").and_then(|x| x.as_str()))
-                            .unwrap_or("")
-                            .to_string();
-                        let place = join_place(
-                            v.get("city").and_then(|x| x.as_str()),
-                            v.get("country").and_then(|x| x.as_str()),
-                        );
-                        return Some(NetInfo { ip: ip.to_string(), isp, place });
+/// One app's icon as a base64 PNG, pulled straight from the executable's own
+/// resources. An empty string means the shell had nothing readable for it and
+/// the row falls back to a letter tile.
+#[derive(serde::Serialize)]
+struct AppIconOut {
+    pkg: String,
+    png: String,
+}
+
+#[tauri::command]
+async fn app_icons(pkgs: Vec<String>) -> Vec<AppIconOut> {
+    tauri::async_runtime::spawn_blocking(move || {
+        // The routing list carries process names; the icons live on disk, so
+        // resolve every name to its executable's full path first. A name we
+        // cannot reach (elevated or protected) simply yields no icon.
+        let paths = process_paths();
+        pkgs.into_iter()
+            .map(|pkg| {
+                let path = if pkg.contains('\\') || pkg.contains('/') {
+                    pkg.clone()
+                } else {
+                    paths.get(&pkg.to_ascii_lowercase()).cloned().unwrap_or_default()
+                };
+                let png = if path.is_empty() {
+                    String::new()
+                } else {
+                    icon_png(&path).map(|bytes| b64(&bytes)).unwrap_or_default()
+                };
+                AppIconOut { pkg, png }
+            })
+            .collect()
+    })
+    .await
+    .unwrap_or_default()
+}
+
+/// Full path per running process name, so the icon reader has a real file to
+/// point at. Processes we cannot open are absent, and their rows tile.
+#[cfg(windows)]
+fn process_paths() -> std::collections::HashMap<String, String> {
+    use windows::Win32::Foundation::CloseHandle;
+    use windows::Win32::System::Diagnostics::ToolHelp::{
+        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
+        TH32CS_SNAPPROCESS,
+    };
+    use windows::Win32::System::Threading::{
+        OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
+        PROCESS_QUERY_LIMITED_INFORMATION,
+    };
+
+    let mut map = std::collections::HashMap::new();
+    unsafe {
+        let snap = match CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) {
+            Ok(h) => h,
+            Err(_) => return map,
+        };
+        let mut entry = PROCESSENTRY32W {
+            dwSize: std::mem::size_of::<PROCESSENTRY32W>() as u32,
+            ..Default::default()
+        };
+        if Process32FirstW(snap, &mut entry).is_ok() {
+            loop {
+                let name = String::from_utf16_lossy(&entry.szExeFile)
+                    .trim_end_matches('\0')
+                    .to_ascii_lowercase();
+                if !name.is_empty() && !map.contains_key(&name) {
+                    if let Ok(h) =
+                        OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, entry.th32ProcessID)
+                    {
+                        let mut buf = [0u16; 1024];
+                        let mut len = buf.len() as u32;
+                        if QueryFullProcessImageNameW(
+                            h,
+                            PROCESS_NAME_WIN32,
+                            windows::core::PWSTR(buf.as_mut_ptr()),
+                            &mut len,
+                        )
+                        .is_ok()
+                        {
+                            map.insert(name, String::from_utf16_lossy(&buf[..len as usize]));
+                        }
+                        let _ = CloseHandle(h);
                     }
                 }
-            }
-        }
-    }
-
-    if let Ok(r) = client.get("https://ipapi.co/json/").send().await {
-        if let Ok(v) = r.json::<serde_json::Value>().await {
-            if let Some(ip) = v.get("ip").and_then(|x| x.as_str()) {
-                if !ip.is_empty() {
-                    let isp = v.get("org").and_then(|x| x.as_str()).unwrap_or("").to_string();
-                    let place = join_place(
-                        v.get("city").and_then(|x| x.as_str()),
-                        v.get("country_name").and_then(|x| x.as_str()),
-                    );
-                    return Some(NetInfo { ip: ip.to_string(), isp, place });
+                if Process32NextW(snap, &mut entry).is_err() {
+                    break;
                 }
             }
         }
+        let _ = CloseHandle(snap);
     }
+    map
+}
 
-    // Last resort: Cloudflare's trace endpoint, on the same host the speed
-    // test itself uses. It carries no provider, but an address beats a dash.
-    if let Ok(t) = client.get("https://cloudflare.com/cdn-cgi/trace").send().await {
-        if let Ok(body) = t.text().await {
-            let ip = body
-                .lines()
-                .find_map(|l| l.strip_prefix("ip="))
-                .unwrap_or("")
-                .trim()
-                .to_string();
-            if !ip.is_empty() {
-                return Some(NetInfo { ip, isp: String::new(), place: String::new() });
-            }
+#[cfg(not(windows))]
+fn process_paths() -> std::collections::HashMap<String, String> {
+    std::collections::HashMap::new()
+}
+
+/// A small base64 so icon bytes can ride inside JSON without a new crate.
+fn b64(data: &[u8]) -> String {
+    const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity((data.len() + 2) / 3 * 4);
+    for c in data.chunks(3) {
+        let n = ((c[0] as u32) << 16)
+            | ((c.get(1).copied().unwrap_or(0) as u32) << 8)
+            | c.get(2).copied().unwrap_or(0) as u32;
+        out.push(T[((n >> 18) & 63) as usize] as char);
+        out.push(T[((n >> 12) & 63) as usize] as char);
+        out.push(if c.len() > 1 { T[((n >> 6) & 63) as usize] as char } else { '=' });
+        out.push(if c.len() > 2 { T[(n & 63) as usize] as char } else { '=' });
+    }
+    out
+}
+
+/// Read a GDI bitmap into raw bytes at the requested depth.
+#[cfg(windows)]
+unsafe fn read_dib(hbm: windows::Win32::Graphics::Gdi::HBITMAP, w: i32, h: i32, bpp: u16) -> Option<Vec<u8>> {
+    use windows::Win32::Graphics::Gdi::{
+        CreateCompatibleDC, DeleteDC, GetDIBits, BITMAPINFO, BITMAPINFOHEADER, BI_RGB,
+        DIB_RGB_COLORS,
+    };
+    let mut bi = BITMAPINFO::default();
+    bi.bmiHeader.biSize = std::mem::size_of::<BITMAPINFOHEADER>() as u32;
+    bi.bmiHeader.biWidth = w;
+    bi.bmiHeader.biHeight = -h; // top-down rows
+    bi.bmiHeader.biPlanes = 1;
+    bi.bmiHeader.biBitCount = bpp;
+    bi.bmiHeader.biCompression = BI_RGB.0;
+    let row = ((w as usize * bpp as usize + 31) / 32) * 4;
+    let mut buf = vec![0u8; row * h as usize];
+    let dc = CreateCompatibleDC(None);
+    if dc.0.is_null() {
+        return None;
+    }
+    let lines = GetDIBits(dc, hbm, 0, h as u32, Some(buf.as_mut_ptr() as *mut _), &mut bi, DIB_RGB_COLORS);
+    let _ = DeleteDC(dc);
+    if lines == 0 {
+        return None;
+    }
+    Some(buf)
+}
+
+/// The executable's own icon (the shell's large size, 32px) as PNG bytes.
+#[cfg(windows)]
+fn icon_png(path: &str) -> Option<Vec<u8>> {
+    use windows::core::PCWSTR;
+    use windows::Win32::Graphics::Gdi::{DeleteObject, GetObjectW, BITMAP, HGDIOBJ};
+    use windows::Win32::Storage::FileSystem::FILE_ATTRIBUTE_NORMAL;
+    use windows::Win32::UI::Shell::{SHGetFileInfoW, SHFILEINFOW, SHGFI_ICON, SHGFI_LARGEICON};
+    use windows::Win32::UI::WindowsAndMessaging::{DestroyIcon, GetIconInfo, ICONINFO};
+
+    unsafe {
+        // The shell helpers want COM up on the thread that calls them.
+        let _ = windows::Win32::System::Com::CoInitializeEx(
+            None,
+            windows::Win32::System::Com::COINIT_APARTMENTTHREADED,
+        );
+        let wide: Vec<u16> = path.encode_utf16().chain(std::iter::once(0)).collect();
+        let mut shfi = SHFILEINFOW::default();
+        let got = SHGetFileInfoW(
+            PCWSTR(wide.as_ptr()),
+            FILE_ATTRIBUTE_NORMAL,
+            Some(&mut shfi),
+            std::mem::size_of::<SHFILEINFOW>() as u32,
+            SHGFI_ICON | SHGFI_LARGEICON,
+        );
+        if got == 0 || shfi.hIcon.is_invalid() {
+            return None;
         }
+        let hicon = shfi.hIcon;
+        let out = (|| {
+            let mut ii = ICONINFO::default();
+            GetIconInfo(hicon, &mut ii).ok()?;
+            let res = (|| {
+                let color = if !ii.hbmColor.0.is_null() { ii.hbmColor } else { ii.hbmMask };
+                let mut bm = BITMAP::default();
+                if GetObjectW(
+                    HGDIOBJ(color.0),
+                    std::mem::size_of::<BITMAP>() as i32,
+                    Some(&mut bm as *mut _ as *mut _),
+                ) == 0
+                {
+                    return None;
+                }
+                let (w, h) = (bm.bmWidth, bm.bmHeight);
+                if w <= 0 || h <= 0 || w > 1024 || h > 1024 {
+                    return None;
+                }
+                let mut px = read_dib(color, w, h, 32)?;
+                if !px.chunks(4).any(|p| p[3] != 0) {
+                    // Legacy icons keep transparency in the AND mask.
+                    let mask = read_dib(ii.hbmMask, w, h, 1)?;
+                    let row = ((w as usize + 31) / 32) * 4;
+                    for y in 0..h as usize {
+                        for x in 0..w as usize {
+                            let bit = (mask[y * row + x / 8] >> (7 - (x % 8))) & 1;
+                            let p = &mut px[(y * w as usize + x) * 4..][..4];
+                            if bit == 1 {
+                                p[0] = 0;
+                                p[1] = 0;
+                                p[2] = 0;
+                                p[3] = 0;
+                            } else {
+                                p[3] = 255;
+                            }
+                        }
+                    }
+                }
+                for p in px.chunks_mut(4) {
+                    p.swap(0, 2); // BGRA -> RGBA
+                }
+                let img = image::RgbaImage::from_raw(w as u32, h as u32, px)?;
+                let mut out = std::io::Cursor::new(Vec::new());
+                image::DynamicImage::ImageRgba8(img)
+                    .write_to(&mut out, image::ImageFormat::Png)
+                    .ok()?;
+                Some(out.into_inner())
+            })();
+            if !ii.hbmColor.0.is_null() {
+                let _ = DeleteObject(HGDIOBJ(ii.hbmColor.0));
+            }
+            if !ii.hbmMask.0.is_null() {
+                let _ = DeleteObject(HGDIOBJ(ii.hbmMask.0));
+            }
+            res
+        })();
+        let _ = DestroyIcon(hicon);
+        out
     }
+}
 
+#[cfg(not(windows))]
+fn icon_png(_path: &str) -> Option<Vec<u8>> {
     None
 }
 
@@ -1665,6 +1906,7 @@ pub fn run() {
             check_update,
             apply_update,
             net_info,
+            app_icons,
             speed_servers,
             speed_latency,
             speed_reach,

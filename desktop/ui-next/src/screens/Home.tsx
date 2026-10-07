@@ -65,13 +65,19 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
           <p className="mt-1 max-w-[430px] text-[13.5px] leading-relaxed text-txt2">{t("setupBody")}</p>
         </div>
         <div className="mt-4 flex flex-col gap-5 lg:flex-row lg:items-stretch">
-          {/* the presets */}
-          <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+          {/* the presets: two cards, each one carrying its own story */}
+          <div className="flex min-w-0 flex-1 flex-col">
+            <h3 className="text-[13.5px] font-semibold text-txt">{t("presetHeading")}</h3>
+            <div className="mt-2.5 grid grid-cols-2 gap-3">
               {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
                 const mine = cards.find((c) => c.card_type === kind)
                 const sni = mine?.sni ?? DEFAULT_SNI[kind]
                 const isActive = preset === kind
                 const Icon = kind === "Gamerz" ? Gamepad2 : Tv
+                const tags =
+                  kind === "Gamerz"
+                    ? [t("tagGaming"), t("tagLowLatency"), t("tagEaGames")]
+                    : [t("tagStreaming"), t("tagVideoPlatforms"), t("tagHighStability")]
                 return (
                   <button
                     key={kind}
@@ -89,44 +95,59 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                       void ensurePresetCard(kind).finally(() => setCreating(null))
                     }}
                     className={cn(
-                      "flex min-h-[56px] items-center gap-3 rounded-[12px] border px-3.5 py-2 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
+                      "flex min-h-[132px] flex-col rounded-[12px] border p-3.5 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
                       isActive
                         ? "border-[var(--brand-line)] bg-[var(--brand-bg)]"
                         : "border-line bg-white/[0.02] hover:border-[var(--brand-line)]",
                     )}
                   >
-                    <span
-                      className={cn(
-                        "grid size-9 shrink-0 place-items-center rounded-[10px] border transition-colors",
-                        isActive
-                          ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong"
-                          : "border-line bg-white/[0.03] text-txt3",
-                      )}
-                    >
-                      <Icon className="size-4" aria-hidden />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className={cn("block truncate text-[13.5px] font-semibold", isActive ? "text-txt" : "text-txt2")} dir="auto">
-                        {t(kind === "Gamerz" ? "kindGamerz" : "kindStreamerz")}
+                    <span className="flex items-center justify-between gap-2">
+                      <span
+                        className={cn(
+                          "grid size-9 shrink-0 place-items-center rounded-[10px] border transition-colors",
+                          isActive
+                            ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong"
+                            : "border-line bg-white/[0.03] text-txt3",
+                        )}
+                      >
+                        <Icon className="size-4" aria-hidden />
                       </span>
-                      <span className="block truncate font-mono text-[11px] tabular-nums text-txt3">{sni}</span>
+                      <span
+                        aria-hidden
+                        className={cn(
+                          "grid size-[18px] shrink-0 place-items-center rounded-full border-[1.5px] transition-colors",
+                          isActive ? "border-[var(--brand)]" : "border-line-strong",
+                        )}
+                      >
+                        {isActive && <span className="size-2 rounded-full bg-[var(--brand)]" />}
+                      </span>
                     </span>
                     <span
-                      aria-hidden
-                      className={cn(
-                        "grid size-[18px] shrink-0 place-items-center rounded-full border-[1.5px] transition-colors",
-                        isActive ? "border-[var(--brand)]" : "border-line-strong",
-                      )}
+                      className={cn("mt-2.5 block truncate text-[13.5px] font-semibold", isActive ? "text-txt" : "text-txt2")}
+                      dir="auto"
                     >
-                      {isActive && <span className="size-2 rounded-full bg-[var(--brand)]" />}
+                      {t(kind === "Gamerz" ? "kindGamerz" : "kindStreamerz")}
+                    </span>
+                    <span className="mt-0.5 block truncate font-mono text-[11px] text-txt3">{sni}</span>
+                    <span className="mt-auto flex flex-wrap gap-1 pt-3">
+                      {tags.map((tag) => (
+                        <span key={tag} className="rounded-full border border-line px-1.5 py-[2px] text-[10px] text-txt3">
+                          {tag}
+                        </span>
+                      ))}
                     </span>
                   </button>
                 )
               })}
+            </div>
           </div>
 
           {/* the controls, one continuous column */}
-          <div className="flex shrink-0 flex-col justify-center gap-3 lg:w-[436px] lg:border-l lg:border-line lg:pl-6">
+          <div className="flex shrink-0 flex-col justify-center gap-3 lg:w-[364px] lg:border-l lg:border-line lg:pl-6">
+            <div>
+              <h3 className="text-[13.5px] font-semibold text-txt">{t("configHeading")}</h3>
+              <p className="mt-0.5 text-[12px] text-txt3">{t("configBody")}</p>
+            </div>
             <ControlRow label={t("domainSni")} icon={ServerIcon}>
               {customOpen ? (
                 <div className="flex w-full items-center gap-2">

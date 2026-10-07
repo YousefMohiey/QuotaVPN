@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { isTauri } from "@/lib/ipc"
 import { AnimatePresence, motion } from "motion/react"
@@ -15,21 +15,28 @@ import { Settings } from "@/screens/Settings"
 import { Apps } from "@/screens/Apps"
 
 const EASE_OUT = [0.1, 0.9, 0.2, 1] as const
+const TABS: Tab[] = ["home", "speed", "voice", "history", "result", "apps", "settings"]
 
 export default function App() {
   // The hash is the router: #speed, #settings, #apps. Small, but it
   // makes each screen linkable and lets the preview harness open one cold.
   const [tab, setTab] = useState<Tab>(() => {
     const h = (typeof location !== "undefined" ? location.hash.slice(1) : "") as Tab
-    return (["home", "speed", "voice", "history", "result", "apps", "settings"] as Tab[]).includes(h) ? h : "home"
+    return TABS.includes(h) ? h : "home"
   })
   // The stored run opened in the result view, if any.
   const [resultAt, setResultAt] = useState<number | null>(null)
+  const tabRef = useRef(tab)
+  tabRef.current = tab
+  const lastPop = useRef(0)
 
+  // Every move becomes a real history entry, so the shell's own back and
+  // forward (mouse buttons, keyboard) walk the app instead of doing nothing.
   const go = (t: Tab) => {
+    if (t === tabRef.current) return
     setTab(t)
     try {
-      history.replaceState(null, "", "#" + t)
+      history.pushState(null, "", "#" + t)
     } catch {
       /* file:// */
     }
@@ -69,14 +76,57 @@ export default function App() {
     return () => window.removeEventListener("mousedown", onDown)
   }, [])
 
-  // Back/forward and anything else that moves the hash keeps the shell in step.
+  // Back/forward, the mouse's own back and forward buttons, and the number
+  // row all move the shell. The hash is the source of truth, so anything the
+  // shell itself navigates lands in the same place.
   useEffect(() => {
-    const onHash = () => {
-      const h = location.hash.slice(1) as Tab
-      if ((["home", "speed", "voice", "history", "result", "apps", "settings"] as Tab[]).includes(h)) setTab(h)
+    const KEYS: Record<string, Tab> = {
+      "1": "home",
+      "2": "voice",
+      "3": "speed",
+      "4": "history",
+      "5": "settings",
     }
-    window.addEventListener("hashchange", onHash)
-    return () => window.removeEventListener("hashchange", onHash)
+    const onPop = () => {
+      lastPop.current = Date.now()
+      const h = location.hash.slice(1) as Tab
+      if (TABS.includes(h)) setTab(h)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      const el = e.target instanceof HTMLElement ? e.target : null
+      if (el && el.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return
+      const hit = KEYS[e.key]
+      if (!hit) return
+      e.preventDefault()
+      go(hit)
+    }
+    const onAux = (e: MouseEvent) => {
+      if (e.button !== 3 && e.button !== 4) return
+      e.preventDefault()
+      const back = e.button === 3
+      const seen = lastPop.current
+      // If the shell moved on this press by itself, let it stand; otherwise
+      // walk our own entries a beat later.
+      window.setTimeout(() => {
+        if (lastPop.current !== seen) return
+        try {
+          if (back) history.back()
+          else history.forward()
+        } catch {
+          /* file:// */
+        }
+      }, 70)
+    }
+    window.addEventListener("popstate", onPop)
+    window.addEventListener("keydown", onKey)
+    window.addEventListener("mousedown", onAux)
+    return () => {
+      window.removeEventListener("popstate", onPop)
+      window.removeEventListener("keydown", onKey)
+      window.removeEventListener("mousedown", onAux)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (

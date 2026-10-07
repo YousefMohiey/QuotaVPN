@@ -109,6 +109,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const refreshingRef = useRef(false)
   const busyRef = useRef(false)
   const vpnRef = useRef(false)
+  const phaseRef = useRef<Phase>("idle")
+  // Every connect run carries a generation; cancelling bumps it so the run
+  // that is still in flight stops applying state the moment it returns.
+  const connectGenRef = useRef(0)
   // Guards the staged disconnect teardown below: any new connect run
   // invalidates a pending clear so fresh session data is never wiped.
   const teardownRef = useRef(0)
@@ -116,6 +120,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   busyRef.current = busy
   vpnRef.current = vpnOn
+  phaseRef.current = phase
   const cardsRef = useRef<Card[]>([])
   const cardUuidRef = useRef("")
   cardsRef.current = cards
@@ -461,6 +466,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const connect = useCallback(async () => {
     teardownRef.current += 1
+    const gen = ++connectGenRef.current
+    const stale = () => connectGenRef.current !== gen
     // A routing mode with nothing behind it can never match: fall back to
     // the whole device instead of silently doing nothing.
     let mode = appsMode
@@ -483,6 +490,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           uuid = existing.uuid
         } else {
           const g = await api.generateCard(preset, preset, DEFAULT_SNI[preset])
+          if (stale()) return
           if (!g.ok) {
             setStatus(g.msg)
             setPhase("idle")
@@ -502,6 +510,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         write("qc-card", uuid)
       }
       await api.probeServer()
+      if (stale()) return
       // The voice helper rides along in the same session when it is on, so
       // the normal VPN and the voice routing live in one tunnel.
       let voiceOn = false
@@ -511,6 +520,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         /* file:// */
       }
       const r = await api.start(uuid, mode, apps, transport, voiceOn)
+      if (stale()) {
+        // The run was called off while the engine was starting: make sure
+        // whatever it just brought up comes back down.
+        void api.stop().catch(() => {})
+        return
+      }
       if (!r.ok) {
         // The engine can be alive but not routing yet ("still starting"): the
         // tunnel usually comes up a moment later, so enter the connected
@@ -537,6 +552,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       // Check the engine state before the first sleep so an already-up
       // engine (and the instant mock) resolves without paying a full wait.
       for (let i = 0; i < 8; i++) {
+        if (stale()) return
         const st = await api.status()
         if (st.running) break
         if (st.error) {
@@ -547,6 +563,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         if (i < 7) await new Promise((res) => setTimeout(res, 900))
       }
       const probe = await api.probeTunnel().catch(() => null)
+      if (stale()) return
       setConnected(!!probe?.ok)
       setPhase("on")
       // Success messages (like the reachable line) stay out of the UI;
@@ -573,10 +590,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         })()
       } else setStatus("")
     } catch (e) {
-      setStatus(String(e))
-      setPhase("idle")
+      if (!stale()) {
+        setStatus(String(e))
+        setPhase("idle")
+      }
     } finally {
-      setBusy(false)
+      // A cancelled run leaves busy alone: the cancel path owns it now.
+      if (!stale()) setBusy(false)
     }
   }, [apps, appsMode, cards, cardUuid, preset, t, transport])
 
@@ -649,10 +669,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setPhase("idle")
   }, [cards, cardUuid, transport])
 
+  // The dial stays live while it is connecting, so a press in that window
+  // calls the whole attempt off instead of being ignored.
+  const cancelConnect = useCallback(async () => {
+    connectGenRef.current += 1
+    await disconnect()
+  }, [disconnect])
+
   const toggle = useCallback(() => {
+    if (phaseRef.current === "connecting") {
+      void cancelConnect()
+      return
+    }
     if (busyRef.current) return
     void (vpnRef.current ? disconnect() : connect())
-  }, [connect, disconnect])
+  }, [cancelConnect, connect, disconnect])
 
 
   const checkUpdates = useCallback(async () => {

@@ -36,6 +36,11 @@ export type NetInfo = { ip: string; isp: string; place: string }
 export const isTauri = (): boolean =>
   typeof window !== "undefined" && "__TAURI_INTERNALS__" in window
 
+/** Per-app icons as base64 PNGs, pulled straight from the executables.
+    An empty string means the backend could not read one. */
+export type AppIcon = { pkg: string; png: string }
+export const appIcons = (pkgs: string[]): Promise<AppIcon[]> => call<AppIcon[]>("app_icons", { pkgs })
+
 /** Exit-address facts for the speed page, resolved backend-side. */
 export const netInfo = (): Promise<NetInfo | null> => call<NetInfo | null>("net_info")
 

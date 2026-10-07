@@ -176,6 +176,17 @@
     line-height: 1.45;
     font-variant-numeric: tabular-nums;
     overflow: hidden;
+    /* The app is a product surface, not a document: text does not select by
+       accident. Fields and the few values people copy stay selectable. */
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  input,
+  textarea,
+  [contenteditable="true"],
+  .select-text {
+    -webkit-user-select: text;
+    user-select: text;
   }
   /* Arabic: Cairo for both scripts so mixed lines never shift character.
      Text right-aligns, the layout never mirrors. */

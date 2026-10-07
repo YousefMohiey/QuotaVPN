@@ -77,6 +77,9 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
       return ok("Log copied.") as T
     case "import_card":
       return ok("Card added.") as T
+    case "app_icons":
+      // The preview has no executables to read icons from: the rows tile.
+      return [] as unknown as T
     case "tunnel_apps":
       return JSON.stringify(APPS.map((label) => ({ pkg: label.toLowerCase().replace(/\s+/g, "") + ".exe", label }))) as T
     case "resolve_host":
