@@ -76,6 +76,17 @@ export default function App() {
     return () => window.removeEventListener("mousedown", onDown)
   }, [])
 
+  // The first entry carries the hash too, so a back from anywhere lands on a
+  // named screen instead of a blank one.
+  useEffect(() => {
+    try {
+      history.replaceState(null, "", "#" + tabRef.current)
+    } catch {
+      /* file:// */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Back/forward, the mouse's own back and forward buttons, and the number
   // row all move the shell. The hash is the source of truth, so anything the
   // shell itself navigates lands in the same place.
@@ -90,7 +101,7 @@ export default function App() {
     const onPop = () => {
       lastPop.current = Date.now()
       const h = location.hash.slice(1) as Tab
-      if (TABS.includes(h)) setTab(h)
+      setTab(TABS.includes(h) ? h : "home")
     }
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return

@@ -148,7 +148,14 @@ export function Hero() {
         <motion.div
           layout
           transition={SPRING}
-          className={cn("flex w-full items-center", dialLeft ? "justify-start gap-8" : "justify-center")}
+          className={cn(
+            /* The reading zone is taller than the dial, so without a floor the
+               row would resize as the zone comes and goes and the spring would
+               wobble the dial with it. Held at the zone's own height, the row
+               never changes and the glide stays flat. */
+            "flex min-h-[188px] w-full items-center",
+            dialLeft ? "justify-start gap-8" : "justify-center",
+          )}
         >
           <motion.div layout transition={SPRING} className="flex shrink-0 items-center justify-center">
             <Dial state={state} onClick={toggle} disabled={busy && phase !== "connecting"} />
