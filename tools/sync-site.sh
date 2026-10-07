@@ -9,12 +9,10 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 echo "== desktop ui-next -> docs/app =="
-cd "$ROOT/desktop/ui-next"
-rm -rf dist
-# The project's own script, not a bare vite build: the tsc pass it runs first
-# is load bearing (a raw vite build ships a bundle whose React dispatcher is
-# null and the page mounts to nothing).
-npm run build -- --base=./ >/dev/null
+# The guarded build, never a bare vite build: rolldown-vite intermittently
+# emits a bundle carrying React twice (two e.useState shims), which mounts to
+# nothing. build-ui.sh checks for that shim and retries until clean.
+bash "$ROOT/tools/build-ui.sh" >/dev/null
 cd "$ROOT"
 rm -rf docs/app
 cp -r desktop/ui-next/dist docs/app

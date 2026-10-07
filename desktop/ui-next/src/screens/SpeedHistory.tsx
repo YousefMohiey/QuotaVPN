@@ -189,7 +189,7 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
     "flex h-9 items-center gap-1.5 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt transition-colors hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
 
   return (
-    <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-4">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1040px] flex-col gap-4">
       <div className="flex items-end justify-between gap-6">
         <div className="min-w-0 flex-1">
           <h1 className="text-[30px] font-semibold leading-tight text-txt">{t("history")}</h1>
@@ -222,7 +222,7 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
       </div>
 
       {history.length === 0 ? (
-        <section className="flex flex-col items-center justify-center rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] px-5 py-12 text-center">
+        <section className="flex flex-1 flex-col items-center justify-center rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] px-5 py-12 text-center">
           <p className="text-[13.5px] text-txt2">{t("histEmpty")}</p>
         </section>
       ) : (

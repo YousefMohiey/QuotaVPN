@@ -132,6 +132,33 @@ export function Hero() {
     setDialLeft(false)
   }, [active, phase])
 
+  const [textOpen, setTextOpen] = useState(true)
+  useEffect(() => {
+    if (dialLeft) {
+      setTextOpen(false)
+      return
+    }
+    // the text waits for the dial to land before it opens
+    const id = window.setTimeout(() => setTextOpen(true), 560)
+    return () => window.clearTimeout(id)
+  }, [dialLeft])
+
+  const textRef = useRef<HTMLDivElement>(null)
+  const [textH, setTextH] = useState(0)
+  useEffect(() => {
+    const el = textRef.current
+    if (!el) return
+    const measure = () => setTextH(el.offsetHeight)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  // The text keeps its space in flow while parked, so the card height never
+  // moves and the glide never fights a reflow. The dial drops by half the
+  // block it no longer shares with, landing centered on the zone.
+  const dialDrop = (18 + textH) / 2
+
   useTick(1000, connected)
 
   return (
@@ -143,22 +170,24 @@ export function Hero() {
           className={cn("flex w-full items-center", dialLeft ? "justify-start gap-6" : "justify-center")}
         >
           <motion.div layout transition={SPRING} className="flex shrink-0 flex-col items-center text-center">
-            <Dial state={state} onClick={toggle} disabled={busy} />
+            <motion.div
+              animate={{ y: dialLeft ? dialDrop : 0 }}
+              transition={SPRING}
+              className="flex flex-col items-center"
+            >
+              <Dial state={state} onClick={toggle} disabled={busy} />
+            </motion.div>
             <motion.div
               initial={false}
-              animate={{
-                height: dialLeft ? 0 : "auto",
-                marginTop: dialLeft ? 0 : 18,
-                opacity: dialLeft ? 0 : 1,
-              }}
-              transition={{ duration: 0.4, ease: EASE_OUT }}
-              className={cn("overflow-hidden", dialLeft && "pointer-events-none")}
+              animate={{ opacity: textOpen ? 1 : 0 }}
+              transition={{ duration: 0.3, ease: EASE_OUT }}
+              className={cn(!textOpen && "pointer-events-none")}
             >
-              <div className="flex flex-col items-center">
+              <div ref={textRef} className="mt-[18px] flex flex-col items-center pt-2">
                 <button
                   type="button"
                   onClick={toggle}
-                  className="mt-2 text-[24px] font-semibold tracking-[-0.01em] text-txt transition-colors duration-200 hover:text-brand-strong"
+                  className="text-[24px] font-semibold tracking-[-0.01em] text-txt transition-colors duration-200 hover:text-brand-strong"
                 >
                   {t("connect")}
                 </button>
@@ -312,18 +341,15 @@ function Traffic({ rx, tx }: { rx: number; tx: number }) {
     const max = Math.max(1, ...values)
     const w = 260
     const h = 44
-    // A fixed step keeps the trace anchored to the left as the window fills
-    // instead of stretching a two point wedge across the whole width.
-    const step = w / 59
+    const step = w / Math.max(1, values.length - 1)
     const pts = values.map((v, i) => [i * step, h - (v / max) * (h - 8) - 3] as const)
     const d = pts
       .map(([x, y], i) => `${i ? "L" : "M"} ${x.toFixed(1)} ${y.toFixed(1)}`)
       .join(" ")
     const current = values[values.length - 1] || 0
-    const endX = (values.length - 1) * step
     return {
       line: d,
-      area: `${d} L ${endX.toFixed(1)} ${h} L 0 ${h} Z`,
+      area: `${d} L ${w} ${h} L 0 ${h} Z`,
       rate: rateText(current),
       peak: rateText(Math.max(0, ...values)),
     }
