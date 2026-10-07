@@ -188,6 +188,7 @@ export const ar = {
   "trNoteVless": "الترافيك الافتراضي",
   "trNoteWg": "WireGuard: الأخف، وقد يُحجب على بعض الشبكات",
   "quotaWarn": "يُحتسب من الباقة العامة، وليس من باقتك.",
+  "dismiss": "إغلاق",
   "trStandard": "عادي",
   "trWg": "WireGuard",
   "trafficThru": "كل الترافيك يمر عبر ",

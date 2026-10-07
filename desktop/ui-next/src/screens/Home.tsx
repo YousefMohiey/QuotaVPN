@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react"
-import { ChevronDown, ChevronRight, Gamepad2, LayoutGrid, Server as ServerIcon, TriangleAlert, Tv, type LucideIcon } from "lucide-react"
+import { Cable, ChevronDown, ChevronRight, Gamepad2, LayoutGrid, Server as ServerIcon, Tv, type LucideIcon } from "lucide-react"
 import { Hero } from "@/components/Hero"
 import { PickerDialog, type PickerItem } from "@/components/PickerDialog"
 import { Segmented } from "@/components/Segmented"
@@ -181,7 +181,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
               </button>
             </ControlRow>
 
-            <ControlRow label={t("transport") + " \u24d8"} align="start">
+            <ControlRow label={t("transport") + " \u24d8"} align="start" icon={Cable}>
               <div>
                 <Segmented
                   id="transport"
@@ -196,15 +196,6 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 />
                 {transport !== "vless" && (
                   <p className="mt-2.5 text-[11.5px] text-txt3">{transport === "wg" ? t("trNoteWg") : t("trNoteHy2")}</p>
-                )}
-                {transport !== "vless" && (
-                  <p
-                    role="status"
-                    className="mt-2 flex items-start gap-2 rounded-[10px] border border-warn-line bg-warn-bg px-2.5 py-1.5 text-[11.5px] leading-[1.45] text-warn"
-                  >
-                    <TriangleAlert className="mt-px size-3.5 shrink-0" aria-hidden />
-                    <span>{t("quotaWarn")}</span>
-                  </p>
                 )}
               </div>
             </ControlRow>

@@ -121,14 +121,14 @@ export function Settings() {
           : "bg-[var(--brand-vivid)]"
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1040px] flex-col gap-3">
+    <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-3">
       <div className="mb-1 min-w-0">
         <h1 className="text-[30px] font-semibold leading-tight text-txt">{t("tabSettings")}</h1>
         <p className="mt-1 text-[15px] text-txt2">{t("settingsSub")}</p>
       </div>
 
-      {/* the cards sit centered in the page instead of stranded at the top */}
-      <div className="flex min-h-0 flex-1 flex-col justify-center gap-3">
+      {/* the cards sit right under the header, as the owner wants */}
+      <div className="flex flex-col gap-3">
       <SettingCard
         icon={<Languages className="size-5" strokeWidth={1.7} aria-hidden />}
         title={t("language")}

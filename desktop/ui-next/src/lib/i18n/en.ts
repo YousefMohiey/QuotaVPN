@@ -185,6 +185,7 @@ export const en = {
   "trNoteVless": "Default traffic",
   "trNoteWg": "WireGuard: lightest, may be blocked on some networks.",
   "quotaWarn": "Spends from your general quota, not your package.",
+  "dismiss": "Dismiss",
   "trStandard": "Standard",
   "trWg": "WireGuard",
   "trafficThru": "All traffic goes through ",

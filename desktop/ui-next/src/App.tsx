@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react"
 import omenUrl from "./assets/omen.png"
 import { Sidebar, type Tab } from "@/components/Sidebar"
 import { WindowControls } from "@/components/WindowControls"
+import { QuotaToast } from "@/components/QuotaToast"
 import { Home } from "@/screens/Home"
 import { Speed } from "@/screens/Speed"
 import { Voice } from "@/screens/Voice"
@@ -132,6 +133,7 @@ export default function App() {
             </AnimatePresence>
           </div>
         </main>
+        <QuotaToast />
       </div>
     </>
   )

@@ -222,7 +222,11 @@ export function Apps({ onBack }: { onBack: () => void }) {
                   className={cn(
                     "flex w-full scroll-mt-36 items-center gap-3 border-b border-line px-4 py-2.5 text-start transition-colors last:border-b-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-line)]",
                     appsMode === "all" && "opacity-70",
-                    focused ? "bg-white/[0.04]" : "hover:bg-white/[0.02]",
+                    on
+                      ? "bg-[var(--brand-bg)]"
+                      : focused
+                        ? "bg-white/[0.04]"
+                        : "hover:bg-white/[0.02]",
                   )}
                 >
                   <span className="min-w-0 flex-1">
@@ -237,10 +241,10 @@ export function Apps({ onBack }: { onBack: () => void }) {
                     aria-hidden
                     className={cn(
                       "grid size-[18px] shrink-0 place-items-center rounded-full border-[1.5px] transition-colors",
-                      on ? "border-[var(--brand)] bg-[var(--brand)]" : "border-line-strong",
+                      on ? "border-[var(--brand-line)] bg-[var(--brand-bg)]" : "border-line-strong",
                     )}
                   >
-                    {on && <Check className="size-3 text-white" strokeWidth={3} aria-hidden />}
+                    {on && <Check className="size-3 text-brand-strong" strokeWidth={3} aria-hidden />}
                   </span>
                 </button>
               )
