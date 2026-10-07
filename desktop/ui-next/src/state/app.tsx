@@ -385,10 +385,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     const on = voiceRunningRef.current && get("qc-voice-active") === "1"
     if (game && !gameWasUp.current) {
       // The game just appeared: arm the helper unless it is already on.
-      gameWasUp.current = true
-      if (!cardUuidRef.current || on || voiceBusyRef.current) return
+      // A failed arm leaves the latch open so the next tick retries: a cold
+      // engine or a flaky first packet must not cost the whole session.
+      if (on) {
+        gameWasUp.current = true
+        return
+      }
+      if (!cardUuidRef.current || voiceBusyRef.current) return
       const armed = await voiceHelperRef.current(true)
       if (!armed) return
+      gameWasUp.current = true
       try {
         localStorage.setItem("qc-voice-auto", "1")
       } catch {
@@ -429,10 +435,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }
       })()
     }
+    // The window spends most of its life hidden, so any moment the user
+    // actually looks at it is a free chance to catch up on the game state.
+    const bump = () => void gameTickRef.current()
+    document.addEventListener("visibilitychange", bump)
+    window.addEventListener("focus", bump)
     return () => {
       dead = true
       un?.()
       window.clearInterval(id)
+      document.removeEventListener("visibilitychange", bump)
+      window.removeEventListener("focus", bump)
     }
   }, [])
 
