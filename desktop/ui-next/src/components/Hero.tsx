@@ -10,7 +10,7 @@ import { Dial, type DialState } from "./Dial"
 import { displayHost, fmtBytes, fmtDuration, mbps } from "@/lib/format"
 
 const EASE_OUT = [0.1, 0.9, 0.2, 1] as const
-const SPRING = { type: "spring", stiffness: 170, damping: 26 } as const
+const SPRING = { type: "spring", stiffness: 320, damping: 34 } as const
 
 /** A one-second heartbeat for the session clock; polling still drives data. */
 function useTick(ms: number, on: boolean) {
@@ -115,7 +115,7 @@ export function Hero() {
       setShowInfo(false)
       return
     }
-    const id = window.setTimeout(() => setShowInfo(true), 420)
+    const id = window.setTimeout(() => setShowInfo(true), 250)
     return () => window.clearTimeout(id)
   }, [active])
 
@@ -128,7 +128,7 @@ export function Hero() {
     if (phase === "stopping") {
       // Short hold only: the zone exit leads by a beat, then the dial
       // answers at once. A long hold here reads as a dead pause.
-      const id = window.setTimeout(() => setDialLeft(false), 340)
+      const id = window.setTimeout(() => setDialLeft(false), 140)
       return () => window.clearTimeout(id)
     }
     setDialLeft(false)
@@ -155,7 +155,7 @@ export function Hero() {
                 initial={{ opacity: 0, x: 16 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 12 }}
-                transition={{ duration: 0.28, ease: EASE_OUT, delay: 0.05 }}
+                transition={{ duration: 0.32, ease: EASE_OUT, delay: 0.06 }}
                 className="min-w-0 flex-1"
               >
                 <div className="flex items-center gap-2">
