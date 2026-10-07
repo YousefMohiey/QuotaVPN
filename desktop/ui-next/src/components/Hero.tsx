@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { Activity, ChevronDown, Globe, Network, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -177,22 +177,37 @@ export function Hero() {
                 transition={{ duration: 0.32, ease: EASE_OUT, delay: 0.06 }}
                 className="min-w-0 flex-1"
               >
-                <div className="flex items-center gap-2">
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "size-1.5 rounded-full",
-                      connected ? "bg-[var(--green)]" : "pulse-dot bg-[var(--brand)]",
-                    )}
-                  />
-                  <span className="text-[12.5px] text-txt2">
-                    {connected ? t("connected") : t("working")}
-                  </span>
+                {/* the owner's own arrangement: the reading tiles ride the
+                    top right, and Live traffic keeps the left for itself */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span
+                        aria-hidden
+                        className={cn(
+                          "size-1.5 rounded-full",
+                          connected ? "bg-[var(--green)]" : "pulse-dot bg-[var(--brand)]",
+                        )}
+                      />
+                      <span className="text-[12.5px] text-txt2">
+                        {connected ? t("connected") : t("working")}
+                      </span>
+                    </div>
+                    <p className="mt-2 truncate text-[15px] font-medium text-txt" dir="auto">
+                      {connected ? hostLine : t("talking")}
+                    </p>
+                  </div>
+                  {connected && (
+                    <div className="flex min-w-0 items-stretch gap-2.5">
+                      <StatTile
+                        label={t("sessLabel")}
+                        value={sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
+                        sub={"⁨↓ " + fmtBytes(rx) + "⁩   ⁨↑ " + fmtBytes(tx) + "⁩"}
+                      />
+                      <StatTile label={t("srvLocation")} value={placeShown} sub={serverAddr || ipText} />
+                    </div>
+                  )}
                 </div>
-
-                <p className="mt-2 truncate text-[15px] font-medium text-txt" dir="auto">
-                  {connected ? hostLine : t("talking")}
-                </p>
                 {status ? (
                   <div className="mt-2 max-w-[520px] select-text text-[11.5px] leading-snug text-txt3">{status}</div>
                 ) : null}
@@ -205,18 +220,8 @@ export function Hero() {
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.36, ease: EASE_OUT, delay: 0.12 }}
                     >
-                      <div className="mt-5 flex items-stretch gap-4">
-                        <div className="flex min-w-0 flex-1 flex-col justify-center">
-                          <Traffic rx={rx} tx={tx} />
-                        </div>
-                        <div className="flex w-[212px] shrink-0 flex-col justify-center gap-2">
-                          <StatTile
-                            label={t("sessLabel")}
-                            value={sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
-                            sub={"⁨↓ " + fmtBytes(rx) + "⁩   ⁨↑ " + fmtBytes(tx) + "⁩"}
-                          />
-                          <StatTile label={t("srvLocation")} value={placeShown} sub={serverAddr || ipText} />
-                        </div>
+                      <div className="mt-4">
+                        <Traffic rx={rx} tx={tx} />
                       </div>
                     </motion.div>
                   )}
@@ -327,7 +332,7 @@ function Fact({
 
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-[12px] border border-line bg-white/[0.02] px-3 py-2">
+    <div className="min-w-0 rounded-[12px] border border-line bg-white/[0.02] px-3 py-2">
       <div className="flex items-baseline justify-between gap-2">
         <span className="shrink-0 text-[11px] text-txt3">{label}</span>
         <span className="truncate text-[13px] font-medium tabular-nums text-txt">{value}</span>
@@ -355,23 +360,10 @@ function Traffic({ rx, tx }: { rx: number; tx: number }) {
     }
   }, [rx, tx])
 
-  const { line, area, rate, peak } = useMemo(() => {
-    const values = hist.current.length ? hist.current : [0, 0]
-    const max = Math.max(1, ...values)
-    const w = 260
-    const h = 44
-    const step = w / Math.max(1, values.length - 1)
-    const pts = values.map((v, i) => [i * step, h - (v / max) * (h - 8) - 3] as const)
-    const d = pts
-      .map(([x, y], i) => `${i ? "L" : "M"} ${x.toFixed(1)} ${y.toFixed(1)}`)
-      .join(" ")
+  const values = hist.current.length ? hist.current : [0, 0]
+  const { rate, peak } = useMemo(() => {
     const current = values[values.length - 1] || 0
-    return {
-      line: d,
-      area: `${d} L ${w} ${h} L 0 ${h} Z`,
-      rate: rateText(current),
-      peak: rateText(Math.max(0, ...values)),
-    }
+    return { rate: rateText(current), peak: rateText(Math.max(0, ...values)) }
   }, [rx, tx])
 
   return (
@@ -386,19 +378,74 @@ function Traffic({ rx, tx }: { rx: number; tx: number }) {
         <span className="text-[20px] font-semibold leading-none tabular-nums text-txt">{rate.num}</span>
         <span className="text-[12px] text-txt2">{rate.unit}</span>
       </div>
-      <svg viewBox="0 0 260 44" preserveAspectRatio="none" className="mt-2 h-[48px] w-full" aria-hidden>
-        <path d={area} fill="var(--brand-bg)" />
-        <path
-          d={line}
-          fill="none"
-          stroke="var(--brand)"
-          strokeWidth="2"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-      </svg>
+      <Spark values={values} />
     </div>
   )
+}
+
+/** The theme colour a var would give, resolved to a plain value. */
+function cssVar(name: string, fallback: string): string {
+  const probe = document.createElement("span")
+  probe.style.color = `var(${name})`
+  probe.style.display = "none"
+  document.body.appendChild(probe)
+  const v = getComputedStyle(probe).color
+  probe.remove()
+  return v && v !== "rgba(0, 0, 0, 0)" ? v : fallback
+}
+
+/** The rolling rate on a canvas. WebView2 never strokes the equivalent SVG
+    path on its first raster (it only paints after unrelated DOM pokes, which
+    is why the line kept disappearing), so the pixels are drawn here instead:
+    a canvas paints exactly when it is asked to. */
+function Spark({ values }: { values: number[] }) {
+  const ref = useRef<HTMLCanvasElement | null>(null)
+
+  const paint = useCallback(() => {
+    const cv = ref.current
+    if (!cv) return
+    const dpr = window.devicePixelRatio || 1
+    const w = cv.clientWidth
+    const h = cv.clientHeight
+    if (!w || !h) return
+    cv.width = Math.round(w * dpr)
+    cv.height = Math.round(h * dpr)
+    const ctx = cv.getContext("2d")
+    if (!ctx) return
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.clearRect(0, 0, w, h)
+    const vals = values.length ? values : [0, 0]
+    const max = Math.max(1, ...vals)
+    const step = w / Math.max(1, vals.length - 1)
+    const yOf = (v: number) => h - (v / max) * (h - 8) - 3
+    const trace = () => {
+      ctx.beginPath()
+      vals.forEach((v, ix) => (ix ? ctx.lineTo(ix * step, yOf(v)) : ctx.moveTo(0, yOf(v))))
+    }
+    trace()
+    ctx.lineTo(w, h)
+    ctx.lineTo(0, h)
+    ctx.closePath()
+    ctx.fillStyle = cssVar("--brand-bg", "rgba(31, 89, 182, 0.14)")
+    ctx.fill()
+    trace()
+    ctx.strokeStyle = cssVar("--brand", "#1f59b6")
+    ctx.lineWidth = 2
+    ctx.lineJoin = "round"
+    ctx.lineCap = "round"
+    ctx.stroke()
+  }, [values])
+
+  useEffect(() => {
+    paint()
+    const cv = ref.current
+    if (!cv) return
+    const ro = new ResizeObserver(() => paint())
+    ro.observe(cv)
+    return () => ro.disconnect()
+  }, [paint])
+
+  return <canvas ref={ref} className="mt-2 h-[56px] w-full" aria-hidden />
 }
 
 /** Bytes per second as the live number: Mbps once it is a real rate,

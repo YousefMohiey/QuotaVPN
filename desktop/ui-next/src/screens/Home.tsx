@@ -188,7 +188,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
               </button>
             </ControlRow>
 
-            <ControlRow label={t("transport") + " \u24d8"} align="start" icon={Cable}>
+            <ControlRow label={t("transport")} align="start" icon={Cable}>
               <div>
                 <Segmented
                   id="transport"

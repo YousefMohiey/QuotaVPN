@@ -384,3 +384,9 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0.45; }
 }
+
+/* The live graph's area fill. The stroke's colour is resolved in JS instead:
+   WebView2 never paints an SVG stroke that comes from a CSS variable. */
+.qc-spark-area {
+  fill: var(--brand-bg);
+}
