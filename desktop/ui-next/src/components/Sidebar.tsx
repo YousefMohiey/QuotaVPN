@@ -30,7 +30,7 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
           <div className="min-w-0">
             <div className="flex items-baseline gap-3">
               <span className="truncate text-[15px] font-semibold text-txt">QuotaVPN</span>
-              {version && <span className="shrink-0 text-[10.5px] text-txt3">v{version}</span>}
+              {version && <span className="shrink-0 text-[11px] text-txt3">v{version}</span>}
             </div>
           </div>
         </div>
@@ -54,7 +54,7 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
                 <span className="block truncate text-[11.5px] font-medium text-brand-strong" dir="auto">
                   {t("updRemind")} · v{update.latest}
                 </span>
-                <span className="block truncate text-[10.5px] text-txt3" dir="auto">
+                <span className="block truncate text-[11px] text-txt3" dir="auto">
                   {update.notes || t("updRemindSub")}
                 </span>
               </span>

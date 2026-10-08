@@ -47,7 +47,7 @@ export function PickerDialog({
     <Dialog open={open} onOpenChange={close}>
       <DialogContent className="max-w-[380px] gap-0 overflow-hidden rounded-[16px] border-line bg-[var(--popover)] p-0">
         <div className="border-b border-line px-4 pb-3.5 pt-4">
-          <DialogTitle className="text-[14px] font-semibold text-txt">{title}</DialogTitle>
+          <DialogTitle className="text-[15px] font-semibold text-txt">{title}</DialogTitle>
           <div className="relative mt-3">
             <Search className="absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-txt3" aria-hidden />
             <Input
@@ -56,7 +56,7 @@ export function PickerDialog({
               onChange={(e) => setQ(e.target.value)}
               placeholder={search}
               aria-label={search}
-              className="h-9 rounded-[10px] border-line bg-white/[0.02] ps-8 text-[13px]"
+              className="h-9 rounded-[10px] border-line bg-white/[0.02] ps-8 text-[13.5px]"
             />
           </div>
         </div>
@@ -80,7 +80,7 @@ export function PickerDialog({
                 )}
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-[13px] text-txt" dir="auto">
+                  <span className="block truncate text-[13.5px] text-txt" dir="auto">
                     {it.label}
                   </span>
                   {it.sub && (

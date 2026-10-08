@@ -99,7 +99,7 @@ export function Voice() {
                       )}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-[15.5px] font-semibold text-txt">
+                      <h3 className="text-[15px] font-semibold text-txt">
                         {on ? t("voiceActive") : t("voiceOffTitle")}
                       </h3>
                       <p className="mt-0.5 flex items-center gap-1.5 truncate text-[12.5px] text-txt2">
@@ -124,7 +124,7 @@ export function Voice() {
                         <Check className="size-3.5" strokeWidth={3} aria-hidden />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-[13px] font-semibold text-txt">{t("voiceReadyTitle")}</p>
+                        <p className="text-[13.5px] font-semibold text-txt">{t("voiceReadyTitle")}</p>
                         <p className="mt-0.5 text-[12.5px] text-txt2">{t("voiceReadyBody")}</p>
                       </div>
                     </div>

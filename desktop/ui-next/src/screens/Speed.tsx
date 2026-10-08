@@ -645,7 +645,7 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
   ]
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-84px)] w-full max-w-[1040px] flex-col gap-4">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1040px] flex-col gap-3">
       <div className="flex items-end justify-between gap-6">
         <div className="min-w-0 flex-1">
           <h1 className="text-[30px] font-semibold leading-tight text-txt">{t("tabSpeed")}</h1>
@@ -658,7 +658,7 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
             disabled={running}
             aria-label={t("pickServer")}
             title={t("pickServer")}
-            className="flex h-9 min-w-[150px] max-w-[230px] items-center gap-2 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt transition-colors hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] disabled:cursor-not-allowed"
+            className="flex h-9 min-w-[150px] max-w-[230px] items-center gap-2 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13.5px] text-txt transition-colors hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] disabled:cursor-not-allowed"
           >
             <Globe className="size-3.5 shrink-0 text-txt3" aria-hidden />
             <span className="min-w-0 flex-1 truncate" dir="auto">
@@ -712,7 +712,7 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
                       >
                         {unit === "ms" ? Math.round(value) : value >= 100 ? value.toFixed(0) : value.toFixed(1)}
                       </span>
-                      <span className="shrink-0 text-[13px] text-txt3">{unit}</span>
+                      <span className="shrink-0 text-[13.5px] text-txt3">{unit}</span>
                     </div>
                     {shown.length > 0 && (
                       <span className="shrink-0 text-[11.5px] tabular-nums text-txt3">
@@ -757,7 +757,7 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
         {verdicts.length > 0 && (
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-line px-5 py-3">
             {verdicts.map((v) => (
-              <span key={v.label} className="flex items-center gap-2 text-[12px]">
+              <span key={v.label} className="flex items-center gap-2 text-[12.5px]">
                 <v.icon className="size-3.5 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
                 <span
                   aria-hidden
@@ -978,7 +978,7 @@ function MetricTile({
         <span className="block truncate text-[11.5px] text-txt3">{title}</span>
         <span
           className={cn(
-            "mt-0.5 block truncate text-[17px] font-medium tabular-nums",
+            "mt-0.5 block truncate text-[16.5px] font-medium tabular-nums",
             value === null ? "text-txt3" : "text-txt",
           )}
         >
@@ -1007,7 +1007,7 @@ function FactRow({
         <Icon className="size-[18px]" strokeWidth={1.7} aria-hidden />
       </span>
       <div className="min-w-0">
-        <div className="text-[10.5px] font-medium tracking-[0.08em] text-txt3 uppercase">{title}</div>
+        <div className="text-[11px] font-medium tracking-[0.08em] text-txt3 uppercase">{title}</div>
         <div className={cn("mt-0.5 leading-snug font-semibold break-words text-txt", fitSize(main, true))} dir="auto">
           {main}
         </div>
@@ -1025,6 +1025,6 @@ function FactRow({
  *  it grows, and anything still too long wraps instead of clipping. */
 function fitSize(s: string, main: boolean): string {
   const n = s.length
-  if (main) return n > 30 ? "text-[12px]" : n > 20 ? "text-[13px]" : "text-[14px]"
-  return n > 30 ? "text-[10px]" : n > 24 ? "text-[10.5px]" : "text-[11.5px]"
+  if (main) return n > 30 ? "text-[12.5px]" : n > 20 ? "text-[13.5px]" : "text-[15px]"
+  return n > 30 ? "text-[11px]" : n > 24 ? "text-[11px]" : "text-[11.5px]"
 }

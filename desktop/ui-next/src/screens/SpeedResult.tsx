@@ -39,7 +39,7 @@ export function SpeedResult({ runAt, onBack }: { runAt: number | null; onBack: (
     : t("history")
 
   return (
-    <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-4">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1040px] flex-col gap-3">
       <div className="flex items-end justify-between gap-6">
         <div className="min-w-0 flex-1">
           <h1 className="text-[30px] font-semibold leading-tight text-txt">{when}</h1>
@@ -50,7 +50,7 @@ export function SpeedResult({ runAt, onBack }: { runAt: number | null; onBack: (
         <button
           type="button"
           onClick={onBack}
-          className="flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt transition-colors hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
+          className="flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13.5px] text-txt transition-colors hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
         >
           <ArrowLeft className="size-3.5" aria-hidden />
           {t("back")}
@@ -71,7 +71,7 @@ export function SpeedResult({ runAt, onBack }: { runAt: number | null; onBack: (
               >
                 {headlineText}
               </span>
-              <span className="text-[13px] text-txt3">{headlineUnit}</span>
+              <span className="text-[13.5px] text-txt3">{headlineUnit}</span>
             </div>
           </div>
 
@@ -85,7 +85,7 @@ export function SpeedResult({ runAt, onBack }: { runAt: number | null; onBack: (
                   <span className="block truncate text-[11.5px] text-txt3">{r.title}</span>
                   <span
                     className={cn(
-                      "mt-0.5 block truncate text-[17px] font-medium tabular-nums",
+                      "mt-0.5 block truncate text-[16.5px] font-medium tabular-nums",
                       r.value === null ? "text-txt3" : "text-txt",
                     )}
                   >
@@ -100,7 +100,7 @@ export function SpeedResult({ runAt, onBack }: { runAt: number | null; onBack: (
           {verdicts.length > 0 && (
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-line px-5 py-3">
               {verdicts.map((v) => (
-                <span key={v.label} className="flex items-center gap-2 text-[12px]">
+                <span key={v.label} className="flex items-center gap-2 text-[12.5px]">
                   <v.icon className="size-3.5 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
                   <span
                     aria-hidden

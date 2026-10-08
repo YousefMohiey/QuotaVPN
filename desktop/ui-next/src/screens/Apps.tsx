@@ -106,9 +106,9 @@ export function Apps({ onBack }: { onBack: () => void }) {
   const bulkOff = appsMode === "all"
 
   return (
-    <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-3">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1040px] flex-col gap-3">
       <div className="px-1">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-0.5 text-[12px]">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-0.5 text-[12.5px]">
           <button
             type="button"
             onClick={onBack}
@@ -121,7 +121,7 @@ export function Apps({ onBack }: { onBack: () => void }) {
         </nav>
         <h1 className="mt-2 text-[30px] font-semibold leading-tight text-txt">{t("routing")}</h1>
         <p className="mt-1 text-[15px] text-txt2">{t("appsBody")}</p>
-        <p className="mt-0.5 text-[13px] text-txt3">{t("appsHint")}</p>
+        <p className="mt-0.5 text-[13.5px] text-txt3">{t("appsHint")}</p>
       </div>
 
       {/* the controls stay up while the list scrolls beneath them */}
@@ -157,14 +157,14 @@ export function Apps({ onBack }: { onBack: () => void }) {
                 }}
                 placeholder={t("appsSearch")}
                 aria-label={t("appsSearch")}
-                className="h-9 w-full rounded-[10px] border border-line bg-white/[0.02] ps-8 text-[13px] text-txt outline-none transition-colors placeholder:text-txt3 focus:border-[var(--brand-line)]"
+                className="h-9 w-full rounded-[10px] border border-line bg-white/[0.02] ps-8 text-[13.5px] text-txt outline-none transition-colors placeholder:text-txt3 focus:border-[var(--brand-line)]"
               />
             </div>
             <button
               type="button"
               disabled={bulkOff || filtered.length === 0}
               onClick={selectMatches}
-              className="h-9 shrink-0 rounded-[10px] border border-[var(--brand-line)] px-2.5 text-[12px] text-brand-strong transition-colors hover:bg-[var(--brand-bg)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+              className="h-9 shrink-0 rounded-[10px] border border-[var(--brand-line)] px-2.5 text-[12.5px] text-brand-strong transition-colors hover:bg-[var(--brand-bg)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
             >
               {q
                 ? t("appsSelectMatches").replace("{m}", String(filtered.length))
@@ -174,7 +174,7 @@ export function Apps({ onBack }: { onBack: () => void }) {
               type="button"
               disabled={bulkOff || apps.length === 0}
               onClick={() => setApps([])}
-              className="h-9 shrink-0 rounded-[10px] border border-line px-2.5 text-[12px] text-[rgb(207_112_120/0.8)] transition-colors hover:border-[var(--red-line)] hover:bg-[var(--red-bg)] hover:text-[var(--red)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line disabled:hover:bg-transparent disabled:hover:text-[rgb(207_112_120/0.8)]"
+              className="h-9 shrink-0 rounded-[10px] border border-line px-2.5 text-[12.5px] text-[rgb(207_112_120/0.8)] transition-colors hover:border-[var(--red-line)] hover:bg-[var(--red-bg)] hover:text-[var(--red)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line disabled:hover:bg-transparent disabled:hover:text-[rgb(207_112_120/0.8)]"
             >
               {t("appsClearSel")}
             </button>
@@ -183,16 +183,15 @@ export function Apps({ onBack }: { onBack: () => void }) {
       </div>
 
       <div className="overflow-hidden rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)]">
+        {/* one count only: the list header repeats it, so the right hand
+            figure was saying the same thing twice */}
         <div className="flex flex-wrap items-start justify-between gap-3 px-4 pb-3 pt-3.5">
           <div className="min-w-0">
             <h2 className="text-[15px] font-semibold text-txt">{t("appsListTitle")}</h2>
-            <p aria-live="polite" className="mt-0.5 text-[12px] text-txt3" dir="auto">
+            <p aria-live="polite" className="mt-0.5 text-[12.5px] text-txt3" dir="auto">
               {summary}
             </p>
           </div>
-          <span className="shrink-0 text-[12px] tabular-nums text-txt3" dir="auto">
-            {apps.length} / {list.length} {t("selOf")}
-          </span>
         </div>
 
         <div
@@ -254,7 +253,7 @@ export function Apps({ onBack }: { onBack: () => void }) {
                     {icon ? (
                       <img src={icon} alt="" draggable={false} className="size-5 select-none" />
                     ) : (
-                      <span className="text-[12px] font-semibold uppercase text-txt3">
+                      <span className="text-[12.5px] font-semibold uppercase text-txt3">
                         {row.label.slice(0, 1)}
                       </span>
                     )}
