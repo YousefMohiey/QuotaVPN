@@ -66,8 +66,13 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
           <p className="mt-1 max-w-[430px] text-[13.5px] leading-relaxed text-txt2">{t("setupBody")}</p>
         </div>
         <div className="mt-4 flex flex-col gap-5 lg:flex-row lg:items-stretch">
-          {/* the presets: two stacked rows, each carrying its own story */}
-          <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+          {/* the presets: two stacked rows, each carrying its own story.
+              The column opens with a heading like the controls one, so both
+              sides start on one line, and the rows share the height so both
+              sides also end together. */}
+          <div className="flex min-w-0 flex-1 flex-col gap-3">
+            <h3 className="text-[13.5px] font-semibold text-txt">{t("presetHeading")}</h3>
+            <div className="flex flex-1 flex-col gap-2.5">
             {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
               const mine = cards.find((c) => c.card_type === kind)
               const sni = mine?.sni ?? DEFAULT_SNI[kind]
@@ -90,7 +95,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     void ensurePresetCard(kind).finally(() => setCreating(null))
                   }}
                   className={cn(
-                    "flex items-center gap-3 rounded-[12px] border p-4 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
+                    "flex flex-1 items-center gap-3 rounded-[12px] border p-4 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
                     isActive
                       ? "border-[var(--brand-line)] bg-[var(--brand-bg)]"
                       : "border-line bg-white/[0.02] hover:border-[var(--brand-line)]",
@@ -127,14 +132,15 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 </button>
               )
             })}
+            </div>
           </div>
 
           {/* the controls, one continuous column */}
-          <div className="flex shrink-0 flex-col justify-center gap-3 lg:w-[364px] lg:border-l lg:border-line lg:pl-6">
-            <div>
-              <h3 className="text-[13.5px] font-semibold text-txt">{t("configHeading")}</h3>
-              <p className="mt-0.5 text-[12.5px] text-txt3">{t("configBody")}</p>
-            </div>
+          <div className="flex shrink-0 flex-col gap-3 lg:w-[364px] lg:border-l lg:border-line lg:pl-6">
+            <h3 className="text-[13.5px] font-semibold text-txt">{t("configHeading")}</h3>
+            {/* the rows share out whatever height the presets column sets,
+                so both columns finish on the same line */}
+            <div className="flex flex-1 flex-col justify-between gap-3">
             <ControlRow label={t("domainSni")} icon={ServerIcon}>
               {customOpen ? (
                 <div className="flex w-full items-center gap-2">
@@ -189,7 +195,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
               </button>
             </ControlRow>
 
-            <ControlRow label={t("transport")} align="start" icon={Cable}>
+            <ControlRow label={t("transport")} icon={Cable}>
               <div>
                 <Segmented
                   id="transport"
@@ -207,6 +213,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 )}
               </div>
             </ControlRow>
+            </div>
           </div>
         </div>
       </section>
@@ -244,7 +251,7 @@ function ControlRow({
   icon?: LucideIcon
 }) {
   return (
-    <div className={cn("flex gap-3", align === "center" ? "items-center" : "items-start")}>
+    <div className={cn("flex flex-1 gap-3", align === "center" ? "items-center" : "items-start")}>
       <div className="flex w-[138px] shrink-0 items-center gap-2 pt-[2px] text-[12.5px] text-txt2">
         {/* the icon slot is reserved even without an icon so every label
             starts on the same x, rows included */}
