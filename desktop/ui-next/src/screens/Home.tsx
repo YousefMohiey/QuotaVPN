@@ -60,13 +60,15 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
       <Hero />
 
       <section className="flex min-h-[186px] flex-1 flex-col justify-center rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] p-5">
-        <div>
-          <h2 className="text-[20px] font-semibold text-txt">{t("setupTitle")}</h2>
-          <p className="mt-1 max-w-[430px] text-[13.5px] leading-relaxed text-txt2">{t("setupBody")}</p>
-        </div>
-        <div className="mt-4 grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
-          {/* the presets: two stacked rows, each carrying its own story */}
-          <div className="flex min-w-0 flex-col gap-2.5">
+        <div className="grid gap-5 lg:grid-cols-2 lg:gap-0">
+          {/* the presets column opens with its own heading so both column
+              headings sit on the same line, as in the owner's reference */}
+          <div className="flex min-w-0 flex-col lg:pr-5">
+            <div>
+              <h2 className="text-[20px] font-semibold text-txt">{t("setupTitle")}</h2>
+              <p className="mt-1 text-[13.5px] text-txt2">{t("setupBody")}</p>
+            </div>
+            <div className="mt-0.5 flex flex-col gap-5">
             {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
               const mine = cards.find((c) => c.card_type === kind)
               const sni = mine?.sni ?? DEFAULT_SNI[kind]
@@ -126,14 +128,16 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 </button>
               )
             })}
+            </div>
           </div>
 
-          {/* the controls, one continuous column */}
-          <div className="flex min-w-0 flex-col gap-4 lg:border-l lg:border-line lg:pl-5">
+          {/* the controls column opens the same way, heading first */}
+          <div className="flex min-w-0 flex-col lg:border-l lg:border-line lg:pl-5">
             <div>
-              <h3 className="text-[17px] font-semibold text-txt">{t("configHeading")}</h3>
+              <h3 className="text-[20px] font-semibold text-txt">{t("configHeading")}</h3>
               <p className="mt-1 text-[13.5px] text-txt2">{t("configBody")}</p>
             </div>
+            <div className="mt-6 flex flex-col gap-4">
             <ControlRow label={t("domainSni")} icon={ServerIcon}>
               {customOpen ? (
                 <div className="flex w-full items-center gap-2">
@@ -206,6 +210,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 )}
               </div>
             </ControlRow>
+            </div>
           </div>
         </div>
       </section>
@@ -244,16 +249,16 @@ function ControlRow({
 }) {
   return (
     <div className={cn("flex gap-3", align === "center" ? "items-center" : "items-start")}>
-      <div className="flex w-[135px] shrink-0 items-center gap-2.5 text-[12.5px] text-txt2">
+      <div className="flex w-[132px] shrink-0 items-center gap-2 text-[12.5px] text-txt2">
         {/* the icon slot is reserved even without an icon so every label
             starts on the same x, rows included */}
         <span
           className={cn(
-            "grid size-7 shrink-0 place-items-center rounded-[8px]",
+            "grid size-[26px] shrink-0 place-items-center rounded-[8px]",
             Icon && "border border-line bg-white/[0.03] text-txt2",
           )}
         >
-          {Icon ? <Icon className="size-[14px]" aria-hidden /> : null}
+          {Icon ? <Icon className="size-[13px]" aria-hidden /> : null}
         </span>
         <span className="min-w-0 truncate">{label}</span>
       </div>
