@@ -24,7 +24,7 @@ export function Segmented<T extends string>({
     <div
       className={cn(
         "rounded-[10px] border border-line bg-white/[0.02]",
-        boxed ? "flex h-12 w-full items-center p-1" : "p-0.5",
+        boxed ? "flex h-12 w-full items-center p-1.5" : "p-0.5",
         !boxed && (fill ? "flex w-full" : "inline-flex"),
         className,
       )}
@@ -40,7 +40,7 @@ export function Segmented<T extends string>({
             className={cn(
               "relative rounded-[8px] transition-colors",
               boxed
-                ? cn("relative flex h-full min-w-0 flex-1 items-center justify-center px-0.5 text-[12px]", on ? "text-white" : "text-txt2 hover:text-txt")
+                ? cn("relative flex h-full min-w-0 flex-1 items-center justify-center px-[3px] text-[12px]", on ? "text-white" : "text-txt2 hover:text-txt")
                 : cn("py-1.5", fill ? "min-w-0 flex-1 px-1.5 text-[12.5px]" : "px-3 text-[12.5px]", on ? "text-txt" : "text-txt3 hover:text-txt2"),
             )}
           >
