@@ -61,12 +61,12 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
 
       <section className="flex min-h-[186px] flex-1 flex-col justify-center rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] p-5">
         <div>
-          <h2 className="text-[16.5px] font-semibold text-txt">{t("setupTitle")}</h2>
+          <h2 className="text-[20px] font-semibold text-txt">{t("setupTitle")}</h2>
           <p className="mt-1 max-w-[430px] text-[13.5px] leading-relaxed text-txt2">{t("setupBody")}</p>
         </div>
-        <div className="mt-4 flex flex-col gap-5 lg:flex-row lg:items-stretch">
+        <div className="mt-4 grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
           {/* the presets: two stacked rows, each carrying its own story */}
-          <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+          <div className="flex min-w-0 flex-col gap-2.5">
             {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
               const mine = cards.find((c) => c.card_type === kind)
               const sni = mine?.sni ?? DEFAULT_SNI[kind]
@@ -89,7 +89,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     void ensurePresetCard(kind).finally(() => setCreating(null))
                   }}
                   className={cn(
-                    "flex items-center gap-3 rounded-[12px] border p-4 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
+                    "flex items-center gap-3.5 rounded-[12px] border p-5 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
                     isActive
                       ? "border-[var(--brand-line)] bg-[var(--brand-bg)]"
                       : "border-line bg-white/[0.02] hover:border-[var(--brand-line)]",
@@ -97,17 +97,17 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 >
                   <span
                     className={cn(
-                      "grid size-11 shrink-0 place-items-center rounded-[10px] border transition-colors",
+                      "grid size-12 shrink-0 place-items-center rounded-[10px] border transition-colors",
                       isActive
                         ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong"
                         : "border-line bg-white/[0.03] text-txt3",
                     )}
                   >
-                    <Icon className="size-[19px]" aria-hidden />
+                    <Icon className="size-[20px]" aria-hidden />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span
-                      className={cn("block truncate text-[14.5px] font-semibold", isActive ? "text-txt" : "text-txt2")}
+                      className={cn("block truncate text-[15px] font-semibold", isActive ? "text-txt" : "text-txt2")}
                       dir="auto"
                     >
                       {t(kind === "Gamerz" ? "kindGamerz" : "kindStreamerz")}
@@ -129,10 +129,10 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
           </div>
 
           {/* the controls, one continuous column */}
-          <div className="flex shrink-0 flex-col justify-center gap-3 lg:w-[364px] lg:border-l lg:border-line lg:pl-6">
+          <div className="flex min-w-0 flex-col gap-4 lg:border-l lg:border-line lg:pl-5">
             <div>
-              <h3 className="text-[13.5px] font-semibold text-txt">{t("configHeading")}</h3>
-              <p className="mt-0.5 text-[12px] text-txt3">{t("configBody")}</p>
+              <h3 className="text-[17px] font-semibold text-txt">{t("configHeading")}</h3>
+              <p className="mt-1 text-[13.5px] text-txt2">{t("configBody")}</p>
             </div>
             <ControlRow label={t("domainSni")} icon={ServerIcon}>
               {customOpen ? (
@@ -147,11 +147,11 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     }}
                     placeholder="example.com"
                     aria-label={t("domainSni")}
-                    className="h-10 rounded-[10px] border-line bg-white/[0.02] text-[13px]"
+                    className="h-12 rounded-[10px] border-line bg-white/[0.02] text-[13.5px]"
                   />
                   <Button
                     size="sm"
-                    className="h-10 shrink-0 rounded-[10px] px-3.5 text-[13px]"
+                    className="h-12 shrink-0 rounded-[10px] px-3.5 text-[13.5px]"
                     disabled={domainBusy || !customVal.trim()}
                     onClick={() => void submitCustom()}
                   >
@@ -163,7 +163,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   type="button"
                   aria-busy={domainBusy}
                   onClick={() => setDomainOpen(true)}
-                  className="group flex h-10 w-full items-center justify-between gap-3 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt transition-colors duration-200 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
+                  className="group flex h-12 w-full items-center justify-between gap-3 rounded-[10px] border border-line bg-white/[0.02] px-3.5 text-[13.5px] text-txt transition-colors duration-200 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
                 >
                   <span className={cn("truncate", domText.length > 17 && "text-[11px]")} dir="auto">{domText}</span>
                   <ChevronDown className="size-4 shrink-0 text-txt2 transition-[color,transform] duration-200 group-hover:translate-y-px group-hover:text-brand-strong" aria-hidden />
@@ -175,7 +175,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
               <button
                 type="button"
                 onClick={onOpenApps}
-                className="group flex h-10 w-full items-center justify-between gap-3 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt transition-colors duration-200 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
+                className="group flex h-12 w-full items-center justify-between gap-3 rounded-[10px] border border-line bg-white/[0.02] px-3.5 text-[13.5px] text-txt transition-colors duration-200 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
               >
                 <span className="truncate" dir="auto">
                   {routing}
@@ -194,7 +194,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   id="transport"
                   value={transport}
                   onChange={setTransport}
-                  fill
+                  boxed
                   options={[
                     { value: "vless", label: t("trStandard") },
                     { value: "hy2", label: "Hysteria2" },
@@ -244,16 +244,16 @@ function ControlRow({
 }) {
   return (
     <div className={cn("flex gap-3", align === "center" ? "items-center" : "items-start")}>
-      <div className="flex w-[138px] shrink-0 items-center gap-2 pt-[2px] text-[12px] text-txt2">
+      <div className="flex w-[135px] shrink-0 items-center gap-2.5 text-[12.5px] text-txt2">
         {/* the icon slot is reserved even without an icon so every label
             starts on the same x, rows included */}
         <span
           className={cn(
-            "grid size-[26px] shrink-0 place-items-center rounded-[8px]",
+            "grid size-7 shrink-0 place-items-center rounded-[8px]",
             Icon && "border border-line bg-white/[0.03] text-txt2",
           )}
         >
-          {Icon ? <Icon className="size-[13px]" aria-hidden /> : null}
+          {Icon ? <Icon className="size-[14px]" aria-hidden /> : null}
         </span>
         <span className="min-w-0 truncate">{label}</span>
       </div>
