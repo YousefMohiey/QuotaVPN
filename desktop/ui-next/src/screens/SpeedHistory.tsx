@@ -186,10 +186,10 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
   const num = (v: number | null) => (v === null ? "-" : v >= 100 ? v.toFixed(0) : v.toFixed(1))
 
   const chip =
-    "flex h-9 items-center gap-1.5 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13.5px] text-txt transition-colors hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
+    "flex h-9 items-center gap-1.5 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt transition-colors hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1040px] flex-col gap-3">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1040px] flex-col gap-4">
       <div className="flex items-end justify-between gap-6">
         <div className="min-w-0 flex-1">
           <h1 className="text-[30px] font-semibold leading-tight text-txt">{t("history")}</h1>
@@ -235,7 +235,7 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
               { label: t("bestPing"), value: best.ping, unit: t("ms"), round: true },
             ].map((s) => (
               <div key={s.label} className="flex min-w-0 flex-col items-center gap-1 px-3 py-4">
-                <span className="truncate text-[11px] font-medium tracking-[0.08em] text-txt3 uppercase">
+                <span className="truncate text-[10.5px] font-medium tracking-[0.08em] text-txt3 uppercase">
                   {s.label}
                 </span>
                 <span
@@ -269,7 +269,7 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
                         )}
                       />
                     </span>
-                    <span className="block ps-[26px] text-[11px] font-medium tracking-[0.08em] text-txt3 uppercase">
+                    <span className="block ps-[26px] text-[10.5px] font-medium tracking-[0.08em] text-txt3 uppercase">
                       {dayLabel(d.at)}
                     </span>
                   </div>
@@ -307,7 +307,7 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
             type="button"
             disabled={picked.length === 0}
             onClick={() => setPending({ kind: "many" })}
-            className="flex h-9 items-center gap-1.5 rounded-[10px] bg-[var(--brand-vivid)] px-3.5 text-[13.5px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex h-9 items-center gap-1.5 rounded-[10px] bg-[var(--brand-vivid)] px-3.5 text-[13px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Trash2 className="size-3.5" aria-hidden />
             {t("delete")}
@@ -319,7 +319,7 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
         <DialogContent className="max-w-[360px] gap-0 overflow-hidden rounded-[16px] p-0">
           <div className="px-5 pb-4 pt-4">
             <DialogHeader className="gap-1.5">
-              <DialogTitle className="text-[15px] font-semibold">{title}</DialogTitle>
+              <DialogTitle className="text-[14px] font-semibold">{title}</DialogTitle>
               <DialogDescription className="text-[12.5px] leading-relaxed text-txt3">{body}</DialogDescription>
             </DialogHeader>
             <p className="mt-3 text-[12.5px] text-txt3">
@@ -329,14 +329,14 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
           <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-3">
             <button
               type="button"
-              className="flex h-9 items-center rounded-[10px] border border-line px-4 text-[13.5px] text-txt transition-colors hover:border-line-strong"
+              className="flex h-9 items-center rounded-[10px] border border-line px-4 text-[13px] text-txt transition-colors hover:border-line-strong"
               onClick={() => setPending(null)}
             >
               {t("cancel")}
             </button>
             <button
               type="button"
-              className="flex h-9 items-center gap-1.5 rounded-[10px] border border-[var(--red-line)] bg-[rgb(207_112_120/0.2)] px-4 text-[13.5px] font-medium text-[#e6999f] transition-colors hover:bg-[rgb(207_112_120/0.26)]"
+              className="flex h-9 items-center gap-1.5 rounded-[10px] border border-[var(--red-line)] bg-[rgb(207_112_120/0.2)] px-4 text-[13px] font-medium text-[#e6999f] transition-colors hover:bg-[rgb(207_112_120/0.26)]"
               onClick={confirm}
             >
               <Trash2 className="size-3.5" aria-hidden />

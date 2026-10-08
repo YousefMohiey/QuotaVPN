@@ -28,8 +28,8 @@ export function Segmented<T extends string>({
             onClick={() => onChange(o.value)}
             aria-pressed={on}
             className={cn(
-              "relative grid h-[34px] place-items-center rounded-[8px] transition-colors",
-              fill ? "min-w-0 flex-1 px-1.5 text-[12.5px]" : "px-3 text-[12.5px]",
+              "relative rounded-[8px] py-1.5 transition-colors",
+              fill ? "min-w-0 flex-1 px-1.5 text-[12px]" : "px-3 text-[12.5px]",
               on ? "text-txt" : "text-txt3 hover:text-txt2",
             )}
           >

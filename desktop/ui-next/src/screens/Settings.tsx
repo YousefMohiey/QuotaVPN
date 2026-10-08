@@ -121,7 +121,7 @@ export function Settings() {
           : "bg-[var(--brand-vivid)]"
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1040px] flex-col gap-3">
+    <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-3">
       <div className="mb-1 min-w-0">
         <h1 className="text-[30px] font-semibold leading-tight text-txt">{t("tabSettings")}</h1>
         <p className="mt-1 text-[15px] text-txt2">{t("settingsSub")}</p>
@@ -152,7 +152,7 @@ export function Settings() {
         sub={
           <>
             {t("startupBody")}
-            {startupMsg ? <p className="mt-1 text-[12.5px] text-[var(--red)]">{startupMsg}</p> : null}
+            {startupMsg ? <p className="mt-1 text-[12px] text-[var(--red)]">{startupMsg}</p> : null}
           </>
         }
         control={
@@ -171,7 +171,7 @@ export function Settings() {
         sub={t("upRowBody")}
         control={
           <div className="flex items-center gap-3">
-            <span aria-live="polite" className="flex items-center gap-2 text-[12.5px] text-txt3">
+            <span aria-live="polite" className="flex items-center gap-2 text-[12px] text-txt3">
               {updateText ? (
                 <>
                   <span aria-hidden className={cn("size-1.5 rounded-full", upTone)} />
@@ -183,7 +183,7 @@ export function Settings() {
               type="button"
               onClick={() => void checkUpdates()}
               disabled={updateState === "checking"}
-              className="flex h-9 items-center gap-2 rounded-[10px] border border-line bg-white/[0.02] px-3.5 text-[13.5px] text-txt transition-colors hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] disabled:cursor-wait"
+              className="flex h-9 items-center gap-2 rounded-[10px] border border-line bg-white/[0.02] px-3.5 text-[13px] text-txt transition-colors hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] disabled:cursor-wait"
             >
               <RefreshCw className={cn("size-3.5", updateState === "checking" && "animate-spin")} aria-hidden />
               {updateState === "checking" ? t("upChecking") : t("upCheck")}
@@ -193,7 +193,7 @@ export function Settings() {
                 type="button"
                 onClick={() => void applyUpdate()}
                 disabled={updateState === "installing"}
-                className="flex h-9 items-center rounded-[10px] bg-[var(--brand-vivid)] px-3.5 text-[13.5px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
+                className="flex h-9 items-center rounded-[10px] bg-[var(--brand-vivid)] px-3.5 text-[13px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
               >
                 {updateState === "installing"
                   ? updatePct !== null

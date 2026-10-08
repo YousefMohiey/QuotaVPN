@@ -308,8 +308,7 @@ function Fact({
         <ChevronDown
           aria-hidden
           className={cn(
-            "ms-auto size-4 shrink-0 text-txt3 transition-[color,transform] duration-300",
-            "group-hover:translate-y-px group-hover:text-brand-strong",
+            "ms-auto size-4 shrink-0 text-txt3 transition-transform duration-300",
             busy && "rotate-180",
           )}
         />
@@ -322,7 +321,7 @@ function Fact({
         type="button"
         onClick={onClick}
         aria-label={label}
-        className={cn("group flex min-w-0 items-center gap-2.5 text-start", className)}
+        className={cn("flex min-w-0 items-center gap-2.5 text-start", className)}
       >
         {body}
       </button>
@@ -336,7 +335,7 @@ function StatTile({ label, value, sub }: { label: string; value: string; sub?: s
     <div className="min-w-0 rounded-[12px] border border-line bg-white/[0.02] px-3 py-2">
       <div className="flex items-baseline justify-between gap-2">
         <span className="shrink-0 text-[11px] text-txt3">{label}</span>
-        <span className="truncate text-[13.5px] font-medium tabular-nums text-txt">{value}</span>
+        <span className="truncate text-[13px] font-medium tabular-nums text-txt">{value}</span>
       </div>
       {sub && <div className="mt-0.5 truncate text-[11px] tabular-nums text-txt3">{sub}</div>}
     </div>
@@ -377,7 +376,7 @@ function Traffic({ rx, tx }: { rx: number; tx: number }) {
       </div>
       <div className="mt-1 flex items-baseline gap-1.5">
         <span className="text-[20px] font-semibold leading-none tabular-nums text-txt">{rate.num}</span>
-        <span className="text-[12.5px] text-txt2">{rate.unit}</span>
+        <span className="text-[12px] text-txt2">{rate.unit}</span>
       </div>
       <Spark values={values} />
     </div>

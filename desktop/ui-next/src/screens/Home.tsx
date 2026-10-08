@@ -57,7 +57,6 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1040px] flex-col gap-3">
-      <h1 className="sr-only">{t("tabHome")}</h1>
       <Hero />
 
       <section className="flex min-h-[186px] flex-1 flex-col justify-center rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] p-5">
@@ -66,13 +65,8 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
           <p className="mt-1 max-w-[430px] text-[13.5px] leading-relaxed text-txt2">{t("setupBody")}</p>
         </div>
         <div className="mt-4 flex flex-col gap-5 lg:flex-row lg:items-stretch">
-          {/* the presets: two stacked rows, each carrying its own story.
-              The column opens with a heading like the controls one, so both
-              sides start on one line, and the rows share the height so both
-              sides also end together. */}
-          <div className="flex min-w-0 flex-1 flex-col gap-3">
-            <h3 className="text-[13.5px] font-semibold text-txt">{t("presetHeading")}</h3>
-            <div className="flex flex-1 flex-col gap-2.5">
+          {/* the presets: two stacked rows, each carrying its own story */}
+          <div className="flex min-w-0 flex-1 flex-col gap-2.5">
             {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
               const mine = cards.find((c) => c.card_type === kind)
               const sni = mine?.sni ?? DEFAULT_SNI[kind]
@@ -95,7 +89,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     void ensurePresetCard(kind).finally(() => setCreating(null))
                   }}
                   className={cn(
-                    "flex flex-1 items-center gap-3 rounded-[12px] border p-4 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
+                    "flex items-center gap-3 rounded-[12px] border p-4 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
                     isActive
                       ? "border-[var(--brand-line)] bg-[var(--brand-bg)]"
                       : "border-line bg-white/[0.02] hover:border-[var(--brand-line)]",
@@ -113,7 +107,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span
-                      className={cn("block truncate text-[15px] font-semibold", isActive ? "text-txt" : "text-txt2")}
+                      className={cn("block truncate text-[14.5px] font-semibold", isActive ? "text-txt" : "text-txt2")}
                       dir="auto"
                     >
                       {t(kind === "Gamerz" ? "kindGamerz" : "kindStreamerz")}
@@ -132,15 +126,14 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 </button>
               )
             })}
-            </div>
           </div>
 
           {/* the controls, one continuous column */}
-          <div className="flex shrink-0 flex-col gap-3 lg:w-[364px] lg:border-l lg:border-line lg:pl-6">
-            <h3 className="text-[13.5px] font-semibold text-txt">{t("configHeading")}</h3>
-            {/* the rows share out whatever height the presets column sets,
-                so both columns finish on the same line */}
-            <div className="flex flex-1 flex-col justify-between gap-3">
+          <div className="flex shrink-0 flex-col justify-center gap-3 lg:w-[364px] lg:border-l lg:border-line lg:pl-6">
+            <div>
+              <h3 className="text-[13.5px] font-semibold text-txt">{t("configHeading")}</h3>
+              <p className="mt-0.5 text-[12px] text-txt3">{t("configBody")}</p>
+            </div>
             <ControlRow label={t("domainSni")} icon={ServerIcon}>
               {customOpen ? (
                 <div className="flex w-full items-center gap-2">
@@ -154,11 +147,11 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     }}
                     placeholder="example.com"
                     aria-label={t("domainSni")}
-                    className="h-10 rounded-[10px] border-line bg-white/[0.02] text-[13.5px]"
+                    className="h-10 rounded-[10px] border-line bg-white/[0.02] text-[13px]"
                   />
                   <Button
                     size="sm"
-                    className="h-10 shrink-0 rounded-[10px] px-3.5 text-[13.5px]"
+                    className="h-10 shrink-0 rounded-[10px] px-3.5 text-[13px]"
                     disabled={domainBusy || !customVal.trim()}
                     onClick={() => void submitCustom()}
                   >
@@ -170,7 +163,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   type="button"
                   aria-busy={domainBusy}
                   onClick={() => setDomainOpen(true)}
-                  className="group flex h-10 w-full items-center justify-between gap-3 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13.5px] text-txt transition-colors duration-200 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
+                  className="group flex h-10 w-full items-center justify-between gap-3 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt transition-colors duration-200 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
                 >
                   <span className={cn("truncate", domText.length > 17 && "text-[11px]")} dir="auto">{domText}</span>
                   <ChevronDown className="size-4 shrink-0 text-txt2 transition-[color,transform] duration-200 group-hover:translate-y-px group-hover:text-brand-strong" aria-hidden />
@@ -182,7 +175,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
               <button
                 type="button"
                 onClick={onOpenApps}
-                className="group flex h-10 w-full items-center justify-between gap-3 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13.5px] text-txt transition-colors duration-200 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
+                className="group flex h-10 w-full items-center justify-between gap-3 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt transition-colors duration-200 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
               >
                 <span className="truncate" dir="auto">
                   {routing}
@@ -195,7 +188,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
               </button>
             </ControlRow>
 
-            <ControlRow label={t("transport")} icon={Cable}>
+            <ControlRow label={t("transport")} align="start" icon={Cable}>
               <div>
                 <Segmented
                   id="transport"
@@ -213,7 +206,6 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 )}
               </div>
             </ControlRow>
-            </div>
           </div>
         </div>
       </section>
@@ -251,8 +243,8 @@ function ControlRow({
   icon?: LucideIcon
 }) {
   return (
-    <div className={cn("flex flex-1 gap-3", align === "center" ? "items-center" : "items-start")}>
-      <div className="flex w-[138px] shrink-0 items-center gap-2 pt-[2px] text-[12.5px] text-txt2">
+    <div className={cn("flex gap-3", align === "center" ? "items-center" : "items-start")}>
+      <div className="flex w-[138px] shrink-0 items-center gap-2 pt-[2px] text-[12px] text-txt2">
         {/* the icon slot is reserved even without an icon so every label
             starts on the same x, rows included */}
         <span
