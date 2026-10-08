@@ -59,7 +59,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1040px] flex-col gap-3">
       <Hero />
 
-      <section className="flex min-h-[186px] flex-1 flex-col justify-center rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] p-5">
+      <section className="flex min-h-[186px] flex-1 flex-col justify-center rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] p-[18px]">
         <div className="grid gap-5 lg:grid-cols-2 lg:gap-0">
           {/* the presets column opens with its own heading so both column
               headings sit on the same line, as in the owner's reference */}
@@ -68,7 +68,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
               <h2 className="text-[20px] font-semibold text-txt">{t("setupTitle")}</h2>
               <p className="mt-1 text-[13.5px] text-txt2">{t("setupBody")}</p>
             </div>
-            <div className="mt-0.5 flex flex-col gap-5">
+            <div className="mt-0.5 flex flex-col gap-4">
             {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
               const mine = cards.find((c) => c.card_type === kind)
               const sni = mine?.sni ?? DEFAULT_SNI[kind]
@@ -91,7 +91,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     void ensurePresetCard(kind).finally(() => setCreating(null))
                   }}
                   className={cn(
-                    "flex items-center gap-3.5 rounded-[12px] border p-5 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
+                    "flex items-center gap-3.5 rounded-[12px] border p-4 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
                     isActive
                       ? "border-[var(--brand-line)] bg-[var(--brand-bg)]"
                       : "border-line bg-white/[0.02] hover:border-[var(--brand-line)]",
@@ -132,12 +132,12 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
           </div>
 
           {/* the controls column opens the same way, heading first */}
-          <div className="flex min-w-0 flex-col lg:border-l lg:border-line lg:pl-5">
+          <div className="flex min-w-0 flex-col lg:border-l lg:border-[rgb(255_255_255/0.05)] lg:pl-4">
             <div>
               <h3 className="text-[20px] font-semibold text-txt">{t("configHeading")}</h3>
               <p className="mt-1 text-[13.5px] text-txt2">{t("configBody")}</p>
             </div>
-            <div className="mt-6 flex flex-col gap-4">
+            <div className="mt-0.5 flex flex-col gap-4">
             <ControlRow label={t("domainSni")} icon={ServerIcon}>
               {customOpen ? (
                 <div className="flex w-full items-center gap-2">
@@ -248,7 +248,7 @@ function ControlRow({
   icon?: LucideIcon
 }) {
   return (
-    <div className={cn("flex gap-3", align === "center" ? "items-center" : "items-start")}>
+    <div className={cn("flex gap-2", align === "center" ? "items-center" : "items-start")}>
       <div className="flex w-[132px] shrink-0 items-center gap-2 text-[12.5px] text-txt2">
         {/* the icon slot is reserved even without an icon so every label
             starts on the same x, rows included */}
