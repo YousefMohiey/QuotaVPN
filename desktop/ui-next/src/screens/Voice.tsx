@@ -58,7 +58,7 @@ export function Voice() {
         </div>
 
         <div className="mt-7 flex flex-col gap-6">
-          <section className="rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] p-5">
+          <section className="rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
               <div className="flex min-w-0 flex-1 items-center">
                 <div className="min-w-0">
@@ -134,7 +134,7 @@ export function Voice() {
             </div>
           </section>
 
-          <section className="rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] p-5">
+          <section className="rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
               <div className="flex min-w-0 flex-1 items-center">
                 <div className="min-w-0">

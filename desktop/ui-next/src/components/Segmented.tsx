@@ -40,7 +40,7 @@ export function Segmented<T extends string>({
             className={cn(
               "relative rounded-[8px] transition-colors",
               boxed
-                ? cn("relative flex h-full min-w-0 flex-1 items-center justify-center px-[3px] text-[12px]", on ? "text-white" : "text-txt2 hover:text-txt")
+                ? cn("relative flex h-full min-w-0 flex-1 items-center justify-center px-[3px] text-[12px]", on ? "font-medium text-brand-strong" : "text-txt2 hover:text-txt")
                 : cn("py-1.5", fill ? "min-w-0 flex-1 px-1.5 text-[12.5px]" : "px-3 text-[12.5px]", on ? "text-txt" : "text-txt3 hover:text-txt2"),
             )}
           >
@@ -49,7 +49,7 @@ export function Segmented<T extends string>({
                 layoutId={"seg-" + id}
                 className={cn(
                   "absolute inset-0 rounded-[8px]",
-                  boxed ? "border border-[var(--brand)] bg-[var(--brand-mid)]" : "bg-white/[0.1]",
+                  boxed ? "bg-white/[0.09] shadow-[inset_0_1px_0_rgb(255_255_255/0.07),0_1px_2px_rgb(0_0_0/0.4)]" : "bg-white/[0.1]",
                 )}
                 transition={{ type: "spring", stiffness: 520, damping: 40 }}
               />

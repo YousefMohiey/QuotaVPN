@@ -59,7 +59,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1040px] flex-col gap-3">
       <Hero />
 
-      <section className="flex min-h-[186px] flex-1 flex-col justify-center rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] p-4">
+      <section className="flex min-h-[186px] flex-1 flex-col justify-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-4">
         <div className="grid gap-5 lg:grid-cols-[1.02fr_0.98fr] lg:gap-0">
           {/* the presets column opens with its own heading so both column
               headings sit on the same line, as in the owner's reference */}

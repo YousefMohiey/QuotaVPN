@@ -149,7 +149,7 @@ export function Hero() {
   useTick(1000, connected)
 
   return (
-    <section className="flex flex-1 flex-col rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] p-5">
+    <section className="flex flex-1 flex-col rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
       <div className="flex flex-1 items-center">
         <motion.div
           layout

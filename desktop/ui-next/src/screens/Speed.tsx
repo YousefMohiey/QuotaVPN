@@ -683,7 +683,7 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
           the same way Home's dial does, and the reading slides in beside it.
           The card stretches to take the window's spare height, so the page
           ends at the card instead of leaving an empty band below it. */}
-      <section className="flex flex-1 flex-col rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)]">
+      <section className="flex flex-1 flex-col rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)]">
         <div className="flex min-h-[224px] flex-1 items-center px-5 py-3">
           <motion.div
             layout
@@ -779,7 +779,7 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
           what is being measured against, who hosts it, and who you are. */}
       <section
         className={cn(
-          "grid divide-x divide-line rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)]",
+          "grid divide-x divide-line rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)]",
           netInfo ? "grid-cols-3" : "grid-cols-2",
         )}
       >

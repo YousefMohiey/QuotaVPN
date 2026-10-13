@@ -22,7 +22,7 @@ function SettingCard({
   control: ReactNode
 }) {
   return (
-    <section className="flex items-center gap-4 rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] px-5 py-4">
+    <section className="flex items-center gap-4 rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] px-5 py-4">
       <span className="grid size-12 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
         {icon}
       </span>

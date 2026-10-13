@@ -58,11 +58,11 @@ export function SpeedResult({ runAt, onBack }: { runAt: number | null; onBack: (
       </div>
 
       {run === null ? (
-        <section className="flex flex-col items-center justify-center rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] px-5 py-12 text-center">
+        <section className="flex flex-col items-center justify-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] px-5 py-12 text-center">
           <p className="text-[13.5px] text-txt2">{t("histEmpty")}</p>
         </section>
       ) : (
-        <section className="rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)]">
+        <section className="rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)]">
           <div className="flex min-h-[196px] items-center justify-center px-5 py-4">
             <div className="flex items-baseline gap-2">
               <span

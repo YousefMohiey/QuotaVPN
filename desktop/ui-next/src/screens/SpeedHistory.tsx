@@ -44,7 +44,7 @@ function RunCard({
   return (
     <div
       className={cn(
-        "group flex items-center rounded-[12px] border border-line bg-[rgb(21_29_46/0.62)] transition-colors hover:border-line-strong",
+        "group flex items-center rounded-[12px] border border-line bg-[rgb(18_19_23/0.72)] transition-colors hover:border-line-strong",
         picked && "border-[var(--brand-line)] bg-[var(--brand-bg)]",
       )}
     >
@@ -222,13 +222,13 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
       </div>
 
       {history.length === 0 ? (
-        <section className="flex flex-1 flex-col items-center justify-center rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)] px-5 py-12 text-center">
+        <section className="flex flex-1 flex-col items-center justify-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] px-5 py-12 text-center">
           <p className="text-[13.5px] text-txt2">{t("histEmpty")}</p>
         </section>
       ) : (
         <>
           {/* the log in three numbers */}
-          <section className="grid grid-cols-3 divide-x divide-line rounded-[16px] border border-line bg-[rgb(21_29_46/0.62)]">
+          <section className="grid grid-cols-3 divide-x divide-line rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)]">
             {[
               { label: t("bestDown"), value: best.down, unit: t("mbps"), round: false },
               { label: t("bestUp"), value: best.up, unit: t("mbps"), round: false },
