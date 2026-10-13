@@ -184,22 +184,17 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
             </ConfigField>
 
             <ConfigField label={t("transport")} icon={Cable}>
-              <div>
-                <Segmented
-                  id="transport"
-                  value={transport}
-                  onChange={setTransport}
-                  boxed
-                  options={[
-                    { value: "vless", label: t("trStandard") },
-                    { value: "hy2", label: "Hysteria2" },
-                    { value: "wg", label: t("trWg") },
-                  ]}
-                />
-                {transport !== "vless" && (
-                  <p className="mt-2.5 text-[11.5px] text-txt3">{transport === "wg" ? t("trNoteWg") : t("trNoteHy2")}</p>
-                )}
-              </div>
+              <Segmented
+                id="transport"
+                value={transport}
+                onChange={setTransport}
+                boxed
+                options={[
+                  { value: "vless", label: t("trStandard") },
+                  { value: "hy2", label: "Hysteria2", hint: t("trNoteHy2") },
+                  { value: "wg", label: t("trWg"), hint: t("trNoteWg") },
+                ]}
+              />
             </ConfigField>
           </div>
       </section>

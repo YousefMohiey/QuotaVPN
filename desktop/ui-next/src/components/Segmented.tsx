@@ -14,7 +14,7 @@ export function Segmented<T extends string>({
 }: {
   id: string
   value: T
-  options: Array<{ value: T; label: string }>
+  options: Array<{ value: T; label: string; hint?: string }>
   onChange: (v: T) => void
   className?: string
   fill?: boolean
@@ -23,8 +23,11 @@ export function Segmented<T extends string>({
   return (
     <div
       className={cn(
-        "rounded-[10px] border border-line bg-white/[0.02]",
-        boxed ? "flex h-12 w-full items-center p-1.5" : "p-0.5",
+        /* boxed drops the outer frame: the three options sit bare in a row
+           and the selected pill carries the shape by itself */
+        boxed
+          ? "flex h-12 w-full items-center gap-1"
+          : "rounded-[10px] border border-line bg-white/[0.02] p-0.5",
         !boxed && (fill ? "flex w-full" : "inline-flex"),
         className,
       )}
@@ -37,19 +40,23 @@ export function Segmented<T extends string>({
             type="button"
             onClick={() => onChange(o.value)}
             aria-pressed={on}
+            title={o.hint}
             className={cn(
-              "relative rounded-[8px] transition-colors",
+              "relative transition-colors",
               boxed
-                ? cn("relative flex h-full min-w-0 flex-1 items-center justify-center px-[3px] text-[12px]", on ? "font-medium text-brand-strong" : "text-txt2 hover:text-txt")
-                : cn("py-1.5", fill ? "min-w-0 flex-1 px-1.5 text-[12.5px]" : "px-3 text-[12.5px]", on ? "text-txt" : "text-txt3 hover:text-txt2"),
+                ? cn(
+                    "flex h-full min-w-0 flex-1 items-center justify-center rounded-[10px] px-1.5 text-[12px]",
+                    on ? "text-white" : "text-txt2 hover:bg-[var(--brand-bg)] hover:text-brand-strong",
+                  )
+                : cn("rounded-[8px] py-1.5", fill ? "min-w-0 flex-1 px-1.5 text-[12.5px]" : "px-3 text-[12.5px]", on ? "text-txt" : "text-txt3 hover:text-txt2"),
             )}
           >
             {on && (
               <motion.span
                 layoutId={"seg-" + id}
                 className={cn(
-                  "absolute inset-0 rounded-[8px]",
-                  boxed ? "bg-white/[0.09] shadow-[inset_0_1px_0_rgb(255_255_255/0.07),0_1px_2px_rgb(0_0_0/0.4)]" : "bg-white/[0.1]",
+                  "absolute inset-0",
+                  boxed ? "rounded-[10px] border border-[var(--brand)] bg-[var(--brand-mid)]" : "rounded-[8px] bg-white/[0.1]",
                 )}
                 transition={{ type: "spring", stiffness: 520, damping: 40 }}
               />
