@@ -60,15 +60,12 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
       <Hero />
 
       <section className="flex min-h-[186px] flex-1 flex-col justify-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-4">
-        <div className="grid gap-5 lg:grid-cols-[1.02fr_0.98fr] lg:gap-0">
-          {/* the presets column opens with its own heading so both column
-              headings sit on the same line, as in the owner's reference */}
-          <div className="flex min-w-0 flex-col lg:pr-2.5">
-            <div>
-              <h2 className="text-[20px] font-semibold text-txt">{t("setupTitle")}</h2>
-              <p className="mt-1 text-[13.5px] text-txt2">{t("setupBody")}</p>
-            </div>
-            <div className="mt-0.5 flex flex-col gap-4">
+        <div>
+          <h2 className="text-[20px] font-semibold text-txt">{t("setupTitle")}</h2>
+          <p className="mt-1 text-[13.5px] text-txt2">{t("setupBody")}</p>
+        </div>
+        <div className="mt-3">
+          <div className="grid grid-cols-2 gap-3" role="group" aria-label={t("setupTitle")}>
             {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
               const mine = cards.find((c) => c.card_type === kind)
               const sni = mine?.sni ?? DEFAULT_SNI[kind]
@@ -130,15 +127,9 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
             })}
             </div>
           </div>
-
-          {/* the controls column opens the same way, heading first */}
-          <div className="flex min-w-0 flex-col lg:border-l lg:border-[rgb(255_255_255/0.05)] lg:pl-2.5">
-            <div>
-              <h3 className="text-[20px] font-semibold text-txt">{t("configHeading")}</h3>
-              <p className="mt-1 text-[13.5px] text-txt2">{t("configBody")}</p>
-            </div>
-            <div className="mt-0.5 flex flex-col gap-4">
-            <ControlRow label={t("domainSni")} icon={ServerIcon}>
+          <div className="my-4 border-t border-line" aria-hidden />
+          <div className="grid grid-cols-3 gap-4">
+            <ConfigField label={t("domainSni")} icon={ServerIcon}>
               {customOpen ? (
                 <div className="flex w-full items-center gap-2">
                   <Input
@@ -173,9 +164,9 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   <ChevronDown className="size-4 shrink-0 text-txt2 transition-[color,transform] duration-200 group-hover:translate-y-px group-hover:text-brand-strong" aria-hidden />
                 </button>
               )}
-            </ControlRow>
+            </ConfigField>
 
-            <ControlRow label={t("routing")} icon={LayoutGrid}>
+            <ConfigField label={t("routing")} icon={LayoutGrid}>
               <button
                 type="button"
                 onClick={onOpenApps}
@@ -190,9 +181,9 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   aria-hidden
                 />
               </button>
-            </ControlRow>
+            </ConfigField>
 
-            <ControlRow label={t("transport")} align="start" icon={Cable}>
+            <ConfigField label={t("transport")} icon={Cable}>
               <div>
                 <Segmented
                   id="transport"
@@ -209,10 +200,8 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   <p className="mt-2.5 text-[11.5px] text-txt3">{transport === "wg" ? t("trNoteWg") : t("trNoteHy2")}</p>
                 )}
               </div>
-            </ControlRow>
-            </div>
+            </ConfigField>
           </div>
-        </div>
       </section>
 
       <PickerDialog
@@ -235,34 +224,25 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
   )
 }
 
-/** One control row: a quiet label with its glyph, then the control. */
-function ControlRow({
+/** One config column: a micro label with its glyph over the control. */
+function ConfigField({
   label,
   children,
-  align = "center",
   icon: Icon,
 }: {
   label: string
   children: ReactNode
-  align?: "center" | "start"
-  icon?: LucideIcon
+  icon: LucideIcon
 }) {
   return (
-    <div className={cn("flex gap-1.5", align === "center" ? "items-center" : "items-start")}>
-      <div className="flex w-[131px] shrink-0 items-center gap-1.5 text-[12.5px] text-txt2">
-        {/* the icon slot is reserved even without an icon so every label
-            starts on the same x, rows included */}
-        <span
-          className={cn(
-            "grid size-[26px] shrink-0 place-items-center rounded-[8px]",
-            Icon && "border border-line bg-white/[0.03] text-txt2",
-          )}
-        >
-          {Icon ? <Icon className="size-[13px]" aria-hidden /> : null}
+    <div className="min-w-0">
+      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase text-txt3">
+        <span className="grid size-[26px] shrink-0 place-items-center rounded-[8px] border border-line bg-white/[0.03] text-txt2">
+          <Icon className="size-[13px]" aria-hidden />
         </span>
         <span className="min-w-0 truncate">{label}</span>
       </div>
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="mt-2 min-w-0">{children}</div>
     </div>
   )
 }
