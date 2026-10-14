@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { Activity, Gauge, Globe, Network, RefreshCw, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { flagFor } from "@/lib/flags"
 import { useI18n } from "@/lib/i18n"
 import { useApp } from "@/state/app"
 import { fmtQuota, quotaRefresh, useQuota } from "@/state/quota"
@@ -117,7 +116,6 @@ export function Hero() {
       if (timer) window.clearTimeout(timer)
     }
   }, [connected])
-  const placeShown = geo?.place ? flagFor(geo.place) + geo.place : "-"
   const ipText = geo?.ip || "-"
 
   // The dial starts centered and parks left the moment Connect is pressed.
@@ -155,7 +153,9 @@ export function Hero() {
   useTick(1000, connected)
 
   return (
-    <section className="flex flex-1 flex-col rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
+    <div className="grid flex-1 grid-cols-2 gap-3">
+    {/* connection card: the dial glides, the reading rides beside it */}
+    <section className="flex min-h-0 flex-col rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
       <div className="flex flex-1 items-center">
         <motion.div
           layout
@@ -183,195 +183,173 @@ export function Hero() {
                 transition={{ duration: 0.32, ease: EASE_OUT, delay: 0.06 }}
                 className="min-w-0 flex-1"
               >
-                {/* the owner's own arrangement: the reading tiles ride the
-                    top right, and Live traffic keeps the left for itself */}
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span
-                        aria-hidden
-                        className={cn(
-                          "size-1.5 rounded-full",
-                          connected ? "bg-[var(--green)]" : "pulse-dot bg-[var(--brand)]",
-                        )}
-                      />
-                      <span className="text-[12.5px] text-txt2">
-                        {connected ? t("connected") : t("working")}
-                      </span>
-                      {connected && name ? (
-                        <span className="shrink-0 truncate rounded-full border border-line px-2 py-0.5 text-[11px] text-txt2" dir="auto">
-                          {name}
-                        </span>
-                      ) : null}
-                    </div>
-                    {connected ? (
-                      <>
-                        <p className="mt-2 truncate text-[22px] font-semibold leading-tight text-txt" dir="auto">
-                          {name}
-                        </p>
-                        <p className="mt-0.5 truncate text-[12.5px] text-txt3" dir="auto">
-                          {displayHost(card?.sni)}
-                        </p>
-                      </>
-                    ) : (
-                      <p className="mt-2 truncate text-[15px] font-medium text-txt" dir="auto">
-                        {t("talking")}
-                      </p>
-                    )}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "size-1.5 rounded-full",
+                        connected ? "bg-[var(--green)]" : "pulse-dot bg-[var(--brand)]",
+                      )}
+                    />
+                    <span className="truncate text-[12.5px] text-txt2">
+                      {connected ? t("connected") : t("working")}
+                    </span>
                   </div>
-                  {connected && (
-                    <div className="grid min-w-0 shrink-0 grid-cols-2 items-stretch gap-2.5">
-                      <StatTile
-                        label={t("sessLabel")}
-                        value={sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
-                        sub={"⁨↓ " + fmtBytes(rx) + "⁩   ⁨↑ " + fmtBytes(tx) + "⁩"}
-                      />
-                      <StatTile label={t("yourIp")} value={serverAddr || ipText} />
-                    </div>
+                  {connected ? (
+                    <>
+                      <p className="mt-2 truncate text-[22px] font-semibold leading-tight text-txt" dir="auto">
+                        {name}
+                      </p>
+                      <p className="mt-0.5 truncate text-[12.5px] text-txt3" dir="auto">
+                        {displayHost(card?.sni)}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="mt-2 truncate text-[15px] font-medium text-txt" dir="auto">
+                      {t("talking")}
+                    </p>
                   )}
+                  {status ? (
+                    <div className="mt-2 select-text text-[11.5px] leading-snug text-txt3">{status}</div>
+                  ) : null}
                 </div>
-                {status ? (
-                  <div className="mt-2 max-w-[520px] select-text text-[11.5px] leading-snug text-txt3">{status}</div>
-                ) : null}
-
-                <AnimatePresence>
-                  {connected && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.36, ease: EASE_OUT, delay: 0.12 }}
-                    >
-                      <div className="mt-4">
-                        <Traffic rx={rx} tx={tx} />
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </motion.div>
             )}
           </AnimatePresence>
         </motion.div>
       </div>
 
-      {/* the WE quota section: a full block when linked, an invite row when not */}
-      {quota.linked && mainUnit ? (
-        <div className="mt-3 border-t border-line pt-3">
-          <div className="flex items-center gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
-              <Gauge className="size-4" strokeWidth={1.7} aria-hidden />
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-3">
-                <span className="truncate text-[12px] text-txt2" dir="auto">
-                  {mainUnit.offer || "WE"}
-                  {quota.updatedAt ? ` · ${new Date(quota.updatedAt).toLocaleTimeString()}` : ""}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => void quotaRefresh(true)}
-                  title={t("weRefresh")}
-                  aria-label={t("weRefresh")}
-                  disabled={quota.phase === "busy"}
-                  className="grid size-7 shrink-0 place-items-center rounded-[8px] border border-line bg-white/[0.02] text-txt2 transition-colors hover:border-[var(--brand-line)] hover:text-brand-strong disabled:cursor-wait"
-                >
-                  <RefreshCw className={cn("size-3.5", quota.phase === "busy" && "animate-spin")} aria-hidden />
-                </button>
-              </div>
-              <div className="mt-1 text-[15px] font-semibold text-txt">
-                {fmtQuota(mainUnit.remain)} {t("weLeft")} {fmtQuota(mainUnit.total)}
-              </div>
-              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
-                <div
-                  className="h-full rounded-full bg-[var(--brand-vivid)]"
-                  style={{
-                    width: `${mainUnit.total > 0 ? Math.max(0, Math.min(100, (mainUnit.remain / mainUnit.total) * 100)) : 0}%`,
-                  }}
-                />
-              </div>
-              <p className="mt-1 text-[11px] text-txt3">
-                {t("weUsed")} {fmtQuota(mainUnit.used)}
-              </p>
+      <AnimatePresence>
+        {connected && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.36, ease: EASE_OUT, delay: 0.12 }}
+          >
+            <div className="mt-3 grid grid-cols-2 items-stretch gap-2.5">
+              <StatTile
+                label={t("sessLabel")}
+                value={sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
+                sub={"⁨↓ " + fmtBytes(rx) + "⁩   ⁨↑ " + fmtBytes(tx) + "⁩"}
+              />
+              <StatTile label={t("yourIp")} value={serverAddr || ipText} />
             </div>
-          </div>
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setQuotaOpen(true)}
-          className="mt-3 flex w-full items-center gap-3 border-t border-line pt-3 text-start"
-        >
-          <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
-            <Gauge className="size-4" strokeWidth={1.7} aria-hidden />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[13px] font-medium text-txt">{t("weQuota")}</span>
-            <span className="mt-0.5 block truncate text-[11.5px] text-txt2">{t("weQuotaSub")}</span>
-          </span>
-          <span className="shrink-0 rounded-[8px] bg-[var(--brand-vivid)] px-3 py-1.5 text-[12px] font-medium text-white">
-            {t("weLink")}
-          </span>
-        </button>
-      )}
-      <WeQuotaDialog open={quotaOpen} onOpenChange={setQuotaOpen} />
+            <div className="mt-3">
+              <Traffic rx={rx} tx={tx} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* idle and unlinked keeps the three facts; the quota block or the
-          session tiles carry the rest */}
+      {/* idle and unlinked: the three facts as stacked rows, Settings
+          language, label left and value right with room to breathe */}
       {!connected && !quota.linked && (
-        <div className="mt-3 grid grid-cols-3 border-t border-line pt-3">
-          <Fact icon={Globe} label={t("yourLocation")} value={placeShown} />
-          <Fact
-            icon={Network}
-            label={t("yourIp")}
-            value={ipText}
-            className="border-s border-line ps-4"
-            valueClass="select-text"
-          />
-          <Fact
-            icon={Activity}
-            label={t("statusLbl")}
-            value={connected ? t("connected") : t("notConnected")}
-            dot={connected}
-            className="border-s border-line ps-4"
-          />
+        <div className="mt-3 border-t border-line pt-1">
+          <FactRow icon={Globe} label={t("yourLocation")} value={geo?.place || "-"} />
+          <FactRow icon={Network} label={t("yourIp")} value={ipText} select />
+          <FactRow icon={Activity} label={t("statusLbl")} value={t("notConnected")} dot={false} />
         </div>
       )}
     </section>
+
+      {/* quota card: the line's own panel, Settings-card language */}
+      <section className="flex min-h-0 flex-col justify-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
+        {quota.linked && mainUnit ? (
+          <div>
+            <div className="flex items-center gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
+                <Gauge className="size-4" strokeWidth={1.7} aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-[14px] font-semibold text-txt">{t("weQuota")}</h2>
+                <p className="mt-0.5 truncate text-[11.5px] text-txt2" dir="auto" title={mainUnit.offer || "WE"}>
+                  {mainUnit.offer || "WE"}
+                  {quota.updatedAt ? ` · ${new Date(quota.updatedAt).toLocaleTimeString()}` : ""}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void quotaRefresh(true)}
+                title={t("weRefresh")}
+                aria-label={t("weRefresh")}
+                disabled={quota.phase === "busy"}
+                className="grid size-8 shrink-0 place-items-center rounded-[10px] border border-line bg-white/[0.02] text-txt2 transition-colors hover:border-[var(--brand-line)] hover:text-brand-strong disabled:cursor-wait"
+              >
+                <RefreshCw className={cn("size-3.5", quota.phase === "busy" && "animate-spin")} aria-hidden />
+              </button>
+            </div>
+            <div className="mt-3 text-[24px] font-semibold leading-tight tabular-nums text-txt">
+              {fmtQuota(mainUnit.remain)}
+            </div>
+            <div className="mt-0.5 text-[12px] text-txt2">
+              {t("weLeft")} {fmtQuota(mainUnit.total)}
+            </div>
+            <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+              <div
+                className="h-full rounded-full bg-[var(--brand-vivid)]"
+                style={{
+                  width: `${mainUnit.total > 0 ? Math.max(0, Math.min(100, (mainUnit.remain / mainUnit.total) * 100)) : 0}%`,
+                }}
+              />
+            </div>
+            <p className="mt-1.5 text-[11px] text-txt3">
+              {t("weUsed")} {fmtQuota(mainUnit.used)}
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
+            <span className="grid size-12 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
+              <Gauge className="size-5" strokeWidth={1.7} aria-hidden />
+            </span>
+            <h2 className="mt-3 text-[14px] font-semibold text-txt">{t("weQuota")}</h2>
+            <p className="mt-1 text-[12px] leading-relaxed text-txt2">{t("weQuotaSub")}</p>
+            <button
+              type="button"
+              onClick={() => setQuotaOpen(true)}
+              className="mt-3 flex h-10 w-full items-center justify-center rounded-[10px] bg-[var(--brand-vivid)] px-3.5 text-[13px] font-medium text-white transition-[filter] hover:brightness-110"
+            >
+              {t("weLink")}
+            </button>
+          </div>
+        )}
+      </section>
+      <WeQuotaDialog open={quotaOpen} onOpenChange={setQuotaOpen} />
+    </div>
   )
 }
 
-/** One footer fact: icon tile, quiet label, one value line. */
-function Fact({
+/** One footer fact row: icon and label left, value right with the full
+    text disclosed. Unpredictable values keep nowrap plus a title so
+    nothing reads as a clipped mystery. */
+function FactRow({
   icon: Icon,
   label,
   value,
   dot,
-  className,
-  valueClass,
+  select,
 }: {
   icon: LucideIcon
   label: string
   value: string
   dot?: boolean
-  className?: string
-  valueClass?: string
+  select?: boolean
 }) {
   return (
-    <div className={cn("flex min-w-0 items-center gap-2.5", className)}>
-      <span className="grid size-[30px] shrink-0 place-items-center rounded-[8px] border border-line bg-white/[0.03] text-brand-strong">
-        <Icon className="size-[15px]" aria-hidden />
+    <div className="flex items-center gap-2.5 border-b border-line py-2 last:border-b-0">
+      <span className="grid size-[26px] shrink-0 place-items-center rounded-[8px] border border-line bg-white/[0.03] text-brand-strong">
+        <Icon className="size-[14px]" aria-hidden />
       </span>
-      <div className="min-w-0">
-        <div className="whitespace-nowrap text-[11px] text-txt3">{label}</div>
-        <div className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-txt">
-          {dot !== undefined && (
-            <span className={cn("size-[6px] shrink-0 rounded-full", dot ? "bg-[var(--green)]" : "bg-[var(--red)]")} aria-hidden />
-          )}
-          <span className={cn("truncate", valueClass)} dir="auto">
-            {value}
-          </span>
-        </div>
-      </div>
+      <span className="w-24 shrink-0 truncate text-[12px] text-txt2">{label}</span>
+      <span className="flex min-w-0 flex-1 items-center justify-end gap-1.5 text-[12.5px] text-txt">
+        {dot !== undefined && (
+          <span className={cn("size-[6px] shrink-0 rounded-full", dot ? "bg-[var(--green)]" : "bg-[var(--red)]")} aria-hidden />
+        )}
+        <span className={cn("truncate", select && "select-text")} title={value} dir="auto">
+          {value}
+        </span>
+      </span>
     </div>
   )
 }
