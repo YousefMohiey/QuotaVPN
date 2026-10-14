@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
-import { Activity, Gauge, Globe, Network, RefreshCw, type LucideIcon } from "lucide-react"
+import { Activity, Globe, Network, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/lib/i18n"
 import { useApp } from "@/state/app"
-import { fmtQuota, quotaRefresh, useQuota } from "@/state/quota"
-import { WeQuotaDialog } from "./WeQuotaDialog"
+import { useQuota } from "@/state/quota"
 import { api, netInfo } from "@/lib/ipc"
 import { Dial, type DialState } from "./Dial"
 import { displayHost, fmtBytes, fmtDuration, mbps } from "@/lib/format"
@@ -34,16 +33,6 @@ export function Hero() {
   const { t } = useI18n()
   const { phase, connected, busy, toggle, card, rx, tx, sessionStart, serverIp, status } = useApp()
   const quota = useQuota()
-  const [quotaOpen, setQuotaOpen] = useState(false)
-  const mainUnit = useMemo(
-    () => quota.units.find((u) => u.total > 0),
-    [quota.units],
-  )
-
-  // The linked WE line reads itself once per launch; the tap refreshes it.
-  useEffect(() => {
-    void quotaRefresh()
-  }, [])
   const [serverAddr, setServerAddr] = useState("")
 
   // While the tunnel is up the world sees the server's address, so resolve it
@@ -153,9 +142,9 @@ export function Hero() {
   useTick(1000, connected)
 
   return (
-    <div className="grid flex-1 grid-cols-2 gap-3">
-    {/* connection card: the dial glides, the reading rides beside it */}
-    <section className="flex min-h-0 flex-col rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
+    <>
+    {/* connection band: full width, the dial glides, the reading rides beside it */}
+    <section className="flex min-h-0 flex-1 flex-col justify-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
       <div className="flex flex-1 items-center">
         <motion.div
           layout
@@ -243,87 +232,23 @@ export function Hero() {
         )}
       </AnimatePresence>
 
-      {/* idle and unlinked: the three facts as stacked rows, Settings
-          language, label left and value right with room to breathe */}
+      {/* idle and unlinked: the three facts as a roomy strip, icon tile
+          over label over value, nothing clipped */}
       {!connected && !quota.linked && (
-        <div className="mt-3 border-t border-line pt-1">
-          <FactRow icon={Globe} label={t("yourLocation")} value={geo?.place || "-"} />
-          <FactRow icon={Network} label={t("yourIp")} value={ipText} select />
-          <FactRow icon={Activity} label={t("statusLbl")} value={t("notConnected")} dot={false} />
+        <div className="mt-3 grid grid-cols-3 gap-3 border-t border-line pt-3">
+          <FactTile icon={Globe} label={t("yourLocation")} value={geo?.place || "-"} />
+          <FactTile icon={Network} label={t("yourIp")} value={ipText} select />
+          <FactTile icon={Activity} label={t("statusLbl")} value={t("notConnected")} dot={false} />
         </div>
       )}
     </section>
-
-      {/* quota card: the line's own panel, Settings-card language */}
-      <section className="flex min-h-0 flex-col justify-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
-        {quota.linked && mainUnit ? (
-          <div>
-            <div className="flex items-center gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
-                <Gauge className="size-4" strokeWidth={1.7} aria-hidden />
-              </span>
-              <div className="min-w-0 flex-1">
-                <h2 className="text-[14px] font-semibold text-txt">{t("weQuota")}</h2>
-                <p className="mt-0.5 truncate text-[11.5px] text-txt2" dir="auto" title={mainUnit.offer || "WE"}>
-                  {mainUnit.offer || "WE"}
-                  {quota.updatedAt ? ` · ${new Date(quota.updatedAt).toLocaleTimeString()}` : ""}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => void quotaRefresh(true)}
-                title={t("weRefresh")}
-                aria-label={t("weRefresh")}
-                disabled={quota.phase === "busy"}
-                className="grid size-8 shrink-0 place-items-center rounded-[10px] border border-line bg-white/[0.02] text-txt2 transition-colors hover:border-[var(--brand-line)] hover:text-brand-strong disabled:cursor-wait"
-              >
-                <RefreshCw className={cn("size-3.5", quota.phase === "busy" && "animate-spin")} aria-hidden />
-              </button>
-            </div>
-            <div className="mt-3 text-[24px] font-semibold leading-tight tabular-nums text-txt">
-              {fmtQuota(mainUnit.remain)}
-            </div>
-            <div className="mt-0.5 text-[12px] text-txt2">
-              {t("weLeft")} {fmtQuota(mainUnit.total)}
-            </div>
-            <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
-              <div
-                className="h-full rounded-full bg-[var(--brand-vivid)]"
-                style={{
-                  width: `${mainUnit.total > 0 ? Math.max(0, Math.min(100, (mainUnit.remain / mainUnit.total) * 100)) : 0}%`,
-                }}
-              />
-            </div>
-            <p className="mt-1.5 text-[11px] text-txt3">
-              {t("weUsed")} {fmtQuota(mainUnit.used)}
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
-            <span className="grid size-12 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
-              <Gauge className="size-5" strokeWidth={1.7} aria-hidden />
-            </span>
-            <h2 className="mt-3 text-[14px] font-semibold text-txt">{t("weQuota")}</h2>
-            <p className="mt-1 text-[12px] leading-relaxed text-txt2">{t("weQuotaSub")}</p>
-            <button
-              type="button"
-              onClick={() => setQuotaOpen(true)}
-              className="mt-3 flex h-10 w-full items-center justify-center rounded-[10px] bg-[var(--brand-vivid)] px-3.5 text-[13px] font-medium text-white transition-[filter] hover:brightness-110"
-            >
-              {t("weLink")}
-            </button>
-          </div>
-        )}
-      </section>
-      <WeQuotaDialog open={quotaOpen} onOpenChange={setQuotaOpen} />
-    </div>
+    </>
   )
 }
 
-/** One footer fact row: icon and label left, value right with the full
-    text disclosed. Unpredictable values keep nowrap plus a title so
-    nothing reads as a clipped mystery. */
-function FactRow({
+/** One fact tile: icon over a quiet label over one value line. The strip
+    is full width now, so each tile has real room and nothing clips. */
+function FactTile({
   icon: Icon,
   label,
   value,
@@ -337,19 +262,21 @@ function FactRow({
   select?: boolean
 }) {
   return (
-    <div className="flex items-center gap-2.5 border-b border-line py-2 last:border-b-0">
-      <span className="grid size-[26px] shrink-0 place-items-center rounded-[8px] border border-line bg-white/[0.03] text-brand-strong">
-        <Icon className="size-[14px]" aria-hidden />
+    <div className="flex min-w-0 items-center gap-2.5">
+      <span className="grid size-[30px] shrink-0 place-items-center rounded-[8px] border border-line bg-white/[0.03] text-brand-strong">
+        <Icon className="size-[15px]" aria-hidden />
       </span>
-      <span className="w-24 shrink-0 truncate text-[12px] text-txt2">{label}</span>
-      <span className="flex min-w-0 flex-1 items-center justify-end gap-1.5 text-[12.5px] text-txt">
-        {dot !== undefined && (
-          <span className={cn("size-[6px] shrink-0 rounded-full", dot ? "bg-[var(--green)]" : "bg-[var(--red)]")} aria-hidden />
-        )}
-        <span className={cn("truncate", select && "select-text")} title={value} dir="auto">
-          {value}
-        </span>
-      </span>
+      <div className="min-w-0">
+        <div className="truncate text-[11px] text-txt3">{label}</div>
+        <div className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-txt">
+          {dot !== undefined && (
+            <span className={cn("size-[6px] shrink-0 rounded-full", dot ? "bg-[var(--green)]" : "bg-[var(--red)]")} aria-hidden />
+          )}
+          <span className={cn("truncate", select && "select-text")} title={value} dir="auto">
+            {value}
+          </span>
+        </div>
+      </div>
     </div>
   )
 }

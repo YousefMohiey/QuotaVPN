@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react"
 import { ChevronDown, ChevronRight, Gamepad2, Tv } from "lucide-react"
 import { Hero } from "@/components/Hero"
+import { QuotaPanel } from "@/components/QuotaPanel"
 import { PickerDialog, type PickerItem } from "@/components/PickerDialog"
 import { Segmented } from "@/components/Segmented"
 import { Button } from "@/components/ui/button"
@@ -60,8 +61,9 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1040px] flex-col gap-3">
       <Hero />
 
-      <section className="flex min-h-[186px] flex-1 flex-col justify-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-4">
-          <div className="grid grid-cols-2 gap-3" role="group" aria-label={t("setupTitle")}>
+      <div className="grid min-h-0 flex-1 grid-cols-12 gap-3">
+      <section className="col-span-7 flex min-h-[186px] flex-col justify-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-4">
+          <div className="grid grid-cols-1 gap-2" role="group" aria-label={t("setupTitle")}>
             {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
               const mine = cards.find((c) => c.card_type === kind)
               const sni = mine?.sni ?? DEFAULT_SNI[kind]
@@ -193,6 +195,9 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
             </RowField>
           </div>
       </section>
+
+      <QuotaPanel className="col-span-5" />
+      </div>
 
       <PickerDialog
         open={domainOpen}
