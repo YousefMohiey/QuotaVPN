@@ -100,6 +100,21 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
     }
     case "apply_update":
       return "Up to date." as T
+    case "we_quota_challenge": {
+      const wantCode =
+        typeof window !== "undefined" &&
+        new URLSearchParams(window.location.search).get("quota") === "code"
+      return { interaction: wantCode, image: "" } as unknown as T
+    }
+    case "we_quota_login":
+      return { customer: "Demo User" } as unknown as T
+    case "we_quota_usage":
+      return [
+        { offer: "WE 50GB", total: 51200, used: 39321.6, remain: 11878.4 },
+        { offer: "Extra 10GB", total: 10240, used: 10240, remain: 0 },
+      ] as unknown as T
+    case "we_quota_logout":
+      return undefined as T
     default:
       return ok() as T
   }

@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuotaVPN History</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<style>
+:root{
+  --stage:#040506;
+  --bg:#0c0d0f;
+  --side:#0e0f11;
+  --surface:#131415;
+  --fg:#f7f8f8;
+  --fg2:#d0d6e0;
+  --muted:#9c9c9d;
+  --meta:#6a6b6c;
+  --border:rgba(255,255,255,.07);
+  --border-soft:rgba(255,255,255,.045);
+  --brand:#2e7bf6;
+  --brand-hover:#4f92f8;
+  --brand-tint:rgba(46,123,246,.13);
+  --brand-edge:rgba(46,123,246,.45);
+  --danger:#f25555;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;min-height:100vh;display:grid;place-items:center;background:var(--stage);
+  color:var(--fg);font-family:Inter,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:14px;font-weight:500;letter-spacing:.2px;
+  font-feature-settings:"cv01","ss03";font-variant-numeric:tabular-nums;
+  -webkit-font-smoothing:antialiased;user-select:none;
+}
+.window{width:1060px;height:700px;display:flex;overflow:hidden;background:var(--bg);
+  border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 28px 70px rgba(0,0,0,.62),0 2px 6px rgba(0,0,0,.5);}
+/* sidebar */
+.sidebar{flex:0 0 200px;width:200px;display:flex;flex-direction:column;
+  padding:18px 12px 12px;background:var(--side);border-right:1px solid var(--border);}
+.brand{display:flex;align-items:center;gap:10px;padding:0 2px 18px;}
+.brand-mark{width:56px;height:56px;flex:0 0 56px;display:block;border-radius:12px;background:#1a1b1d;}
+.brand-name{font-size:15px;font-weight:600;color:var(--fg);white-space:nowrap;}
+.brand-ver{font-size:10.5px;font-weight:500;color:var(--meta);white-space:nowrap;margin-top:3px;display:block;}
+.nav{display:flex;flex-direction:column;gap:2px;}
+.nav-item{display:flex;align-items:center;gap:10px;height:36px;padding:0 10px;border:0;border-radius:6px;
+  background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:14px;font-weight:500;
+  letter-spacing:.2px;text-align:left;}
+.nav-item svg{width:20px;height:20px;flex:0 0 20px;}
+.nav-item:hover{background:rgba(255,255,255,.05);color:var(--fg);}
+.nav-item.is-active{background:var(--brand-tint);color:var(--fg);}
+.nav-mark{width:20px;height:20px;flex:0 0 20px;display:block;background-color:currentColor;
+  -webkit-mask-image:url("../../desktop/ui-next/public/valorant.png");mask-image:url("../../desktop/ui-next/public/valorant.png");
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;
+  -webkit-mask-size:contain;mask-size:contain;}
+.nav-foot{margin-top:auto;padding-top:12px;border-top:1px solid var(--border-soft);}
+/* main */
+.main{flex:1;min-width:0;display:flex;flex-direction:column;}
+.body{flex:1;min-height:0;padding:22px 28px 0;display:flex;flex-direction:column;}
+.head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}
+.head h1{margin:0;font-size:30px;font-weight:600;letter-spacing:-.5px;line-height:1.1;}
+.head p{margin:5px 0 0;font-size:13px;font-weight:400;color:var(--muted);}
+.head-actions{display:flex;gap:8px;padding-top:6px;}
+.btn{height:30px;padding:0 12px;border-radius:6px;border:1px solid var(--border);
+  background:rgba(255,255,255,.03);color:var(--fg2);font-family:inherit;font-size:12.5px;font-weight:500;
+  letter-spacing:.2px;cursor:pointer;}
+.btn:hover{background:rgba(255,255,255,.06);color:var(--fg);}
+/* best ever strip: one continuous bar, not cards */
+.best{margin-top:14px;display:flex;align-items:center;height:58px;padding:0 18px;
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;}
+.best-flag{display:flex;align-items:center;gap:9px;padding-right:18px;flex:0 0 auto;}
+.best-flag svg{width:17px;height:17px;color:var(--brand);}
+.best-flag b{font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--fg2);}
+.best-flag span{display:block;font-size:11px;font-weight:400;color:var(--meta);letter-spacing:.2px;}
+.best-seg{flex:1;display:flex;align-items:baseline;gap:8px;padding:0 18px;border-left:1px solid var(--border-soft);min-width:0;}
+.best-seg .v{font-size:19px;font-weight:600;color:var(--fg);white-space:nowrap;}
+.best-seg .v small{font-size:11.5px;font-weight:500;color:var(--muted);margin-left:3px;}
+.best-seg .k{font-size:12px;font-weight:400;color:var(--muted);white-space:nowrap;}
+/* groups */
+.groups{margin-top:10px;flex:1;min-height:0;display:flex;flex-direction:column;gap:7px;}
+.glabel{display:flex;align-items:center;gap:10px;font-size:10.5px;font-weight:600;letter-spacing:1.2px;
+  text-transform:uppercase;color:var(--meta);}
+.glabel::after{content:"";flex:1;height:1px;background:var(--border-soft);}
+.glabel .n{font-weight:500;letter-spacing:.2px;text-transform:none;color:var(--meta);}
+.rows{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:10px;
+  background:var(--surface);overflow:hidden;}
+.row{display:grid;grid-template-columns:26px 52px minmax(0,1fr) auto auto 30px;align-items:center;
+  gap:10px;padding:0 8px 0 12px;height:48px;border-top:1px solid var(--border-soft);cursor:pointer;}
+.row:first-child{border-top:0;}
+.row:hover{background:rgba(255,255,255,.04);}
+.row.is-sel{background:var(--brand-tint);}
+.row.is-sel:hover{background:rgba(46,123,246,.17);}
+.box{width:16px;height:16px;border-radius:4px;border:1px solid rgba(255,255,255,.22);
+  background:transparent;display:grid;place-items:center;color:#fff;}
+.row.is-sel .box{background:var(--brand);border-color:var(--brand);}
+.box svg{width:11px;height:11px;opacity:0;}
+.row.is-sel .box svg{opacity:1;}
+.time{font-size:13px;font-weight:500;color:var(--fg2);}
+.srv{min-width:0;}
+.srv b{display:block;font-size:13.5px;font-weight:500;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.srv span{display:block;font-size:11.5px;font-weight:400;color:var(--meta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dl{text-align:right;}
+.dl b{font-size:17px;font-weight:600;color:var(--fg);}
+.dl b small{font-size:11px;font-weight:500;color:var(--muted);margin-left:3px;}
+.dl span{display:block;font-size:10.5px;font-weight:500;letter-spacing:.8px;text-transform:uppercase;color:var(--meta);}
+.sub{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--muted);white-space:nowrap;}
+.sub b{font-weight:500;color:var(--fg2);}
+.del{width:28px;height:28px;border:0;border-radius:6px;background:transparent;color:var(--muted);
+  display:grid;place-items:center;cursor:pointer;opacity:0;}
+.row:hover .del,.row:focus-within .del{opacity:1;}
+.del:hover{background:rgba(255,255,255,.07);color:var(--danger);}
+.del svg{width:15px;height:15px;}
+/* bottom selection bar */
+.selbar{margin:10px 28px 16px;display:flex;align-items:center;justify-content:space-between;
+  height:46px;padding:0 8px 0 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;}
+.selbar p{margin:0;font-size:13px;color:var(--fg2);}
+.selbar p b{color:var(--fg);}
+.selbar .right{display:flex;align-items:center;gap:8px;}
+.linkbtn{border:0;background:transparent;color:var(--muted);font-family:inherit;font-size:12.5px;
+  font-weight:500;cursor:pointer;padding:6px 8px;border-radius:6px;}
+.linkbtn:hover{color:var(--fg);background:rgba(255,255,255,.05);}
+.dangerbtn{height:30px;padding:0 14px;border:0;border-radius:6px;background:rgba(242,85,85,.14);
+  color:var(--danger);font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;}
+.dangerbtn:hover{background:rgba(242,85,85,.22);}
+</style>
+</head>
+<body>
+<div class="window" role="dialog" aria-label="QuotaVPN History">
+  <aside class="sidebar">
+    <div class="brand">
+      <img class="brand-mark" src="../../desktop/ui-next/public/icon.png" alt="" width="56" height="56" onerror="this.style.visibility='hidden'">
+      <span><span class="brand-name">QuotaVPN</span><span class="brand-ver">v0.4.0</span></span>
+    </div>
+    <nav class="nav" aria-label="Main">
+      <button type="button" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 10.4 12 4l8.4 6.4V19a1.4 1.4 0 0 1-1.4 1.4H5a1.4 1.4 0 0 1-1.4-1.4z"/><path d="M9.7 20.4v-6h4.6v6"/></svg>
+        Home
+      </button>
+      <button type="button" class="nav-item"><span class="nav-mark"></span>Valorant</button>
+      <button type="button" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 18.2a8.6 8.6 0 1 1 15.2 0"/><path d="M12 14.2l3.7-3.6"/><circle cx="12" cy="15.4" r="1.3"/></svg>
+        Speed
+      </button>
+      <button type="button" class="nav-item is-active" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.7 12a8.3 8.3 0 1 0 2.5-5.9"/><path d="M3.4 4.4v4.3h4.3"/><path d="M12 7.9V12l3 1.8"/></svg>
+        History
+      </button>
+    </nav>
+    <div class="nav-foot">
+      <button type="button" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.6h8.2M16.6 7.6H20M4 16.4h3.4M11.8 16.4H20"/><circle cx="14.6" cy="7.6" r="2.1"/><circle cx="9.4" cy="16.4" r="2.1"/></svg>
+        Settings
+      </button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="body">
+      <div class="head">
+        <div><h1>History</h1><p>Every speed test on this device, newest first.</p></div>
+        <div class="head-actions"><button type="button" class="btn">Select</button><button type="button" class="btn">Clear all</button></div>
+      </div>
+      <div class="best" aria-label="Best ever results">
+        <div class="best-flag">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4a1 1 0 0 0-1 1c0 2.5 2 4.5 4.5 4.5M17 6h3a1 1 0 0 1 1 1c0 2.5-2 4.5-4.5 4.5"/></svg>
+          <div><b>Best ever</b><span>Across 46 tests</span></div>
+        </div>
+        <div class="best-seg"><span class="v">183.6<small>Mbps</small></span><span class="k">Best download</span></div>
+        <div class="best-seg"><span class="v">42.8<small>Mbps</small></span><span class="k">Best upload</span></div>
+        <div class="best-seg"><span class="v">18<small>ms</small></span><span class="k">Best ping</span></div>
+      </div>
+      <div class="groups">
+        <div>
+          <div class="glabel">Today <span class="n">3 runs</span></div>
+          <div class="rows" style="margin-top:6px">
+            <div class="row is-sel">
+              <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5 10-11"/></svg></span>
+              <span class="time">14:02</span>
+              <span class="srv"><b>Frankfurt 04</b><span>Auto server, 12 ms route</span></span>
+              <span class="dl"><b>183.6<small>Mbps</small></b><span>Download</span></span>
+              <span class="sub"><span><b>42.8</b> up</span><span><b>18</b> ping</span><span><b>2.1</b> jitter</span></span>
+              <button type="button" class="del" aria-label="Delete run"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 4.5h5M6.5 7l1 13h9l1-13"/><path d="M10 11v6M14 11v6"/></svg></button>
+            </div>
+            <div class="row">
+              <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5 10-11"/></svg></span>
+              <span class="time">11:47</span>
+              <span class="srv"><b>Amsterdam 02</b><span>Manual pick, game lobby EU</span></span>
+              <span class="dl"><b>96.4<small>Mbps</small></b><span>Download</span></span>
+              <span class="sub"><span><b>27.6</b> up</span><span><b>29</b> ping</span><span><b>3.8</b> jitter</span></span>
+              <button type="button" class="del" aria-label="Delete run"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 4.5h5M6.5 7l1 13h9l1-13"/><path d="M10 11v6M14 11v6"/></svg></button>
+            </div>
+            <div class="row">
+              <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5 10-11"/></svg></span>
+              <span class="time">09:15</span>
+              <span class="srv"><b>Cairo 01</b><span>Auto server, home fiber</span></span>
+              <span class="dl"><b>47.2<small>Mbps</small></b><span>Download</span></span>
+              <span class="sub"><span><b>15.7</b> up</span><span><b>42</b> ping</span><span><b>6.4</b> jitter</span></span>
+              <button type="button" class="del" aria-label="Delete run"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 4.5h5M6.5 7l1 13h9l1-13"/><path d="M10 11v6M14 11v6"/></svg></button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="glabel">Yesterday <span class="n">2 runs</span></div>
+          <div class="rows" style="margin-top:6px">
+            <div class="row is-sel">
+              <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5 10-11"/></svg></span>
+              <span class="time">21:38</span>
+              <span class="srv"><b>Frankfurt 02</b><span>Manual pick, late session</span></span>
+              <span class="dl"><b>128.9<small>Mbps</small></b><span>Download</span></span>
+              <span class="sub"><span><b>31.4</b> up</span><span><b>24</b> ping</span><span><b>2.9</b> jitter</span></span>
+              <button type="button" class="del" aria-label="Delete run"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 4.5h5M6.5 7l1 13h9l1-13"/><path d="M10 11v6M14 11v6"/></svg></button>
+            </div>
+            <div class="row">
+              <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5 10-11"/></svg></span>
+              <span class="time">18:05</span>
+              <span class="srv"><b>Milan 01</b><span>Auto server, before match</span></span>
+              <span class="dl"><b>73.5<small>Mbps</small></b><span>Download</span></span>
+              <span class="sub"><span><b>22.3</b> up</span><span><b>36</b> ping</span><span><b>4.7</b> jitter</span></span>
+              <button type="button" class="del" aria-label="Delete run"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 4.5h5M6.5 7l1 13h9l1-13"/><path d="M10 11v6M14 11v6"/></svg></button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="glabel">Oct 10 <span class="n">1 run</span></div>
+          <div class="rows" style="margin-top:6px">
+            <div class="row">
+              <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5 10-11"/></svg></span>
+              <span class="time">16:20</span>
+              <span class="srv"><b>Paris 03</b><span>Auto server, hotel wifi</span></span>
+              <span class="dl"><b>61.8<small>Mbps</small></b><span>Download</span></span>
+              <span class="sub"><span><b>18.9</b> up</span><span><b>31</b> ping</span><span><b>5.2</b> jitter</span></span>
+              <button type="button" class="del" aria-label="Delete run"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 4.5h5M6.5 7l1 13h9l1-13"/><path d="M10 11v6M14 11v6"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="selbar"><p><b>Selected 2</b> of 6 runs</p><div class="right"><button type="button" class="linkbtn">Cancel</button><button type="button" class="dangerbtn">Delete</button></div></div>
+  </main>
+</div>
+</body>
+</html>

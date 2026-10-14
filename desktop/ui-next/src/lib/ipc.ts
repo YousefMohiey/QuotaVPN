@@ -32,6 +32,9 @@ export type TunnelState = { running: boolean; error: string }
 export type TrafficState = { rx: number; tx: number }
 export type UpdateInfo = { current: string; latest: string; available: boolean; url: string; notes: string }
 export type NetInfo = { ip: string; isp: string; place: string }
+export type WeChallenge = { interaction: boolean; image: string }
+export type WeLogin = { customer: string }
+export type WeUnit = { offer: string; total: number; used: number; remain: number }
 
 export const isTauri = (): boolean =>
   typeof window !== "undefined" && "__TAURI_INTERNALS__" in window
@@ -140,4 +143,10 @@ export const api = {
   probeTunnel: () => call<CmdResult>("tunnel_probe"),
   checkUpdate: () => call<UpdateInfo>("check_update"),
   applyUpdate: () => call<string>("apply_update"),
+  weQuotaChallenge: (identifier: string) =>
+    call<WeChallenge>("we_quota_challenge", { identifier }),
+  weQuotaLogin: (landline: string, password: string, code: string) =>
+    call<WeLogin>("we_quota_login", { landline, password, code }),
+  weQuotaUsage: (acct: string) => call<WeUnit[]>("we_quota_usage", { acct }),
+  weQuotaLogout: () => call<unknown>("we_quota_logout"),
 }

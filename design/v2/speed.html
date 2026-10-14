@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuotaVPN Speed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#090a0c; --surface:#131416; --surface-2:#1b1d20;
+  --fg:#f5f7fa; --fg-2:#d9dee4; --muted:#a9b0b8; --meta:#868c94;
+  --border:rgba(255,255,255,.09); --border-soft:rgba(255,255,255,.07);
+  --brand:#2e7bf6; --brand-hover:#4f92f8; --brand-tint:rgba(46,123,246,.16); --brand-tint-soft:rgba(46,123,246,.10); --brand-edge:rgba(46,123,246,.55);
+  --row-fill:rgba(255,255,255,.035); --row-hover:rgba(255,255,255,.06); --hair-strong:rgba(255,255,255,.16);
+  --radius-sm:8px; --radius-md:12px; --radius-lg:16px;
+  --spring:cubic-bezier(.34,1.56,.64,1); --spring-soft:cubic-bezier(.22,1.4,.36,1);
+  --font-body:"Inter","SF Pro Text",-apple-system,system-ui,"Segoe UI",Roboto,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#040506;color:var(--fg);font-family:var(--font-body);font-size:14px;font-weight:500;letter-spacing:.2px;-webkit-font-smoothing:antialiased;user-select:none;overflow:hidden}
+#stage{width:1060px;height:700px}
+.window{width:1060px;height:700px;display:flex;overflow:hidden;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 28px 70px rgba(0,0,0,.62),0 2px 6px rgba(0,0,0,.5)}
+.sidebar{flex:0 0 200px;width:200px;display:flex;flex-direction:column;padding:20px 12px 12px;background:#0d0e10;border-right:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px 24px}
+.brand-mark{width:28px;height:28px;border-radius:8px;display:block;flex:0 0 28px}
+.brand-name{font-size:15px;font-weight:600;color:var(--fg);letter-spacing:.1px}
+.nav{display:flex;flex-direction:column;gap:4px}
+.nav-item{display:flex;align-items:center;gap:10px;height:38px;padding:0 12px;border:0;border-radius:var(--radius-sm);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:14px;font-weight:500;text-align:left;white-space:nowrap}
+.nav-item svg{width:17px;height:17px;flex:0 0 17px}
+.nav-item:hover{background:var(--row-hover);color:var(--fg)}
+.nav-item.is-active{background:var(--brand-tint);color:var(--fg)}
+.nav-foot{margin-top:auto;padding-top:12px;border-top:1px solid var(--border-soft)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;padding:20px 24px 16px;gap:14px}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.top h1{margin:0;font-size:20px;font-weight:600;letter-spacing:.1px;color:var(--fg);line-height:1.25}
+.top .sub{margin:5px 0 0;font-size:13px;color:var(--muted);font-weight:400;line-height:1.4}
+.provider{margin-top:4px;text-align:right;font-size:12px;color:var(--meta);font-weight:400;white-space:nowrap;line-height:1.5}
+.provider b{color:var(--fg-2);font-weight:600}
+.servers{display:flex;align-items:center;gap:10px}
+.servers .lbl{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);flex:0 0 auto}
+.srv{display:flex;align-items:center;gap:9px;height:40px;padding:0 14px 0 12px;border:1px solid var(--border);border-radius:10px;background:var(--row-fill);color:var(--fg);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:border-color .2s var(--spring-soft),background-color .2s,transform .35s var(--spring)}
+.srv:hover{border-color:var(--hair-strong);background:var(--row-hover)}
+.srv.is-sel{border-color:var(--brand-edge);background:var(--brand-tint-soft);color:#fff}
+.srv .pulse{width:8px;height:8px;border-radius:50%;background:var(--brand);flex:0 0 8px}
+.srv.ghost .pulse{background:#7c8085}
+.srv .ms{font-family:var(--font-mono);font-size:11.5px;color:var(--muted)}
+.srv.is-sel .ms{color:var(--fg-2)}
+.srv .plus{width:16px;height:16px;color:var(--muted)}
+.body{flex:1;min-height:0;display:grid;grid-template-columns:348px 1fr;gap:16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 1px 2px rgba(0,0,0,.4);display:flex;flex-direction:column;min-height:0;min-width:0}
+.gauge-card{align-items:center;padding:22px 22px 16px;gap:6px}
+.launcher{position:relative;width:238px;height:238px;border-radius:50%;border:0;background:transparent;padding:0;cursor:pointer;flex:0 0 auto}
+.launcher:focus-visible{outline:2px solid var(--brand);outline-offset:4px}
+.ring{position:absolute;inset:0}
+.disc{position:absolute;inset:20px;border-radius:50%;background:var(--surface-2);border:1px solid rgba(255,255,255,.09);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),inset 0 -14px 28px rgba(0,0,0,.30),0 10px 24px rgba(0,0,0,.42);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:transform .45s var(--spring),background-color .2s}
+.launcher:hover .disc{background:#202327;border-color:rgba(255,255,255,.13)}
+.launcher:active .disc{transform:scale(.965)}
+.big-num{font-size:44px;font-weight:600;letter-spacing:-.5px;line-height:1;font-variant-numeric:tabular-nums;color:var(--fg)}
+.big-unit{font-size:12px;color:var(--muted);font-weight:500}
+.big-phase{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.start-stack{display:flex;flex-direction:column;align-items:center;gap:9px}
+.play{width:46px;height:46px;border-radius:50%;background:var(--brand);display:grid;place-items:center;transition:transform .45s var(--spring),background-color .2s}
+.play svg{width:18px;height:18px;color:#fff;margin-left:2px}
+.launcher:hover .play{transform:scale(1.08);background:var(--brand-hover)}
+.start-word{font-size:15px;font-weight:700;letter-spacing:2.5px;color:var(--fg);line-height:1}
+.start-hint{font-size:12px;color:var(--muted);font-weight:400;line-height:1.4}
+.live-stack{display:none;flex-direction:column;align-items:center;gap:3px}
+.testing .live-stack{display:flex}
+.testing .start-stack{display:none}
+.steps{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;flex-wrap:nowrap}
+.step{display:flex;align-items:center;gap:7px;padding:7px 12px;border:1px solid rgba(255,255,255,.10);border-radius:999px;font-size:12px;font-weight:500;color:var(--muted);background:rgba(255,255,255,.03);white-space:nowrap;transition:all .5s var(--spring)}
+.step i{width:7px;height:7px;border-radius:50%;background:#6b6e72;flex:0 0 7px;transition:all .5s var(--spring)}
+.step.on{color:#fff;border-color:var(--brand-edge);background:var(--brand-tint);transform:scale(1.05)}
+.step.on i{background:var(--brand-hover)}
+.step.done{color:var(--fg-2);border-color:var(--border-soft)}
+.step.done i{background:#9aa0a6}
+.gauge-foot{margin-top:auto;padding-top:10px;font-size:12.5px;color:var(--muted);font-weight:400;line-height:1.5;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.right{padding:20px 20px 16px;gap:16px}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.tile{border:1px solid var(--border-soft);border-radius:12px;background:rgba(255,255,255,.03);padding:12px 14px 11px;min-width:0}
+.tile .k{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .v{margin-top:6px;font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.2px;color:var(--fg);white-space:nowrap;line-height:1.2}
+.tile .v .n{color:var(--fg)}
+.tile .v small{font-size:11.5px;font-weight:500;color:var(--muted);margin-left:4px}
+.tile.pop{animation:pop .55s var(--spring)}
+@keyframes pop{0%{transform:scale(.92)}60%{transform:scale(1.04)}100%{transform:scale(1)}}
+.graph-wrap{flex:1;min-height:0;border:1px solid var(--border-soft);border-radius:12px;background:#0b0d10;padding:14px 16px 12px;display:flex;flex-direction:column;gap:10px}
+.graph-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.graph-head .t{font-size:12.5px;font-weight:500;color:var(--muted)}
+.graph-head .live{font-family:var(--font-mono);font-size:12.5px;color:var(--fg);font-variant-numeric:tabular-nums;white-space:nowrap}
+.graph-head .live b{color:#6ea3f9;font-weight:500}
+#graph{width:100%;height:128px;display:block}
+.foot{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:36px}
+.status{font-size:12.5px;color:var(--muted);font-weight:400;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status b{color:var(--fg);font-weight:600}
+.again{height:36px;padding:0 18px;border-radius:10px;border:1px solid var(--brand-edge);background:var(--brand);color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex:0 0 auto;opacity:0;transform:translateY(8px) scale(.95);pointer-events:none;transition:all .5s var(--spring)}
+.again.show{opacity:1;transform:none;pointer-events:auto}
+.again:hover{background:var(--brand-hover)}
+.sweep-dot{transform-origin:center}
+@media (max-width:1100px){}
+</style>
+</head>
+<body>
+<div id="stage">
+<div class="window" role="application" aria-label="QuotaVPN Speed test">
+  <aside class="sidebar">
+    <div class="brand">
+      <img class="brand-mark" src="../../desktop/ui-next/public/icon.png" alt="QuotaVPN logo" onerror="this.style.display='none'">
+      <span class="brand-name">QuotaVPN</span>
+    </div>
+    <nav class="nav" aria-label="Main">
+      <button type="button" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 10.4 12 4l8.4 6.4V19a1.4 1.4 0 0 1-1.4 1.4H5a1.4 1.4 0 0 1-1.4-1.4z"/><path d="M9.7 20.4v-6h4.6v6"/></svg>
+        Home
+      </button>
+      <button type="button" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.3"/><path d="M12 2.2v3.2M12 18.6v3.2M2.2 12h3.2M18.6 12h3.2"/></svg>
+        Valorant
+      </button>
+      <button type="button" class="nav-item is-active" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 18.2a8.6 8.6 0 1 1 15.2 0"/><path d="M12 14.2l3.7-3.6"/><circle cx="12" cy="15.4" r="1.3"/></svg>
+        Speed
+      </button>
+      <button type="button" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.7 12a8.3 8.3 0 1 0 2.5-5.9"/><path d="M3.4 4.4v4.3h4.3"/><path d="M12 7.9V12l3 1.8"/></svg>
+        History
+      </button>
+    </nav>
+    <div class="nav-foot">
+      <button type="button" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.6h8.2M16.6 7.6H20M4 16.4h3.4M11.8 16.4H20"/><circle cx="14.6" cy="7.6" r="2.1"/><circle cx="9.4" cy="16.4" r="2.1"/></svg>
+        Settings
+      </button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="top">
+      <div>
+        <h1>Speed test</h1>
+        <p class="sub">Measure tunnel throughput through your selected server.</p>
+      </div>
+      <div class="provider">Connected with <b>WE</b> · Cairo, Egypt</div>
+    </div>
+    <div class="servers">
+      <span class="lbl">Test server</span>
+      <button class="srv is-sel" type="button"><span class="pulse"></span>Cloudflare<span class="ms">18 ms</span></button>
+      <button class="srv ghost" type="button"><span class="pulse"></span>Own server<span class="ms">your endpoint</span><svg class="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    </div>
+    <div class="body">
+      <section class="card gauge-card" aria-label="Test launcher">
+        <button class="launcher" id="launcher" type="button" aria-label="Start speed test">
+          <svg class="ring" viewBox="0 0 238 238" aria-hidden="true">
+            <circle cx="119" cy="119" r="110" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="9"/>
+            <circle id="arc" cx="119" cy="119" r="110" fill="none" stroke="#2e7bf6" stroke-width="9" stroke-linecap="round" stroke-dasharray="691.2" stroke-dashoffset="691.2" transform="rotate(-90 119 119)"/>
+            <g id="ticks" opacity=".8"></g>
+            <circle id="sweepDot" class="sweep-dot" cx="119" cy="9" r="5" fill="#4f92f8" opacity="0"/>
+          </svg>
+          <span class="disc">
+            <span class="start-stack">
+              <span class="play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+              <span class="start-word">START</span>
+              <span class="start-hint">Tap to run a test</span>
+            </span>
+            <span class="live-stack">
+              <span class="big-num" id="bigNum">0.0</span>
+              <span class="big-unit" id="bigUnit">Mbps</span>
+              <span class="big-phase" id="bigPhase">Ping</span>
+            </span>
+          </span>
+        </button>
+        <div class="steps" id="steps">
+          <span class="step" data-s="ping"><i></i>Ping</span>
+          <span class="step" data-s="down"><i></i>Download</span>
+          <span class="step" data-s="up"><i></i>Upload</span>
+        </div>
+        <div class="gauge-foot" id="gaugeFoot">Idle. Last run 2 min ago.</div>
+      </section>
+      <section class="card right" aria-label="Results">
+        <div class="tiles">
+          <div class="tile" id="tPing"><div class="k">Ping</div><div class="v"><span class="n">--</span><small>ms</small></div></div>
+          <div class="tile" id="tJit"><div class="k">Jitter</div><div class="v"><span class="n">--</span><small>ms</small></div></div>
+          <div class="tile" id="tDown"><div class="k">Download</div><div class="v"><span class="n">--</span><small>Mbps</small></div></div>
+          <div class="tile" id="tUp"><div class="k">Upload</div><div class="v"><span class="n">--</span><small>Mbps</small></div></div>
+        </div>
+        <div class="graph-wrap">
+          <div class="graph-head"><span class="t">Live throughput</span><span class="live" id="liveRate">0.0 <b>Mbps</b></span></div>
+          <canvas id="graph" width="560" height="128"></canvas>
+        </div>
+        <div class="foot">
+          <div class="status" id="status">Ready when you are.</div>
+          <button class="again" id="again" type="button">Run again</button>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+</div>
+<script>
+(function(){
+  var CIRC = 2*Math.PI*110;
+  var arc = document.getElementById('arc');
+  var dot = document.getElementById('sweepDot');
+  var bigNum = document.getElementById('bigNum');
+  var bigUnit = document.getElementById('bigUnit');
+  var bigPhase = document.getElementById('bigPhase');
+  var launcher = document.getElementById('launcher');
+  var gaugeCard = document.querySelector('.gauge-card');
+  var foot = document.getElementById('gaugeFoot');
+  var status = document.getElementById('status');
+  var again = document.getElementById('again');
+  var liveRate = document.getElementById('liveRate');
+  var steps = {ping:document.querySelector('[data-s="ping"]'),down:document.querySelector('[data-s="down"]'),up:document.querySelector('[data-s="up"]')};
+  var tiles = {ping:document.querySelector('#tPing .n'),jit:document.querySelector('#tJit .n'),down:document.querySelector('#tDown .n'),up:document.querySelector('#tUp .n')};
+  var tileBox = {ping:document.getElementById('tPing'),jit:document.getElementById('tJit'),down:document.getElementById('tDown'),up:document.getElementById('tUp')};
+
+  var ticks = document.getElementById('ticks');
+  var th='';
+  for(var i=0;i<48;i++){var a=i/48*Math.PI*2;var r1=96,r2=(i%4===0)?88:92;
+    var x1=119+Math.cos(a)*r1,y1=119+Math.sin(a)*r1,x2=119+Math.cos(a)*r2,y2=119+Math.sin(a)*r2;
+    th+='<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="rgba(255,255,255,'+(i%4===0?'.34':'.16')+')" stroke-width="'+(i%4===0?2:1)+'"/>';}
+  ticks.innerHTML=th;
+
+  var cv=document.getElementById('graph'),ctx=cv.getContext('2d');
+  var N=120,data=[];for(var k=0;k<N;k++)data.push(0);
+  function drawGraph(){
+    var W=cv.width,H=cv.height;ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle='rgba(255,255,255,.09)';ctx.lineWidth=1;
+    for(var g=1;g<4;g++){var y=H/4*g;ctx.beginPath();ctx.moveTo(0,y+.5);ctx.lineTo(W,y+.5);ctx.stroke();}
+    var max=220,i,x,y;
+    ctx.beginPath();
+    for(i=0;i<N;i++){x=i/(N-1)*W;y=H-8-(data[i]/max)*(H-24);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
+    ctx.strokeStyle='#2e7bf6';ctx.lineWidth=2.2;ctx.lineJoin='round';ctx.stroke();
+    ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.closePath();
+    ctx.fillStyle='rgba(46,123,246,.14)';ctx.fill();
+    var last=data[N-1];x=W-3;y=H-8-(last/max)*(H-24);
+    ctx.beginPath();ctx.arc(Math.min(x,W-4),Math.max(y,4),3.5,0,7);ctx.fillStyle='#4f92f8';ctx.fill();
+    ctx.beginPath();ctx.arc(Math.min(x,W-4),Math.max(y,4),5.5,0,7);ctx.strokeStyle='rgba(79,146,248,.35)';ctx.lineWidth=1.5;ctx.stroke();
+  }
+
+  var FINAL={ping:18,jit:3,down:183.6,up:42.8};
+  var T={idle:1300,ping:2200,down:2800,up:2400,done:3400};
+  var state='idle',t0=performance.now(),cycleStart=performance.now();
+  var dispDown=0,dispUp=0,velD=0,velU=0,dispPing=0;
+  var arcX=0,arcV=0;
+  var lastPush=0;
+
+  function easeOutBack(t){var c=1.70158+1;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2);}
+  function spring(cur,vel,target,k,d){var f=(target-cur)*k;vel+=f;vel*=d;cur+=vel;return[cur,vel];}
+
+  function setStep(name){
+    Object.keys(steps).forEach(function(s){
+      steps[s].classList.remove('on');
+      if(name==='done'||(name==='up'&&(s==='ping'||s==='down'))||(name==='down'&&s==='ping'))steps[s].classList.add('done');
+      else steps[s].classList.remove('done');
+    });
+    if(steps[name])steps[name].classList.add('on');
+  }
+  function pop(el){el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');}
+  function phaseTarget(){
+    if(state==='ping')return 6+Math.random()*6;
+    if(state==='down')return 150+Math.random()*55;
+    if(state==='up')return 30+Math.random()*22;
+    if(state==='done')return 0;
+    return 0;
+  }
+
+  function tick(now){
+    var el=now-cycleStart;
+    var total=T.idle+T.ping+T.down+T.up+T.done;
+    if(el>=total){cycleStart=now;el=0;state='idle';t0=now;}
+    var ns;
+    if(el<T.idle)ns='idle';
+    else if(el<T.idle+T.ping)ns='ping';
+    else if(el<T.idle+T.ping+T.down)ns='down';
+    else if(el<T.idle+T.ping+T.down+T.up)ns='up';
+    else ns='done';
+    if(ns!==state){
+      state=ns;t0=now;
+      if(state==='ping'){gaugeCard.classList.add('testing');again.classList.remove('show');tiles.ping.textContent='--';tiles.jit.textContent='--';tiles.down.textContent='--';tiles.up.textContent='--';setStep('ping');foot.textContent='Measuring latency.';status.innerHTML='Testing <b>ping</b>. Hold steady.';bigUnit.textContent='ms';bigPhase.textContent='Ping';}
+      if(state==='down'){setStep('down');tiles.ping.textContent=FINAL.ping;tiles.jit.textContent=FINAL.jit;pop(tileBox.ping);pop(tileBox.jit);foot.textContent='Ping 18 ms, jitter 3 ms.';status.innerHTML='Ping <b>18 ms</b>. Now testing <b>download</b>.';bigUnit.textContent='Mbps';bigPhase.textContent='Download';}
+      if(state==='up'){setStep('up');tiles.down.textContent=FINAL.down.toFixed(1);pop(tileBox.down);foot.textContent='Download 183.6 Mbps.';status.innerHTML='Download <b>183.6 Mbps</b>. Now testing <b>upload</b>.';bigPhase.textContent='Upload';}
+      if(state==='done'){setStep('done');tiles.up.textContent=FINAL.up.toFixed(1);pop(tileBox.up);again.classList.add('show');foot.textContent='Done. Throughput looks healthy.';status.innerHTML='Done. Ping <b>18 ms</b>, down <b>183.6 Mbps</b>, up <b>42.8 Mbps</b>.';bigNum.textContent=FINAL.down.toFixed(1);bigUnit.textContent='Mbps';bigPhase.textContent='Result';}
+      if(state==='idle'){gaugeCard.classList.remove('testing');setStep('none');Object.keys(steps).forEach(function(s){steps[s].classList.remove('on','done');});again.classList.remove('show');foot.textContent='Idle. Last run 2 min ago.';status.textContent='Ready when you are.';}
+    }
+    var p=(now-t0)/({idle:T.idle,ping:T.ping,down:T.down,up:T.up,done:T.done}[state]||1000);
+    p=Math.min(Math.max(p,0),1);
+
+    if(state==='idle'){
+      var idleA=(Math.sin(now/900)+1)/2;
+      arc.setAttribute('stroke-dashoffset',CIRC);
+      dot.setAttribute('opacity','0');
+    }else if(state==='ping'){
+      var e=easeOutBack(Math.min(p*1.15,1));
+      dispPing=FINAL.ping*e;
+      bigNum.textContent=dispPing.toFixed(0);
+      var frac=p*.18;
+      arc.setAttribute('stroke-dashoffset',CIRC*(1-frac));
+      var ang=-Math.PI/2+frac*Math.PI*2;
+      dot.setAttribute('opacity','1');
+      dot.setAttribute('cx',119+Math.cos(ang)*110);dot.setAttribute('cy',119+Math.sin(ang)*110);
+    }else if(state==='down'){
+      var r=spring(dispDown,velD,FINAL.down,.045,.82);dispDown=r[0];velD=r[1];
+      if(p>.92){var q=(p-.92)/.08;dispDown=FINAL.down-(FINAL.down-dispDown)*(1-q);}
+      bigNum.textContent=dispDown.toFixed(1);
+      var t2=.18+.82*easeOutBack(Math.min(p*1.05,1));
+      var s=spring(arcX,arcV,t2,.06,.80);arcX=s[0];arcV=s[1];
+      arc.setAttribute('stroke-dashoffset',CIRC*(1-Math.min(arcX,1.02)));
+      var a2=-Math.PI/2+Math.min(arcX,1)*Math.PI*2;
+      dot.setAttribute('opacity','1');
+      dot.setAttribute('cx',119+Math.cos(a2)*110);dot.setAttribute('cy',119+Math.sin(a2)*110);
+    }else if(state==='up'){
+      var r3=spring(dispUp,velU,FINAL.up,.05,.80);dispUp=r3[0];velU=r3[1];
+      bigNum.textContent=dispUp.toFixed(1);
+      arc.setAttribute('stroke-dashoffset',CIRC*(1-1));
+      var wob=Math.sin(now/140)*.02;
+      var a3=now/500;
+      dot.setAttribute('opacity','1');
+      dot.setAttribute('cx',119+Math.cos(a3)*110);dot.setAttribute('cy',119+Math.sin(a3)*110);
+      arc.setAttribute('stroke-dashoffset',CIRC*wob*.3);
+    }else if(state==='done'){
+      arc.setAttribute('stroke-dashoffset',0);
+      var a4=-Math.PI/2+Math.PI*2;
+      dot.setAttribute('cx',119+Math.cos(a4)*110);dot.setAttribute('cy',119+Math.sin(a4)*110);
+      dot.setAttribute('opacity','0');
+    }
+
+    if(now-lastPush>55){
+      lastPush=now;
+      var tv=phaseTarget();
+      var shown=0;
+      if(state==='down')shown=dispDown+ (Math.random()-.5)*10;
+      else if(state==='up')shown=dispUp+(Math.random()-.5)*5;
+      else if(state==='ping')shown=4+Math.random()*4;
+      else if(state==='done')shown=Math.max(0,(data[N-1]||0)*.7-2);
+      data.push(Math.max(0,shown));data.shift();
+      drawGraph();
+      var lr=state==='down'?dispDown:state==='up'?dispUp:state==='ping'?dispPing:state==='done'?0:0;
+      var unit=state==='ping'?'ms':'<b>Mbps</b>';
+      liveRate.innerHTML=(state==='ping'?lr.toFixed(0)+' ms':lr.toFixed(1)+' '+unit);
+    }
+    requestAnimationFrame(tick);
+  }
+  launcher.addEventListener('click',function(){
+    if(state==='idle'||state==='done'){cycleStart=performance.now()-T.idle;dispDown=0;dispUp=0;velD=0;velU=0;arcX=0;arcV=0;}
+  });
+  again.addEventListener('click',function(){cycleStart=performance.now()-T.idle;dispDown=0;dispUp=0;velD=0;velU=0;arcX=0;arcV=0;});
+  document.querySelectorAll('.srv').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('.srv').forEach(function(x){x.classList.remove('is-sel');x.classList.add('ghost');});
+    b.classList.add('is-sel');b.classList.remove('ghost');
+  });});
+  drawGraph();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

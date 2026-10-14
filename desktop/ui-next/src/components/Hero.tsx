@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
-import { Activity, Globe, Network, type LucideIcon } from "lucide-react"
+import { Activity, Gauge, Globe, Network, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { flagFor } from "@/lib/flags"
 import { useI18n } from "@/lib/i18n"
 import { useApp } from "@/state/app"
+import { fmtQuota, quotaRefresh, useQuota } from "@/state/quota"
 import { api, netInfo } from "@/lib/ipc"
 import { Dial, type DialState } from "./Dial"
 import { displayHost, fmtBytes, fmtDuration, mbps } from "@/lib/format"
@@ -32,6 +33,16 @@ function useTick(ms: number, on: boolean) {
 export function Hero() {
   const { t } = useI18n()
   const { phase, connected, busy, toggle, card, rx, tx, sessionStart, serverIp, status } = useApp()
+  const quota = useQuota()
+  const mainUnit = useMemo(
+    () => quota.units.find((u) => u.total > 0),
+    [quota.units],
+  )
+
+  // The linked WE line reads itself once per launch; the tap refreshes it.
+  useEffect(() => {
+    void quotaRefresh()
+  }, [])
   const [serverAddr, setServerAddr] = useState("")
 
   // While the tunnel is up the world sees the server's address, so resolve it
@@ -225,6 +236,34 @@ export function Hero() {
           </AnimatePresence>
         </motion.div>
       </div>
+
+      {/* the linked WE line: remaining under the dial, tap to refresh */}
+      {quota.linked && mainUnit ? (
+        <button
+          type="button"
+          onClick={() => void quotaRefresh(true)}
+          title={t("weRefresh")}
+          className="mt-4 flex w-full items-center gap-3 text-start"
+        >
+          <Gauge className="size-4 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
+          <span className="min-w-0 flex-1">
+            <span className="flex items-baseline justify-between gap-3 text-[12px]">
+              <span className="truncate text-txt2">{mainUnit.offer || "WE"}</span>
+              <span className="shrink-0 text-txt">
+                {fmtQuota(mainUnit.remain)} {t("weLeft")} {fmtQuota(mainUnit.total)}
+              </span>
+            </span>
+            <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+              <span
+                className="block h-full rounded-full bg-[var(--brand-vivid)]"
+                style={{
+                  width: `${mainUnit.total > 0 ? Math.max(0, Math.min(100, (mainUnit.remain / mainUnit.total) * 100)) : 0}%`,
+                }}
+              />
+            </span>
+          </span>
+        </button>
+      ) : null}
 
       {/* the connection facts: three even columns on dividers */}
       <div className="mt-4 grid grid-cols-3 border-t border-line pt-4">
