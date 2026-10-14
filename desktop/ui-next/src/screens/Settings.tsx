@@ -122,6 +122,9 @@ function WeQuotaCard() {
           {q.updatedAt ? (
             <p className="text-[11.5px] text-txt3">
               {t("weUpdated")} {new Date(q.updatedAt).toLocaleTimeString()}
+              {q.phase === "ready" && q.msgKey === "weRefreshed" ? (
+                <span className="ms-2 text-txt2">{t("weRefreshed")}</span>
+              ) : null}
             </p>
           ) : null}
         </div>

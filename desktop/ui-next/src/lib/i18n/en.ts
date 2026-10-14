@@ -292,6 +292,7 @@ export const en = {
   "weUnlink": "Unlink",
   "weLeft": "left of",
   "weUsed": "Used",
+  "weRefreshed": "Updated just now",
   "weUpdated": "Updated",
   "weLinkHint": "Number and password stay on this PC only",
   "weLoginFail": "Number or password refused",

@@ -117,7 +117,9 @@ export async function quotaLink(number: string, password: string, code = ""): Pr
         return false
       }
     }
-    return await pull(number, password, code)
+    const ok = await pull(number, password, code)
+    if (ok) flashRefreshed()
+    return ok
   } catch (e) {
     set({ phase: "error", msgKey: errKey(e), msgRaw: errRaw(e) })
     return false
@@ -125,6 +127,16 @@ export async function quotaLink(number: string, password: string, code = ""): Pr
 }
 
 let refreshTried = false
+let confirmTimer: number | undefined
+
+/** Brief confirmation after a good read, then it clears itself. */
+function flashRefreshed() {
+  set({ phase: "ready", msgKey: "weRefreshed", msgRaw: "" })
+  if (confirmTimer) window.clearTimeout(confirmTimer)
+  confirmTimer = window.setTimeout(() => {
+    if (snap.msgKey === "weRefreshed") set({ phase: "ready", msgKey: "" })
+  }, 5000)
+}
 
 /** Silent refresh with the saved number and password. When the server
     wants a code read it stops at need-code for the Settings screen. */
@@ -142,6 +154,7 @@ export async function quotaRefresh(force = false): Promise<void> {
       return
     }
     await pull(number, password, "")
+    flashRefreshed()
   } catch (e) {
     set({ phase: snap.linked ? "ready" : "error", msgKey: errKey(e), msgRaw: errRaw(e) })
   }

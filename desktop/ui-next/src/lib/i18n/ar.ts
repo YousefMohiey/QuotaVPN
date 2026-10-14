@@ -292,6 +292,7 @@ export const ar = {
   "weUnlink": "فك الربط",
   "weLeft": "متبقٍ من",
   "weUsed": "المستخدم",
+  "weRefreshed": "تم التحديث الآن",
   "weUpdated": "آخر تحديث",
   "weLinkHint": "الرقم وكلمة السر يبقيان على هذا الجهاز فقط",
   "weLoginFail": "الرقم أو كلمة السر مرفوضة",
