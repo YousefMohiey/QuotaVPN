@@ -84,7 +84,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     void ensurePresetCard(kind).finally(() => setCreating(null))
                   }}
                   className={cn(
-                    "flex items-center gap-3.5 rounded-[12px] border p-3.5 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
+                    "flex items-center gap-3 rounded-[12px] border p-3 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
                     isActive
                       ? "border-[var(--brand-line)] bg-[var(--brand-bg)]"
                       : "border-line bg-white/[0.02] hover:border-[var(--brand-line)]",
@@ -92,37 +92,37 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 >
                   <span
                     className={cn(
-                      "grid size-11 shrink-0 place-items-center rounded-[10px] border transition-colors",
+                      "grid size-10 shrink-0 place-items-center rounded-[10px] border transition-colors",
                       isActive
                         ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong"
                         : "border-line bg-white/[0.03] text-txt3",
                     )}
                   >
-                    <Icon className="size-[20px]" aria-hidden />
+                    <Icon className="size-[18px]" aria-hidden />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span
-                      className={cn("block truncate text-[15px] font-semibold", isActive ? "text-txt" : "text-txt2")}
+                      className={cn("block truncate text-[14px] font-semibold", isActive ? "text-txt" : "text-txt2")}
                       dir="auto"
                     >
                       {t(kind === "Gamerz" ? "kindGamerz" : "kindStreamerz")}
                     </span>
-                    <span className="mt-1 block truncate font-mono text-[11.5px] text-txt3">{sni}</span>
+                    <span className="mt-0.5 block truncate font-mono text-[11px] text-txt3">{sni}</span>
                   </span>
                   <span
                     aria-hidden
                     className={cn(
-                      "grid size-[18px] shrink-0 place-items-center rounded-full border-[1.5px] transition-colors",
+                      "grid size-4 shrink-0 place-items-center rounded-full border-[1.5px] transition-colors",
                       isActive ? "border-[var(--brand)]" : "border-line-strong",
                     )}
                   >
-                    {isActive && <span className="size-2 rounded-full bg-[var(--brand)]" />}
+                    {isActive && <span className="size-[7px] rounded-full bg-[var(--brand)]" />}
                   </span>
                 </button>
               )
             })}
           </div>
-          <div className="my-3 border-t border-line" aria-hidden />
+          <div className="my-2 border-t border-line" aria-hidden />
           <div className="flex flex-col divide-y divide-line">
             <RowField label={t("domainSni")}>
               {customOpen ? (
@@ -137,11 +137,11 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     }}
                     placeholder="example.com"
                     aria-label={t("domainSni")}
-                    className="h-11 rounded-[10px] border-line bg-white/[0.02] text-[13.5px]"
+                    className="h-10 rounded-[10px] border-line bg-white/[0.02] text-[13px]"
                   />
                   <Button
                     size="sm"
-                    className="h-11 shrink-0 rounded-[10px] px-3.5 text-[13.5px]"
+                    className="h-10 shrink-0 rounded-[10px] px-3.5 text-[13px]"
                     disabled={domainBusy || !customVal.trim()}
                     onClick={() => void submitCustom()}
                   >
@@ -153,7 +153,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   type="button"
                   aria-busy={domainBusy}
                   onClick={() => setDomainOpen(true)}
-                  className="group flex h-11 w-full items-center justify-between gap-3 rounded-[10px] border border-line bg-white/[0.02] px-3.5 text-[13.5px] text-txt transition-colors duration-200 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
+                  className="group flex h-10 w-full items-center justify-between gap-3 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt transition-colors duration-200 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
                 >
                   <span className={cn("truncate", domText.length > 17 && "text-[11px]")} dir="auto">{domText}</span>
                   <ChevronDown className="size-4 shrink-0 text-txt2 transition-[color,transform] duration-200 group-hover:translate-y-px group-hover:text-brand-strong" aria-hidden />
@@ -165,7 +165,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
               <button
                 type="button"
                 onClick={onOpenApps}
-                className="group flex h-11 w-full items-center justify-between gap-3 rounded-[10px] border border-line bg-white/[0.02] px-3.5 text-[13.5px] text-txt transition-colors duration-200 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
+                className="group flex h-10 w-full items-center justify-between gap-3 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt transition-colors duration-200 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
               >
                 <span className="truncate" dir="auto">
                   {routing}
@@ -225,8 +225,8 @@ function RowField({
   children: ReactNode
 }) {
   return (
-    <div className="flex items-center gap-4 py-2.5">
-      <span className="w-24 shrink-0 truncate text-[12.5px] text-txt2">{label}</span>
+    <div className="flex items-center gap-3 py-2">
+      <span className="w-28 shrink-0 truncate text-[12px] text-txt2">{label}</span>
       <div className="min-w-0 flex-1">
         {children}
         {hint ? <p className="mt-1 text-[11px] text-txt3">{hint}</p> : null}

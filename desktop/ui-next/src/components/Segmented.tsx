@@ -26,7 +26,7 @@ export function Segmented<T extends string>({
         /* boxed drops the outer frame: the three options sit bare in a row
            and the selected pill carries the shape by itself */
         boxed
-          ? "flex h-11 w-full items-center gap-2"
+          ? "flex h-10 w-full items-center gap-2"
           : "rounded-[10px] border border-line bg-white/[0.02] p-0.5",
         !boxed && (fill ? "flex w-full" : "inline-flex"),
         className,
