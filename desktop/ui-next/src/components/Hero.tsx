@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
-import { Activity, Gauge, Globe, Network, type LucideIcon } from "lucide-react"
+import { Activity, Gauge, Globe, Network, RefreshCw, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { flagFor } from "@/lib/flags"
 import { useI18n } from "@/lib/i18n"
 import { useApp } from "@/state/app"
 import { fmtQuota, quotaRefresh, useQuota } from "@/state/quota"
+import { WeQuotaDialog } from "./WeQuotaDialog"
 import { api, netInfo } from "@/lib/ipc"
 import { Dial, type DialState } from "./Dial"
 import { displayHost, fmtBytes, fmtDuration, mbps } from "@/lib/format"
@@ -34,6 +35,7 @@ export function Hero() {
   const { t } = useI18n()
   const { phase, connected, busy, toggle, card, rx, tx, sessionStart, serverIp, status } = useApp()
   const quota = useQuota()
+  const [quotaOpen, setQuotaOpen] = useState(false)
   const mainUnit = useMemo(
     () => quota.units.find((u) => u.total > 0),
     [quota.units],
@@ -252,36 +254,70 @@ export function Hero() {
         </motion.div>
       </div>
 
-      {/* the linked WE line: its own hairline row under the facts */}
+      {/* the WE quota section: a full block when linked, an invite row when not */}
       {quota.linked && mainUnit ? (
+        <div className="mt-3 border-t border-line pt-3">
+          <div className="flex items-center gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
+              <Gauge className="size-4" strokeWidth={1.7} aria-hidden />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-3">
+                <span className="truncate text-[12px] text-txt2" dir="auto">
+                  {mainUnit.offer || "WE"}
+                  {quota.updatedAt ? ` · ${new Date(quota.updatedAt).toLocaleTimeString()}` : ""}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void quotaRefresh(true)}
+                  title={t("weRefresh")}
+                  aria-label={t("weRefresh")}
+                  disabled={quota.phase === "busy"}
+                  className="grid size-7 shrink-0 place-items-center rounded-[8px] border border-line bg-white/[0.02] text-txt2 transition-colors hover:border-[var(--brand-line)] hover:text-brand-strong disabled:cursor-wait"
+                >
+                  <RefreshCw className={cn("size-3.5", quota.phase === "busy" && "animate-spin")} aria-hidden />
+                </button>
+              </div>
+              <div className="mt-1 text-[15px] font-semibold text-txt">
+                {fmtQuota(mainUnit.remain)} {t("weLeft")} {fmtQuota(mainUnit.total)}
+              </div>
+              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+                <div
+                  className="h-full rounded-full bg-[var(--brand-vivid)]"
+                  style={{
+                    width: `${mainUnit.total > 0 ? Math.max(0, Math.min(100, (mainUnit.remain / mainUnit.total) * 100)) : 0}%`,
+                  }}
+                />
+              </div>
+              <p className="mt-1 text-[11px] text-txt3">
+                {t("weUsed")} {fmtQuota(mainUnit.used)}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
         <button
           type="button"
-          onClick={() => void quotaRefresh(true)}
-          title={t("weRefresh")}
+          onClick={() => setQuotaOpen(true)}
           className="mt-3 flex w-full items-center gap-3 border-t border-line pt-3 text-start"
         >
-          <Gauge className="size-4 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
+          <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
+            <Gauge className="size-4" strokeWidth={1.7} aria-hidden />
+          </span>
           <span className="min-w-0 flex-1">
-            <span className="flex items-baseline justify-between gap-3 text-[12px]">
-              <span className="truncate text-txt2">{mainUnit.offer || "WE"}</span>
-              <span className="shrink-0 text-txt">
-                {fmtQuota(mainUnit.remain)} {t("weLeft")} {fmtQuota(mainUnit.total)}
-              </span>
-            </span>
-            <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
-              <span
-                className="block h-full rounded-full bg-[var(--brand-vivid)]"
-                style={{
-                  width: `${mainUnit.total > 0 ? Math.max(0, Math.min(100, (mainUnit.remain / mainUnit.total) * 100)) : 0}%`,
-                }}
-              />
-            </span>
+            <span className="block text-[13px] font-medium text-txt">{t("weQuota")}</span>
+            <span className="mt-0.5 block truncate text-[11.5px] text-txt2">{t("weQuotaSub")}</span>
+          </span>
+          <span className="shrink-0 rounded-[8px] bg-[var(--brand-vivid)] px-3 py-1.5 text-[12px] font-medium text-white">
+            {t("weLink")}
           </span>
         </button>
-      ) : null}
+      )}
+      <WeQuotaDialog open={quotaOpen} onOpenChange={setQuotaOpen} />
 
-      {/* idle keeps the three facts; connected carries session and IP tiles */}
-      {!connected && (
+      {/* idle and unlinked keeps the three facts; the quota block or the
+          session tiles carry the rest */}
+      {!connected && !quota.linked && (
         <div className="mt-3 grid grid-cols-3 border-t border-line pt-3">
           <Fact icon={Globe} label={t("yourLocation")} value={placeShown} />
           <Fact

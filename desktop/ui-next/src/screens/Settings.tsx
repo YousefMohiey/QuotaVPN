@@ -5,12 +5,11 @@ import { Segmented } from "@/components/Segmented"
 import { useApp } from "@/state/app"
 import {
   fmtQuota,
-  quotaLink,
   quotaLogout,
   quotaRefresh,
-  savedQuotaPass,
   useQuota,
 } from "@/state/quota"
+import { WeQuotaDialog } from "@/components/WeQuotaDialog"
 import { useI18n } from "@/lib/i18n"
 import { api } from "@/lib/ipc"
 import { cn } from "@/lib/utils"
@@ -49,13 +48,8 @@ const AUTOSTART_CACHE = "qc-autostart"
 function WeQuotaCard() {
   const { t } = useI18n()
   const q = useQuota()
-  const [number, setNumber] = useState(q.number)
-  const [password, setPassword] = useState("")
-  const [code, setCode] = useState("")
+  const [quotaOpen, setQuotaOpen] = useState(false)
   const busy = q.phase === "busy"
-
-  const link = (withCode: string) =>
-    quotaLink(number.trim(), password || savedQuotaPass(), withCode)
 
   return (
     <section className="rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] px-5 py-4">
@@ -84,8 +78,6 @@ function WeQuotaCard() {
               type="button"
               onClick={() => {
                 void quotaLogout()
-                setPassword("")
-                setCode("")
               }}
               className="flex h-9 items-center rounded-[10px] border border-line bg-white/[0.02] px-3.5 text-[13px] text-txt2 transition-colors hover:text-txt"
             >
@@ -129,75 +121,18 @@ function WeQuotaCard() {
           ) : null}
         </div>
       ) : (
-        <div className="mt-3 flex flex-col gap-2.5">
-          <div className="grid grid-cols-2 gap-2.5">
-            <input
-              value={number}
-              onChange={(e) => setNumber(e.target.value)}
-              inputMode="tel"
-              autoComplete="off"
-              placeholder={t("weNumber")}
-              aria-label={t("weNumber")}
-              className="h-9 w-full rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt outline-none transition-colors placeholder:text-txt3 focus:border-[var(--brand-line)]"
-            />
-            <input
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              type="password"
-              autoComplete="off"
-              placeholder={t("wePassword")}
-              aria-label={t("wePassword")}
-              className="h-9 w-full rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt outline-none transition-colors placeholder:text-txt3 focus:border-[var(--brand-line)]"
-            />
-          </div>
-          {q.phase === "need-code" && (
-            <div className="flex items-center gap-2.5">
-              {q.challengeImage ? (
-                <img
-                  src={q.challengeImage}
-                  alt={t("weCode")}
-                  className="h-9 shrink-0 rounded-[8px] border border-line"
-                />
-              ) : null}
-              <input
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                autoComplete="off"
-                placeholder={t("weCode")}
-                aria-label={t("weCode")}
-                className="h-9 w-full rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt outline-none transition-colors placeholder:text-txt3 focus:border-[var(--brand-line)]"
-              />
-              <button
-                type="button"
-                onClick={() => void link(code.trim())}
-                disabled={busy || !code.trim()}
-                className="flex h-9 shrink-0 items-center rounded-[10px] bg-[var(--brand-vivid)] px-3.5 text-[13px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
-              >
-                {t("weConfirm")}
-              </button>
-            </div>
-          )}
-          <div className="flex items-center gap-3">
-            {q.phase !== "need-code" && (
-              <button
-                type="button"
-                onClick={() => void link("")}
-                disabled={busy || !number.trim()}
-                className="flex h-9 items-center rounded-[10px] bg-[var(--brand-vivid)] px-3.5 text-[13px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
-              >
-                {t("weLink")}
-              </button>
-            )}
-            <p className="text-[11.5px] text-txt3">{t("weLinkHint")}</p>
-          </div>
-          {q.phase === "error" && q.msgKey ? (
-            <p className="text-[12px] text-[var(--red)]">
-              {t(q.msgKey as never)}
-              {q.msgRaw ? ` (${q.msgRaw})` : ""}
-            </p>
-          ) : null}
+        <div className="mt-3 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setQuotaOpen(true)}
+            className="flex h-9 items-center rounded-[10px] bg-[var(--brand-vivid)] px-3.5 text-[13px] font-medium text-white transition-[filter] hover:brightness-110"
+          >
+            {t("weLink")}
+          </button>
+          <p className="text-[11.5px] text-txt3">{t("weLinkHint")}</p>
         </div>
       )}
+      <WeQuotaDialog open={quotaOpen} onOpenChange={setQuotaOpen} />
     </section>
   )
 }
