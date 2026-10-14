@@ -21,6 +21,7 @@ use tauri_plugin_updater::UpdaterExt;
 
 pub mod speed;
 pub mod ookla;
+pub mod we_quota;
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
@@ -1767,6 +1768,7 @@ pub fn run() {
         )
         .manage(State(Mutex::new(AppConfig::default())))
         .manage(Engine(Mutex::new(None)))
+        .manage(we_quota::WeQuota::new())
         .setup(|app| {
             // Same OS config dir as the previous desktop app: cards carry
             // over, nothing to re-enter. (No chdir - that is phone-only.)
@@ -1916,7 +1918,11 @@ pub fn run() {
             speedtest_cli,
             process_running,
             autostart_get,
-            autostart_set
+            autostart_set,
+            we_quota::we_quota_challenge,
+            we_quota::we_quota_login,
+            we_quota::we_quota_usage,
+            we_quota::we_quota_logout
         ])
         .run(tauri::generate_context!())
         .expect("QuotaVPN failed to start");
