@@ -66,7 +66,7 @@ function WeQuotaCard() {
         <div className="min-w-0 flex-1">
           <h2 className="text-[15px] font-semibold text-txt">{t("weQuota")}</h2>
           <p className="mt-0.5 text-[12.5px] leading-relaxed text-txt2">
-            {q.linked && q.customer ? q.customer : t("weQuotaSub")}
+            {t("weQuotaSub")}
           </p>
         </div>
         {q.linked && (
@@ -113,6 +113,9 @@ function WeQuotaCard() {
                     style={{ width: `${pct}%` }}
                   />
                 </div>
+                <p className="mt-0.5 text-end text-[11px] text-txt3">
+                  {t("weUsed")} {fmtQuota(u.used)}
+                </p>
               </div>
             )
           })}

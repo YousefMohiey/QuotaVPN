@@ -291,6 +291,7 @@ export const ar = {
   "weRefresh": "تحديث",
   "weUnlink": "فك الربط",
   "weLeft": "متبقٍ من",
+  "weUsed": "المستخدم",
   "weUpdated": "آخر تحديث",
   "weLinkHint": "الرقم وكلمة السر يبقيان على هذا الجهاز فقط",
   "weLoginFail": "الرقم أو كلمة السر مرفوضة",

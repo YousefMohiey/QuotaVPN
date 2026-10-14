@@ -291,6 +291,7 @@ export const en = {
   "weRefresh": "Refresh",
   "weUnlink": "Unlink",
   "weLeft": "left of",
+  "weUsed": "Used",
   "weUpdated": "Updated",
   "weLinkHint": "Number and password stay on this PC only",
   "weLoginFail": "Number or password refused",

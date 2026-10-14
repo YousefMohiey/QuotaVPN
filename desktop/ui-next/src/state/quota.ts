@@ -134,7 +134,7 @@ export async function quotaRefresh(force = false): Promise<void> {
   if (!number || !password) return
   if (!force && (snap.linked || refreshTried)) return
   refreshTried = true
-  if (!snap.linked) set({ phase: "busy", msgKey: "", msgRaw: "" })
+  set({ phase: "busy", msgKey: "", msgRaw: "" })
   try {
     const ch = await api.weQuotaChallenge(number)
     if (ch.interaction) {
@@ -168,8 +168,8 @@ export async function quotaLogout(): Promise<void> {
   })
 }
 
-/** The API counts in MB; paint GB once it matters. */
+/** The API counts home-internet buckets in GB already; keep them that way. */
 export function fmtQuota(v: number): string {
-  if (v >= 1024) return `${(v / 1024).toFixed(1)} GB`
-  return `${Math.round(v)} MB`
+  if (v > 0 && v < 1) return `${Math.round(v * 1024)} MB`
+  return `${v.toFixed(2).replace(/\.?0+$/, "")} GB`
 }

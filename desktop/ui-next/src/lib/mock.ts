@@ -110,8 +110,7 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
       return { customer: "Demo User" } as unknown as T
     case "we_quota_usage":
       return [
-        { offer: "WE 50GB", total: 51200, used: 39321.6, remain: 11878.4 },
-        { offer: "Extra 10GB", total: 10240, used: 10240, remain: 0 },
+        { offer: "PLUS 1", total: 1005, used: 519.25, remain: 485.75 },
       ] as unknown as T
     case "we_quota_logout":
       return undefined as T
