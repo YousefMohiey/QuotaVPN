@@ -46,7 +46,9 @@ export function Segmented<T extends string>({
               boxed
                 ? cn(
                     "flex h-full min-w-0 flex-1 items-center justify-center rounded-[10px] px-1.5 text-[12px]",
-                    on ? "text-white" : "text-txt2 hover:bg-[var(--brand-bg)] hover:text-brand-strong",
+                    on
+                      ? "border border-[var(--brand-line)] bg-[var(--brand-bg)] text-txt"
+                      : "border border-transparent text-txt2 hover:bg-[var(--brand-bg)] hover:text-brand-strong",
                   )
                 : cn("rounded-[8px] py-1.5", fill ? "min-w-0 flex-1 px-1.5 text-[12.5px]" : "px-3 text-[12.5px]", on ? "text-txt" : "text-txt3 hover:text-txt2"),
             )}
@@ -56,7 +58,7 @@ export function Segmented<T extends string>({
                 layoutId={"seg-" + id}
                 className={cn(
                   "absolute inset-0",
-                  boxed ? "rounded-[10px] border border-[var(--brand)] bg-[var(--brand-mid)]" : "rounded-[8px] bg-white/[0.1]",
+                  boxed ? "rounded-[10px]" : "rounded-[8px] bg-white/[0.1]",
                 )}
                 transition={{ type: "spring", stiffness: 520, damping: 40 }}
               />
