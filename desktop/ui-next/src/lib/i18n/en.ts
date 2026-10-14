@@ -294,6 +294,7 @@ export const en = {
   "weUpdated": "Updated",
   "weLinkHint": "Number and password stay on this PC only",
   "weLoginFail": "Number or password refused",
+  "weNetFail": "Could not reach WE from this PC",
   "weCaptchaFail": "Could not reach the check image",
   "weOffersFail": "Quota read refused",
   "weGenericFail": "Something failed, try again",

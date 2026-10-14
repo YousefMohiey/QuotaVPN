@@ -73,6 +73,7 @@ const acctOf = (n: string) => `FBB${n.trim().replace(/^0+/, "")}`
 
 function errKey(e: unknown): string {
   const s = String(e instanceof Error ? e.message : e)
+  if (s.includes("NET:")) return "weNetFail"
   if (s.includes("login refused")) return "weLoginFail"
   if (s.includes("check refused") || s.includes("captcha")) return "weCaptchaFail"
   if (s.includes("offers refused")) return "weOffersFail"
@@ -85,7 +86,6 @@ function errRaw(e: unknown): string {
   const m = s.match(/check refused ([A-Za-z-]+)/)
   return m ? m[1] : ""
 }
-
 async function pull(number: string, password: string, code: string): Promise<boolean> {
   const login = await api.weQuotaLogin(number, password, code)
   save(NUM_KEY, number)

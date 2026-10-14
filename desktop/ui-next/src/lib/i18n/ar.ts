@@ -294,6 +294,7 @@ export const ar = {
   "weUpdated": "آخر تحديث",
   "weLinkHint": "الرقم وكلمة السر يبقيان على هذا الجهاز فقط",
   "weLoginFail": "الرقم أو كلمة السر مرفوضة",
+  "weNetFail": "تعذر الوصول إلى WE من هذا الجهاز",
   "weCaptchaFail": "تعذر الوصول لصورة التحقق",
   "weOffersFail": "تعذرت قراءة الباقة",
   "weGenericFail": "حدث خطأ حاول مجدداً",

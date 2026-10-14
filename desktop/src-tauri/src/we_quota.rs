@@ -71,11 +71,15 @@ async fn post(
     for (k, v) in extra {
         req = req.header(*k, *v);
     }
-    let resp = req.json(&payload).send().await.map_err(|e| e.to_string())?;
+    let resp = req
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|e| format!("NET:{e}"))?;
     harvest(jar, resp.headers());
     resp.json::<serde_json::Value>()
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| format!("NET:{e}"))
 }
 
 fn ret_code(v: &serde_json::Value) -> String {
