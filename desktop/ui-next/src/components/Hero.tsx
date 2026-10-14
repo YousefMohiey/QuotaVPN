@@ -237,13 +237,13 @@ export function Hero() {
         </motion.div>
       </div>
 
-      {/* the linked WE line: remaining under the dial, tap to refresh */}
+      {/* the linked WE line: its own hairline row under the facts */}
       {quota.linked && mainUnit ? (
         <button
           type="button"
           onClick={() => void quotaRefresh(true)}
           title={t("weRefresh")}
-          className="mt-4 flex w-full items-center gap-3 text-start"
+          className="mt-3 flex w-full items-center gap-3 border-t border-line pt-3 text-start"
         >
           <Gauge className="size-4 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
           <span className="min-w-0 flex-1">
@@ -266,7 +266,7 @@ export function Hero() {
       ) : null}
 
       {/* the connection facts: three even columns on dividers */}
-      <div className="mt-4 grid grid-cols-3 border-t border-line pt-4">
+      <div className="mt-3 grid grid-cols-3 border-t border-line pt-3">
         <Fact icon={Globe} label={t("yourLocation")} value={placeShown} />
         <Fact
           icon={Network}

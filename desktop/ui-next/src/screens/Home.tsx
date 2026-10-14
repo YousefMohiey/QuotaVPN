@@ -61,8 +61,8 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
 
       <section className="flex min-h-[186px] flex-1 flex-col justify-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-4">
         <div>
-          <h2 className="text-[20px] font-semibold text-txt">{t("setupTitle")}</h2>
-          <p className="mt-1 text-[13.5px] text-txt2">{t("setupBody")}</p>
+          <h2 className="text-[18px] font-semibold text-txt">{t("setupTitle")}</h2>
+          <p className="mt-0.5 text-[13px] text-txt2">{t("setupBody")}</p>
         </div>
         <div className="mt-3">
           <div className="grid grid-cols-2 gap-3" role="group" aria-label={t("setupTitle")}>
@@ -88,7 +88,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     void ensurePresetCard(kind).finally(() => setCreating(null))
                   }}
                   className={cn(
-                    "flex items-center gap-3.5 rounded-[12px] border p-4 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
+                    "flex items-center gap-3.5 rounded-[12px] border p-3.5 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
                     isActive
                       ? "border-[var(--brand-line)] bg-[var(--brand-bg)]"
                       : "border-line bg-white/[0.02] hover:border-[var(--brand-line)]",
@@ -96,7 +96,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 >
                   <span
                     className={cn(
-                      "grid size-12 shrink-0 place-items-center rounded-[10px] border transition-colors",
+                      "grid size-11 shrink-0 place-items-center rounded-[10px] border transition-colors",
                       isActive
                         ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong"
                         : "border-line bg-white/[0.03] text-txt3",
@@ -127,7 +127,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
             })}
             </div>
           </div>
-          <div className="my-4 border-t border-line" aria-hidden />
+          <div className="my-3 border-t border-line" aria-hidden />
           <div className="grid grid-cols-3 gap-4">
             <ConfigField label={t("domainSni")} icon={ServerIcon}>
               {customOpen ? (
@@ -142,11 +142,11 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     }}
                     placeholder="example.com"
                     aria-label={t("domainSni")}
-                    className="h-12 rounded-[10px] border-line bg-white/[0.02] text-[13.5px]"
+                    className="h-11 rounded-[10px] border-line bg-white/[0.02] text-[13.5px]"
                   />
                   <Button
                     size="sm"
-                    className="h-12 shrink-0 rounded-[10px] px-3.5 text-[13.5px]"
+                    className="h-11 shrink-0 rounded-[10px] px-3.5 text-[13.5px]"
                     disabled={domainBusy || !customVal.trim()}
                     onClick={() => void submitCustom()}
                   >
@@ -158,7 +158,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   type="button"
                   aria-busy={domainBusy}
                   onClick={() => setDomainOpen(true)}
-                  className="group flex h-12 w-full items-center justify-between gap-3 rounded-[10px] border border-line bg-white/[0.02] px-3.5 text-[13.5px] text-txt transition-colors duration-200 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
+                  className="group flex h-11 w-full items-center justify-between gap-3 rounded-[10px] border border-line bg-white/[0.02] px-3.5 text-[13.5px] text-txt transition-colors duration-200 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
                 >
                   <span className={cn("truncate", domText.length > 17 && "text-[11px]")} dir="auto">{domText}</span>
                   <ChevronDown className="size-4 shrink-0 text-txt2 transition-[color,transform] duration-200 group-hover:translate-y-px group-hover:text-brand-strong" aria-hidden />
@@ -170,7 +170,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
               <button
                 type="button"
                 onClick={onOpenApps}
-                className="group flex h-12 w-full items-center justify-between gap-3 rounded-[10px] border border-line bg-white/[0.02] px-3.5 text-[13.5px] text-txt transition-colors duration-200 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
+                className="group flex h-11 w-full items-center justify-between gap-3 rounded-[10px] border border-line bg-white/[0.02] px-3.5 text-[13.5px] text-txt transition-colors duration-200 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
               >
                 <span className="truncate" dir="auto">
                   {routing}

@@ -149,6 +149,9 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
   // Which measurement the graph belongs to, so the line keeps its colour
   // after the run ends (green upload, amber ping, blue download).
   const [lastKind, setLastKind] = useState<"ping" | "down" | "up">("down")
+  // Full runs show their three phases as segments; single-metric runs hide
+  // them, or finished tiles from the last run would light up wrongly.
+  const [runKind, setRunKind] = useState<"all" | "single">("all")
 
   const abort = useRef<AbortController | null>(null)
   const gate = useRef(0)
@@ -382,6 +385,7 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
   const run = async (which: "all" | "ping" | "down" | "up") => {
     if (running) return
     abort.current?.abort()
+    setRunKind(which === "all" ? "all" : "single")
     const ctl = new AbortController()
     abort.current = ctl
     const s = ctl.signal
@@ -723,6 +727,9 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
                   <div className="mt-1.5 truncate text-[12.5px] text-txt2">
                     {phase === "done" ? t("doneLabel") : caption}
                   </div>
+                  {runKind === "all" && (running || phase === "done") && (
+                    <PhaseSteps phase={phase} running={running} result={result} />
+                  )}
                   <div className="mt-3">
                     <SpeedGraph samples={shown} accent={accent} active={running} />
                   </div>
@@ -866,6 +873,40 @@ export function buildVerdicts(r: Result, t: (k: StrKey) => string): Verdict[] {
   }
 
   return out
+}
+
+/** The run's three phases as hairline segments: done is solid, the live one
+    pulses, the rest wait. Only full runs show them. */
+function PhaseSteps({
+  phase,
+  running,
+  result,
+}: {
+  phase: Phase
+  running: boolean
+  result: Result
+}) {
+  const order: Phase[] = ["ping", "download", "upload"]
+  const values: (number | null)[] = [result.ping, result.down, result.up]
+  const at = phase === "done" ? order.length : order.indexOf(running ? phase : "idle")
+  return (
+    <div className="mt-3 flex items-center gap-1.5" aria-hidden>
+      {order.map((p, i) => {
+        const done = phase === "done" ? values[i] !== null : at > i
+        const active = running && phase === p
+        return (
+          <span
+            key={p}
+            className={cn(
+              "h-[3px] flex-1 rounded-full",
+              done || active ? "bg-[var(--brand)]" : "bg-white/[0.08]",
+              active && "animate-pulse",
+            )}
+          />
+        )
+      })}
+    </div>
+  )
 }
 
 /** The one button that matters here: the Home dial's frame, a translucent
