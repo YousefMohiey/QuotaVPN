@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { AnimatePresence, motion } from "motion/react"
-import { Activity, Globe, Network, type LucideIcon } from "lucide-react"
+import { Gauge, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/lib/i18n"
 import { useApp } from "@/state/app"
-import { useQuota } from "@/state/quota"
+import { fmtQuota, quotaRefresh, useQuota } from "@/state/quota"
+import { WeQuotaDialog } from "./WeQuotaDialog"
 import { api, netInfo } from "@/lib/ipc"
 import { Dial, type DialState } from "./Dial"
 import { displayHost, fmtBytes, fmtDuration, mbps } from "@/lib/format"
@@ -22,17 +23,42 @@ function useTick(ms: number, on: boolean) {
   }, [ms, on])
 }
 
+/** Live rate plus rolling history from the adapter counters. */
+function useTraffic(rx: number, tx: number) {
+  const hist = useRef<number[]>([])
+  const last = useRef({ rx: 0, tx: 0, t: Date.now() })
+
+  useEffect(() => {
+    const now = Date.now()
+    const dt = Math.max(0.2, (now - last.current.t) / 1000)
+    const delta = Math.max(0, rx - last.current.rx) + Math.max(0, tx - last.current.tx)
+    last.current = { rx, tx, t: now }
+    if (last.current.rx || last.current.tx) {
+      hist.current = [...hist.current.slice(-59), delta / dt]
+    }
+  }, [rx, tx])
+
+  return useMemo(() => {
+    const values = hist.current.length ? hist.current : [0, 0]
+    return {
+      values,
+      rate: rateText(values[values.length - 1] || 0),
+      peak: rateText(Math.max(0, ...values)),
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rx, tx])
+}
+
 /**
- * The connection card, one composition: the glass dial anchors the left,
- * and the right zone carries the state line, the action word and the host.
- * Under them the zone shows its reading: the three connection facts while
- * idle, and the live session (rate and graph, then the timers) once the
- * tunnel is up. One zone, two readings, nothing else on the card.
+ * The connection card. The dial anchors the left and glides from center to
+ * its parking spot the moment Connect is pressed; the reading fades in
+ * beside it. The right zone carries the WE line reading, and the strip
+ * under everything swaps its three cells with the tunnel: facts while it
+ * is down, the live session while it is up.
  */
 export function Hero() {
   const { t } = useI18n()
   const { phase, connected, busy, toggle, card, rx, tx, sessionStart, serverIp, status } = useApp()
-  const quota = useQuota()
   const [serverAddr, setServerAddr] = useState("")
 
   // While the tunnel is up the world sees the server's address, so resolve it
@@ -45,7 +71,7 @@ export function Hero() {
     let alive = true
     let timer: number | undefined
     // The first lookup through a fresh tunnel can be cold, and a single
-    // miss used to leave this tile showing the raw name for the rest of
+    // miss used to leave the strip showing the raw name for the rest of
     // the session. Keep asking for a bit before settling for the name.
     const attempt = (n: number) => {
       api
@@ -66,7 +92,7 @@ export function Hero() {
     }
   }, [connected, serverIp])
 
-  // Footer facts: where this machine appears from, read off its public
+  // The strip facts: where this machine appears from, read off its public
   // address. The lookup races its providers on the Rust side, and the last
   // answer is cached so a launch never starts on a dash.
   const [geo, setGeo] = useState<{ ip: string; place: string; isp: string } | null>(() => {
@@ -140,12 +166,11 @@ export function Hero() {
   }, [active, phase])
 
   useTick(1000, connected)
+  const traffic = useTraffic(rx, tx)
 
   return (
-    <>
-    {/* connection band: full width, the dial glides, the reading rides beside it */}
-    <section className="flex min-h-0 flex-1 flex-col justify-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
-      <div className="flex flex-1 items-center">
+    <section className="flex min-h-0 flex-1 flex-col rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
+      <div className="flex min-h-0 flex-1 items-center">
         <motion.div
           layout
           transition={SPRING}
@@ -154,7 +179,7 @@ export function Hero() {
                row would resize as the zone comes and goes and the spring would
                wobble the dial with it. Held at the zone's own height, the row
                never changes and the glide stays flat. */
-            "flex min-h-[188px] w-full items-center",
+            "flex min-h-[188px] flex-1 items-center",
             dialLeft ? "justify-start gap-8" : "justify-center",
           )}
         >
@@ -181,7 +206,12 @@ export function Hero() {
                         connected ? "bg-[var(--green)]" : "pulse-dot bg-[var(--brand)]",
                       )}
                     />
-                    <span className="truncate text-[12.5px] text-txt2">
+                    <span
+                      className={cn(
+                        "truncate text-[12.5px]",
+                        connected ? "text-[var(--green)]" : "text-txt2",
+                      )}
+                    >
                       {connected ? t("connected") : t("working")}
                     </span>
                   </div>
@@ -207,129 +237,191 @@ export function Hero() {
             )}
           </AnimatePresence>
         </motion.div>
+
+        <QuotaZone />
       </div>
 
-      <AnimatePresence>
-        {connected && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.36, ease: EASE_OUT, delay: 0.12 }}
-          >
-            <div className="mt-3 grid grid-cols-2 items-stretch gap-2.5">
-              <StatTile
-                label={t("sessLabel")}
-                value={sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
-                sub={"⁨↓ " + fmtBytes(rx) + "⁩   ⁨↑ " + fmtBytes(tx) + "⁩"}
-              />
-              <StatTile label={t("yourIp")} value={serverAddr || ipText} />
-            </div>
-            <div className="mt-3">
-              <Traffic rx={rx} tx={tx} />
-            </div>
-          </motion.div>
+      {/* the strip: facts while down, the live session while up */}
+      <div className="mt-3 grid min-h-[64px] grid-cols-3 items-center gap-4 border-t border-line pt-3">
+        {connected ? (
+          <>
+            <Cell
+              label={t("sessLabel")}
+              value={sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
+              sub={`↓ ${fmtBytes(rx)}   ↑ ${fmtBytes(tx)}`}
+            />
+            <Cell label={t("yourIp")} value={serverAddr || ipText} select />
+            <Cell
+              label={t("liveLabel")}
+              right={`${t("peakLbl")} ${traffic.peak.num} ${traffic.peak.unit}`}
+              value={traffic.rate.num}
+              unit={traffic.rate.unit}
+              spark={<Spark values={traffic.values} className="h-9 min-w-[88px] flex-1" />}
+            />
+          </>
+        ) : (
+          <>
+            <Cell label={t("yourLocation")} value={geo?.place || "-"} />
+            <Cell label={t("yourIp")} value={ipText} select />
+            <Cell label={t("statusLbl")} value={t("notConnected")} dot="bg-[var(--red)]" />
+          </>
         )}
-      </AnimatePresence>
-
-      {/* idle and unlinked: the three facts as a roomy strip, icon tile
-          over label over value, nothing clipped */}
-      {!connected && !quota.linked && (
-        <div className="mt-3 grid grid-cols-3 gap-3 border-t border-line pt-3">
-          <FactTile icon={Globe} label={t("yourLocation")} value={geo?.place || "-"} />
-          <FactTile icon={Network} label={t("yourIp")} value={ipText} select />
-          <FactTile icon={Activity} label={t("statusLbl")} value={t("notConnected")} dot={false} />
-        </div>
-      )}
+      </div>
     </section>
-    </>
   )
 }
 
-/** One fact tile: icon over a quiet label over one value line. The strip
-    is full width now, so each tile has real room and nothing clips. */
-function FactTile({
-  icon: Icon,
+/** The WE line panel: the reading when linked, the invite when not. */
+function QuotaZone() {
+  const { t } = useI18n()
+  const quota = useQuota()
+  const [quotaOpen, setQuotaOpen] = useState(false)
+  const mainUnit = useMemo(
+    () => quota.units.find((u) => u.total > 0),
+    [quota.units],
+  )
+
+  // The linked WE line reads itself once per launch; the tap refreshes it.
+  useEffect(() => {
+    void quotaRefresh()
+  }, [])
+
+  const pct =
+    mainUnit && mainUnit.total > 0
+      ? Math.max(0, Math.min(100, (mainUnit.remain / mainUnit.total) * 100))
+      : 0
+
+  return (
+    <div className="ms-6 w-[236px] shrink-0 self-stretch border-s border-line ps-6">
+      <div className="flex h-full flex-col justify-center">
+        {quota.linked && mainUnit ? (
+          <div>
+            <div className="flex items-center gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
+                <Gauge className="size-4" strokeWidth={1.7} aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="truncate text-[13.5px] font-semibold text-txt">{t("weQuota")}</h2>
+                <p className="mt-0.5 truncate text-[11px] text-txt2" dir="auto" title={mainUnit.offer || "WE"}>
+                  {mainUnit.offer || "WE"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void quotaRefresh(true)}
+                title={t("weRefresh")}
+                aria-label={t("weRefresh")}
+                disabled={quota.phase === "busy"}
+                className="grid size-8 shrink-0 place-items-center rounded-full border border-line bg-white/[0.02] text-txt2 transition-colors hover:border-[var(--brand-line)] hover:text-brand-strong disabled:cursor-wait"
+              >
+                <RefreshCw className={cn("size-3.5", quota.phase === "busy" && "animate-spin")} aria-hidden />
+              </button>
+            </div>
+            <div className="mt-4 text-[24px] font-semibold leading-none tabular-nums text-txt">
+              {fmtQuota(mainUnit.remain)}
+            </div>
+            <div className="mt-1.5 text-[12px] text-txt2">
+              {t("weLeft")} {fmtQuota(mainUnit.total)}
+            </div>
+            <div className="mt-3.5 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+              <div
+                className="h-full rounded-full bg-[var(--brand-vivid)] transition-[width] duration-700 ease-out"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <div className="mt-2 flex items-baseline justify-between gap-2 text-[11px] text-txt3">
+              <span className="truncate">
+                {t("weUsed")} {fmtQuota(mainUnit.used)}
+              </span>
+              {quota.updatedAt ? (
+                <span className="shrink-0 tabular-nums">
+                  {t("weUpdated")}{" "}
+                  {new Date(quota.updatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                </span>
+              ) : null}
+            </div>
+            {quota.phase === "error" && quota.msgKey ? (
+              <p className="mt-1.5 truncate text-[10.5px] text-[var(--red)]" dir="auto">
+                {t(quota.msgKey as Parameters<typeof t>[0])}
+                {quota.msgRaw ? ` (${quota.msgRaw})` : ""}
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <div>
+            <div className="flex items-center gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
+                <Gauge className="size-4" strokeWidth={1.7} aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <h2 className="truncate text-[13.5px] font-semibold text-txt">{t("weQuota")}</h2>
+                <p className="mt-0.5 text-[11px] leading-snug text-txt2">{t("weQuotaSub")}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setQuotaOpen(true)}
+              className="mt-3.5 flex h-9 w-full items-center justify-center rounded-[9px] bg-[var(--brand-vivid)] px-3.5 text-[12.5px] font-medium text-white transition-[filter] hover:brightness-110"
+            >
+              {t("weLink")}
+            </button>
+          </div>
+        )}
+      </div>
+      <WeQuotaDialog open={quotaOpen} onOpenChange={setQuotaOpen} />
+    </div>
+  )
+}
+
+/** One strip cell: a quiet label, then the value (with spark when live). */
+function Cell({
   label,
   value,
-  dot,
+  sub,
+  unit,
+  right,
+  spark,
   select,
+  dot,
 }: {
-  icon: LucideIcon
   label: string
   value: string
-  dot?: boolean
+  sub?: string
+  unit?: string
+  right?: ReactNode
+  spark?: ReactNode
   select?: boolean
+  dot?: string
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <span className="grid size-[30px] shrink-0 place-items-center rounded-[8px] border border-line bg-white/[0.03] text-brand-strong">
-        <Icon className="size-[15px]" aria-hidden />
-      </span>
-      <div className="min-w-0">
-        <div className="truncate text-[11px] text-txt3">{label}</div>
-        <div className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-txt">
-          {dot !== undefined && (
-            <span className={cn("size-[6px] shrink-0 rounded-full", dot ? "bg-[var(--green)]" : "bg-[var(--red)]")} aria-hidden />
-          )}
-          <span className={cn("truncate", select && "select-text")} title={value} dir="auto">
-            {value}
-          </span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="min-w-0 rounded-[12px] border border-line bg-white/[0.02] px-3 py-2">
+    <div className="min-w-0">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="shrink-0 text-[11px] text-txt3">{label}</span>
-        <span className="truncate text-[13px] font-medium tabular-nums text-txt">{value}</span>
-      </div>
-      {sub && <div className="mt-0.5 truncate text-[11px] tabular-nums text-txt3">{sub}</div>}
-    </div>
-  )
-}
-
-/** Live rate + rolling sparkline from the adapter counters. The block
-    reads like the reference: label row with the peak, the big number,
-    then the graph. */
-function Traffic({ rx, tx }: { rx: number; tx: number }) {
-  const { t } = useI18n()
-  const hist = useRef<number[]>([])
-  const last = useRef({ rx: 0, tx: 0, t: Date.now() })
-
-  useEffect(() => {
-    const now = Date.now()
-    const dt = Math.max(0.2, (now - last.current.t) / 1000)
-    const delta = Math.max(0, rx - last.current.rx) + Math.max(0, tx - last.current.tx)
-    last.current = { rx, tx, t: now }
-    if (last.current.rx || last.current.tx) {
-      hist.current = [...hist.current.slice(-59), delta / dt]
-    }
-  }, [rx, tx])
-
-  const values = hist.current.length ? hist.current : [0, 0]
-  const { rate, peak } = useMemo(() => {
-    const current = values[values.length - 1] || 0
-    return { rate: rateText(current), peak: rateText(Math.max(0, ...values)) }
-  }, [rx, tx])
-
-  return (
-    <div>
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="text-[11.5px] tracking-[0.04em] text-txt3">{t("liveLabel")}</span>
-        <span className="text-[11.5px] tabular-nums text-txt3">
-          {t("peakLbl")} {peak.num} {peak.unit}
+        <span className="flex min-w-0 items-center gap-1.5">
+          {dot ? <span aria-hidden className={cn("size-[6px] shrink-0 rounded-full", dot)} /> : null}
+          <span className="truncate text-[11px] text-txt3">{label}</span>
         </span>
+        {right ? <span className="shrink-0 truncate text-[10.5px] tabular-nums text-txt3">{right}</span> : null}
       </div>
-      <div className="mt-1 flex items-baseline gap-1.5">
-        <span className="text-[20px] font-semibold leading-none tabular-nums text-txt">{rate.num}</span>
-        <span className="text-[12px] text-txt2">{rate.unit}</span>
-      </div>
-      <Spark values={values} />
+      {spark ? (
+        <div className="mt-1 flex items-center gap-3">
+          <span className="shrink-0 text-[17px] font-semibold leading-none tabular-nums text-txt">
+            {value}
+            {unit ? <span className="ms-1 text-[11px] font-normal text-txt2">{unit}</span> : null}
+          </span>
+          {spark}
+        </div>
+      ) : (
+        <>
+          <div
+            className={cn("mt-1 truncate text-[15px] font-medium leading-tight text-txt", select && "select-text")}
+            dir="auto"
+            title={value}
+          >
+            {value}
+          </div>
+          {sub ? <div className="mt-0.5 truncate text-[11px] tabular-nums text-txt3">{sub}</div> : null}
+        </>
+      )}
     </div>
   )
 }
@@ -349,7 +441,7 @@ function cssVar(name: string, fallback: string): string {
     path on its first raster (it only paints after unrelated DOM pokes, which
     is why the line kept disappearing), so the pixels are drawn here instead:
     a canvas paints exactly when it is asked to. */
-function Spark({ values }: { values: number[] }) {
+function Spark({ values, className }: { values: number[]; className?: string }) {
   const ref = useRef<HTMLCanvasElement | null>(null)
 
   const paint = useCallback(() => {
@@ -396,7 +488,7 @@ function Spark({ values }: { values: number[] }) {
     return () => ro.disconnect()
   }, [paint])
 
-  return <canvas ref={ref} className="mt-2 h-[56px] w-full" aria-hidden />
+  return <canvas ref={ref} className={cn("w-full", className ?? "mt-2 h-[56px]")} aria-hidden />
 }
 
 /** Bytes per second as the live number: Mbps once it is a real rate,
