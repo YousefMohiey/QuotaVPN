@@ -26,7 +26,7 @@ export function Segmented<T extends string>({
         /* boxed drops the outer frame: the three options sit bare in a row
            and the selected pill carries the shape by itself */
         boxed
-          ? "flex h-12 w-full items-center gap-1"
+          ? "flex h-11 w-full items-center gap-2"
           : "rounded-[10px] border border-line bg-white/[0.02] p-0.5",
         !boxed && (fill ? "flex w-full" : "inline-flex"),
         className,
@@ -48,7 +48,7 @@ export function Segmented<T extends string>({
                     "flex h-full min-w-0 flex-1 items-center justify-center rounded-[10px] px-1.5 text-[12px]",
                     on
                       ? "border border-[var(--brand-line)] bg-[var(--brand-bg)] text-txt"
-                      : "border border-transparent text-txt2 hover:bg-[var(--brand-bg)] hover:text-brand-strong",
+                      : "border border-line bg-white/[0.02] text-txt2 hover:border-[var(--brand-line)] hover:text-brand-strong",
                   )
                 : cn("rounded-[8px] py-1.5", fill ? "min-w-0 flex-1 px-1.5 text-[12.5px]" : "px-3 text-[12.5px]", on ? "text-txt" : "text-txt3 hover:text-txt2"),
             )}
