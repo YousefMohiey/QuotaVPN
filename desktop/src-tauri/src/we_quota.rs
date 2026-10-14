@@ -118,7 +118,11 @@ pub async fn we_quota_challenge(
     )
     .await?;
     if cap.get("status").and_then(|s| s.as_str()) != Some("Success") {
-        return Err("captcha service refused".to_string());
+        let status = cap
+            .get("status")
+            .and_then(|s| s.as_str())
+            .unwrap_or("no-answer");
+        return Err(format!("check refused {status}"));
     }
     let interaction = cap.get("requireInteraction").and_then(|b| b.as_bool()).unwrap_or(false);
     let image = if interaction {

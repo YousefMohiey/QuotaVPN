@@ -12,6 +12,7 @@ export type QuotaSnap = {
   updatedAt: number | null
   phase: QuotaPhase
   msgKey: string
+  msgRaw: string
   challengeImage: string
 }
 
@@ -48,6 +49,7 @@ let snap: QuotaSnap = {
   updatedAt: null,
   phase: "idle",
   msgKey: "",
+    msgRaw: "",
   challengeImage: "",
 }
 
@@ -72,9 +74,16 @@ const acctOf = (n: string) => `FBB${n.trim().replace(/^0+/, "")}`
 function errKey(e: unknown): string {
   const s = String(e instanceof Error ? e.message : e)
   if (s.includes("login refused")) return "weLoginFail"
-  if (s.includes("captcha")) return "weCaptchaFail"
+  if (s.includes("check refused") || s.includes("captcha")) return "weCaptchaFail"
   if (s.includes("offers refused")) return "weOffersFail"
   return "weGenericFail"
+}
+
+/** The server's own refusal word (Blocked and friends), safe to show. */
+function errRaw(e: unknown): string {
+  const s = String(e instanceof Error ? e.message : e)
+  const m = s.match(/check refused ([A-Za-z-]+)/)
+  return m ? m[1] : ""
 }
 
 async function pull(number: string, password: string, code: string): Promise<boolean> {
@@ -90,6 +99,7 @@ async function pull(number: string, password: string, code: string): Promise<boo
     updatedAt: Date.now(),
     phase: "ready",
     msgKey: "",
+    msgRaw: "",
     challengeImage: "",
   })
   return true
@@ -98,7 +108,7 @@ async function pull(number: string, password: string, code: string): Promise<boo
 /** Link step one: asks the server whether it wants a code read. When it
     does, this resolves false and the screen shows the image instead. */
 export async function quotaLink(number: string, password: string, code = ""): Promise<boolean> {
-  set({ phase: "busy", msgKey: "" })
+  set({ phase: "busy", msgKey: "", msgRaw: "" })
   try {
     if (!code && snap.phase !== "need-code") {
       const ch = await api.weQuotaChallenge(number)
@@ -109,7 +119,7 @@ export async function quotaLink(number: string, password: string, code = ""): Pr
     }
     return await pull(number, password, code)
   } catch (e) {
-    set({ phase: "error", msgKey: errKey(e) })
+    set({ phase: "error", msgKey: errKey(e), msgRaw: errRaw(e) })
     return false
   }
 }
@@ -124,7 +134,7 @@ export async function quotaRefresh(force = false): Promise<void> {
   if (!number || !password) return
   if (!force && (snap.linked || refreshTried)) return
   refreshTried = true
-  if (!snap.linked) set({ phase: "busy", msgKey: "" })
+  if (!snap.linked) set({ phase: "busy", msgKey: "", msgRaw: "" })
   try {
     const ch = await api.weQuotaChallenge(number)
     if (ch.interaction) {
@@ -133,7 +143,7 @@ export async function quotaRefresh(force = false): Promise<void> {
     }
     await pull(number, password, "")
   } catch (e) {
-    set({ phase: snap.linked ? "ready" : "error", msgKey: errKey(e) })
+    set({ phase: snap.linked ? "ready" : "error", msgKey: errKey(e), msgRaw: errRaw(e) })
   }
 }
 
@@ -153,6 +163,7 @@ export async function quotaLogout(): Promise<void> {
     updatedAt: null,
     phase: "idle",
     msgKey: "",
+    msgRaw: "",
     challengeImage: "",
   })
 }

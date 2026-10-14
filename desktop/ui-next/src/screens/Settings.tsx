@@ -185,7 +185,10 @@ function WeQuotaCard() {
             <p className="text-[11.5px] text-txt3">{t("weLinkHint")}</p>
           </div>
           {q.phase === "error" && q.msgKey ? (
-            <p className="text-[12px] text-[var(--red)]">{t(q.msgKey as never)}</p>
+            <p className="text-[12px] text-[var(--red)]">
+              {t(q.msgKey as never)}
+              {q.msgRaw ? ` (${q.msgRaw})` : ""}
+            </p>
           ) : null}
         </div>
       )}
