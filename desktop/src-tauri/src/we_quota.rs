@@ -60,11 +60,11 @@ async fn post(
     jar: &mut HashMap<String, String>,
     extra: &[(&str, &str)],
 ) -> Result<serde_json::Value, String> {
+    // No Origin/Referer here: captcha.te.eg answers InvalidMerchantRequest
+    // when they are present, while the echannel calls below need them.
     let mut req = client
         .post(url)
-        .header(reqwest::header::CONTENT_TYPE, "application/json")
-        .header(reqwest::header::ORIGIN, "https://my.te.eg")
-        .header(reqwest::header::REFERER, "https://my.te.eg/echannel/");
+        .header(reqwest::header::CONTENT_TYPE, "application/json");
     if !jar.is_empty() {
         req = req.header(reqwest::header::COOKIE, cookie_header(jar));
     }
@@ -90,7 +90,7 @@ fn ret_code(v: &serde_json::Value) -> String {
         .to_string()
 }
 
-const WEB_HEADERS: [(&str, &str); 7] = [
+const WEB_HEADERS: [(&str, &str); 9] = [
     ("channelid", "702"),
     ("csrftoken", ""),
     ("languagecode", "en-US"),
@@ -98,6 +98,8 @@ const WEB_HEADERS: [(&str, &str); 7] = [
     ("delegatorsubsid", ""),
     ("iscoporate", "false"),
     ("ismobile", "false"),
+    ("Origin", "https://my.te.eg"),
+    ("Referer", "https://my.te.eg/echannel/"),
 ];
 
 #[derive(serde::Serialize)]
