@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react"
-import { Cable, ChevronDown, ChevronRight, Gamepad2, LayoutGrid, Server as ServerIcon, Tv, type LucideIcon } from "lucide-react"
+import { ChevronDown, ChevronRight, Gamepad2, Tv } from "lucide-react"
 import { Hero } from "@/components/Hero"
 import { PickerDialog, type PickerItem } from "@/components/PickerDialog"
 import { Segmented } from "@/components/Segmented"
@@ -54,17 +54,13 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
         ? t("appsOnly")
         : t("appsExcept")
   const routingCount = appsMode !== "all" && apps.length ? ` · ${apps.length}` : ""
+  const trHint = transport === "hy2" ? t("trNoteHy2") : transport === "wg" ? t("trNoteWg") : ""
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1040px] flex-col gap-3">
       <Hero />
 
       <section className="flex min-h-[186px] flex-1 flex-col justify-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-4">
-        <div>
-          <h2 className="text-[18px] font-semibold text-txt">{t("setupTitle")}</h2>
-          <p className="mt-0.5 text-[13px] text-txt2">{t("setupBody")}</p>
-        </div>
-        <div className="mt-3">
           <div className="grid grid-cols-2 gap-3" role="group" aria-label={t("setupTitle")}>
             {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
               const mine = cards.find((c) => c.card_type === kind)
@@ -125,11 +121,10 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 </button>
               )
             })}
-            </div>
           </div>
           <div className="my-3 border-t border-line" aria-hidden />
-          <div className="grid grid-cols-3 gap-4">
-            <ConfigField label={t("domainSni")} icon={ServerIcon}>
+          <div className="flex flex-col divide-y divide-line">
+            <RowField label={t("domainSni")}>
               {customOpen ? (
                 <div className="flex w-full items-center gap-2">
                   <Input
@@ -164,9 +159,9 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   <ChevronDown className="size-4 shrink-0 text-txt2 transition-[color,transform] duration-200 group-hover:translate-y-px group-hover:text-brand-strong" aria-hidden />
                 </button>
               )}
-            </ConfigField>
+            </RowField>
 
-            <ConfigField label={t("routing")} icon={LayoutGrid}>
+            <RowField label={t("routing")}>
               <button
                 type="button"
                 onClick={onOpenApps}
@@ -181,9 +176,9 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   aria-hidden
                 />
               </button>
-            </ConfigField>
+            </RowField>
 
-            <ConfigField label={t("transport")} icon={Cable}>
+            <RowField label={t("transport")} hint={trHint}>
               <Segmented
                 id="transport"
                 value={transport}
@@ -195,7 +190,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   { value: "wg", label: t("trWg"), hint: t("trNoteWg") },
                 ]}
               />
-            </ConfigField>
+            </RowField>
           </div>
       </section>
 
@@ -219,25 +214,23 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
   )
 }
 
-/** One config column: a micro label with its glyph over the control. */
-function ConfigField({
+/** One config row: the label sits left, the control takes the right. */
+function RowField({
   label,
+  hint,
   children,
-  icon: Icon,
 }: {
   label: string
+  hint?: string
   children: ReactNode
-  icon: LucideIcon
 }) {
   return (
-    <div className="min-w-0">
-      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase text-txt3">
-        <span className="grid size-[26px] shrink-0 place-items-center rounded-[8px] border border-line bg-white/[0.03] text-txt2">
-          <Icon className="size-[13px]" aria-hidden />
-        </span>
-        <span className="min-w-0 truncate">{label}</span>
+    <div className="flex items-center gap-4 py-2.5">
+      <span className="w-24 shrink-0 truncate text-[12.5px] text-txt2">{label}</span>
+      <div className="min-w-0 flex-1">
+        {children}
+        {hint ? <p className="mt-1 text-[11px] text-txt3">{hint}</p> : null}
       </div>
-      <div className="mt-2 min-w-0">{children}</div>
     </div>
   )
 }

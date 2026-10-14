@@ -123,7 +123,6 @@ export function Hero() {
   // to travel; on the way back the zone exits first, then the dial returns.
   const state: DialState = phase === "on" ? "on" : phase === "connecting" ? "connecting" : "idle"
   const name = card?.name.split(" (")[0] ?? ""
-  const hostLine = [name, displayHost(card?.sni)].filter(Boolean).join(" \u00b7 ")
   const active = phase === "connecting" || phase === "on"
 
   const [showInfo, setShowInfo] = useState(false)
@@ -197,19 +196,35 @@ export function Hero() {
                       <span className="text-[12.5px] text-txt2">
                         {connected ? t("connected") : t("working")}
                       </span>
+                      {connected && name ? (
+                        <span className="shrink-0 truncate rounded-full border border-line px-2 py-0.5 text-[11px] text-txt2" dir="auto">
+                          {name}
+                        </span>
+                      ) : null}
                     </div>
-                    <p className="mt-2 truncate text-[15px] font-medium text-txt" dir="auto">
-                      {connected ? hostLine : t("talking")}
-                    </p>
+                    {connected ? (
+                      <>
+                        <p className="mt-2 truncate text-[22px] font-semibold leading-tight text-txt" dir="auto">
+                          {name}
+                        </p>
+                        <p className="mt-0.5 truncate text-[12.5px] text-txt3" dir="auto">
+                          {displayHost(card?.sni)}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="mt-2 truncate text-[15px] font-medium text-txt" dir="auto">
+                        {t("talking")}
+                      </p>
+                    )}
                   </div>
                   {connected && (
-                    <div className="flex min-w-0 items-stretch gap-2.5">
+                    <div className="grid min-w-0 shrink-0 grid-cols-2 items-stretch gap-2.5">
                       <StatTile
                         label={t("sessLabel")}
                         value={sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
                         sub={"⁨↓ " + fmtBytes(rx) + "⁩   ⁨↑ " + fmtBytes(tx) + "⁩"}
                       />
-                      <StatTile label={t("srvLocation")} value={placeShown} sub={serverAddr || ipText} />
+                      <StatTile label={t("yourIp")} value={serverAddr || ipText} />
                     </div>
                   )}
                 </div>
@@ -265,24 +280,26 @@ export function Hero() {
         </button>
       ) : null}
 
-      {/* the connection facts: three even columns on dividers */}
-      <div className="mt-3 grid grid-cols-3 border-t border-line pt-3">
-        <Fact icon={Globe} label={t("yourLocation")} value={placeShown} />
-        <Fact
-          icon={Network}
-          label={t("yourIp")}
-          value={ipText}
-          className="border-s border-line ps-4"
-          valueClass="select-text"
-        />
-        <Fact
-          icon={Activity}
-          label={t("statusLbl")}
-          value={connected ? t("connected") : t("notConnected")}
-          dot={connected}
-          className="border-s border-line ps-4"
-        />
-      </div>
+      {/* idle keeps the three facts; connected carries session and IP tiles */}
+      {!connected && (
+        <div className="mt-3 grid grid-cols-3 border-t border-line pt-3">
+          <Fact icon={Globe} label={t("yourLocation")} value={placeShown} />
+          <Fact
+            icon={Network}
+            label={t("yourIp")}
+            value={ipText}
+            className="border-s border-line ps-4"
+            valueClass="select-text"
+          />
+          <Fact
+            icon={Activity}
+            label={t("statusLbl")}
+            value={connected ? t("connected") : t("notConnected")}
+            dot={connected}
+            className="border-s border-line ps-4"
+          />
+        </div>
+      )}
     </section>
   )
 }
