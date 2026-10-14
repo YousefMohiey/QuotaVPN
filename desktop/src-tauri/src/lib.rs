@@ -1746,6 +1746,14 @@ fn set_webview_memory_low(app: &tauri::AppHandle, low: bool) {
 }
 
 pub fn run() {
+    // Headless self-test for the WE quota flow, and a diagnostic the owner
+    // can run on any PC: QC_WE_NUMBER and QC_WE_PASS in the environment,
+    // QuotaVPN.exe --we-probe. Prints units and PROBE_GREEN, exits nonzero
+    // on any failure. Runs before the single-instance plugin on purpose.
+    if std::env::args().any(|a| a == "--we-probe") {
+        we_quota::probe_main();
+        return;
+    }
     tauri::Builder::default()
         // Single instance: a second launch brings the running app forward
         // instead of starting a twin. Must be the first plugin registered.

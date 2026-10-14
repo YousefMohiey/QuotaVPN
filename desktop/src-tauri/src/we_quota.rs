@@ -27,7 +27,7 @@ impl WeQuota {
     }
 }
 
-fn client() -> Result<reqwest::Client, String> {
+pub fn client() -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(15))
         .user_agent(UA)
@@ -90,9 +90,8 @@ fn ret_code(v: &serde_json::Value) -> String {
         .to_string()
 }
 
-const WEB_HEADERS: [(&str, &str); 9] = [
+const WEB_BASE: [(&str, &str); 8] = [
     ("channelid", "702"),
-    ("csrftoken", ""),
     ("languagecode", "en-US"),
     ("isselfcare", "true"),
     ("delegatorsubsid", ""),
@@ -102,24 +101,37 @@ const WEB_HEADERS: [(&str, &str); 9] = [
     ("Referer", "https://my.te.eg/echannel/"),
 ];
 
-#[derive(serde::Serialize)]
-pub struct ChallengeOut {
-    interaction: bool,
-    image: String,
+/// One csrftoken header, never two: the server reads the first and an
+/// empty duplicate used to shadow the real login token on usage calls.
+fn web_headers(csrf: &str) -> Vec<(&str, &str)> {
+    let mut h = WEB_BASE.to_vec();
+    h.push(("csrftoken", csrf));
+    h
 }
 
-#[tauri::command]
-pub async fn we_quota_challenge(
-    state: tauri::State<'_, WeQuota>,
-    identifier: String,
-) -> Result<ChallengeOut, String> {
-    let client = client()?;
-    let mut jar = HashMap::new();
+#[derive(serde::Serialize)]
+pub struct ChallengeOut {
+    pub interaction: bool,
+    pub image: String,
+}
+
+fn fnum(v: &serde_json::Value) -> f64 {
+    v.as_f64()
+        .or_else(|| v.as_u64().map(|n| n as f64))
+        .or_else(|| v.as_i64().map(|n| n as f64))
+        .unwrap_or(0.0)
+}
+
+pub async fn challenge_inner(
+    client: &reqwest::Client,
+    jar: &mut HashMap<String, String>,
+    identifier: &str,
+) -> Result<(ChallengeOut, String), String> {
     let cap = post(
-        &client,
+        client,
         CAPTCHA,
         serde_json::json!({"merchantName": "E-Care", "serviceName": "Login", "identifier": identifier}),
-        &mut jar,
+        jar,
         &[],
     )
     .await?;
@@ -137,39 +149,20 @@ pub async fn we_quota_challenge(
         String::new()
     };
     let token = cap.get("token").and_then(|t| t.as_str()).unwrap_or("").to_string();
-    *state.0.lock().map_err(|e| e.to_string())? = Some(WeSession {
-        cookies: jar,
-        csrf: String::new(),
-        sub_id: String::new(),
-        customer: String::new(),
-        token,
-    });
-    Ok(ChallengeOut { interaction, image })
+    Ok((ChallengeOut { interaction, image }, token))
 }
 
-#[derive(serde::Serialize)]
-pub struct LoginOut {
-    customer: String,
-}
-
-#[tauri::command]
-pub async fn we_quota_login(
-    state: tauri::State<'_, WeQuota>,
-    landline: String,
-    password: String,
-    code: String,
-) -> Result<LoginOut, String> {
-    let client = client()?;
+pub async fn login_inner(
+    client: &reqwest::Client,
+    jar: &mut HashMap<String, String>,
+    token: &str,
+    landline: &str,
+    password: &str,
+    code: &str,
+) -> Result<(String, String, String), String> {
     let acct = format!("FBB{}", landline.trim_start_matches('0'));
-    let (mut jar, token) = {
-        let guard = state.0.lock().map_err(|e| e.to_string())?;
-        match guard.as_ref() {
-            Some(s) => (s.cookies.clone(), s.token.clone()),
-            None => return Err("no challenge: ask for a code first".to_string()),
-        }
-    };
     let auth = post(
-        &client,
+        client,
         &format!("{ECHANNEL}/v1/auth/userAuthenticate"),
         serde_json::json!({
             "acctId": acct,
@@ -181,8 +174,8 @@ pub async fn we_quota_login(
             "imgCode": code,
             "isConvergent": "0",
         }),
-        &mut jar,
-        &WEB_HEADERS,
+        jar,
+        &web_headers(""),
     )
     .await?;
     if ret_code(&auth) != "0" {
@@ -205,42 +198,22 @@ pub async fn we_quota_login(
     if csrf.is_empty() || sub_id.is_empty() {
         return Err("login refused".to_string());
     }
-    *state.0.lock().map_err(|e| e.to_string())? = Some(WeSession {
-        cookies: jar,
-        csrf,
-        sub_id,
-        customer: customer.clone(),
-        token: String::new(),
-    });
-    Ok(LoginOut { customer })
+    Ok((customer, csrf, sub_id))
 }
 
-#[derive(serde::Serialize)]
-pub struct QuotaUnit {
-    offer: String,
-    total: f64,
-    used: f64,
-    remain: f64,
-}
-
-#[tauri::command]
-pub async fn we_quota_usage(state: tauri::State<'_, WeQuota>, acct: String) -> Result<Vec<QuotaUnit>, String> {
-    let client = client()?;
-    let (mut jar, csrf, sub_id) = {
-        let guard = state.0.lock().map_err(|e| e.to_string())?;
-        match guard.as_ref() {
-            Some(s) if !s.csrf.is_empty() => (s.cookies.clone(), s.csrf.clone(), s.sub_id.clone()),
-            _ => return Err("not logged in".to_string()),
-        }
-    };
-    let mut headers = WEB_HEADERS.to_vec();
-    let csrf_owned = csrf.clone();
-    headers.push(("csrftoken", csrf_owned.as_str()));
+pub async fn usage_inner(
+    client: &reqwest::Client,
+    jar: &mut HashMap<String, String>,
+    csrf: &str,
+    sub_id: &str,
+    acct: &str,
+) -> Result<Vec<QuotaUnit>, String> {
+    let headers = web_headers(csrf);
     let offers = post(
-        &client,
+        client,
         &format!("{ECHANNEL}/cz/v1/auth/getSubscribedOfferings"),
         serde_json::json!({"msisdn": acct, "numberServiceType": "FBB", "groupId": ""}),
-        &mut jar,
+        jar,
         &headers,
     )
     .await?;
@@ -257,10 +230,10 @@ pub async fn we_quota_usage(state: tauri::State<'_, WeQuota>, acct: String) -> R
             continue;
         };
         let quota = post(
-            &client,
+            client,
             &format!("{ECHANNEL}/cz/cbs/bb/queryFreeUnit"),
             serde_json::json!({"subscriberId": sub_id, "mainOfferId": offer_id}),
-            &mut jar,
+            jar,
             &headers,
         )
         .await?;
@@ -269,15 +242,92 @@ pub async fn we_quota_usage(state: tauri::State<'_, WeQuota>, acct: String) -> R
         }
         let units = quota["body"].as_array().cloned().unwrap_or_default();
         for u in units {
-            let num = |k: &str| u.get(k).and_then(|v| v.as_f64()).unwrap_or(0.0);
-            out.push(QuotaUnit {
+            let unit = QuotaUnit {
                 offer: u.get("offerName").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-                total: num("total"),
-                used: num("used"),
-                remain: num("remain"),
-            });
+                total: fnum(&u["total"]),
+                used: fnum(&u["used"]),
+                remain: fnum(&u["remain"]),
+            };
+            // One line sells several offers sharing the same bucket: show it once.
+            if !out.iter().any(|o: &QuotaUnit| {
+                o.offer == unit.offer && o.total == unit.total && o.remain == unit.remain
+            }) {
+                out.push(unit);
+            }
         }
     }
+    Ok(out)
+}
+
+#[tauri::command]
+pub async fn we_quota_challenge(
+    state: tauri::State<'_, WeQuota>,
+    identifier: String,
+) -> Result<ChallengeOut, String> {
+    let client = client()?;
+    let mut jar = HashMap::new();
+    let (out, token) = challenge_inner(&client, &mut jar, &identifier).await?;
+    *state.0.lock().map_err(|e| e.to_string())? = Some(WeSession {
+        cookies: jar,
+        csrf: String::new(),
+        sub_id: String::new(),
+        customer: String::new(),
+        token,
+    });
+    Ok(out)
+}
+
+#[derive(serde::Serialize)]
+pub struct LoginOut {
+    customer: String,
+}
+
+#[tauri::command]
+pub async fn we_quota_login(
+    state: tauri::State<'_, WeQuota>,
+    landline: String,
+    password: String,
+    code: String,
+) -> Result<LoginOut, String> {
+    let client = client()?;
+    let (mut jar, token) = {
+        let guard = state.0.lock().map_err(|e| e.to_string())?;
+        match guard.as_ref() {
+            Some(s) => (s.cookies.clone(), s.token.clone()),
+            None => return Err("no challenge: ask for a code first".to_string()),
+        }
+    };
+    let (customer, csrf, sub_id) =
+        login_inner(&client, &mut jar, &token, &landline, &password, &code).await?;
+    *state.0.lock().map_err(|e| e.to_string())? = Some(WeSession {
+        cookies: jar,
+        csrf,
+        sub_id,
+        customer: customer.clone(),
+        token: String::new(),
+    });
+    Ok(LoginOut { customer })
+}
+
+#[derive(serde::Serialize)]
+pub struct QuotaUnit {
+    pub offer: String,
+    pub total: f64,
+    pub used: f64,
+    pub remain: f64,
+}
+
+#[tauri::command]
+pub async fn we_quota_usage(state: tauri::State<'_, WeQuota>, acct: String) -> Result<Vec<QuotaUnit>, String> {
+    let client = client()?;
+    let (mut jar, csrf, sub_id) = {
+        let guard = state.0.lock().map_err(|e| e.to_string())?;
+        match guard.as_ref() {
+            Some(s) if !s.csrf.is_empty() => (s.cookies.clone(), s.csrf.clone(), s.sub_id.clone()),
+            _ => return Err("not logged in".to_string()),
+        }
+    };
+    let out = usage_inner(&client, &mut jar, &csrf, &sub_id, &acct).await?;
     {
         let mut guard = state.0.lock().map_err(|e| e.to_string())?;
         if let Some(s) = guard.as_mut() {
@@ -290,4 +340,131 @@ pub async fn we_quota_usage(state: tauri::State<'_, WeQuota>, acct: String) -> R
 #[tauri::command]
 pub fn we_quota_logout(state: tauri::State<'_, WeQuota>) {
     *state.0.lock().expect("quota session poisoned") = None;
+}
+
+/// The `--we-probe` entry point: same inner flow the UI drives, headless.
+pub fn probe_main() {
+    let number = std::env::var("QC_WE_NUMBER").unwrap_or_default();
+    let password = std::env::var("QC_WE_PASS").unwrap_or_default();
+    if number.trim().is_empty() || password.is_empty() {
+        eprintln!("probe needs QC_WE_NUMBER and QC_WE_PASS in the environment");
+        std::process::exit(2);
+    }
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("probe runtime");
+    // Optional code on the command line for non-interactive runs.
+    let arg_code = std::env::args()
+        .skip_while(|a| a != "--we-probe")
+        .nth(1)
+        .unwrap_or_default();
+    rt.block_on(async {
+        let client = client().expect("client builds");
+        let mut jar = HashMap::new();
+        let (ch, token) = challenge_inner(&client, &mut jar, number.trim())
+            .await
+            .expect("challenge answers Success");
+        let code;
+        if ch.interaction {
+            use std::io::BufRead;
+            let path = std::env::var("TEMP")
+                .unwrap_or_else(|_| "C:/Windows/Temp".to_string())
+                + "/we-probe-captcha.jpg";
+            let raw = ch.image.split_once(',').map(|(_, b)| b).unwrap_or("");
+            use base64::Engine;
+            let bytes = base64::engine::general_purpose::STANDARD
+                .decode(raw)
+                .expect("captcha decodes");
+            std::fs::write(&path, bytes).expect("captcha saves");
+            eprintln!("PROBE_NEEDS_CODE {path}");
+            code = if !arg_code.is_empty() {
+                arg_code.clone()
+            } else {
+                eprintln!("type the letters from the image and press Enter:");
+                let mut line = String::new();
+                std::io::stdin().lock().read_line(&mut line).expect("stdin");
+                line.trim().to_string()
+            };
+        } else {
+            println!("challenge: Success, no code read");
+            code = String::new();
+        }
+        let (customer, csrf, sub_id) = login_inner(
+            &client,
+            &mut jar,
+            &token,
+            number.trim(),
+            &password,
+            &code,
+        )
+        .await
+        .expect("login accepts the number and password");
+        assert!(!customer.is_empty(), "login returns a customer name");
+        println!("login: ok");
+        let acct = format!("FBB{}", number.trim().trim_start_matches('0'));
+        let units = usage_inner(&client, &mut jar, &csrf, &sub_id, &acct)
+            .await
+            .expect("offers and free units read clean");
+        assert!(!units.is_empty(), "at least one quota unit comes back");
+        for u in &units {
+            println!("UNIT {} remain {} / total {}", u.offer, u.remain, u.total);
+        }
+        println!("PROBE_GREEN");
+    });
+}
+
+#[cfg(test)]
+mod tests {
+    // NOTE: `cargo test` harness binary does not start on this build box
+    // (STATUS_ENTRYPOINT_NOT_FOUND), so the shippable gate is the example
+    // binary instead: cargo run --example we_probe with QC_WE_NUMBER and
+    // QC_WE_PASS in the environment.
+    use super::*;
+
+    /// Creds come from the environment, never the repo: without them the
+    /// live test skips instead of failing.
+    fn creds() -> Option<(String, String)> {
+        match (std::env::var("QC_WE_NUMBER"), std::env::var("QC_WE_PASS")) {
+            (Ok(n), Ok(p)) if !n.trim().is_empty() && !p.is_empty() => Some((n, p)),
+            _ => None,
+        }
+    }
+
+    /// The exact flow the app runs, against the real WE servers. This is
+    /// the gate: it must be green before any build ships to the owner.
+    #[tokio::test]
+    async fn live_quota_flow() {
+        let Some((number, password)) = creds() else {
+            eprintln!("SKIP live_quota_flow: set QC_WE_NUMBER and QC_WE_PASS");
+            return;
+        };
+        let client = client().expect("client builds");
+        let mut jar = HashMap::new();
+        let (ch, token) = challenge_inner(&client, &mut jar, number.trim())
+            .await
+            .expect("challenge answers Success");
+        if ch.interaction {
+            eprintln!("SKIP live_quota_flow: server wants a code read right now");
+            return;
+        }
+        let (customer, csrf, sub_id) =
+            login_inner(&client, &mut jar, &token, number.trim(), &password, "")
+                .await
+                .expect("login accepts the number and password");
+        assert!(!customer.is_empty(), "login returns a customer name");
+        let acct = format!("FBB{}", number.trim().trim_start_matches('0'));
+        let units = usage_inner(&client, &mut jar, &csrf, &sub_id, &acct)
+            .await
+            .expect("offers and free units read clean");
+        assert!(!units.is_empty(), "at least one quota unit comes back");
+        assert!(
+            units.iter().any(|u| u.total > 0.0),
+            "at least one unit has a real total"
+        );
+        for u in &units {
+            assert!(u.remain <= u.total, "remain never exceeds total");
+            eprintln!("UNIT {} remain {} / total {}", u.offer, u.remain, u.total);
+        }
+    }
 }
