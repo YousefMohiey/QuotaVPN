@@ -101,7 +101,7 @@ export function SpeedDial({
   return (
     <div
       className={cn(
-        "relative h-[300px] w-[300px] [@media(max-height:660px)]:h-[196px] [@media(max-height:660px)]:w-[196px]",
+        "relative h-[300px] w-[300px] scale-[0.8] [@media(max-height:660px)]:h-[196px] [@media(max-height:660px)]:w-[196px]",
         phase === "done" && "cursor-pointer",
       )}
       onClick={phase === "done" ? onStart : undefined}
