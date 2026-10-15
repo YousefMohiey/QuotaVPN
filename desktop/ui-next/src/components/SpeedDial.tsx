@@ -18,9 +18,11 @@ const STROKE = 21
 const R_LABEL = 103
 const R_TIP = 96
 
-// Speedtest's own scale: the stops and where they sit along the sweep.
+// The scale sits at equal angles around the sweep, mirrored across the
+// vertical: 5 against 750, 10 against 500, 50 against 250, 100 at high
+// noon. Measured straight off the reference app at pixel level.
 const STOPS = [0, 5, 10, 50, 100, 250, 500, 750, 1000]
-const FRACS = [0, 0.035, 0.075, 0.285, 0.5, 0.64, 0.775, 0.89, 1]
+const FRACS = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
 
 const pt = (r: number, deg: number) => {
   const a = (deg * Math.PI) / 180
