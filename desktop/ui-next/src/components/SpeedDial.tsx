@@ -101,7 +101,7 @@ export function SpeedDial({
   return (
     <div
       className={cn(
-        "relative h-[300px] w-[300px] scale-[0.8] [@media(max-height:660px)]:h-[196px] [@media(max-height:660px)]:w-[196px]",
+        "relative h-[240px] w-[240px] [@media(max-height:660px)]:h-[156px] [@media(max-height:660px)]:w-[156px]",
         phase === "done" && "cursor-pointer",
       )}
       onClick={phase === "done" ? onStart : undefined}
@@ -192,26 +192,26 @@ export function SpeedDial({
           disabled={!idle}
           aria-label={t("startTest")}
           className={cn(
-            "absolute left-1/2 top-1/2 grid size-[215px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border transition-[opacity,border-color,transform] duration-300",
+            "absolute left-1/2 top-1/2 grid size-[172px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border transition-[opacity,border-color,transform] duration-300 [@media(max-height:660px)]:size-[150px]",
             "border-[rgb(255_255_255/0.14)] bg-white/[0.05] shadow-[inset_0_1px_0_rgb(255_255_255/0.10)] backdrop-blur-[14px] backdrop-saturate-150",
             "hover:border-[rgb(255_255_255/0.26)] active:scale-[0.985] [-webkit-tap-highlight-color:transparent]",
             idle ? "opacity-100" : "pointer-events-none opacity-0",
           )}
         >
-          <span className="text-[28px] font-bold tracking-[0.06em] text-txt">GO</span>
+          <span className="text-[26px] font-bold tracking-[0.06em] text-txt">GO</span>
         </button>
 
         {running && (
           <button
             type="button"
             onClick={onStop}
-            className="pointer-events-auto absolute left-1/2 top-[calc(50%+40px)] -translate-x-1/2 -translate-y-1/2 rounded-full px-3 py-1 text-[11.5px] font-medium text-txt3 transition-[color,background-color] duration-200 hover:bg-white/[0.04] hover:text-txt"
+            className="pointer-events-auto absolute left-1/2 top-[calc(50%+32px)] -translate-x-1/2 -translate-y-1/2 rounded-full px-3 py-1 text-[11.5px] font-medium text-txt3 transition-[color,background-color] duration-200 [@media(max-height:660px)]:top-[calc(50%+26px)] hover:bg-white/[0.04] hover:text-txt"
           >
             {t("stop")}
           </button>
         )}
 
-        <div className="absolute left-1/2 top-[calc(50%+98px)] -translate-x-1/2 -translate-y-1/2 [@media(max-height:660px)]:top-[calc(50%+64px)]">
+        <div className="absolute left-1/2 top-[calc(50%+78px)] -translate-x-1/2 -translate-y-1/2 [@media(max-height:660px)]:top-[calc(50%+51px)]">
           <div
             className={cn(
               "flex flex-col items-center transition-[opacity,transform] duration-300",
@@ -219,14 +219,14 @@ export function SpeedDial({
             )}
           >
             <span
-              className="text-[40px] font-mono font-medium leading-none tabular-nums text-txt [@media(max-height:660px)]:text-[27px]"
+              className="text-[32px] font-mono font-medium leading-none tabular-nums text-txt [@media(max-height:660px)]:text-[22px]"
               style={{ letterSpacing: "-0.01em" }}
             >
               {display}
             </span>
             <span className="mt-2 flex items-center gap-1.5">
-              <Icon className="size-4 text-brand-strong" strokeWidth={1.9} aria-hidden />
-              <span className="text-[14px] text-txt2 [@media(max-height:660px)]:text-[11px]">
+              <Icon className="size-3.5 text-brand-strong" strokeWidth={1.9} aria-hidden />
+              <span className="text-[11.5px] text-txt2 [@media(max-height:660px)]:text-[9.5px]">
                 {unit}
               </span>
             </span>
