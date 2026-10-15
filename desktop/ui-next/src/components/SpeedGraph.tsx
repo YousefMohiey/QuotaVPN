@@ -7,9 +7,8 @@ const H = 96
 
 /**
  * The run's own shape: one line per sample, drawn left to right while the
- * run goes. Idle it is an empty scale (hairlines only); during a run the
- * line is alive with the newest point marked; when the run ends it stays
- * put as the fingerprint of that connection.
+ * run goes. Idle the pane simply waits: no grid, no baseline, nothing to
+ * explain until there is a line to show.
  */
 export function SpeedGraph({
   samples,
@@ -48,12 +47,6 @@ export function SpeedGraph({
         role="img"
         aria-label={active ? t("measuring") : t("graphLabel")}
       >
-        {/* scale: three hairlines so the line reads as a measurement */}
-        <g stroke="rgb(255 255 255 / 0.06)" strokeWidth="1">
-          <line x1="0" y1={H / 4} x2={W} y2={H / 4} />
-          <line x1="0" y1={H / 2} x2={W} y2={H / 2} />
-          <line x1="0" y1={(H * 3) / 4} x2={W} y2={(H * 3) / 4} />
-        </g>
         {has && area && <path d={area} fill={`color-mix(in oklab, ${accent} 14%, transparent)`} />}
         {has && (
           <path
@@ -68,8 +61,6 @@ export function SpeedGraph({
         )}
         {has && last && active && <circle cx={last[0]} cy={last[1]} r="3" fill={accent} />}
       </svg>
-      {/* baseline: without it the shape reads as decoration, not a scale */}
-      <div className="mt-1 h-px w-full bg-[rgb(255_255_255/0.10)]" />
     </div>
   )
 }

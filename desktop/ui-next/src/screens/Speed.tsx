@@ -634,7 +634,7 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
   ]
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-84px)] w-full max-w-[1040px] flex-col gap-4">
+    <div className="mx-auto flex min-h-[calc(100vh-84px)] w-full max-w-[1040px] flex-col gap-3">
       <div className="flex items-end justify-between gap-6">
         <div className="min-w-0 flex-1">
           <h1 className="text-[30px] font-semibold leading-tight text-txt">{t("tabSpeed")}</h1>
@@ -674,25 +674,6 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
           dial Home opens with. */}
       <section className="flex flex-1 flex-col rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)]">
         <div className="flex items-center gap-4 px-5 pb-3 pt-4">
-          <button
-            type="button"
-            onClick={running ? stop : () => void run("all")}
-            aria-label={running ? t("stop") : phase === "done" ? t("startAgain") : t("startTest")}
-            className={cn(
-              "flex h-10 shrink-0 items-center gap-2 rounded-[12px] border px-4 text-[13px] font-medium transition-[color,background-color,border-color,filter] duration-200",
-              running
-                ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong"
-                : "border-transparent bg-[var(--brand-vivid)] text-white hover:brightness-110",
-            )}
-          >
-            {running ? (
-              <Square className="size-3.5" strokeWidth={1.75} aria-hidden />
-            ) : (
-              <Play className="size-3.5" strokeWidth={1.75} aria-hidden />
-            )}
-            <span>{running ? t("stop") : phase === "done" ? t("startAgain") : t("startTest")}</span>
-          </button>
-
           <div className="flex min-h-[36px] min-w-0 flex-1 flex-col justify-center">
             <div className="truncate text-[13px] font-medium text-txt">
               {phase === "done" ? t("doneLabel") : caption}
@@ -722,13 +703,15 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
           )}
         </div>
 
-        <div className="flex flex-1 items-stretch px-5 pb-4 pt-2">
+        {/* the run's shape, given the room this page has (floored so the
+            console survives the smallest window) */}
+        <div className="flex min-h-[48px] flex-1 items-stretch px-5 pb-3.5 pt-2">
           <SpeedGraph samples={shown} accent={accent} active={running} fill />
         </div>
 
         {/* what the numbers mean, in one row, inside the same pane */}
         {verdicts.length > 0 && (
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-line px-5 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t border-line px-5 py-3">
             {verdicts.map((v) => (
               <span key={v.label} className="flex items-center gap-2 text-[12px]">
                 <v.icon className="size-3.5 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
@@ -746,6 +729,29 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
             ))}
           </div>
         )}
+
+        {/* the transport: one full-width control parked where a run bar
+            belongs, at the foot of the console */}
+        <div className="border-t border-line px-5 py-3">
+          <button
+            type="button"
+            onClick={running ? stop : () => void run("all")}
+            aria-label={running ? t("stop") : phase === "done" ? t("startAgain") : t("startTest")}
+            className={cn(
+              "flex h-11 w-full items-center justify-center gap-2 rounded-[10px] border text-[13px] font-medium transition-[color,background-color,border-color,filter] duration-200",
+              running
+                ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong"
+                : "border-transparent bg-[var(--brand-vivid)] text-white hover:brightness-110",
+            )}
+          >
+            {running ? (
+              <Square className="size-3.5" strokeWidth={1.75} aria-hidden />
+            ) : (
+              <Play className="size-3.5" strokeWidth={1.75} aria-hidden />
+            )}
+            <span>{running ? t("stop") : phase === "done" ? t("startAgain") : t("startTest")}</span>
+          </button>
+        </div>
       </section>
 
       {/* The same four numbers, but permanent and precise: each cell is a
@@ -940,7 +946,7 @@ function ReadingCell({
       disabled={disabled}
       title={label}
       className={cn(
-        "min-w-0 px-5 py-3.5 text-start transition-colors",
+        "min-w-0 px-5 py-3 text-start transition-colors",
         !disabled && "hover:bg-white/[0.03]",
       )}
     >
@@ -975,7 +981,7 @@ function FactRow({
   lines: string[]
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-3.5 px-5 py-3.5">
+    <div className="flex min-w-0 items-center gap-3.5 px-5 py-3">
       <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.03)] text-brand-strong">
         <Icon className="size-[18px]" strokeWidth={1.7} aria-hidden />
       </span>
