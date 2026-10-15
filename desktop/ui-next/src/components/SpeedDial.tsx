@@ -206,7 +206,7 @@ export function SpeedDial({
           disabled={!idle}
           aria-label={t("startTest")}
           className={cn(
-            "absolute left-1/2 top-1/2 grid size-[72px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-[27px] font-bold tracking-[0.07em] text-txt transition-[opacity,background-color,transform] duration-300 hover:bg-white/[0.04] active:scale-[0.94]",
+            "absolute left-1/2 top-1/2 grid size-[54px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-[23px] font-bold tracking-[0.06em] text-txt transition-[opacity,background-color,transform] duration-300 [-webkit-tap-highlight-color:transparent] hover:bg-white/[0.04] active:scale-[0.94]",
             idle ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
           )}
         >
