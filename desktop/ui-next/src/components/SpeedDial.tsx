@@ -193,7 +193,7 @@ export function SpeedDial({
           aria-label={t("startTest")}
           className={cn(
             "absolute left-1/2 top-1/2 grid size-[172px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border transition-[opacity,border-color,transform] duration-300 [@media(max-height:660px)]:size-[150px]",
-            "border-[rgb(255_255_255/0.14)] bg-white/[0.05] shadow-[inset_0_1px_0_rgb(255_255_255/0.10)] backdrop-blur-[14px] backdrop-saturate-150",
+            "border-[rgb(255_255_255/0.14)] bg-black/35 shadow-[inset_0_1px_0_rgb(255_255_255/0.10)] backdrop-blur-[14px] backdrop-saturate-150",
             "hover:border-[rgb(255_255_255/0.26)] active:scale-[0.985] [-webkit-tap-highlight-color:transparent]",
             idle ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
           )}
@@ -219,7 +219,7 @@ export function SpeedDial({
             )}
           >
             <span
-              className="text-[32px] font-mono font-medium leading-none tabular-nums text-txt [@media(max-height:660px)]:text-[22px]"
+              className="text-[32px] font-medium leading-none tabular-nums text-txt [@media(max-height:660px)]:text-[22px]"
               style={{ letterSpacing: "-0.01em" }}
             >
               {display}

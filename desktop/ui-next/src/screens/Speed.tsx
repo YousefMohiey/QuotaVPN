@@ -668,7 +668,7 @@ export function Speed() {
 
         {/* the dial rides where the reading used to: live number in the
             middle, needle sweeping the scale while the run goes */}
-        <div className="flex flex-col items-center px-5 pb-4 pt-4 [@media(max-height:660px)]:pb-2 [@media(max-height:660px)]:pt-2">
+        <div className="flex flex-col items-center px-5 pb-8 pt-0 [@media(max-height:660px)]:pb-5 [@media(max-height:660px)]:pt-0">
           <SpeedDial
             display={fmt(value, unit)}
             value={dialValue}
