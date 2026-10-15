@@ -668,7 +668,7 @@ export function Speed() {
 
         {/* the dial rides where the reading used to: live number in the
             middle, needle sweeping the scale while the run goes */}
-        <div className="flex flex-col items-center px-5 pb-8 pt-0 [@media(max-height:660px)]:pb-5 [@media(max-height:660px)]:pt-0">
+        <div className="flex flex-col items-center px-5 pt-0 pb-8 [@media(max-height:660px)]:pt-0 [@media(max-height:660px)]:pb-5">
           <SpeedDial
             display={fmt(value, unit)}
             value={dialValue}
@@ -826,7 +826,7 @@ function ReadingCell({
       disabled={disabled}
       title={label}
       className={cn(
-        "min-w-0 px-5 py-3 text-start transition-colors",
+        "min-w-0 px-5 pt-2.5 pb-3 text-start transition-colors",
         !disabled && "hover:bg-white/[0.03]",
       )}
     >
@@ -871,7 +871,7 @@ function FactRow({
           {main}
         </div>
         {lines.filter(Boolean).map((l, i) => (
-          <div key={i} className={cn("truncate text-txt3", fitSize(l, false))} dir="auto">
+          <div key={i} className={cn("[overflow-wrap:anywhere] text-txt3", fitSize(l, false))} dir="auto">
             {l}
           </div>
         ))}

@@ -243,7 +243,7 @@ export function Hero() {
       </div>
 
       {/* the strip: facts while down, the live session while up */}
-      <div className="mt-3 grid min-h-[64px] grid-cols-3 items-center gap-4 border-t border-line pt-3">
+      <div className="mt-3 grid min-h-[64px] grid-cols-3 items-center divide-x divide-line border-t border-line pt-3">
         {connected ? (
           <>
             <Cell
@@ -251,8 +251,9 @@ export function Hero() {
               value={sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
               sub={`↓ ${fmtBytes(rx)}   ↑ ${fmtBytes(tx)}`}
             />
-            <Cell label={t("yourIp")} value={serverAddr || ipText} select />
+            <Cell className="px-5" label={t("yourIp")} value={serverAddr || ipText} select />
             <Cell
+              className="ps-5"
               label={t("liveLabel")}
               right={`${t("peakLbl")} ${traffic.peak.num} ${traffic.peak.unit}`}
               value={`${traffic.rate.num} ${traffic.rate.unit}`}
@@ -261,9 +262,9 @@ export function Hero() {
           </>
         ) : (
           <>
-            <Cell label={t("yourLocation")} value={geo?.place || "-"} />
-            <Cell label={t("yourIp")} value={ipText} select />
-            <Cell label={t("statusLbl")} value={t("notConnected")} />
+            <Cell className="pe-5" label={t("yourLocation")} value={geo?.place || "-"} />
+            <Cell className="px-5" label={t("yourIp")} value={ipText} select />
+            <Cell className="ps-5" label={t("statusLbl")} value={t("notConnected")} />
           </>
         )}
       </div>
@@ -365,6 +366,7 @@ function QuotaZone() {
             >
               {t("weLink")}
             </button>
+            <p className="mt-2 text-[10.5px] leading-snug text-txt3">{t("weLinkHint")}</p>
           </div>
         )}
       </div>
@@ -380,21 +382,23 @@ function Cell({
   sub,
   right,
   select,
+  className,
 }: {
   label: string
   value: string
   sub?: string
   right?: ReactNode
   select?: boolean
+  className?: string
 }) {
   return (
-    <div className="min-w-0">
+    <div className={cn("min-w-0", className)}>
       <div className="flex items-baseline justify-between gap-2">
         <span className="truncate text-[11px] text-txt3">{label}</span>
         {right ? <span className="shrink-0 truncate text-[10.5px] tabular-nums text-txt3">{right}</span> : null}
       </div>
       <div
-        className={cn("mt-1 truncate text-[15px] font-medium leading-tight text-txt", select && "select-text")}
+        className={cn("mt-1 truncate text-[15px] font-medium leading-tight tabular-nums text-txt", select && "select-text")}
         dir="auto"
         title={value}
       >
