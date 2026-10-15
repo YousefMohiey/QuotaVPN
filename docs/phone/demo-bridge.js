@@ -66,10 +66,10 @@
       if (i >= 0) cards.splice(i, 1);
       return ok("Card revoked.");
     },
-    resolve_host: () => "80.225.89.162",
+    resolve_host: () => "198.51.100.7",
     net_info: () => (running
-      ? { ip: "80.225.89.162", isp: "Oracle Cloud", place: "Milan, Italy" }
-      : { ip: "197.44.211.84", isp: "WE", place: "Cairo, Egypt" }),
+      ? { ip: "198.51.100.7", isp: "Nimbus Hosting", place: "Frankfurt, Germany" }
+      : { ip: "203.0.113.42", isp: "WE", place: "Cairo, Egypt" }),
     // The picker lists the same fallback pool the desktop preview uses.
     speed_servers: () => JSON.stringify({
       librespeed: [

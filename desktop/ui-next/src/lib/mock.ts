@@ -84,14 +84,15 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
       return JSON.stringify(APPS.map((label) => ({ pkg: label.toLowerCase().replace(/\s+/g, "") + ".exe", label }))) as T
     case "resolve_host":
       // The hero resolves the server name only while connected, and the
-      // world then sees the server's address.
-      return "80.225.89.162" as T
+      // world then sees the server's address. Demo value: never a real one.
+      return "198.51.100.7" as T
     case "net_info":
       // Exit facts for the demo: through the tunnel the world sees the
-      // server, otherwise it sees the local address.
+      // server, otherwise it sees the local address. Both are documentation
+      // addresses (RFC 5737) so the demo never prints anything real.
       return (running
-        ? { ip: "80.225.89.162", isp: "Oracle Cloud", place: "Milan, Italy" }
-        : { ip: "197.44.211.84", isp: "WE", place: "Cairo, Egypt" }) as T
+        ? { ip: "198.51.100.7", isp: "Nimbus Hosting", place: "Frankfurt, Germany" }
+        : { ip: "203.0.113.42", isp: "WE", place: "Cairo, Egypt" }) as T
     case "check_update": {
       // The "update ready" reminder appears only when asked for (?upd=1);
       // the real check reports available only when GitHub says so.
@@ -110,7 +111,7 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
       return { customer: "Demo User" } as unknown as T
     case "we_quota_usage":
       return [
-        { offer: "PLUS 1", total: 1005, used: 519.25, remain: 485.75 },
+        { offer: "PLUS 2", total: 200, used: 74.5, remain: 125.5 },
       ] as unknown as T
     case "we_quota_logout":
       return undefined as T
