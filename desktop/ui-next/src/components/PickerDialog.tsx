@@ -47,21 +47,21 @@ export function PickerDialog({
     <Dialog open={open} onOpenChange={close}>
       <DialogContent className="max-w-[380px] gap-0 overflow-hidden rounded-[16px] border-line bg-[var(--popover)] p-0">
         <div className="border-b border-line px-4 pb-3.5 pt-4">
-          <DialogTitle className="text-[14px] font-semibold text-txt">{title}</DialogTitle>
+          <DialogTitle className="pe-7 text-[14px] font-semibold text-txt">{title}</DialogTitle>
           <div className="relative mt-3">
-            <Search className="absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-txt3" aria-hidden />
+            <Search className="absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-txt3" aria-hidden />
             <Input
               autoFocus
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder={search}
               aria-label={search}
-              className="h-9 rounded-[10px] border-line bg-white/[0.02] ps-8 text-[13px]"
+              className="h-10 rounded-[10px] border-line bg-white/[0.02] ps-9 text-[13px] focus-visible:border-[var(--brand-line)] focus-visible:ring-[3px] focus-visible:ring-[rgb(46_123_246/0.14)]"
             />
           </div>
         </div>
 
-        <div className="max-h-[360px] overflow-y-auto p-1.5">
+        <div className="qc-scroll max-h-[360px] overflow-y-auto p-1.5">
           {filtered.map((it) => {
             const on = it.value === value
             return (
@@ -75,21 +75,28 @@ export function PickerDialog({
                   close(false)
                 }}
                 className={cn(
-                  "flex w-full items-center justify-between gap-3 rounded-[10px] px-3 py-2.5 text-start transition-colors hover:bg-white/[0.035]",
-                  on && "bg-white/[0.03]",
+                  "flex w-full items-center justify-between gap-3 rounded-[10px] px-3 py-2.5 text-start transition-colors hover:bg-white/[0.04]",
+                  on && "bg-[var(--brand-bg)]",
                 )}
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-[13px] text-txt" dir="auto">
+                  <span className="block truncate text-[13.5px] text-txt" dir="auto">
                     {it.label}
                   </span>
                   {it.sub && (
-                    <span className="block truncate text-[11.5px] text-txt3" dir="auto">
+                    <span className="mt-0.5 block truncate text-[11.5px] text-txt3" dir="auto">
                       {it.sub}
                     </span>
                   )}
                 </span>
-                {on && <Check className="size-4 shrink-0 text-brand-strong" aria-hidden />}
+                {on && (
+                  <span
+                    aria-hidden
+                    className="grid size-5 shrink-0 place-items-center rounded-full border border-[var(--brand-line)] bg-[var(--brand-bg)]"
+                  >
+                    <Check className="size-3 text-brand-strong" />
+                  </span>
+                )}
               </button>
             )
           })}

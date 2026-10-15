@@ -68,7 +68,7 @@ export function WeQuotaDialog({
             autoComplete="off"
             placeholder={t("weNumber")}
             aria-label={t("weNumber")}
-            className="h-10 rounded-[10px] border-line bg-white/[0.02] text-[13px]"
+            className="h-10 rounded-[10px] border-line bg-white/[0.02] text-[13px] focus-visible:border-[var(--brand-line)] focus-visible:ring-[3px] focus-visible:ring-[rgb(46_123_246/0.14)]"
           />
           <Input
             value={password}
@@ -77,7 +77,7 @@ export function WeQuotaDialog({
             autoComplete="off"
             placeholder={t("wePassword")}
             aria-label={t("wePassword")}
-            className="h-10 rounded-[10px] border-line bg-white/[0.02] text-[13px]"
+            className="h-10 rounded-[10px] border-line bg-white/[0.02] text-[13px] focus-visible:border-[var(--brand-line)] focus-visible:ring-[3px] focus-visible:ring-[rgb(46_123_246/0.14)]"
           />
           {q.phase === "need-code" && (
             <div className="flex items-center gap-2.5">
@@ -94,7 +94,7 @@ export function WeQuotaDialog({
                 autoComplete="off"
                 placeholder={t("weCode")}
                 aria-label={t("weCode")}
-                className="h-10 rounded-[10px] border-line bg-white/[0.02] text-[13px]"
+                className="h-10 rounded-[10px] border-line bg-white/[0.02] text-[13px] focus-visible:border-[var(--brand-line)] focus-visible:ring-[3px] focus-visible:ring-[rgb(46_123_246/0.14)]"
               />
             </div>
           )}

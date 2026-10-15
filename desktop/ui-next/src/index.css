@@ -318,10 +318,30 @@
 
 /* Sheets: heavier blur, never heavier opacity than this or the scene dies. */
 .glass-dialog {
-  background: rgb(18 24 36 / 0.85) !important;
+  background: rgb(19 20 24 / 0.92) !important;
   backdrop-filter: blur(30px) saturate(150%);
-  border: 1px solid var(--glass-line);
+  border: 1px solid var(--line);
   box-shadow: 0 30px 80px rgb(0 0 0 / 0.5);
+}
+
+/* Lists inside dialogs and pickers: a scrollbar that belongs to the theme
+   instead of the OS default. */
+.qc-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.14) transparent;
+}
+.qc-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.qc-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.qc-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.12);
+}
+.qc-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgb(255 255 255 / 0.22);
 }
 
 /* Small surfaces: lighter frost so stacked glass never turns muddy. */

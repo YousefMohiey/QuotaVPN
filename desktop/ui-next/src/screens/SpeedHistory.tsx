@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { ArrowDown, ArrowUp, Check, ChevronRight, Trash2 } from "lucide-react"
+import { Activity, ArrowDown, ArrowUp, Check, ChevronRight, History as HistoryIcon, Trash2 } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -18,9 +18,8 @@ const dayKey = (at: number) => {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
 }
 
-/** A run as a speed test states it: the download is the headline, upload,
-    ping and jitter follow in one line, and the target it ran against sits
-    where the eye lands first. */
+/** A run as one row of measurements, drawn with the same divided strip the
+    speed page uses, so a glance reads it the same way. */
 function RunCard({
   h,
   select,
@@ -41,10 +40,16 @@ function RunCard({
   const { t } = useI18n()
   const num = (v: number | null, digits = 1) => (v === null ? "-" : v >= 100 ? v.toFixed(0) : v.toFixed(digits))
   const time = new Date(h.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  const cells: Array<{ icon: typeof ArrowDown | null; label: string; value: string; unit: string }> = [
+    { icon: ArrowDown, label: t("chDown"), value: num(h.down), unit: t("mbps") },
+    { icon: ArrowUp, label: t("chUp"), value: num(h.up), unit: t("mbps") },
+    { icon: null, label: t("pingTitle"), value: num(h.ping, 0), unit: t("ms") },
+    { icon: null, label: t("jitter"), value: num(h.jitter, 0), unit: t("ms") },
+  ]
   return (
     <div
       className={cn(
-        "group flex items-center rounded-[12px] border border-line bg-[rgb(18_19_23/0.72)] transition-colors hover:border-line-strong",
+        "group relative rounded-[14px] border border-line bg-[rgb(18_19_23/0.72)] transition-colors hover:border-line-strong",
         picked && "border-[var(--brand-line)] bg-[var(--brand-bg)]",
       )}
     >
@@ -52,34 +57,32 @@ function RunCard({
         type="button"
         onClick={onAct}
         aria-pressed={select ? picked : undefined}
-        className="min-w-0 flex-1 px-4 py-3 text-start"
+        className="block w-full px-4 pt-3 pb-0 text-start"
       >
-        <div className="flex items-baseline justify-between gap-3">
+        <div className="flex items-center gap-3 pe-16">
           <span className="text-[11px] tabular-nums text-txt3">{time}</span>
           <span className="min-w-0 truncate text-[11.5px] text-txt2" dir="auto">
             {h.target || serverLabel}
           </span>
         </div>
-        <div className="mt-1.5 flex items-center gap-1.5">
-          <ArrowDown className="size-3.5 shrink-0 text-txt3" aria-hidden />
-          <span className="text-[22px] leading-none font-light tabular-nums text-txt">{num(h.down)}</span>
-          <span className="text-[11.5px] text-txt3">{t("mbps")}</span>
-        </div>
-        <div className="mt-2 grid grid-cols-3 divide-x divide-line text-[11px] text-txt3">
-          <span className="flex min-w-0 items-center gap-1">
-            <ArrowUp className="size-3 shrink-0" aria-hidden />
-            <span className="tabular-nums text-txt2">{num(h.up)}</span>
-            <span>{t("mbps")}</span>
-          </span>
-          <span className="min-w-0 truncate ps-2.5">
-            {t("pingTitle")} <span className="tabular-nums text-txt2">{num(h.ping, 0)}</span> {t("ms")}
-          </span>
-          <span className="min-w-0 truncate ps-2.5">
-            {t("jitter")} <span className="tabular-nums text-txt2">{num(h.jitter, 0)}</span> {t("ms")}
-          </span>
+        <div className="-mx-4 mt-2.5 grid grid-cols-4 divide-x divide-line border-t border-line">
+          {cells.map((c, i) => (
+            <span key={c.label + i} className="min-w-0 px-3.5 py-2.5">
+              <span className="flex items-center gap-1.5 text-[10.5px] text-txt3">
+                {c.icon && <c.icon className="size-3 shrink-0" strokeWidth={1.7} aria-hidden />}
+                <span className="truncate">{c.label}</span>
+              </span>
+              <span className="mt-1 flex items-baseline gap-1">
+                <span className={cn("text-[16px] font-semibold leading-none tabular-nums", c.value === "-" ? "text-txt3" : "text-txt")}>
+                  {c.value}
+                </span>
+                <span className="text-[10px] text-txt3">{c.unit}</span>
+              </span>
+            </span>
+          ))}
         </div>
       </button>
-      <div className="flex shrink-0 items-center gap-1 pe-3.5">
+      <div className="absolute top-2.5 right-3 flex items-center gap-1">
         {select ? (
           <span
             className={cn(
@@ -112,10 +115,10 @@ function RunCard({
   )
 }
 
-/** The log as a timeline: one node per day on a rail, the runs of that day
-    hanging off it, and the best numbers of the whole log above it. Selecting
-    turns the cards into checkboxes so one, several or everything can go, and
-    nothing is removed without a confirmation. */
+/** The log as days of runs, each run a strip of its numbers, with a small
+    summary of the bests on top. Selection turns the rows into checkboxes so
+    one, several or everything can go, and nothing is removed without a
+    confirmation. */
 export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => void }) {
   const { t } = useI18n()
   const [history, setHistory] = useState<Run[]>(() => loadHistory())
@@ -188,6 +191,12 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
   const chip =
     "flex h-9 items-center gap-1.5 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt transition-colors hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
 
+  const bestCells: Array<{ icon: typeof ArrowDown; label: string; value: number | null; unit: string; round?: boolean }> = [
+    { icon: ArrowDown, label: t("bestDown"), value: best.down, unit: t("mbps") },
+    { icon: ArrowUp, label: t("bestUp"), value: best.up, unit: t("mbps") },
+    { icon: Activity, label: t("bestPing"), value: best.ping, unit: t("ms"), round: true },
+  ]
+
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1040px] flex-col gap-4">
       <div className="flex items-end justify-between gap-6">
@@ -222,77 +231,66 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
       </div>
 
       {history.length === 0 ? (
-        <section className="flex flex-1 flex-col items-center justify-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] px-5 py-12 text-center">
+        <section className="flex flex-1 flex-col items-center justify-center gap-3 rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] px-5 py-12 text-center">
+          <span className="grid size-12 place-items-center rounded-full border border-line bg-white/[0.02] text-txt3">
+            <HistoryIcon className="size-5" strokeWidth={1.7} aria-hidden />
+          </span>
           <p className="text-[13.5px] text-txt2">{t("histEmpty")}</p>
         </section>
       ) : (
         <>
-          {/* the log in three numbers */}
+          {/* the log in three numbers, drawn like the speed page strip */}
           <section className="grid grid-cols-3 divide-x divide-line rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)]">
-            {[
-              { label: t("bestDown"), value: best.down, unit: t("mbps"), round: false },
-              { label: t("bestUp"), value: best.up, unit: t("mbps"), round: false },
-              { label: t("bestPing"), value: best.ping, unit: t("ms"), round: true },
-            ].map((s) => (
-              <div key={s.label} className="flex min-w-0 flex-col items-center gap-1 px-3 py-4">
-                <span className="truncate text-[10.5px] font-medium tracking-[0.08em] text-txt3 uppercase">
-                  {s.label}
+            {bestCells.map((s) => (
+              <div key={s.label} className="flex min-w-0 flex-col gap-2 px-5 py-3.5">
+                <span className="flex items-center gap-2 text-[11px] text-txt3">
+                  <s.icon className="size-3.5 shrink-0" strokeWidth={1.7} aria-hidden />
+                  <span className="truncate">{s.label}</span>
                 </span>
-                <span
-                  className={cn(
-                    "text-[22px] leading-none font-light tabular-nums",
-                    s.value === null ? "text-txt3" : "text-txt",
-                  )}
-                >
-                  {s.round ? (s.value === null ? "-" : Math.round(s.value)) : num(s.value)}
+                <span className="flex items-baseline gap-1.5">
+                  <span
+                    className={cn(
+                      "text-[24px] leading-none font-semibold tabular-nums",
+                      s.value === null ? "text-txt3" : "text-txt",
+                    )}
+                  >
+                    {s.round ? (s.value === null ? "-" : Math.round(s.value)) : num(s.value)}
+                  </span>
+                  <span className="text-[11px] text-txt3">{s.unit}</span>
                 </span>
-                <span className="text-[11px] text-txt3">{s.unit}</span>
               </div>
             ))}
           </section>
 
-          {/* the timeline */}
-          <div className="relative">
-            <span aria-hidden className="absolute inset-y-3 start-[7px] w-px bg-[var(--line)]" />
-            <div className="flex flex-col gap-2">
-              {days.map((d) => (
-                <div key={d.key}>
-                  <div className="relative py-2.5">
-                    <span
-                      aria-hidden
-                      className="absolute start-[3px] top-1/2 grid size-[15px] -translate-y-1/2 place-items-center rounded-full border border-line bg-[var(--bg)]"
-                    >
-                      <span
-                        className={cn(
-                          "size-1.5 rounded-full",
-                          d.key === dayKey(Date.now()) ? "bg-[var(--brand-strong)]" : "bg-[var(--line-strong)]",
-                        )}
-                      />
-                    </span>
-                    <span className="block ps-[26px] text-[10.5px] font-medium tracking-[0.08em] text-txt3 uppercase">
-                      {dayLabel(d.at)}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-2 ps-[26px]">
-                    {d.runs.map((h) => {
-                      const on = picked.includes(h.at)
-                      return (
-                        <RunCard
-                          key={h.at}
-                          h={h}
-                          select={selMode}
-                          picked={on}
-                          onAct={() => (selMode ? toggle(h.at) : onOpenResult(h.at))}
-                          onDelete={() => setPending({ kind: "one", at: h.at })}
-                          deleteLabel={t("delete")}
-                          serverLabel={t("targetServer")}
-                        />
-                      )
-                    })}
-                  </div>
+          {/* the log, day by day */}
+          <div className="flex flex-col gap-4">
+            {days.map((d) => (
+              <div key={d.key}>
+                <div className="flex items-center gap-3 px-0.5">
+                  <span className="text-[10.5px] font-medium tracking-[0.08em] text-txt3 uppercase">
+                    {dayLabel(d.at)}
+                  </span>
+                  <span className="h-px flex-1 bg-[var(--line)]" aria-hidden />
                 </div>
-              ))}
-            </div>
+                <div className="mt-2.5 flex flex-col gap-2">
+                  {d.runs.map((h) => {
+                    const on = picked.includes(h.at)
+                    return (
+                      <RunCard
+                        key={h.at}
+                        h={h}
+                        select={selMode}
+                        picked={on}
+                        onAct={() => (selMode ? toggle(h.at) : onOpenResult(h.at))}
+                        onDelete={() => setPending({ kind: "one", at: h.at })}
+                        deleteLabel={t("delete")}
+                        serverLabel={t("targetServer")}
+                      />
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </>
       )}
