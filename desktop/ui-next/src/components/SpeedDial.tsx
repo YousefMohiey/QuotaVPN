@@ -115,60 +115,79 @@ export function SpeedDial({
           </linearGradient>
         </defs>
 
-        {/* the track */}
-        <path d={arcPath} fill="none" stroke="#2c3050" strokeWidth={STROKE} strokeLinecap="butt" />
-
-        {/* the covered stretch, lit */}
-        <path
-          d={arcPath}
-          fill="none"
-          stroke="url(#qcDialFill)"
-          strokeWidth={STROKE}
-          strokeLinecap="butt"
-          style={{
-            strokeDasharray: arcLen,
-            strokeDashoffset: arcLen * (1 - frac),
-            transition: "stroke-dashoffset 170ms cubic-bezier(0.22, 1, 0.36, 1)",
-            filter: "drop-shadow(0 0 5px rgb(46 123 246 / 0.45))",
-          }}
-        />
-
-        {/* the scale, flushed white in sequence whenever a run begins */}
-        <g key={runId}>
-          {labels.map(({ s, pos }, i) => (
-            <text
-              key={s}
-              x={pos.x.toFixed(2)}
-              y={pos.y.toFixed(2)}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fontSize="14.5"
-              fontWeight="600"
-              fill="var(--color-txt)"
-              fillOpacity="0.72"
-              className={runId > 0 ? "qc-lbl-flash" : undefined}
-              style={runId > 0 ? { animationDelay: `${i * 80}ms` } : undefined}
-            >
-              {s}
-            </text>
-          ))}
+        {/* the idle face: a clean double circle in our blues, the way the
+            reference waits before a run; it crossfades away the moment the
+            scale takes over */}
+        <g style={{ opacity: idle ? 1 : 0, transition: "opacity 400ms ease" }}>
+          <circle cx={C} cy={C} r={R_ARC} fill="none" stroke="url(#qcDialFill)" strokeWidth="4" />
+          <circle
+            cx={C}
+            cy={C}
+            r={R_ARC + 10.5}
+            fill="none"
+            stroke="rgb(46 123 246 / 0.5)"
+            strokeWidth="2"
+          />
         </g>
 
-        {/* the needle, pivoting from the center, only once a run exists */}
-        <g
-          style={{
-            transform: `rotate(${needleDeg}deg)`,
-            transformBox: "view-box",
-            transformOrigin: `${C}px ${C}px`,
-            transition: "transform 170ms cubic-bezier(0.22, 1, 0.36, 1), opacity 350ms ease",
-            opacity: idle ? 0 : 1,
-          }}
-        >
+        {/* the working face: track, lit stretch, scale and needle. Only
+            present while a run or a result exists. */}
+        <g style={{ opacity: idle ? 0 : 1, transition: "opacity 400ms ease" }}>
+          {/* the track */}
+          <path d={arcPath} fill="none" stroke="#2c3050" strokeWidth={STROKE} strokeLinecap="butt" />
+
+          {/* the covered stretch, lit */}
           <path
-            d={needlePath}
-            fill="url(#qcDialNeedle)"
-            style={{ filter: "drop-shadow(0 1px 5px rgb(0 0 0 / 0.5))" }}
+            d={arcPath}
+            fill="none"
+            stroke="url(#qcDialFill)"
+            strokeWidth={STROKE}
+            strokeLinecap="butt"
+            style={{
+              strokeDasharray: arcLen,
+              strokeDashoffset: arcLen * (1 - frac),
+              transition: "stroke-dashoffset 170ms cubic-bezier(0.22, 1, 0.36, 1)",
+              filter: "drop-shadow(0 0 5px rgb(46 123 246 / 0.45))",
+            }}
           />
+
+          {/* the scale, flushed white in sequence whenever a run begins */}
+          <g key={runId}>
+            {labels.map(({ s, pos }, i) => (
+              <text
+                key={s}
+                x={pos.x.toFixed(2)}
+                y={pos.y.toFixed(2)}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontSize="14.5"
+                fontWeight="600"
+                fill="var(--color-txt)"
+                fillOpacity="0.72"
+                className={runId > 0 ? "qc-lbl-flash" : undefined}
+                style={runId > 0 ? { animationDelay: `${i * 80}ms` } : undefined}
+              >
+                {s}
+              </text>
+            ))}
+          </g>
+
+          {/* the needle, pivoting from the center */}
+          <g
+            style={{
+              transform: `rotate(${needleDeg}deg)`,
+              transformBox: "view-box",
+              transformOrigin: `${C}px ${C}px`,
+              transition: "transform 170ms cubic-bezier(0.22, 1, 0.36, 1), opacity 350ms ease",
+              opacity: idle ? 0 : 1,
+            }}
+          >
+            <path
+              d={needlePath}
+              fill="url(#qcDialNeedle)"
+              style={{ filter: "drop-shadow(0 1px 5px rgb(0 0 0 / 0.5))" }}
+            />
+          </g>
         </g>
       </svg>
 
