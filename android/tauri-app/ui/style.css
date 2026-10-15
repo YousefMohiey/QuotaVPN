@@ -103,7 +103,7 @@ body {
 .pill.warn { color: var(--amber); border-color: var(--amber-line); background: var(--amber-bg); }
 
 /* Each tab scrolls inside the screen: nothing can slide under the tab bar. */
-main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex; flex-direction: column; gap: 12px; padding-bottom: calc(84px + env(safe-area-inset-bottom)); flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; justify-content: flex-start; }
+main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex; flex-direction: column; gap: 12px; padding-bottom: calc(96px + env(safe-area-inset-bottom)); flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; justify-content: flex-start; }
 .view { display: none; flex-direction: column; gap: 12px; }
 #view-connect > .hero, #view-connect > .card { flex-shrink: 0; }
 #setup-card { display: flex; flex-direction: column; }
@@ -116,7 +116,10 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
 #view-connect.on > .hero { margin-top: auto; }
 #view-connect.on > #setup-card { margin-bottom: auto; }
 .view.on { display: flex; margin: 0; width: 100%; flex: 1 1 auto; min-height: 0; }
-#view-connect.on { flex: 1 1 auto; min-height: 0; }
+/* The connect view never squeezes below its own content: when the screen is
+   short, main scrolls the tail (down to Connection type) clear of the
+   floating tab bar instead of hiding it behind it. */
+#view-connect.on { flex: 1 1 auto; min-height: max-content; }
 
 /* The shared surface: the desktop's card material - translucent navy, one
    hairline, one radius. The same recipe the Valorant cards use. */
@@ -241,10 +244,6 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
   transition: transform 160ms cubic-bezier(0.1, 0.9, 0.2, 1), border-color 200ms, background 200ms;
 }
 .hero-btn .power { width: 36px; height: 36px; position: relative; z-index: 1; }
-.dial-arc { position: absolute; inset: -4px; width: calc(100% + 8px); height: calc(100% + 8px); pointer-events: none; }
-.dial-arc circle { fill: none; stroke: var(--accent-strong); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 148 148; transform: rotate(90deg); transform-origin: center; }
-.hero.connected .dial-arc circle { stroke: var(--green); }
-.hero.connecting .dial-arc circle { stroke: var(--accent-strong); animation: pulse 1.1s ease-in-out infinite; }
 .hero-btn:active { transform: scale(0.985); }
 .hero.connecting .hero-btn { border-color: var(--accent-line); color: var(--accent-strong); }
 .hero.connecting .hero-btn::after {
@@ -763,8 +762,8 @@ button.setting { width: 100%; text-align: start; display: flex; align-items: cen
    it is created on demand and never shown. */
 /* Preset rows: the desktop's package rows - icon tile, name, the domain it
    rides, and the radio that says which one is on. */
-.presets{display:grid; grid-template-columns:1fr 1fr; gap:8px; width:100%}
-.preset{display:flex; flex-direction:row; align-items:center; gap:9px; min-height:64px;
+.presets{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; width:100%}
+.preset{display:flex; flex-direction:row; align-items:center; gap:9px; min-height:64px; min-width:0;
   padding:9px 11px; border-radius:13px; border:1px solid var(--line); background:rgb(255 255 255 / 0.02); color:var(--txt2); text-align:start}
 .preset.on{border-color:var(--accent-line); background:var(--accent-bg); color:var(--txt)}
 .preset-ico{width:30px; height:30px; flex:none; display:grid; place-items:center; border:1px solid var(--line); border-radius:9px; background:rgb(255 255 255 / 0.03); color:var(--txt3)}
