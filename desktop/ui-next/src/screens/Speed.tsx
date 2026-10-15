@@ -130,7 +130,6 @@ export function Speed() {
   const { card, hardRefresh, refreshing } = useApp()
 
   const [phase, setPhase] = useState<Phase>("idle")
-  const [caption, setCaption] = useState(() => t("idle"))
   const [value, setValue] = useState(0)
   const [unit, setUnit] = useState<"Mbps" | "ms">("Mbps")
   const [samples, setSamples] = useState<number[]>([])
@@ -231,7 +230,6 @@ export function Speed() {
     setResult(EMPTY)
     setValue(0)
     clearSamples()
-    setCaption(t("idle"))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [card?.uuid])
 
@@ -249,7 +247,6 @@ export function Speed() {
 
   const runPing = async (srv: SpeedServer, signal: AbortSignal) => {
     setPhase("ping")
-    setCaption(t("pingTitle"))
     setUnit("ms")
     setValue(0)
     clearSamples()
@@ -285,7 +282,6 @@ export function Speed() {
 
   const runThroughput = async (direction: "down" | "up", srv: SpeedServer, signal: AbortSignal) => {
     setPhase(direction === "down" ? "download" : "upload")
-    setCaption(direction === "down" ? t("chDown") : t("chUp"))
     setUnit("Mbps")
     setValue(0)
     clearSamples()
@@ -403,7 +399,6 @@ export function Speed() {
       let cli: CliSpeed | null = null
       try {
         setPhase("ping")
-        setCaption(t("pingTitle"))
         setUnit("ms")
         setValue(0)
         clearSamples()
@@ -414,19 +409,16 @@ export function Speed() {
             // The client is picking its server: show that instead of a dead
             // screen for the several seconds it takes.
             setPhase("ping")
-            setCaption(t("findingServer"))
             setUnit("Mbps")
             setValue(0)
             clearSamples()
           } else if (p === "download") {
             setPhase("download")
-            setCaption(t("chDown"))
             setUnit("Mbps")
             setValue(0)
             clearSamples()
           } else if (p === "upload") {
             setPhase("upload")
-            setCaption(t("chUp"))
             setUnit("Mbps")
             setValue(0)
             clearSamples()
@@ -483,7 +475,6 @@ export function Speed() {
       // The client ran but produced nothing usable: fall through to the
       // built-in measurement rather than showing an idle screen.
       setPhase("idle")
-      setCaption(t("idle"))
     }
 
     // Each phase reports back here so the history line reflects the run that
@@ -551,7 +542,6 @@ export function Speed() {
       remember(acc, used.label || label)
     } else {
       setValue(0)
-      setCaption(t("idle"))
       // Leave the reason on screen: it is the only thing that tells the user
       // (and the next debugging pass) which step died.
       setHint(failNote.current || t("noReply"))
@@ -561,7 +551,6 @@ export function Speed() {
   const stop = () => {
     abort.current?.abort()
     setPhase("idle")
-    setCaption(t("idle"))
     setHint(t("stopped"))
   }
 
@@ -663,54 +652,26 @@ export function Speed() {
         </div>
       </div>
 
-      {/* The console: one transport button, whatever is being measured at
-          scale, and the run's own shape given the room this page has. No
-          circle and no slide-ins here: this page is an instrument, not the
-          dial Home opens with. */}
-      <section className="flex flex-1 flex-col rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)]">
-        <div className="flex items-center gap-4 px-5 pb-3 pt-4">
-          <div className="flex min-h-[36px] min-w-0 flex-1 flex-col justify-center">
-            <div className="truncate text-[13px] font-medium text-txt">
-              {phase === "done" ? t("doneLabel") : caption}
+      {/* The test: one surface, the way Home keeps its band. The header row
+          carries the status and the one control, then the reading, the run's
+          shape, and the four numbers along the bottom. */}
+      <section className="flex flex-col rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)]">
+        <div className="flex items-center gap-3 px-5 pb-3 pt-4">
+          <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
+            <Gauge className="size-[18px]" strokeWidth={1.7} aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[13.5px] font-semibold text-txt">{t("speedTest")}</div>
+            <div className="mt-0.5 truncate text-[11.5px] text-txt2">
+              {phase === "done" ? t("doneLabel") : running ? t("measuring") : hint || t("idle")}
             </div>
-            {(running || phase === "idle") && hint && (
-              <div className="mt-0.5 truncate text-[11.5px] text-txt3">{hint}</div>
-            )}
           </div>
-        </div>
-
-        <div className="flex items-end justify-between gap-4 px-5 pb-1 pt-2">
-          <div className="flex min-w-0 items-baseline gap-2">
-            <span
-              className="text-[46px] font-light leading-none tabular-nums text-txt"
-              style={{ letterSpacing: "-0.02em" }}
-            >
-              {phase === "idle" ? "---" : fmt(value, unit)}
-            </span>
-            <span className="shrink-0 text-[13px] text-txt3">{unit}</span>
-          </div>
-          {shown.length > 0 && !(phase === "done" && fmt(peak, unit) === fmt(value, unit)) && (
-            <span className="shrink-0 pb-1 text-[11.5px] tabular-nums text-txt3">
-              {t("peak")} {fmt(peak, unit)} {unit}
-            </span>
-          )}
-        </div>
-
-        {/* the run's shape, given the room this page has (floored so the
-            console survives the smallest window) */}
-        <div className="flex min-h-[48px] flex-1 items-stretch px-5 pb-3.5 pt-2">
-          <SpeedGraph samples={shown} accent={accent} active={running} fill />
-        </div>
-
-        {/* the transport: one full-width control parked where a run bar
-            belongs, at the foot of the console */}
-        <div className="border-t border-line px-5 py-3">
           <button
             type="button"
             onClick={running ? stop : () => void run("all")}
             aria-label={running ? t("stop") : phase === "done" ? t("startAgain") : t("startTest")}
             className={cn(
-              "flex h-11 w-full items-center justify-center gap-2 rounded-[10px] border text-[13px] font-medium transition-[color,background-color,border-color,filter] duration-200",
+              "flex h-9 shrink-0 items-center gap-1.5 rounded-[9px] border px-3.5 text-[12.5px] font-medium transition-[color,background-color,border-color,filter] duration-200",
               running
                 ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong"
                 : "border-transparent bg-[var(--brand-vivid)] text-white hover:brightness-110",
@@ -724,71 +685,99 @@ export function Speed() {
             <span>{running ? t("stop") : phase === "done" ? t("startAgain") : t("startTest")}</span>
           </button>
         </div>
-      </section>
 
-      {/* One surface for what persists: the four readings, then the ends of
-          the test under one hairline - measured against, hosted by, you. */}
-      <section className="rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)]">
-        <div className="grid grid-cols-4 divide-x divide-line">
-        <ReadingCell
-          icon={Gauge}
-          label={t("pingTitle")}
-          value={phase === "ping" ? value : result.ping}
-          unit={t("ms")}
-          onClick={() => void run("ping")}
-          disabled={running}
-          live={phase === "ping"}
-        />
-        <ReadingCell icon={Activity} label={t("jitter")} value={result.jitter} unit={t("ms")} onClick={() => void run("ping")} disabled={running} />
-        <ReadingCell
-          icon={ArrowDown}
-          label={t("chDown")}
-          value={phase === "download" ? value : result.down}
-          unit={t("mbps")}
-          onClick={() => void run("down")}
-          disabled={running}
-          live={phase === "download"}
-        />
-        <ReadingCell
-          icon={ArrowUp}
-          label={t("chUp")}
-          value={phase === "upload" ? value : result.up}
-          unit={t("mbps")}
-          onClick={() => void run("up")}
-          disabled={running}
-          live={phase === "upload"}
-        />
-      </div>
+        <div className="flex items-end justify-between gap-4 px-5 pb-1 pt-3">
+          <div className="flex min-w-0 items-baseline gap-2">
+            <span
+              className="text-[40px] font-light leading-none tabular-nums text-txt"
+              style={{ letterSpacing: "-0.02em" }}
+            >
+              {phase === "idle" ? "---" : fmt(value, unit)}
+            </span>
+            {phase !== "idle" && <span className="shrink-0 text-[13px] text-txt3">{unit}</span>}
+          </div>
+          {shown.length > 0 && !(phase === "done" && fmt(peak, unit) === fmt(value, unit)) && (
+            <span className="shrink-0 pb-1 text-[11.5px] tabular-nums text-txt3">
+              {t("peak")} {fmt(peak, unit)} {unit}
+            </span>
+          )}
+        </div>
 
-        {/* the ends of the test: measured against, hosted by, you. No
-            vertical rules down here - the hairline above is the only
-            structure these three blocks need */}
+        {/* the run's shape: the space opens while there is something to draw
+            and settles closed at rest, so the card never holds a void */}
         <div
           className={cn(
-            "grid border-t border-line",
+            "overflow-hidden px-5 transition-[height] duration-300 ease-out",
+            running || shown.length > 0 ? "h-[140px] pb-3 pt-2" : "h-0",
+          )}
+        >
+          <div className="h-[116px]">
+            <SpeedGraph samples={shown} accent={accent} active={running} fill />
+          </div>
+        </div>
+
+        {/* the four numbers along the bottom of the band; a click runs the
+            metric on its own */}
+        <div className="grid grid-cols-4 divide-x divide-line border-t border-line">
+          <ReadingCell
+            icon={Gauge}
+            label={t("pingTitle")}
+            value={phase === "ping" ? value : result.ping}
+            unit={t("ms")}
+            onClick={() => void run("ping")}
+            disabled={running}
+            live={phase === "ping"}
+          />
+          <ReadingCell icon={Activity} label={t("jitter")} value={result.jitter} unit={t("ms")} onClick={() => void run("ping")} disabled={running} />
+          <ReadingCell
+            icon={ArrowDown}
+            label={t("chDown")}
+            value={phase === "download" ? value : result.down}
+            unit={t("mbps")}
+            onClick={() => void run("down")}
+            disabled={running}
+            live={phase === "download"}
+          />
+          <ReadingCell
+            icon={ArrowUp}
+            label={t("chUp")}
+            value={phase === "upload" ? value : result.up}
+            unit={t("mbps")}
+            onClick={() => void run("up")}
+            disabled={running}
+            live={phase === "upload"}
+          />
+        </div>
+      </section>
+
+      {/* Where the test ran: measured against, hosted by, you. */}
+      <section className="rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)]">
+        <div
+          className={cn(
+            "grid",
             netInfo ? "grid-cols-3" : "grid-cols-2",
           )}
         >
-        <FactRow
-          icon={Server}
-          title={t("selServer")}
-          main={srv.label}
-          lines={picking ? [t("findingServer")] : [srv.detail || srv.host]}
-        />
-        <FactRow
-          icon={Cloud}
-          title={t("hostedBy")}
-          main={sponsor}
-          lines={srv.id === "cloudflare" ? ["speed.cloudflare.com", "Cloudflare, Inc."] : [srv.host]}
-        />
-        {netInfo && (
           <FactRow
-            icon={Wifi}
-            title={t("yourConn")}
-            main={netInfo.isp || netInfo.ip}
-            lines={[netInfo.isp ? netInfo.ip : "", netInfo.place]}
+            icon={Server}
+            title={t("selServer")}
+            main={srv.label}
+            lines={picking ? [t("findingServer")] : [srv.detail || srv.host]}
           />
-        )}
+          <FactRow
+            icon={Cloud}
+            title={t("hostedBy")}
+            main={sponsor}
+            lines={srv.id === "cloudflare" ? ["speed.cloudflare.com", "Cloudflare, Inc."] : [srv.host]}
+          />
+          {netInfo && (
+            <FactRow
+              icon={Wifi}
+              title={t("yourConn")}
+              main={netInfo.isp || netInfo.ip}
+              lines={[netInfo.isp ? netInfo.ip : "", netInfo.place]}
+            />
+          )}
         </div>
       </section>
 

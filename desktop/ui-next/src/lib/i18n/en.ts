@@ -55,6 +55,7 @@ export const en = {
   "graphLabel": "Throughput",
   "doneLabel": "Test complete",
   "speedTag": "Test your connection to see your ping, download and upload speeds",
+  "speedTest": "Speed test",
   "appsAll": "All apps",
   "appsEmpty": "No applications found",
   "appsEmptyFallback": "No apps picked, connecting the whole device",
