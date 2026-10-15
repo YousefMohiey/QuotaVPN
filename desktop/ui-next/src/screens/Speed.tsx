@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Activity, ArrowDown, ArrowUp, ChevronDown, ChevronRight, Cloud, Gauge, Gamepad2, Globe, History, Play, RefreshCw, Server, Square, Tv, Video, Wifi } from "lucide-react"
+import { Activity, ArrowDown, ArrowUp, ChevronDown, Cloud, Gauge, Gamepad2, Globe, Play, RefreshCw, Server, Square, Tv, Video, Wifi } from "lucide-react"
 import { PickerDialog } from "@/components/PickerDialog"
 import { SpeedGraph } from "@/components/SpeedGraph"
 import { useApp } from "@/state/app"
@@ -24,7 +24,7 @@ const cliLabel = (c: CliSpeed): string =>
 
 /** One number for every place the page states a reading. */
 const fmt = (v: number, unit: "Mbps" | "ms"): string =>
-  unit === "ms" ? String(Math.round(v)) : v >= 100 ? v.toFixed(0) : v.toFixed(1)
+  unit === "ms" ? String(Math.round(v)) : v.toFixed(1)
 
 type Phase = "idle" | "ping" | "download" | "upload" | "done"
 type Result = { ping: number | null; jitter: number | null; down: number | null; up: number | null }
@@ -125,7 +125,7 @@ export function saveHistory(runs: Run[]) {
   }
 }
 
-export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
+export function Speed() {
   const { t } = useI18n()
   const { card, hardRefresh, refreshing } = useApp()
 
@@ -726,9 +726,10 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
         </div>
       </section>
 
-      {/* The same four numbers, but permanent and precise: each cell is a
-          button, so one metric can be measured on its own. */}
-      <div className="grid grid-cols-4 divide-x divide-line rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)]">
+      {/* One surface for what persists: the four readings, then the ends of
+          the test under one hairline - measured against, hosted by, you. */}
+      <section className="rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)]">
+        <div className="grid grid-cols-4 divide-x divide-line">
         <ReadingCell
           icon={Gauge}
           label={t("pingTitle")}
@@ -759,14 +760,15 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
         />
       </div>
 
-      {/* Both ends of the test, stated the way a speed test states them:
-          what is being measured against, who hosts it, and who you are. */}
-      <section
-        className={cn(
-          "grid divide-x divide-line rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)]",
-          netInfo ? "grid-cols-3" : "grid-cols-2",
-        )}
-      >
+        {/* the ends of the test: measured against, hosted by, you. No
+            vertical rules down here - the hairline above is the only
+            structure these three blocks need */}
+        <div
+          className={cn(
+            "grid border-t border-line",
+            netInfo ? "grid-cols-3" : "grid-cols-2",
+          )}
+        >
         <FactRow
           icon={Server}
           title={t("selServer")}
@@ -787,25 +789,12 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
             lines={[netInfo.isp ? netInfo.ip : "", netInfo.place]}
           />
         )}
+        </div>
       </section>
 
-      <div className="flex items-center justify-end gap-4 px-1">
-        <p aria-live="polite" className="sr-only">
-          {hint}
-        </p>
-        {history.length > 0 && (
-          <button
-            type="button"
-            onClick={onOpenHistory}
-            className="group flex shrink-0 items-center gap-1.5 text-[12.5px] text-txt3 transition-colors hover:text-brand-strong"
-          >
-            <History className="size-3.5" strokeWidth={1.7} aria-hidden />
-            <span>{t("history")}</span>
-            <span className="tabular-nums">{history.length}</span>
-            <ChevronRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden />
-          </button>
-        )}
-      </div>
+      <p aria-live="polite" className="sr-only">
+        {hint}
+      </p>
 
       <PickerDialog
         open={pickOpen}

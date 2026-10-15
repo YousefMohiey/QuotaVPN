@@ -184,7 +184,7 @@ export default function App() {
                 transition={{ duration: 0.2, ease: EASE_OUT }}
               >
                 {tab === "home" && <Home onOpenApps={() => go("apps")} />}
-                {tab === "speed" && <Speed onOpenHistory={() => go("history")} />}
+                {tab === "speed" && <Speed />}
                 {tab === "voice" && <Voice />}
                 {tab === "history" && <SpeedHistory onOpenResult={openResult} />}
                 {tab === "result" && <SpeedResult runAt={resultAt} onBack={() => go("history")} />}
