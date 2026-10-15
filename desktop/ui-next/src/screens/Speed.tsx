@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Activity, ArrowDown, ArrowUp, ChevronDown, Cloud, Gauge, Gamepad2, Globe, Play, RefreshCw, Server, Square, Tv, Video, Wifi } from "lucide-react"
 import { PickerDialog } from "@/components/PickerDialog"
-import { SpeedGraph } from "@/components/SpeedGraph"
+import { SpeedDial } from "@/components/SpeedDial"
 import { useApp } from "@/state/app"
 import { useI18n, type StrKey } from "@/lib/i18n"
 import { measureDownload, measurePing, measureUpload } from "@/lib/speedtest"
@@ -25,6 +25,11 @@ const cliLabel = (c: CliSpeed): string =>
 /** One number for every place the page states a reading. */
 const fmt = (v: number, unit: "Mbps" | "ms"): string =>
   unit === "ms" ? String(Math.round(v)) : v.toFixed(1)
+
+/** Dial scale: the smallest step that leaves the peak inside the ring. The
+    quarters of every step are whole numbers, so the labels stay clean. */
+const DIAL_STEPS = [20, 40, 60, 100, 200, 400, 600, 800, 1000]
+const niceDialMax = (v: number): number => DIAL_STEPS.find((s) => s >= Math.max(v, 10) * 1.1) ?? 1000
 
 type Phase = "idle" | "ping" | "download" | "upload" | "done"
 type Result = { ping: number | null; jitter: number | null; down: number | null; up: number | null }
@@ -585,17 +590,12 @@ export function Speed() {
           : downSnap.current
       : samples
   const peak = Math.max(0, ...shown)
+  // The dial reads throughput only; during ping it rests at zero, and the
+  // ring is scaled so the run's peak stays inside it.
+  const dialValue = unit === "ms" ? 0 : value
+  const dialMax = niceDialMax(phase === "idle" || phase === "ping" ? 60 : peak)
   const srv = picked ?? CLOUDFLARE
   const sponsor = srv.label.includes(" · ") ? srv.label.split(" · ")[0].trim() : srv.label
-  // The line keeps the colour of whatever was measured last.
-  const kind: "ping" | "down" | "up" = running
-    ? phase === "ping"
-      ? "ping"
-      : phase === "upload"
-        ? "up"
-        : "down"
-    : lastKind
-  const accent = kind === "up" ? "var(--green)" : kind === "ping" ? "var(--amber)" : "var(--brand)"
 
   const chooseServer = async (id: string) => {
     if (id === "auto") {
@@ -686,34 +686,15 @@ export function Speed() {
           </button>
         </div>
 
-        <div className="flex items-end justify-between gap-4 px-5 pb-1 pt-3">
-          <div className="flex min-w-0 items-baseline gap-2">
-            <span
-              className="text-[40px] font-light leading-none tabular-nums text-txt"
-              style={{ letterSpacing: "-0.02em" }}
-            >
-              {phase === "idle" ? "---" : fmt(value, unit)}
-            </span>
-            {phase !== "idle" && <span className="shrink-0 text-[13px] text-txt3">{unit}</span>}
-          </div>
+        {/* the dial rides where the reading used to: live number in the
+            middle, needle sweeping the scale while the run goes */}
+        <div className="flex flex-col items-center px-5 pb-4 pt-4 [@media(max-height:660px)]:pb-2 [@media(max-height:660px)]:pt-2">
+          <SpeedDial display={fmt(value, unit)} value={dialValue} max={dialMax} unit={unit} idle={phase === "idle"} />
           {shown.length > 0 && !(phase === "done" && fmt(peak, unit) === fmt(value, unit)) && (
-            <span className="shrink-0 pb-1 text-[11.5px] tabular-nums text-txt3">
+            <div className="mt-2 text-[11.5px] tabular-nums text-txt3">
               {t("peak")} {fmt(peak, unit)} {unit}
-            </span>
+            </div>
           )}
-        </div>
-
-        {/* the run's shape: the space opens while there is something to draw
-            and settles closed at rest, so the card never holds a void */}
-        <div
-          className={cn(
-            "overflow-hidden px-5 transition-[height] duration-300 ease-out",
-            running || shown.length > 0 ? "h-[140px] pb-3 pt-2" : "h-0",
-          )}
-        >
-          <div className="h-[116px]">
-            <SpeedGraph samples={shown} accent={accent} active={running} fill />
-          </div>
         </div>
 
         {/* the four numbers along the bottom of the band; a click runs the
