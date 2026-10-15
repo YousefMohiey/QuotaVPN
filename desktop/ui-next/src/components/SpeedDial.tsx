@@ -121,21 +121,6 @@ export function SpeedDial({
           </linearGradient>
         </defs>
 
-        {/* the idle face: a clean double circle in our blues, the way the
-            reference waits before a run; it crossfades away the moment the
-            scale takes over */}
-        <g style={{ opacity: idle ? 1 : 0, transition: "opacity 400ms ease" }}>
-          <circle cx={C} cy={C} r={R_ARC} fill="none" stroke="url(#qcDialFill)" strokeWidth="4" />
-          <circle
-            cx={C}
-            cy={C}
-            r={R_ARC + 10.5}
-            fill="none"
-            stroke="rgb(29 91 214 / 0.5)"
-            strokeWidth="2"
-          />
-        </g>
-
         {/* the working face: track, lit stretch, scale and needle. Only
             present while a run or a result exists. */}
         <g style={{ opacity: idle ? 0 : 1, transition: "opacity 400ms ease" }}>
@@ -197,8 +182,9 @@ export function SpeedDial({
         </g>
       </svg>
 
-      {/* the center: GO while there is nothing to watch, quiet stop while
-          the run goes, the reading down in the opening once measured */}
+      {/* the center: the start button wears the home page dial's dress
+          (glass circle, one lit line), then a quiet stop while the run
+          goes, and the reading down in the opening once measured */}
       <div className="pointer-events-none absolute inset-0">
         <button
           type="button"
@@ -206,11 +192,13 @@ export function SpeedDial({
           disabled={!idle}
           aria-label={t("startTest")}
           className={cn(
-            "absolute left-1/2 top-1/2 grid size-[54px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-[23px] font-bold tracking-[0.06em] text-txt transition-[opacity,background-color,transform] duration-300 [-webkit-tap-highlight-color:transparent] hover:bg-white/[0.04] active:scale-[0.94]",
-            idle ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
+            "absolute left-1/2 top-1/2 grid size-[215px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border transition-[opacity,border-color,transform] duration-300",
+            "border-[rgb(255_255_255/0.14)] bg-white/[0.05] shadow-[inset_0_1px_0_rgb(255_255_255/0.10)] backdrop-blur-[14px] backdrop-saturate-150",
+            "hover:border-[rgb(255_255_255/0.26)] active:scale-[0.985] [-webkit-tap-highlight-color:transparent]",
+            idle ? "opacity-100" : "pointer-events-none opacity-0",
           )}
         >
-          GO
+          <span className="text-[28px] font-bold tracking-[0.06em] text-txt">GO</span>
         </button>
 
         {running && (
