@@ -48,7 +48,9 @@ export function WeQuotaDialog({
       <DialogContent className="max-w-[380px] gap-0 overflow-hidden rounded-[16px] border-line bg-[var(--popover)] p-0">
         <div className="border-b border-line px-4 pb-3.5 pt-4">
           <div className="flex items-center gap-3">
-            <WeMark className="size-10 shrink-0" />
+            <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
+              <WeMark className="w-[22px]" />
+            </span>
             <div className="min-w-0">
               <DialogTitle className="text-[14px] font-semibold text-txt">
                 {t("weQuota")}

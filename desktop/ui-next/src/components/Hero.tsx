@@ -297,7 +297,9 @@ function QuotaZone() {
         {quota.linked && mainUnit ? (
           <div>
             <div className="flex items-center gap-3">
-              <WeMark className="size-10 shrink-0" />
+              <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
+                <WeMark className="w-[22px]" />
+              </span>
               <div className="min-w-0 flex-1">
                 <h2 className="truncate text-[13.5px] font-semibold text-txt">{t("weQuota")}</h2>
                 <p className="mt-0.5 truncate text-[11px] text-txt2" dir="auto" title={mainUnit.offer || "WE"}>
@@ -348,7 +350,9 @@ function QuotaZone() {
         ) : (
           <div>
             <div className="flex items-center gap-3">
-              <WeMark className="size-10 shrink-0" />
+              <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
+                <WeMark className="w-[22px]" />
+              </span>
               <div className="min-w-0">
                 <h2 className="truncate text-[13.5px] font-semibold text-txt">{t("weQuota")}</h2>
                 <p className="mt-0.5 text-[11px] leading-snug text-txt2">{t("weQuotaSub")}</p>
