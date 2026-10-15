@@ -76,7 +76,6 @@ export function SpeedDial({
   const { t } = useI18n()
   const idle = phase === "idle"
   const running = phase === "ping" || phase === "download" || phase === "upload"
-  const showGo = idle || phase === "done"
 
   const frac = fracFor(value)
   const needleDeg = angleFor(frac)
@@ -100,12 +99,19 @@ export function SpeedDial({
   )
 
   return (
-    <div className="relative h-[300px] w-[300px] [@media(max-height:660px)]:h-[196px] [@media(max-height:660px)]:w-[196px]">
+    <div
+      className={cn(
+        "relative h-[300px] w-[300px] [@media(max-height:660px)]:h-[196px] [@media(max-height:660px)]:w-[196px]",
+        phase === "done" && "cursor-pointer",
+      )}
+      onClick={phase === "done" ? onStart : undefined}
+      title={phase === "done" ? t("startAgain") : undefined}
+    >
       <svg viewBox={`0 0 ${VIEW} ${VIEW}`} className="h-full w-full" aria-hidden focusable="false">
         <defs>
           <linearGradient id="qcDialFill" x1="0" y1="0.8" x2="1" y2="0.2">
-            <stop offset="0" stopColor="#9cc8ff" />
-            <stop offset="1" stopColor="#3b8bff" />
+            <stop offset="0" stopColor="#6fa3f2" />
+            <stop offset="1" stopColor="#1d5bd6" />
           </linearGradient>
           {/* their dark-theme needle: light blade at the tip, fading home */}
           <linearGradient id="qcDialNeedle" x1="0" y1="0" x2="0" y2="1">
@@ -125,7 +131,7 @@ export function SpeedDial({
             cy={C}
             r={R_ARC + 10.5}
             fill="none"
-            stroke="rgb(46 123 246 / 0.5)"
+            stroke="rgb(29 91 214 / 0.5)"
             strokeWidth="2"
           />
         </g>
@@ -147,7 +153,7 @@ export function SpeedDial({
               strokeDasharray: arcLen,
               strokeDashoffset: arcLen * (1 - frac),
               transition: "stroke-dashoffset 170ms cubic-bezier(0.22, 1, 0.36, 1)",
-              filter: "drop-shadow(0 0 5px rgb(46 123 246 / 0.45))",
+              filter: "drop-shadow(0 0 5px rgb(29 91 214 / 0.5))",
             }}
           />
 
@@ -197,11 +203,11 @@ export function SpeedDial({
         <button
           type="button"
           onClick={onStart}
-          disabled={running}
-          aria-label={phase === "done" ? t("startAgain") : t("startTest")}
+          disabled={!idle}
+          aria-label={t("startTest")}
           className={cn(
-            "absolute left-1/2 top-1/2 grid size-[86px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-[38px] font-bold tracking-[0.09em] text-txt transition-[opacity,background-color,transform] duration-300 hover:bg-white/[0.04] active:scale-[0.94]",
-            showGo ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
+            "absolute left-1/2 top-1/2 grid size-[72px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-[27px] font-bold tracking-[0.07em] text-txt transition-[opacity,background-color,transform] duration-300 hover:bg-white/[0.04] active:scale-[0.94]",
+            idle ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
           )}
         >
           GO
