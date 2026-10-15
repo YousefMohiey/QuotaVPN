@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Activity, ArrowDown, ArrowUp, ChevronDown, Cloud, Gauge, Gamepad2, Globe, Play, RefreshCw, Server, Square, Tv, Video, Wifi } from "lucide-react"
+import { Activity, ArrowDown, ArrowUp, ChevronDown, Cloud, Gauge, Gamepad2, Globe, RefreshCw, Server, Tv, Video, Wifi } from "lucide-react"
 import { PickerDialog } from "@/components/PickerDialog"
 import { SpeedDial } from "@/components/SpeedDial"
 import { useApp } from "@/state/app"
@@ -146,6 +146,9 @@ export function Speed() {
   const [picking, setPicking] = useState(true)
   const [cliReady, setCliReady] = useState(false)
   const [pickOpen, setPickOpen] = useState(false)
+  // Bumped whenever a run starts: the dial replays its entry animation off
+  // this, so the scale flushes white in sequence every time.
+  const [runId, setRunId] = useState(0)
   // Which measurement the graph belongs to, so the line keeps its colour
   // after the run ends (green upload, amber ping, blue download).
   const [lastKind, setLastKind] = useState<"ping" | "down" | "up">("down")
@@ -362,6 +365,7 @@ export function Speed() {
 
   const run = async (which: "all" | "ping" | "down" | "up") => {
     if (running) return
+    setRunId((n) => n + 1)
     abort.current?.abort()
     const ctl = new AbortController()
     abort.current = ctl
@@ -660,30 +664,21 @@ export function Speed() {
               {phase === "done" ? t("doneLabel") : running ? t("measuring") : hint || t("idle")}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={running ? stop : () => void run("all")}
-            aria-label={running ? t("stop") : phase === "done" ? t("startAgain") : t("startTest")}
-            className={cn(
-              "flex h-9 shrink-0 items-center gap-1.5 rounded-[9px] border px-3.5 text-[12.5px] font-medium transition-[color,background-color,border-color,filter] duration-200",
-              running
-                ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong"
-                : "border-transparent bg-[var(--brand-vivid)] text-white hover:brightness-110",
-            )}
-          >
-            {running ? (
-              <Square className="size-3.5" strokeWidth={1.75} aria-hidden />
-            ) : (
-              <Play className="size-3.5" strokeWidth={1.75} aria-hidden />
-            )}
-            <span>{running ? t("stop") : phase === "done" ? t("startAgain") : t("startTest")}</span>
-          </button>
         </div>
 
         {/* the dial rides where the reading used to: live number in the
             middle, needle sweeping the scale while the run goes */}
         <div className="flex flex-col items-center px-5 pb-4 pt-4 [@media(max-height:660px)]:pb-2 [@media(max-height:660px)]:pt-2">
-          <SpeedDial display={fmt(value, unit)} value={dialValue} unit={unit} icon={dialIcon} idle={phase === "idle"} />
+          <SpeedDial
+            display={fmt(value, unit)}
+            value={dialValue}
+            unit={unit}
+            icon={dialIcon}
+            phase={phase}
+            runId={runId}
+            onStart={() => void run("all")}
+            onStop={stop}
+          />
           {shown.length > 0 && !(phase === "done" && fmt(peak, unit) === fmt(value, unit)) && (
             <div className="mt-2 text-[11.5px] tabular-nums text-txt3">
               {t("peak")} {fmt(peak, unit)} {unit}

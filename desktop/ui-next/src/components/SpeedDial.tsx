@@ -1,5 +1,7 @@
 import { useMemo } from "react"
 import type { LucideIcon } from "lucide-react"
+import { useI18n } from "@/lib/i18n"
+import { cn } from "@/lib/utils"
 
 // The dial the whole world knows, dressed in the app's colors. Every
 // geometry constant below is Ookla's own, lifted from their gauge code and
@@ -9,6 +11,11 @@ import type { LucideIcon } from "lucide-react"
 // Scale: 0..1000 over a 270 degree sweep, label i at i/8 of the sweep, so
 // 100 sits at high noon and the sides mirror; the needle slides linearly
 // between the two stops it sits among. Measured off the reference app.
+//
+// Interaction follows the reference app too: while there is nothing to
+// show, GO sits dead center and starts the run; the moment it starts the
+// word fades, the scale numbers flash white in sequence, the needle drops
+// in, and the reading lands in the opening. When the run ends GO returns.
 
 const VIEW = 300
 const C = VIEW / 2
@@ -45,19 +52,32 @@ const fracFor = (v: number): number => {
   return 1
 }
 
+export type DialPhase = "idle" | "ping" | "download" | "upload" | "done"
+
 export function SpeedDial({
   display,
   value,
   unit,
   icon: Icon,
-  idle,
+  phase,
+  runId,
+  onStart,
+  onStop,
 }: {
   display: string
   value: number
   unit: string
   icon: LucideIcon
-  idle: boolean
+  phase: DialPhase
+  runId: number
+  onStart: () => void
+  onStop: () => void
 }) {
+  const { t } = useI18n()
+  const idle = phase === "idle"
+  const running = phase === "ping" || phase === "download" || phase === "upload"
+  const showGo = idle || phase === "done"
+
   const frac = fracFor(value)
   const needleDeg = angleFor(frac)
 
@@ -67,8 +87,8 @@ export function SpeedDial({
   const arcPath = `M ${arcStart.x.toFixed(2)} ${arcStart.y.toFixed(2)} A ${R_ARC} ${R_ARC} 0 1 1 ${arcEnd.x.toFixed(2)} ${arcEnd.y.toFixed(2)}`
 
   const b = NEEDLE_BASE_W / 2
-  const t = NEEDLE_TIP_W / 2
-  const needlePath = `M ${C - b} ${C} L ${C - t} ${C - R_TIP} L ${C + t} ${C - R_TIP} L ${C + b} ${C} Z`
+  const tipW = NEEDLE_TIP_W / 2
+  const needlePath = `M ${C - b} ${C} L ${C - tipW} ${C - R_TIP} L ${C + tipW} ${C - R_TIP} L ${C + b} ${C} Z`
 
   const labels = useMemo(
     () =>
@@ -113,30 +133,35 @@ export function SpeedDial({
           }}
         />
 
-        {/* the scale, numbers bold the way the original prints them */}
-        {labels.map(({ s, pos }) => (
-          <text
-            key={s}
-            x={pos.x.toFixed(2)}
-            y={pos.y.toFixed(2)}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fontSize="14.5"
-            fontWeight="600"
-            fill="var(--color-txt)"
-            fillOpacity="0.72"
-          >
-            {s}
-          </text>
-        ))}
+        {/* the scale, flushed white in sequence whenever a run begins */}
+        <g key={runId}>
+          {labels.map(({ s, pos }, i) => (
+            <text
+              key={s}
+              x={pos.x.toFixed(2)}
+              y={pos.y.toFixed(2)}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fontSize="14.5"
+              fontWeight="600"
+              fill="var(--color-txt)"
+              fillOpacity="0.72"
+              className={runId > 0 ? "qc-lbl-flash" : undefined}
+              style={runId > 0 ? { animationDelay: `${i * 80}ms` } : undefined}
+            >
+              {s}
+            </text>
+          ))}
+        </g>
 
-        {/* the needle, pivoting from the center */}
+        {/* the needle, pivoting from the center, only once a run exists */}
         <g
           style={{
             transform: `rotate(${needleDeg}deg)`,
             transformBox: "view-box",
             transformOrigin: `${C}px ${C}px`,
-            transition: "transform 170ms cubic-bezier(0.22, 1, 0.36, 1)",
+            transition: "transform 170ms cubic-bezier(0.22, 1, 0.36, 1), opacity 350ms ease",
+            opacity: idle ? 0 : 1,
           }}
         >
           <path
@@ -147,21 +172,52 @@ export function SpeedDial({
         </g>
       </svg>
 
-      {/* the readout riding in the bottom opening, like the original */}
-      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <div className="flex translate-y-[98px] flex-col items-center [@media(max-height:660px)]:translate-y-[64px]">
-          <span
-            className="text-[40px] font-mono font-medium leading-none tabular-nums text-txt [@media(max-height:660px)]:text-[27px]"
-            style={{ letterSpacing: "-0.01em" }}
+      {/* the center: GO while there is nothing to watch, quiet stop while
+          the run goes, the reading down in the opening once measured */}
+      <div className="pointer-events-none absolute inset-0">
+        <button
+          type="button"
+          onClick={onStart}
+          disabled={running}
+          aria-label={phase === "done" ? t("startAgain") : t("startTest")}
+          className={cn(
+            "absolute left-1/2 top-1/2 grid size-[86px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-[38px] font-bold tracking-[0.09em] text-txt transition-[opacity,background-color,transform] duration-300 hover:bg-white/[0.04] active:scale-[0.94]",
+            showGo ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
+          )}
+        >
+          GO
+        </button>
+
+        {running && (
+          <button
+            type="button"
+            onClick={onStop}
+            className="pointer-events-auto absolute left-1/2 top-[calc(50%+40px)] -translate-x-1/2 -translate-y-1/2 rounded-full px-3 py-1 text-[11.5px] font-medium text-txt3 transition-[color,background-color] duration-200 hover:bg-white/[0.04] hover:text-txt"
           >
-            {idle ? "---" : display}
-          </span>
-          <span className="mt-2 flex items-center gap-1.5">
-            <Icon className="size-4 text-brand-strong" strokeWidth={1.9} aria-hidden />
-            <span className="text-[14px] text-txt2 [@media(max-height:660px)]:text-[11px]">
-              {unit}
+            {t("stop")}
+          </button>
+        )}
+
+        <div className="absolute left-1/2 top-[calc(50%+98px)] -translate-x-1/2 -translate-y-1/2 [@media(max-height:660px)]:top-[calc(50%+64px)]">
+          <div
+            className={cn(
+              "flex flex-col items-center transition-[opacity,transform] duration-300",
+              idle ? "translate-y-2 opacity-0" : "translate-y-0 opacity-100",
+            )}
+          >
+            <span
+              className="text-[40px] font-mono font-medium leading-none tabular-nums text-txt [@media(max-height:660px)]:text-[27px]"
+              style={{ letterSpacing: "-0.01em" }}
+            >
+              {display}
             </span>
-          </span>
+            <span className="mt-2 flex items-center gap-1.5">
+              <Icon className="size-4 text-brand-strong" strokeWidth={1.9} aria-hidden />
+              <span className="text-[14px] text-txt2 [@media(max-height:660px)]:text-[11px]">
+                {unit}
+              </span>
+            </span>
+          </div>
         </div>
       </div>
     </div>

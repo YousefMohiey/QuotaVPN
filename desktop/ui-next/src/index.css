@@ -390,3 +390,17 @@
 .qc-spark-area {
   fill: var(--brand-bg);
 }
+
+/* The scale numbers flash white in sequence the moment a run begins, a
+   wave from 0 around to 1000, the way the original dial does it. */
+@keyframes qc-lbl-flash {
+  from {
+    fill: #ffffff;
+  }
+  to {
+    fill: var(--color-txt);
+  }
+}
+.qc-lbl-flash {
+  animation: qc-lbl-flash 700ms ease;
+}
