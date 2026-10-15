@@ -5,16 +5,18 @@ import type { LucideIcon } from "lucide-react"
 // open-bottom track, a non-linear 0-1000 scale with no ticks, a tapered
 // needle pivoting from the center, and the readout riding just below the
 // pivot. The covered stretch of the track lights up as the run climbs.
+// The construction follows OpenSpeedTest (MIT): dasharray driven fill and
+// round-joined strokes, so the arc paints the same way the original does.
 
-const VIEW = 280
+const VIEW = 300
 const C = VIEW / 2
 const START = -135
 const SWEEP = 270
 
-const R_ARC = 116
-const STROKE = 19
-const R_LABEL = 97
-const R_TIP = 84
+const R_ARC = 124
+const STROKE = 21
+const R_LABEL = 103
+const R_TIP = 96
 
 // Speedtest's own scale: the stops and where they sit along the sweep.
 const STOPS = [0, 5, 10, 50, 100, 250, 500, 750, 1000]
@@ -71,16 +73,16 @@ export function SpeedDial({
   )
 
   return (
-    <div className="relative h-[280px] w-[280px] [@media(max-height:660px)]:h-[198px] [@media(max-height:660px)]:w-[198px]">
+    <div className="relative h-[300px] w-[300px] [@media(max-height:660px)]:h-[196px] [@media(max-height:660px)]:w-[196px]">
       <svg viewBox={`0 0 ${VIEW} ${VIEW}`} className="h-full w-full" aria-hidden focusable="false">
         <defs>
-          <linearGradient id="qcDialFill" x1="0" y1="1" x2="0.55" y2="0">
-            <stop offset="0" stopColor="#8fbcff" />
-            <stop offset="1" stopColor="#2e7bf6" />
+          <linearGradient id="qcDialFill" x1="0" y1="0.8" x2="1" y2="0.2">
+            <stop offset="0" stopColor="#9cc8ff" />
+            <stop offset="1" stopColor="#3b8bff" />
           </linearGradient>
           <linearGradient id="qcDialNeedle" x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0" stopColor="#69738a" />
-            <stop offset="1" stopColor="#e9edf5" />
+            <stop offset="0" stopColor="#59637a" />
+            <stop offset="1" stopColor="#f0f3f9" />
           </linearGradient>
         </defs>
 
@@ -88,7 +90,7 @@ export function SpeedDial({
         <path
           d={arcPath}
           fill="none"
-          stroke="#243353"
+          stroke="#2c3050"
           strokeWidth={STROKE}
           strokeLinecap="butt"
         />
@@ -104,7 +106,7 @@ export function SpeedDial({
             strokeDasharray: arcLen,
             strokeDashoffset: arcLen * (1 - frac),
             transition: "stroke-dashoffset 170ms cubic-bezier(0.22, 1, 0.36, 1)",
-            filter: "drop-shadow(0 0 6px rgb(46 123 246 / 0.45))",
+            filter: "drop-shadow(0 0 5px rgb(46 123 246 / 0.45))",
           }}
         />
 
@@ -116,9 +118,10 @@ export function SpeedDial({
             y={pos.y.toFixed(2)}
             textAnchor="middle"
             dominantBaseline="middle"
-            fontSize="12"
+            fontSize="14"
             fontWeight="500"
-            fill="var(--color-txt2)"
+            fill="var(--color-txt)"
+            fillOpacity="0.72"
           >
             {s}
           </text>
@@ -134,29 +137,29 @@ export function SpeedDial({
           }}
         >
           <path
-            d={`M ${C - 4} ${C} L ${C} ${C - R_TIP} L ${C + 4} ${C} Z`}
+            d={`M ${C - 3.4} ${C} L ${C} ${C - R_TIP} L ${C + 3.4} ${C} Z`}
             fill="url(#qcDialNeedle)"
-            stroke="#0c0d10"
-            strokeOpacity="0.55"
-            strokeWidth="0.75"
+            stroke="#0a0c10"
+            strokeOpacity="0.6"
+            strokeWidth="0.9"
             strokeLinejoin="round"
-            style={{ filter: "drop-shadow(0 2px 5px rgb(0 0 0 / 0.5))" }}
+            style={{ filter: "drop-shadow(0 2px 6px rgb(0 0 0 / 0.55))" }}
           />
         </g>
       </svg>
 
       {/* the readout riding just below the pivot, like the original */}
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <div className="flex translate-y-[44px] flex-col items-center [@media(max-height:660px)]:translate-y-[30px]">
+        <div className="flex translate-y-[48px] flex-col items-center [@media(max-height:660px)]:translate-y-[36px]">
           <span
-            className="text-[38px] font-light leading-none tabular-nums text-txt"
+            className="text-[46px] font-light leading-none tabular-nums text-txt"
             style={{ letterSpacing: "-0.02em" }}
           >
             {idle ? "---" : display}
           </span>
-          <span className="mt-2 flex items-center gap-1.5">
-            <Icon className="size-3.5 text-brand-strong" strokeWidth={1.9} aria-hidden />
-            <span className="text-[12px] text-txt3">{unit}</span>
+          <span className="mt-2.5 flex items-center gap-1.5">
+            <Icon className="size-4 text-brand-strong" strokeWidth={1.9} aria-hidden />
+            <span className="text-[12.5px] text-txt2">{unit}</span>
           </span>
         </div>
       </div>
