@@ -1,26 +1,27 @@
 import { useMemo } from "react"
 import type { LucideIcon } from "lucide-react"
 
-// The dial the whole world knows, dressed in the app's colors: a thick
-// open-bottom track, a non-linear 0-1000 scale with no ticks, a tapered
-// needle pivoting from the center, and the readout riding just below the
-// pivot. The covered stretch of the track lights up as the run climbs.
-// The construction follows OpenSpeedTest (MIT): dasharray driven fill and
-// round-joined strokes, so the arc paints the same way the original does.
+// The dial the whole world knows, dressed in the app's colors. Every
+// geometry constant below is Ookla's own, lifted from their gauge code and
+// scaled to our 300 box: ring radius 130, stroke 23, labels bold at
+// radius-33, a blunt trapezoid needle (base 20, tip 10, length 85) that
+// pivots from the center, the readout riding in the bottom opening.
+// Scale: 0..1000 over a 270 degree sweep, label i at i/8 of the sweep, so
+// 100 sits at high noon and the sides mirror; the needle slides linearly
+// between the two stops it sits among. Measured off the reference app.
 
 const VIEW = 300
 const C = VIEW / 2
 const START = -135
 const SWEEP = 270
 
-const R_ARC = 124
-const STROKE = 21
-const R_LABEL = 103
-const R_TIP = 96
+const R_ARC = 136.5 // ring 130 of a 286 box, scaled to 300
+const STROKE = 24 // stroke width 23, scaled
+const R_LABEL = 101.5 // labels at radius-33, scaled
+const R_TIP = 89 // needle length 85, scaled
+const NEEDLE_BASE_W = 21 // needle base width 20, scaled
+const NEEDLE_TIP_W = 10.5 // needle tip width 10, scaled
 
-// The scale sits at equal angles around the sweep, mirrored across the
-// vertical: 5 against 750, 10 against 500, 50 against 250, 100 at high
-// noon. Measured straight off the reference app at pixel level.
 const STOPS = [0, 5, 10, 50, 100, 250, 500, 750, 1000]
 const FRACS = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
 
@@ -65,6 +66,10 @@ export function SpeedDial({
   const arcEnd = pt(R_ARC, START + SWEEP)
   const arcPath = `M ${arcStart.x.toFixed(2)} ${arcStart.y.toFixed(2)} A ${R_ARC} ${R_ARC} 0 1 1 ${arcEnd.x.toFixed(2)} ${arcEnd.y.toFixed(2)}`
 
+  const b = NEEDLE_BASE_W / 2
+  const t = NEEDLE_TIP_W / 2
+  const needlePath = `M ${C - b} ${C} L ${C - t} ${C - R_TIP} L ${C + t} ${C - R_TIP} L ${C + b} ${C} Z`
+
   const labels = useMemo(
     () =>
       STOPS.map((s, i) => ({
@@ -82,20 +87,16 @@ export function SpeedDial({
             <stop offset="0" stopColor="#9cc8ff" />
             <stop offset="1" stopColor="#3b8bff" />
           </linearGradient>
-          <linearGradient id="qcDialNeedle" x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0" stopColor="#59637a" />
-            <stop offset="1" stopColor="#f0f3f9" />
+          {/* their dark-theme needle: light blade at the tip, fading home */}
+          <linearGradient id="qcDialNeedle" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#f2f4f9" stopOpacity="0.95" />
+            <stop offset="0.65" stopColor="#c3cad6" stopOpacity="0.65" />
+            <stop offset="1" stopColor="#7d879c" stopOpacity="0.35" />
           </linearGradient>
         </defs>
 
         {/* the track */}
-        <path
-          d={arcPath}
-          fill="none"
-          stroke="#2c3050"
-          strokeWidth={STROKE}
-          strokeLinecap="butt"
-        />
+        <path d={arcPath} fill="none" stroke="#2c3050" strokeWidth={STROKE} strokeLinecap="butt" />
 
         {/* the covered stretch, lit */}
         <path
@@ -112,7 +113,7 @@ export function SpeedDial({
           }}
         />
 
-        {/* the scale, plain numbers the way the original does it */}
+        {/* the scale, numbers bold the way the original prints them */}
         {labels.map(({ s, pos }) => (
           <text
             key={s}
@@ -120,8 +121,8 @@ export function SpeedDial({
             y={pos.y.toFixed(2)}
             textAnchor="middle"
             dominantBaseline="middle"
-            fontSize="14"
-            fontWeight="500"
+            fontSize="14.5"
+            fontWeight="600"
             fill="var(--color-txt)"
             fillOpacity="0.72"
           >
@@ -139,29 +140,27 @@ export function SpeedDial({
           }}
         >
           <path
-            d={`M ${C - 3.4} ${C} L ${C} ${C - R_TIP} L ${C + 3.4} ${C} Z`}
+            d={needlePath}
             fill="url(#qcDialNeedle)"
-            stroke="#0a0c10"
-            strokeOpacity="0.6"
-            strokeWidth="0.9"
-            strokeLinejoin="round"
-            style={{ filter: "drop-shadow(0 2px 6px rgb(0 0 0 / 0.55))" }}
+            style={{ filter: "drop-shadow(0 1px 5px rgb(0 0 0 / 0.5))" }}
           />
         </g>
       </svg>
 
-      {/* the readout riding just below the pivot, like the original */}
+      {/* the readout riding in the bottom opening, like the original */}
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <div className="flex translate-y-[48px] flex-col items-center [@media(max-height:660px)]:translate-y-[36px]">
+        <div className="flex translate-y-[98px] flex-col items-center [@media(max-height:660px)]:translate-y-[64px]">
           <span
-            className="text-[46px] font-light leading-none tabular-nums text-txt"
-            style={{ letterSpacing: "-0.02em" }}
+            className="text-[40px] font-mono font-medium leading-none tabular-nums text-txt [@media(max-height:660px)]:text-[27px]"
+            style={{ letterSpacing: "-0.01em" }}
           >
             {idle ? "---" : display}
           </span>
-          <span className="mt-2.5 flex items-center gap-1.5">
+          <span className="mt-2 flex items-center gap-1.5">
             <Icon className="size-4 text-brand-strong" strokeWidth={1.9} aria-hidden />
-            <span className="text-[12.5px] text-txt2">{unit}</span>
+            <span className="text-[14px] text-txt2 [@media(max-height:660px)]:text-[11px]">
+              {unit}
+            </span>
           </span>
         </div>
       </div>
