@@ -79,6 +79,8 @@ export function SpeedDial({
 
   const frac = fracFor(value)
   const needleDeg = angleFor(frac)
+  // where the lit arc currently ends: the comet head rides there
+  const tip = pt(R_ARC, angleFor(frac))
 
   const arcLen = 2 * Math.PI * R_ARC * (SWEEP / 360)
   const arcStart = pt(R_ARC, START)
@@ -107,12 +109,34 @@ export function SpeedDial({
       onClick={phase === "done" ? onStart : undefined}
       title={phase === "done" ? t("startAgain") : undefined}
     >
-      <svg viewBox={`0 0 ${VIEW} ${VIEW}`} className="h-full w-full" aria-hidden focusable="false">
+      <svg
+        viewBox={`0 0 ${VIEW} ${VIEW}`}
+        className="h-full w-full overflow-visible"
+        aria-hidden
+        focusable="false"
+      >
         <defs>
           <linearGradient id="qcDialFill" x1="0" y1="0.8" x2="1" y2="0.2">
-            <stop offset="0" stopColor="#6fa3f2" />
-            <stop offset="1" stopColor="#1d5bd6" />
+            <stop offset="0" stopColor="#1b4fc2" />
+            <stop offset="1" stopColor="#74b4ff" />
           </linearGradient>
+          {/* the comet head the original leads its arc with */}
+          <radialGradient id="qcDialHead" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stopColor="#eaf3ff" stopOpacity="0.9" />
+            <stop offset="0.55" stopColor="#9cc7ff" stopOpacity="0.35" />
+            <stop offset="1" stopColor="#9cc7ff" stopOpacity="0" />
+          </radialGradient>
+          {/* the halo around the lit arc; an SVG blur paints where the CSS
+              drop-shadow never did. The svg itself must not clip, or the
+              tight ring margin would eat the outward bloom */}
+          <filter id="qcDialGlow" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="8" result="b" />
+            <feMerge>
+              <feMergeNode in="b" />
+              <feMergeNode in="b" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
           {/* their dark-theme needle: light blade at the tip, fading home */}
           <linearGradient id="qcDialNeedle" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="#f2f4f9" stopOpacity="0.95" />
@@ -124,23 +148,33 @@ export function SpeedDial({
         {/* the working face: track, lit stretch, scale and needle. Only
             present while a run or a result exists. */}
         <g style={{ opacity: idle ? 0 : 1, transition: "opacity 400ms ease" }}>
-          {/* the track */}
-          <path d={arcPath} fill="none" stroke="#2c3050" strokeWidth={STROKE} strokeLinecap="butt" />
+          {/* the track, dark the way the original keeps it */}
+          <path d={arcPath} fill="none" stroke="#1e2336" strokeWidth={STROKE} strokeLinecap="butt" />
 
-          {/* the covered stretch, lit */}
+          {/* the covered stretch, lit, with the bright head the original
+              leads it with */}
           <path
             d={arcPath}
             fill="none"
             stroke="url(#qcDialFill)"
             strokeWidth={STROKE}
-            strokeLinecap="butt"
+            strokeLinecap="round"
+            filter="url(#qcDialGlow)"
             style={{
               strokeDasharray: arcLen,
               strokeDashoffset: arcLen * (1 - frac),
               transition: "stroke-dashoffset 170ms cubic-bezier(0.22, 1, 0.36, 1)",
-              filter: "drop-shadow(0 0 5px rgb(29 91 214 / 0.5))",
             }}
           />
+          {!idle && frac > 0.005 && (
+            <circle
+              cx={tip.x.toFixed(2)}
+              cy={tip.y.toFixed(2)}
+              r="13"
+              fill="url(#qcDialHead)"
+              filter="url(#qcDialGlow)"
+            />
+          )}
 
           {/* the scale, flushed white in sequence whenever a run begins */}
           <g key={runId}>
@@ -193,9 +227,9 @@ export function SpeedDial({
           aria-label={t("startTest")}
           className={cn(
             "absolute left-1/2 top-1/2 grid size-[172px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border transition-[opacity,border-color,transform] duration-300 [@media(max-height:660px)]:size-[150px]",
-            "border-[rgb(255_255_255/0.14)] bg-white/[0.05] shadow-[inset_0_1px_0_rgb(255_255_255/0.10)] backdrop-blur-[14px] backdrop-saturate-150",
+            "border-[rgb(255_255_255/0.14)] bg-black/35 shadow-[inset_0_1px_0_rgb(255_255_255/0.10)] backdrop-blur-[14px] backdrop-saturate-150",
             "hover:border-[rgb(255_255_255/0.26)] active:scale-[0.985] [-webkit-tap-highlight-color:transparent]",
-            idle ? "opacity-100" : "pointer-events-none opacity-0",
+            idle ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
           )}
         >
           <span className="text-[26px] font-bold tracking-[0.06em] text-txt">GO</span>
