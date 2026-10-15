@@ -71,7 +71,7 @@ export function SpeedDial({
   )
 
   return (
-    <div className="relative h-[280px] w-[280px] [@media(max-height:660px)]:h-[208px] [@media(max-height:660px)]:w-[208px]">
+    <div className="relative h-[280px] w-[280px] [@media(max-height:660px)]:h-[198px] [@media(max-height:660px)]:w-[198px]">
       <svg viewBox={`0 0 ${VIEW} ${VIEW}`} className="h-full w-full" aria-hidden focusable="false">
         <defs>
           <linearGradient id="qcDialFill" x1="0" y1="1" x2="0.55" y2="0">
