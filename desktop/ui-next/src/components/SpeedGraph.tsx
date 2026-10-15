@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 import { useI18n } from "@/lib/i18n"
+import { cn } from "@/lib/utils"
 
 const W = 560
 const H = 96
@@ -14,10 +15,13 @@ export function SpeedGraph({
   samples,
   accent,
   active,
+  fill = false,
 }: {
   samples: number[]
   accent: string
   active: boolean
+  /** Stretch to the parent's height instead of the fixed strip. */
+  fill?: boolean
 }) {
   const { t } = useI18n()
 
@@ -36,11 +40,11 @@ export function SpeedGraph({
   }, [samples])
 
   return (
-    <div className="relative">
+    <div className={cn("relative", fill && "flex h-full w-full flex-col")}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
-        className="h-[96px] w-full"
+        className={cn("w-full", fill ? "min-h-0 flex-1" : "h-[96px]")}
         role="img"
         aria-label={active ? t("measuring") : t("graphLabel")}
       >

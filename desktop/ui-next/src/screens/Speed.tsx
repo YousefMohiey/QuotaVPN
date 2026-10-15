@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react"
-import { AnimatePresence, motion } from "motion/react"
 import { Activity, ArrowDown, ArrowUp, ChevronDown, ChevronRight, Cloud, Gauge, Gamepad2, Globe, History, Play, RefreshCw, Server, Square, Tv, Video, Wifi } from "lucide-react"
 import { PickerDialog } from "@/components/PickerDialog"
 import { SpeedGraph } from "@/components/SpeedGraph"
@@ -13,8 +12,6 @@ import { cn } from "@/lib/utils"
 const PING_PROBES = 8
 const PHASE_SECONDS = 9
 const BARS_MEMORY = 96
-const EASE_OUT = [0.1, 0.9, 0.2, 1] as const
-const SPRING = { type: "spring", stiffness: 320, damping: 34 } as const
 
 /** Mean absolute delta between consecutive samples: the same jitter reading
  *  the browser-side measurer reports, for the backend path. */
@@ -24,6 +21,10 @@ const meanAbsDelta = (xs: number[]): number =>
 /** "we · Giza" for the server the official client picked. */
 const cliLabel = (c: CliSpeed): string =>
   [c.server_name, c.server_location].filter(Boolean).join(" · ").trim()
+
+/** One number for every place the page states a reading. */
+const fmt = (v: number, unit: "Mbps" | "ms"): string =>
+  unit === "ms" ? String(Math.round(v)) : v >= 100 ? v.toFixed(0) : v.toFixed(1)
 
 type Phase = "idle" | "ping" | "download" | "upload" | "done"
 type Result = { ping: number | null; jitter: number | null; down: number | null; up: number | null }
@@ -170,22 +171,6 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
 
   const running = phase === "ping" || phase === "download" || phase === "upload"
 
-  // The reading panel slides in only after the circle has had room to move,
-  // the same beat Home uses between its dial and the info panel. Mounting
-  // both at once is what makes the motion feel fast and rough.
-  const [showPanel, setShowPanel] = useState(false)
-  useEffect(() => {
-    if (!running) {
-      setShowPanel(false)
-      return
-    }
-    const id = window.setTimeout(() => setShowPanel(true), 250)
-    return () => window.clearTimeout(id)
-  }, [running])
-
-  // Parked only while measuring: when the run ends the ring goes back to
-  // the middle (Start again), so the page always settles the same way.
-  const parked = running
   // Which server the run goes to. Loaded on arrival and picked by round trip,
   // like a speed test does, so the reading uses the nearest host instead of a
   // fixed one; Cloudflare stays in the pool as the always-available entry.
@@ -683,81 +668,62 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
         </div>
       </div>
 
-      {/* One ring starts the run; while it runs it parks left with a spring,
-          the same way Home's dial does, and the reading slides in beside it.
-          The card stretches to take the window's spare height, so the page
-          ends at the card instead of leaving an empty band below it. */}
+      {/* The console: one transport button, whatever is being measured at
+          scale, and the run's own shape given the room this page has. No
+          circle and no slide-ins here: this page is an instrument, not the
+          dial Home opens with. */}
       <section className="flex flex-1 flex-col rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)]">
-        <div className="flex min-h-[224px] flex-1 items-center px-5 py-3">
-          <motion.div
-            layout
-            transition={SPRING}
-            className={cn("flex min-h-[172px] w-full items-center", parked ? "justify-start gap-8" : "justify-center")}
+        <div className="flex items-center gap-4 px-5 pb-3 pt-4">
+          <button
+            type="button"
+            onClick={running ? stop : () => void run("all")}
+            aria-label={running ? t("stop") : phase === "done" ? t("startAgain") : t("startTest")}
+            className={cn(
+              "flex h-10 shrink-0 items-center gap-2 rounded-[12px] border px-4 text-[13px] font-medium transition-[color,background-color,border-color,filter] duration-200",
+              running
+                ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong"
+                : "border-transparent bg-[var(--brand-vivid)] text-white hover:brightness-110",
+            )}
           >
-            <motion.div layout transition={SPRING} className="flex shrink-0 items-center justify-center">
-              <StartCircle running={running} done={phase === "done"} onStart={() => void run("all")} onStop={stop} />
-            </motion.div>
+            {running ? (
+              <Square className="size-3.5" strokeWidth={1.75} aria-hidden />
+            ) : (
+              <Play className="size-3.5" strokeWidth={1.75} aria-hidden />
+            )}
+            <span>{running ? t("stop") : phase === "done" ? t("startAgain") : t("startTest")}</span>
+          </button>
 
-            <AnimatePresence mode="popLayout">
-              {showPanel && (
-                <motion.div
-                  key="read"
-                  initial={{ opacity: 0, x: 16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 12 }}
-                  transition={{ duration: 0.32, ease: EASE_OUT, delay: 0.06 }}
-                  className="min-w-0 flex-1"
-                >
-                  <div className="flex items-baseline justify-between gap-4">
-                    <div className="flex min-w-0 items-baseline gap-2">
-                      <span
-                        className="text-[44px] leading-none font-light tabular-nums text-txt"
-                        style={{ letterSpacing: "-0.02em" }}
-                      >
-                        {unit === "ms" ? Math.round(value) : value >= 100 ? value.toFixed(0) : value.toFixed(1)}
-                      </span>
-                      <span className="shrink-0 text-[13px] text-txt3">{unit}</span>
-                    </div>
-                    {shown.length > 0 && (
-                      <span className="shrink-0 text-[11.5px] tabular-nums text-txt3">
-                        {t("peak")} {unit === "ms" ? Math.round(peak) : peak.toFixed(1)} {unit}
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-1.5 truncate text-[12.5px] text-txt2">
-                    {phase === "done" ? t("doneLabel") : caption}
-                  </div>
-                  {runKind === "all" && (running || phase === "done") && (
-                    <PhaseSteps phase={phase} running={running} result={result} />
-                  )}
-                  <div className="mt-3">
-                    <SpeedGraph samples={shown} accent={accent} active={running} />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+          <div className="flex min-h-[36px] min-w-0 flex-1 flex-col justify-center">
+            <div className="truncate text-[13px] font-medium text-txt">
+              {phase === "done" ? t("doneLabel") : caption}
+            </div>
+            {(running || phase === "idle") && hint && (
+              <div className="mt-0.5 truncate text-[11.5px] text-txt3">{hint}</div>
+            )}
+          </div>
+
+          {runKind === "all" && <PhaseSteps phase={phase} running={running} result={result} />}
         </div>
 
-        <div className="grid grid-cols-4 divide-x divide-line border-t border-line">
-          <MetricTile icon={Gauge} title={t("pingTitle")} value={result.ping} unit={t("ms")} onClick={() => void run("ping")} disabled={running} />
-          <MetricTile icon={Activity} title={t("jitter")} value={result.jitter} unit={t("ms")} onClick={() => void run("ping")} disabled={running} />
-          <MetricTile
-            icon={ArrowDown}
-            title={t("chDown")}
-            value={phase === "download" ? value : result.down}
-            unit={t("mbps")}
-            onClick={() => void run("down")}
-            disabled={running}
-          />
-          <MetricTile
-            icon={ArrowUp}
-            title={t("chUp")}
-            value={phase === "upload" ? value : result.up}
-            unit={t("mbps")}
-            onClick={() => void run("up")}
-            disabled={running}
-          />
+        <div className="flex items-end justify-between gap-4 px-5 pb-1 pt-2">
+          <div className="flex min-w-0 items-baseline gap-2">
+            <span
+              className="text-[46px] font-light leading-none tabular-nums text-txt"
+              style={{ letterSpacing: "-0.02em" }}
+            >
+              {fmt(value, unit)}
+            </span>
+            <span className="shrink-0 text-[13px] text-txt3">{unit}</span>
+          </div>
+          {shown.length > 0 && (
+            <span className="shrink-0 pb-1 text-[11.5px] tabular-nums text-txt3">
+              {t("peak")} {fmt(peak, unit)} {unit}
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-1 items-stretch px-5 pb-4 pt-2">
+          <SpeedGraph samples={shown} accent={accent} active={running} fill />
         </div>
 
         {/* what the numbers mean, in one row, inside the same pane */}
@@ -781,6 +747,39 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
           </div>
         )}
       </section>
+
+      {/* The same four numbers, but permanent and precise: each cell is a
+          button, so one metric can be measured on its own. */}
+      <div className="grid grid-cols-4 divide-x divide-line rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)]">
+        <ReadingCell
+          icon={Gauge}
+          label={t("pingTitle")}
+          value={phase === "ping" ? value : result.ping}
+          unit={t("ms")}
+          onClick={() => void run("ping")}
+          disabled={running}
+          live={phase === "ping"}
+        />
+        <ReadingCell icon={Activity} label={t("jitter")} value={result.jitter} unit={t("ms")} onClick={() => void run("ping")} disabled={running} />
+        <ReadingCell
+          icon={ArrowDown}
+          label={t("chDown")}
+          value={phase === "download" ? value : result.down}
+          unit={t("mbps")}
+          onClick={() => void run("down")}
+          disabled={running}
+          live={phase === "download"}
+        />
+        <ReadingCell
+          icon={ArrowUp}
+          label={t("chUp")}
+          value={phase === "upload" ? value : result.up}
+          unit={t("mbps")}
+          onClick={() => void run("up")}
+          disabled={running}
+          live={phase === "upload"}
+        />
+      </div>
 
       {/* Both ends of the test, stated the way a speed test states them:
           what is being measured against, who hosts it, and who you are. */}
@@ -875,8 +874,8 @@ export function buildVerdicts(r: Result, t: (k: StrKey) => string): Verdict[] {
   return out
 }
 
-/** The run's three phases as hairline segments: done is solid, the live one
-    pulses, the rest wait. Only full runs show them. */
+/** The run's three phases as one tracker: a hairline segment per phase with
+    its name under it. Done is solid, the live one pulses, the rest wait. */
 function PhaseSteps({
   phase,
   running,
@@ -886,146 +885,79 @@ function PhaseSteps({
   running: boolean
   result: Result
 }) {
+  const { t } = useI18n()
   const order: Phase[] = ["ping", "download", "upload"]
+  const labels = [t("pingTitle"), t("chDown"), t("chUp")]
   const values: (number | null)[] = [result.ping, result.down, result.up]
   const at = phase === "done" ? order.length : order.indexOf(running ? phase : "idle")
   return (
-    <div className="mt-3 flex items-center gap-1.5" aria-hidden>
+    <div className="flex w-[190px] shrink-0 items-start gap-1.5" aria-hidden>
       {order.map((p, i) => {
         const done = phase === "done" ? values[i] !== null : at > i
         const active = running && phase === p
         return (
-          <span
-            key={p}
-            className={cn(
-              "h-[3px] flex-1 rounded-full",
-              done || active ? "bg-[var(--brand)]" : "bg-white/[0.08]",
-              active && "animate-pulse",
-            )}
-          />
+          <span key={p} className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <span
+              className={cn(
+                "h-[3px] w-full rounded-full",
+                done || active ? "bg-[var(--brand)]" : "bg-white/[0.08]",
+                active && "animate-pulse",
+              )}
+            />
+            <span className={cn("truncate text-[10px] leading-none", active ? "text-txt2" : "text-txt3")}>
+              {labels[i]}
+            </span>
+          </span>
         )
       })}
     </div>
   )
 }
 
-/** The one button that matters here: the Home dial's frame, a translucent
-    glass ring with the action inside. A press still answers: the ring
-    flashes softly and the icon and label swap through a small morph. */
-function StartCircle({
-  running,
-  done,
-  onStart,
-  onStop,
-}: {
-  running: boolean
-  done: boolean
-  onStart: () => void
-  onStop: () => void
-}) {
-  const { t } = useI18n()
-  const label = running ? t("stop") : done ? t("startAgain") : t("startTest")
-  const [flash, setFlash] = useState(0)
-
-  const press = () => {
-    setFlash((f) => f + 1)
-    if (running) onStop()
-    else onStart()
-  }
-
-  return (
-    <motion.button
-      type="button"
-      onClick={press}
-      aria-label={label}
-      whileTap={{ scale: 0.985 }}
-      transition={{ type: "spring", stiffness: 460, damping: 32 }}
-      className={cn(
-        /* the same frame as the Home dial: translucent fill, one lit line */
-        "group relative grid size-[172px] place-items-center rounded-full border transition-colors duration-300",
-        "bg-white/[0.05] backdrop-blur-[14px] backdrop-saturate-150",
-        "shadow-[inset_0_1px_0_rgb(255_255_255/0.10)]",
-        running
-          ? "border-[rgb(255_255_255/0.26)]"
-          : "border-[rgb(255_255_255/0.14)] hover:border-[rgb(255_255_255/0.26)]",
-      )}
-    >
-      {/* press feedback: a soft flash inside the glass */}
-      {flash > 0 && (
-        <span
-          key={flash}
-          aria-hidden
-          className="qc-flash pointer-events-none absolute inset-px rounded-full bg-[rgb(255_255_255/0.09)] opacity-0"
-        />
-      )}
-      <span className="relative flex flex-col items-center gap-2.5">
-        <motion.span
-          key={running ? "stop" : "go"}
-          initial={{ opacity: 0, scale: 0.7, rotate: running ? -80 : 80 }}
-          animate={{ opacity: 1, scale: 1, rotate: 0 }}
-          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          className="grid place-items-center"
-        >
-          {running ? (
-            <Square className="size-7 text-[var(--brand-vivid)]" strokeWidth={1.75} aria-hidden />
-          ) : (
-            <Play className="ms-1 size-8 text-[var(--brand-vivid)]" strokeWidth={1.75} aria-hidden />
-          )}
-        </motion.span>
-        <motion.span
-          key={label}
-          initial={{ opacity: 0, y: 3 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-          className="text-[12.5px] font-medium tracking-[0.01em] text-txt"
-        >
-          {label}
-        </motion.span>
-      </span>
-    </motion.button>
-  )
-}
-
-function MetricTile({
+/** One reading: quiet icon and label, the number at scale under them. The
+    whole cell is the button, so any single metric can be measured alone. */
+function ReadingCell({
   icon: Icon,
-  title,
+  label,
   value,
   unit,
   onClick,
   disabled,
+  live,
 }: {
   icon: typeof Gauge
-  title: string
+  label: string
   value: number | null
   unit: string
   onClick: () => void
   disabled?: boolean
+  live?: boolean
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      title={title}
+      title={label}
       className={cn(
-        "flex min-w-0 items-center gap-3 px-4 py-3 text-start transition-colors",
+        "min-w-0 px-5 py-3.5 text-start transition-colors",
         !disabled && "hover:bg-white/[0.03]",
       )}
     >
-      <span className="grid size-9 shrink-0 place-items-center rounded-[10px] border border-line bg-[rgb(255_255_255/0.03)] text-brand-strong">
-        <Icon className="size-4" strokeWidth={1.7} aria-hidden />
+      <span className="flex items-center gap-2 text-[11px] text-txt3">
+        <Icon className={cn("size-3.5 shrink-0", live && "text-brand-strong")} strokeWidth={1.7} aria-hidden />
+        <span className="truncate">{label}</span>
       </span>
-      <span className="min-w-0">
-        <span className="block truncate text-[11.5px] text-txt3">{title}</span>
+      <span className="mt-1.5 flex items-baseline gap-1.5">
         <span
           className={cn(
-            "mt-0.5 block truncate text-[17px] font-medium tabular-nums",
-            value === null ? "text-txt3" : "text-txt",
+            "text-[24px] font-semibold leading-none tabular-nums",
+            value === null ? "text-txt3" : live ? "text-brand-strong" : "text-txt",
           )}
         >
-          {value === null ? "-" : unit === "ms" ? Math.round(value) : value.toFixed(1)}
-          <span className="ms-1 text-[11px] font-normal text-txt3">{unit}</span>
+          {value === null ? "-" : fmt(value, unit === "ms" ? "ms" : "Mbps")}
         </span>
+        <span className="text-[11px] text-txt3">{unit}</span>
       </span>
     </button>
   )
@@ -1044,7 +976,7 @@ function FactRow({
 }) {
   return (
     <div className="flex min-w-0 items-center gap-3.5 px-5 py-3.5">
-      <span className="grid size-10 shrink-0 place-items-center rounded-[12px] border border-line bg-[rgb(255_255_255/0.03)] text-brand-strong">
+      <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.03)] text-brand-strong">
         <Icon className="size-[18px]" strokeWidth={1.7} aria-hidden />
       </span>
       <div className="min-w-0">

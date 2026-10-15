@@ -105,7 +105,7 @@ export const en = {
   "howTo": "How to use",
   "hyWarnB": "Usage on this mode counts from general quota. Use Standard mode for packages",
   "hyWarnT": "Game spends from main quota, not your Gamerz package",
-  "idle": "idle",
+  "idle": "Ready",
   "idleSub": "Pick a card and connect",
   "inUse": "In use",
   "jitter": "Jitter",
