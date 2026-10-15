@@ -26,11 +26,6 @@ const cliLabel = (c: CliSpeed): string =>
 const fmt = (v: number, unit: "Mbps" | "ms"): string =>
   unit === "ms" ? String(Math.round(v)) : v.toFixed(1)
 
-/** Dial scale: the smallest step that leaves the peak inside the ring. The
-    quarters of every step are whole numbers, so the labels stay clean. */
-const DIAL_STEPS = [20, 40, 60, 100, 200, 400, 600, 800, 1000]
-const niceDialMax = (v: number): number => DIAL_STEPS.find((s) => s >= Math.max(v, 10) * 1.1) ?? 1000
-
 type Phase = "idle" | "ping" | "download" | "upload" | "done"
 type Result = { ping: number | null; jitter: number | null; down: number | null; up: number | null }
 export type Run = { at: number; ping: number | null; jitter: number | null; down: number | null; up: number | null; target: string }
@@ -590,10 +585,9 @@ export function Speed() {
           : downSnap.current
       : samples
   const peak = Math.max(0, ...shown)
-  // The dial reads throughput only; during ping it rests at zero, and the
-  // ring is scaled so the run's peak stays inside it.
+  // The dial reads throughput only; during ping the needle rests at zero.
   const dialValue = unit === "ms" ? 0 : value
-  const dialMax = niceDialMax(phase === "idle" || phase === "ping" ? 60 : peak)
+  const dialIcon = phase === "ping" ? Activity : phase === "download" ? ArrowDown : phase === "upload" ? ArrowUp : Gauge
   const srv = picked ?? CLOUDFLARE
   const sponsor = srv.label.includes(" · ") ? srv.label.split(" · ")[0].trim() : srv.label
 
@@ -689,7 +683,7 @@ export function Speed() {
         {/* the dial rides where the reading used to: live number in the
             middle, needle sweeping the scale while the run goes */}
         <div className="flex flex-col items-center px-5 pb-4 pt-4 [@media(max-height:660px)]:pb-2 [@media(max-height:660px)]:pt-2">
-          <SpeedDial display={fmt(value, unit)} value={dialValue} max={dialMax} unit={unit} idle={phase === "idle"} />
+          <SpeedDial display={fmt(value, unit)} value={dialValue} unit={unit} icon={dialIcon} idle={phase === "idle"} />
           {shown.length > 0 && !(phase === "done" && fmt(peak, unit) === fmt(value, unit)) && (
             <div className="mt-2 text-[11.5px] tabular-nums text-txt3">
               {t("peak")} {fmt(peak, unit)} {unit}
