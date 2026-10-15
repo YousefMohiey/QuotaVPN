@@ -59,7 +59,7 @@ export function SpeedGraph({
             strokeLinecap="round"
           />
         )}
-        {has && last && active && <circle cx={last[0]} cy={last[1]} r="3" fill={accent} />}
+        {has && last && <circle cx={last[0]} cy={last[1]} r="3" fill={accent} />}
       </svg>
     </div>
   )

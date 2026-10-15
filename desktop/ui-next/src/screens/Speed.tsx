@@ -150,9 +150,6 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
   // Which measurement the graph belongs to, so the line keeps its colour
   // after the run ends (green upload, amber ping, blue download).
   const [lastKind, setLastKind] = useState<"ping" | "down" | "up">("down")
-  // Full runs show their three phases as segments; single-metric runs hide
-  // them, or finished tiles from the last run would light up wrongly.
-  const [runKind, setRunKind] = useState<"all" | "single">("all")
 
   const abort = useRef<AbortController | null>(null)
   const gate = useRef(0)
@@ -370,7 +367,6 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
   const run = async (which: "all" | "ping" | "down" | "up") => {
     if (running) return
     abort.current?.abort()
-    setRunKind(which === "all" ? "all" : "single")
     const ctl = new AbortController()
     abort.current = ctl
     const s = ctl.signal
@@ -591,7 +587,6 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
     })
   }
 
-  const verdicts = buildVerdicts(result, t)
   const shown =
     phase === "done"
       ? lastKind === "up"
@@ -682,8 +677,6 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
               <div className="mt-0.5 truncate text-[11.5px] text-txt3">{hint}</div>
             )}
           </div>
-
-          {runKind === "all" && <PhaseSteps phase={phase} running={running} result={result} />}
         </div>
 
         <div className="flex items-end justify-between gap-4 px-5 pb-1 pt-2">
@@ -692,11 +685,11 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
               className="text-[46px] font-light leading-none tabular-nums text-txt"
               style={{ letterSpacing: "-0.02em" }}
             >
-              {fmt(value, unit)}
+              {phase === "idle" ? "---" : fmt(value, unit)}
             </span>
             <span className="shrink-0 text-[13px] text-txt3">{unit}</span>
           </div>
-          {shown.length > 0 && (
+          {shown.length > 0 && !(phase === "done" && fmt(peak, unit) === fmt(value, unit)) && (
             <span className="shrink-0 pb-1 text-[11.5px] tabular-nums text-txt3">
               {t("peak")} {fmt(peak, unit)} {unit}
             </span>
@@ -708,27 +701,6 @@ export function Speed({ onOpenHistory }: { onOpenHistory: () => void }) {
         <div className="flex min-h-[48px] flex-1 items-stretch px-5 pb-3.5 pt-2">
           <SpeedGraph samples={shown} accent={accent} active={running} fill />
         </div>
-
-        {/* what the numbers mean, in one row, inside the same pane */}
-        {verdicts.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t border-line px-5 py-3">
-            {verdicts.map((v) => (
-              <span key={v.label} className="flex items-center gap-2 text-[12px]">
-                <v.icon className="size-3.5 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
-                <span
-                  aria-hidden
-                  className={cn(
-                    "size-1.5 rounded-full",
-                    v.tone === "ok" && "bg-[var(--green)]",
-                    v.tone === "warn" && "bg-[var(--amber)]",
-                    v.tone === "bad" && "bg-[var(--red)]",
-                  )}
-                />
-                <span className="text-txt2">{v.text}</span>
-              </span>
-            ))}
-          </div>
-        )}
 
         {/* the transport: one full-width control parked where a run bar
             belongs, at the foot of the console */}
@@ -878,46 +850,6 @@ export function buildVerdicts(r: Result, t: (k: StrKey) => string): Verdict[] {
   }
 
   return out
-}
-
-/** The run's three phases as one tracker: a hairline segment per phase with
-    its name under it. Done is solid, the live one pulses, the rest wait. */
-function PhaseSteps({
-  phase,
-  running,
-  result,
-}: {
-  phase: Phase
-  running: boolean
-  result: Result
-}) {
-  const { t } = useI18n()
-  const order: Phase[] = ["ping", "download", "upload"]
-  const labels = [t("pingTitle"), t("chDown"), t("chUp")]
-  const values: (number | null)[] = [result.ping, result.down, result.up]
-  const at = phase === "done" ? order.length : order.indexOf(running ? phase : "idle")
-  return (
-    <div className="flex w-[190px] shrink-0 items-start gap-1.5" aria-hidden>
-      {order.map((p, i) => {
-        const done = phase === "done" ? values[i] !== null : at > i
-        const active = running && phase === p
-        return (
-          <span key={p} className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <span
-              className={cn(
-                "h-[3px] w-full rounded-full",
-                done || active ? "bg-[var(--brand)]" : "bg-white/[0.08]",
-                active && "animate-pulse",
-              )}
-            />
-            <span className={cn("truncate text-[10px] leading-none", active ? "text-txt2" : "text-txt3")}>
-              {labels[i]}
-            </span>
-          </span>
-        )
-      })}
-    </div>
-  )
 }
 
 /** One reading: quiet icon and label, the number at scale under them. The
