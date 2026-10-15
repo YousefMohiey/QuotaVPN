@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { Gauge, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -23,27 +23,27 @@ function useTick(ms: number, on: boolean) {
   }, [ms, on])
 }
 
-/** Live rate plus rolling history from the adapter counters. */
+/** Live rates from the adapter counters: combined, per direction, and peak. */
 function useTraffic(rx: number, tx: number) {
   const hist = useRef<number[]>([])
-  const last = useRef({ rx: 0, tx: 0, t: Date.now() })
+  const last = useRef({ rx: 0, tx: 0, t: Date.now(), down: 0, up: 0 })
 
   useEffect(() => {
     const now = Date.now()
     const dt = Math.max(0.2, (now - last.current.t) / 1000)
-    const delta = Math.max(0, rx - last.current.rx) + Math.max(0, tx - last.current.tx)
-    last.current = { rx, tx, t: now }
-    if (last.current.rx || last.current.tx) {
-      hist.current = [...hist.current.slice(-59), delta / dt]
-    }
+    const down = Math.max(0, rx - last.current.rx) / dt
+    const up = Math.max(0, tx - last.current.tx) / dt
+    last.current = { rx, tx, t: now, down, up }
+    if (rx || tx) hist.current = [...hist.current.slice(-59), down + up]
   }, [rx, tx])
 
   return useMemo(() => {
-    const values = hist.current.length ? hist.current : [0, 0]
+    const peak = hist.current.length ? Math.max(0, ...hist.current) : 0
     return {
-      values,
-      rate: rateText(values[values.length - 1] || 0),
-      peak: rateText(Math.max(0, ...values)),
+      rate: rateText(last.current.down + last.current.up),
+      down: rateText(last.current.down),
+      up: rateText(last.current.up),
+      peak: rateText(peak),
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rx, tx])
@@ -254,16 +254,15 @@ export function Hero() {
             <Cell
               label={t("liveLabel")}
               right={`${t("peakLbl")} ${traffic.peak.num} ${traffic.peak.unit}`}
-              value={traffic.rate.num}
-              unit={traffic.rate.unit}
-              spark={<Spark values={traffic.values} className="h-9 min-w-[88px] flex-1" />}
+              value={`${traffic.rate.num} ${traffic.rate.unit}`}
+              sub={`↓ ${traffic.down.num} ${traffic.down.unit}   ↑ ${traffic.up.num} ${traffic.up.unit}`}
             />
           </>
         ) : (
           <>
             <Cell label={t("yourLocation")} value={geo?.place || "-"} />
             <Cell label={t("yourIp")} value={ipText} select />
-            <Cell label={t("statusLbl")} value={t("notConnected")} dot="bg-[var(--red)]" />
+            <Cell label={t("statusLbl")} value={t("notConnected")} />
           </>
         )}
       </div>
@@ -373,122 +372,36 @@ function QuotaZone() {
   )
 }
 
-/** One strip cell: a quiet label, then the value (with spark when live). */
+/** One strip cell: a quiet label, then the value with its own reading. */
 function Cell({
   label,
   value,
   sub,
-  unit,
   right,
-  spark,
   select,
-  dot,
 }: {
   label: string
   value: string
   sub?: string
-  unit?: string
   right?: ReactNode
-  spark?: ReactNode
   select?: boolean
-  dot?: string
 }) {
   return (
     <div className="min-w-0">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-1.5">
-          {dot ? <span aria-hidden className={cn("size-[6px] shrink-0 rounded-full", dot)} /> : null}
-          <span className="truncate text-[11px] text-txt3">{label}</span>
-        </span>
+        <span className="truncate text-[11px] text-txt3">{label}</span>
         {right ? <span className="shrink-0 truncate text-[10.5px] tabular-nums text-txt3">{right}</span> : null}
       </div>
-      {spark ? (
-        <div className="mt-1 flex items-center gap-3">
-          <span className="shrink-0 text-[17px] font-semibold leading-none tabular-nums text-txt">
-            {value}
-            {unit ? <span className="ms-1 text-[11px] font-normal text-txt2">{unit}</span> : null}
-          </span>
-          {spark}
-        </div>
-      ) : (
-        <>
-          <div
-            className={cn("mt-1 truncate text-[15px] font-medium leading-tight text-txt", select && "select-text")}
-            dir="auto"
-            title={value}
-          >
-            {value}
-          </div>
-          {sub ? <div className="mt-0.5 truncate text-[11px] tabular-nums text-txt3">{sub}</div> : null}
-        </>
-      )}
+      <div
+        className={cn("mt-1 truncate text-[15px] font-medium leading-tight text-txt", select && "select-text")}
+        dir="auto"
+        title={value}
+      >
+        {value}
+      </div>
+      {sub ? <div className="mt-0.5 truncate text-[11px] tabular-nums text-txt3">{sub}</div> : null}
     </div>
   )
-}
-
-/** The theme colour a var would give, resolved to a plain value. */
-function cssVar(name: string, fallback: string): string {
-  const probe = document.createElement("span")
-  probe.style.color = `var(${name})`
-  probe.style.display = "none"
-  document.body.appendChild(probe)
-  const v = getComputedStyle(probe).color
-  probe.remove()
-  return v && v !== "rgba(0, 0, 0, 0)" ? v : fallback
-}
-
-/** The rolling rate on a canvas. WebView2 never strokes the equivalent SVG
-    path on its first raster (it only paints after unrelated DOM pokes, which
-    is why the line kept disappearing), so the pixels are drawn here instead:
-    a canvas paints exactly when it is asked to. */
-function Spark({ values, className }: { values: number[]; className?: string }) {
-  const ref = useRef<HTMLCanvasElement | null>(null)
-
-  const paint = useCallback(() => {
-    const cv = ref.current
-    if (!cv) return
-    const dpr = window.devicePixelRatio || 1
-    const w = cv.clientWidth
-    const h = cv.clientHeight
-    if (!w || !h) return
-    cv.width = Math.round(w * dpr)
-    cv.height = Math.round(h * dpr)
-    const ctx = cv.getContext("2d")
-    if (!ctx) return
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    ctx.clearRect(0, 0, w, h)
-    const vals = values.length ? values : [0, 0]
-    const max = Math.max(1, ...vals)
-    const step = w / Math.max(1, vals.length - 1)
-    const yOf = (v: number) => h - (v / max) * (h - 8) - 3
-    const trace = () => {
-      ctx.beginPath()
-      vals.forEach((v, ix) => (ix ? ctx.lineTo(ix * step, yOf(v)) : ctx.moveTo(0, yOf(v))))
-    }
-    trace()
-    ctx.lineTo(w, h)
-    ctx.lineTo(0, h)
-    ctx.closePath()
-    ctx.fillStyle = cssVar("--brand-bg", "rgba(31, 89, 182, 0.14)")
-    ctx.fill()
-    trace()
-    ctx.strokeStyle = cssVar("--brand", "#1f59b6")
-    ctx.lineWidth = 2
-    ctx.lineJoin = "round"
-    ctx.lineCap = "round"
-    ctx.stroke()
-  }, [values])
-
-  useEffect(() => {
-    paint()
-    const cv = ref.current
-    if (!cv) return
-    const ro = new ResizeObserver(() => paint())
-    ro.observe(cv)
-    return () => ro.disconnect()
-  }, [paint])
-
-  return <canvas ref={ref} className={cn("w-full", className ?? "mt-2 h-[56px]")} aria-hidden />
 }
 
 /** Bytes per second as the live number: Mbps once it is a real rate,
