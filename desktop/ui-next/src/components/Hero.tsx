@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { AnimatePresence, motion } from "motion/react"
-import { Gauge, RefreshCw } from "lucide-react"
+import { RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { WeMark } from "./WeMark"
 import { useI18n } from "@/lib/i18n"
 import { useApp } from "@/state/app"
 import { fmtQuota, quotaRefresh, useQuota } from "@/state/quota"
@@ -296,9 +297,7 @@ function QuotaZone() {
         {quota.linked && mainUnit ? (
           <div>
             <div className="flex items-center gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
-                <Gauge className="size-4" strokeWidth={1.7} aria-hidden />
-              </span>
+              <WeMark className="size-10 shrink-0" />
               <div className="min-w-0 flex-1">
                 <h2 className="truncate text-[13.5px] font-semibold text-txt">{t("weQuota")}</h2>
                 <p className="mt-0.5 truncate text-[11px] text-txt2" dir="auto" title={mainUnit.offer || "WE"}>
@@ -349,9 +348,7 @@ function QuotaZone() {
         ) : (
           <div>
             <div className="flex items-center gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
-                <Gauge className="size-4" strokeWidth={1.7} aria-hidden />
-              </span>
+              <WeMark className="size-10 shrink-0" />
               <div className="min-w-0">
                 <h2 className="truncate text-[13.5px] font-semibold text-txt">{t("weQuota")}</h2>
                 <p className="mt-0.5 text-[11px] leading-snug text-txt2">{t("weQuotaSub")}</p>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { Gauge, Languages, Power, RefreshCw } from "lucide-react"
+import { Languages, Power, RefreshCw } from "lucide-react"
 import { Toggle } from "@/components/Toggle"
+import { WeMark } from "@/components/WeMark"
 import { Segmented } from "@/components/Segmented"
 import { useApp } from "@/state/app"
 import {
@@ -54,9 +55,7 @@ function WeQuotaCard() {
   return (
     <section className="rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] px-5 py-4">
       <div className="flex items-center gap-4">
-        <span className="grid size-12 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
-          <Gauge className="size-5" strokeWidth={1.7} aria-hidden />
-        </span>
+        <WeMark className="size-12 shrink-0" />
         <div className="min-w-0 flex-1">
           <h2 className="text-[15px] font-semibold text-txt">{t("weQuota")}</h2>
           <p className="mt-0.5 text-[12.5px] leading-relaxed text-txt2">

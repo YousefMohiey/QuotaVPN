@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Gauge } from "lucide-react"
+import { WeMark } from "./WeMark"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { useI18n } from "@/lib/i18n"
@@ -48,9 +48,7 @@ export function WeQuotaDialog({
       <DialogContent className="max-w-[380px] gap-0 overflow-hidden rounded-[16px] border-line bg-[var(--popover)] p-0">
         <div className="border-b border-line px-4 pb-3.5 pt-4">
           <div className="flex items-center gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
-              <Gauge className="size-4" strokeWidth={1.7} aria-hidden />
-            </span>
+            <WeMark className="size-10 shrink-0" />
             <div className="min-w-0">
               <DialogTitle className="text-[14px] font-semibold text-txt">
                 {t("weQuota")}
