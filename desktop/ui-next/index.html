@@ -10,6 +10,18 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      /* The browser demo opens on the linked WE line: seed the saved WE
+         credentials so the silent refresh restores the mocked account, the
+         way a real second launch reads itself. This only runs when the Tauri
+         bridge is absent, so the desktop build is never touched. */
+      try {
+        if (!("__TAURI_INTERNALS__" in window) && !localStorage.getItem("qc-we-number")) {
+          localStorage.setItem("qc-we-number", "0100000000");
+          localStorage.setItem("qc-we-pass", "demo");
+        }
+      } catch (e) {}
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
