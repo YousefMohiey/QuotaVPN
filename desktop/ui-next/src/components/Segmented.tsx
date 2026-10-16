@@ -23,10 +23,10 @@ export function Segmented<T extends string>({
   return (
     <div
       className={cn(
-        /* boxed drops the outer frame: the three options sit bare in a row
-           and the selected pill carries the shape by itself */
+        /* boxed is the Home shorthand: one joined frame, three equal
+           segments, the pick carried by a soft brand pill that slides */
         boxed
-          ? "flex h-10 w-full items-center gap-2"
+          ? "flex h-10 w-full items-center rounded-[10px] border border-line bg-white/[0.02] p-0.5"
           : "rounded-[10px] border border-line bg-white/[0.02] p-0.5",
         !boxed && (fill ? "flex w-full" : "inline-flex"),
         className,
@@ -45,10 +45,8 @@ export function Segmented<T extends string>({
               "relative transition-colors",
               boxed
                 ? cn(
-                    "flex h-full min-w-0 flex-1 items-center justify-center rounded-[10px] px-1.5 text-[12px]",
-                    on
-                      ? "border border-[var(--brand-line)] bg-[var(--brand-bg)] text-txt"
-                      : "border border-line bg-white/[0.02] text-txt2 hover:border-[var(--brand-line)] hover:text-brand-strong",
+                    "flex h-full min-w-0 flex-1 items-center justify-center rounded-[8px] px-1.5 text-[12px]",
+                    on ? "text-txt" : "text-txt2 hover:text-txt",
                   )
                 : cn("rounded-[8px] py-1.5", fill ? "min-w-0 flex-1 px-1.5 text-[12.5px]" : "px-3 text-[12.5px]", on ? "text-txt" : "text-txt3 hover:text-txt2"),
             )}
@@ -58,7 +56,7 @@ export function Segmented<T extends string>({
                 layoutId={"seg-" + id}
                 className={cn(
                   "absolute inset-0",
-                  boxed ? "rounded-[10px]" : "rounded-[8px] bg-white/[0.1]",
+                  boxed ? "rounded-[8px] border border-[var(--brand-line)] bg-[var(--brand-bg)]" : "rounded-[8px] bg-white/[0.1]",
                 )}
                 transition={{ type: "spring", stiffness: 520, damping: 40 }}
               />

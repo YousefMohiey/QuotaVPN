@@ -293,7 +293,7 @@ function QuotaZone() {
       : 0
 
   return (
-    <div className="ms-6 w-[236px] shrink-0 self-stretch border-s border-line ps-6">
+    <div className="ms-6 w-[240px] shrink-0 self-stretch border-s border-line ps-6">
       <div className="flex h-full flex-col justify-center">
         {quota.linked && mainUnit ? (
           <div>
@@ -354,15 +354,13 @@ function QuotaZone() {
               <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
                 <WeMark className="w-[22px]" />
               </span>
-              <div className="min-w-0">
-                <h2 className="truncate text-[13.5px] font-semibold text-txt">{t("weQuota")}</h2>
-                <p className="mt-0.5 text-[11px] leading-snug text-txt2">{t("weQuotaSub")}</p>
-              </div>
+              <h2 className="min-w-0 truncate text-[13.5px] font-semibold text-txt">{t("weQuota")}</h2>
             </div>
+            <p className="mt-2 text-[11px] leading-snug text-txt2">{t("weQuotaSub")}</p>
             <button
               type="button"
               onClick={() => setQuotaOpen(true)}
-              className="mt-3.5 flex h-9 w-full items-center justify-center rounded-[9px] bg-[var(--brand-vivid)] px-3.5 text-[12.5px] font-medium text-white transition-[filter] hover:brightness-110"
+              className="mt-3 flex h-9 w-full items-center justify-center rounded-[9px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-3.5 text-[12.5px] font-medium text-[var(--brand-strong)] transition-colors hover:border-[var(--brand-strong)]"
             >
               {t("weLink")}
             </button>
