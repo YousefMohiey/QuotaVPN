@@ -111,7 +111,17 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
       return { customer: "Demo User" } as unknown as T
     case "we_quota_usage":
       return [
-        { offer: "PLUS 2", total: 200, used: 74.5, remain: 125.5 },
+        {
+          offer: "PLUS 2",
+          total: 200,
+          used: 74.5,
+          remain: 125.5,
+          buckets: [
+            { label: "Main Quota", item: "C_TED_Primary_Fixed_Data", total: 100, remain: 62.5 },
+            { label: "Gaming quota X 2", item: "C_TED_Primary_Fixed_Sonic_Gaming", total: 50, remain: 35 },
+            { label: "Streaming quota X 2", item: "C_TED_Primary_Fixed_Sonic_AllRacing", total: 50, remain: 28 },
+          ],
+        },
       ] as unknown as T
     case "we_quota_logout":
       return undefined as T

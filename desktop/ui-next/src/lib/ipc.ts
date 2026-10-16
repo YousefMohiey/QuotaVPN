@@ -34,7 +34,8 @@ export type UpdateInfo = { current: string; latest: string; available: boolean; 
 export type NetInfo = { ip: string; isp: string; place: string }
 export type WeChallenge = { interaction: boolean; image: string }
 export type WeLogin = { customer: string }
-export type WeUnit = { offer: string; total: number; used: number; remain: number }
+export type WeBucket = { label: string; item: string; total: number; remain: number }
+export type WeUnit = { offer: string; total: number; used: number; remain: number; buckets: WeBucket[] }
 
 export const isTauri = (): boolean =>
   typeof window !== "undefined" && "__TAURI_INTERNALS__" in window

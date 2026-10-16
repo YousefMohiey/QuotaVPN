@@ -225,10 +225,17 @@ pub async fn usage_inner(
         .cloned()
         .unwrap_or_default();
     let mut out = Vec::new();
+    let mut seen_offers: Vec<String> = Vec::new();
     for offer in list {
         let Some(offer_id) = offer.get("mainOfferingId").cloned() else {
             continue;
         };
+        // Several rows share one main offering id: read it once.
+        let id_key = offer_id.as_str().unwrap_or_default().to_string();
+        if id_key.is_empty() || seen_offers.iter().any(|s| s == &id_key) {
+            continue;
+        }
+        seen_offers.push(id_key);
         let quota = post(
             client,
             &format!("{ECHANNEL}/cz/cbs/bb/queryFreeUnit"),
@@ -242,11 +249,47 @@ pub async fn usage_inner(
         }
         let units = quota["body"].as_array().cloned().unwrap_or_default();
         for u in units {
+            let mut buckets = u
+                .get("freeUnitBeanDetailList")
+                .and_then(|b| b.as_array())
+                .cloned()
+                .unwrap_or_default()
+                .into_iter()
+                .map(|b| QuotaBucket {
+                    label: b
+                        .get("originType")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    item: b
+                        .get("itemCode")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    total: fnum(&b["initialAmount"]),
+                    remain: fnum(&b["currentAmount"]),
+                })
+                .filter(|b| b.total > 0.0)
+                .collect::<Vec<_>>();
+            // Read main first, then gaming, then streaming, then the rest.
+            buckets.sort_by_key(|b| {
+                let s = b.item.to_lowercase();
+                if s.contains("gaming") {
+                    1
+                } else if s.contains("racing") || s.contains("stream") {
+                    2
+                } else if s.contains("_data") {
+                    0
+                } else {
+                    3
+                }
+            });
             let unit = QuotaUnit {
                 offer: u.get("offerName").and_then(|v| v.as_str()).unwrap_or("").to_string(),
                 total: fnum(&u["total"]),
                 used: fnum(&u["used"]),
                 remain: fnum(&u["remain"]),
+                buckets,
             };
             // One line sells several offers sharing the same bucket: show it once.
             if !out.iter().any(|o: &QuotaUnit| {
@@ -310,11 +353,22 @@ pub async fn we_quota_login(
 }
 
 #[derive(serde::Serialize)]
+pub struct QuotaBucket {
+    pub label: String,
+    pub item: String,
+    pub total: f64,
+    pub remain: f64,
+}
+
+#[derive(serde::Serialize)]
 pub struct QuotaUnit {
     pub offer: String,
     pub total: f64,
     pub used: f64,
     pub remain: f64,
+    /// The package split: main, gaming, streaming, gift. The top-level
+    /// numbers above are their sum; the detail list is where the split lives.
+    pub buckets: Vec<QuotaBucket>,
 }
 
 #[tauri::command]
@@ -409,6 +463,12 @@ pub fn probe_main() {
         assert!(!units.is_empty(), "at least one quota unit comes back");
         for u in &units {
             println!("UNIT {} remain {} / total {}", u.offer, u.remain, u.total);
+            for b in &u.buckets {
+                println!(
+                    "  BUCKET {} [{}] remain {} / total {}",
+                    b.label, b.item, b.remain, b.total
+                );
+            }
         }
         println!("PROBE_GREEN");
     });
@@ -459,12 +519,18 @@ mod tests {
             .expect("offers and free units read clean");
         assert!(!units.is_empty(), "at least one quota unit comes back");
         assert!(
-            units.iter().any(|u| u.total > 0.0),
-            "at least one unit has a real total"
+            units.iter().any(|u| !u.buckets.is_empty()),
+            "the package split (main / gaming / streaming) comes back"
         );
         for u in &units {
             assert!(u.remain <= u.total, "remain never exceeds total");
             eprintln!("UNIT {} remain {} / total {}", u.offer, u.remain, u.total);
+            for b in &u.buckets {
+                eprintln!(
+                    "  BUCKET {} [{}] remain {} / total {}",
+                    b.label, b.item, b.remain, b.total
+                );
+            }
         }
     }
 }

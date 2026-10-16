@@ -15,6 +15,15 @@ import { useI18n } from "@/lib/i18n"
 import { api } from "@/lib/ipc"
 import { cn } from "@/lib/utils"
 
+/** The package buckets read by their meaning; unknown items keep their own label. */
+function bucketKey(item: string): "weBucketMain" | "weBucketGaming" | "weBucketStreaming" | null {
+  const s = item.toLowerCase()
+  if (s.includes("gaming")) return "weBucketGaming"
+  if (s.includes("racing") || s.includes("stream")) return "weBucketStreaming"
+  if (s.includes("_data")) return "weBucketMain"
+  return null
+}
+
 /** One setting as its own card, built like the voice chat cards: a
     hairline icon chip, a bold title, one quiet line under it, and the
     control at the right edge. */
@@ -109,6 +118,30 @@ function WeQuotaCard() {
                 <p className="mt-0.5 text-end text-[11px] text-txt3">
                   {t("weUsed")} {fmtQuota(u.used)}
                 </p>
+                {u.buckets.length > 0 ? (
+                  <div className="mt-2 flex flex-col gap-1.5 border-t border-line pt-2">
+                    {u.buckets.map((b) => {
+                      const k = bucketKey(b.item)
+                      const bpct = b.total > 0 ? Math.max(0, Math.min(100, (b.remain / b.total) * 100)) : 0
+                      return (
+                        <div key={b.item || b.label}>
+                          <div className="flex items-baseline justify-between gap-3 text-[11.5px]">
+                            <span className="truncate text-txt3">{k ? t(k) : b.label || "WE"}</span>
+                            <span className="shrink-0 tabular-nums text-txt2">
+                              {fmtQuota(b.remain)} {t("weLeft")} {fmtQuota(b.total)}
+                            </span>
+                          </div>
+                          <div className="mt-0.5 h-1 overflow-hidden rounded-full bg-white/[0.05]">
+                            <div
+                              className="h-full rounded-full bg-[rgb(46_123_246/0.55)]"
+                              style={{ width: `${bpct}%` }}
+                            />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : null}
               </div>
             )
           })}
