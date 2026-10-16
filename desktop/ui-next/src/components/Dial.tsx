@@ -27,7 +27,7 @@ export function Dial({
       whileTap={disabled ? undefined : { scale: 0.985 }}
       transition={{ type: "spring", stiffness: 460, damping: 32 }}
       className={cn(
-        "relative grid size-[172px] place-items-center rounded-full border transition-colors duration-300 disabled:opacity-70",
+        "relative grid size-[204px] place-items-center rounded-full border transition-colors duration-300 disabled:opacity-70",
         /* a hint of glass: translucent fill, one lit line, nothing else */
         "bg-white/[0.05] backdrop-blur-[14px] backdrop-saturate-150",
         "shadow-[inset_0_1px_0_rgb(255_255_255/0.10)]",
@@ -44,11 +44,10 @@ export function Dial({
           className="absolute -inset-px rounded-full border-2 border-transparent border-t-[var(--brand)] [animation:spin_1.15s_linear_infinite]"
         />
       )}
-      {/* the old button, word for word: a size-8 power over a 12.5 label,
-          with the same 2.5 gap, so the word sits the way it always did */}
-      <span className="flex flex-col items-center gap-2.5">
-        <Power className="size-8" strokeWidth={1.75} aria-hidden />
-        <span className="text-[12.5px] font-medium tracking-[0.01em]">{label}</span>
+      {/* the power over the word, sized to the circle it lives in */}
+      <span className="flex flex-col items-center gap-3">
+        <Power className="size-9" strokeWidth={1.75} aria-hidden />
+        <span className="text-[13.5px] font-medium tracking-[0.01em]">{label}</span>
       </span>
     </motion.button>
   )

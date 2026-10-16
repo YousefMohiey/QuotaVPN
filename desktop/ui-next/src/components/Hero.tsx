@@ -1,18 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { AnimatePresence, motion } from "motion/react"
-import { RefreshCw } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
-import { WeMark } from "./WeMark"
 import { useI18n } from "@/lib/i18n"
 import { useApp } from "@/state/app"
-import { fmtQuota, quotaRefresh, useQuota } from "@/state/quota"
-import { WeQuotaDialog } from "./WeQuotaDialog"
 import { api, netInfo } from "@/lib/ipc"
 import { Dial, type DialState } from "./Dial"
 import { displayHost, fmtBytes, fmtDuration, mbps } from "@/lib/format"
-
-const EASE_OUT = [0.1, 0.9, 0.2, 1] as const
-const SPRING = { type: "spring", stiffness: 320, damping: 34 } as const
 
 /** A one-second heartbeat for the session clock; polling still drives data. */
 function useTick(ms: number, on: boolean) {
@@ -50,52 +42,18 @@ function useTraffic(rx: number, tx: number) {
   }, [rx, tx])
 }
 
-/**
- * The connection card. The dial anchors the left and glides from center to
- * its parking spot the moment Connect is pressed; the reading fades in
- * beside it. The right zone carries the WE line reading, and the strip
- * under everything swaps its three cells with the tunnel: facts while it
- * is down, the live session while it is up.
- */
-export function Hero() {
-  const { t } = useI18n()
-  const { phase, connected, busy, toggle, card, rx, tx, sessionStart, serverIp, status } = useApp()
-  const [serverAddr, setServerAddr] = useState("")
+/** Bytes per second as the live number: Mbps once it is a real rate,
+    KB/s below that. Used for both the big value and the peak. */
+function rateText(bps: number): { num: string; unit: string } {
+  const m = (Math.max(0, bps) * 8) / 1e6
+  if (m >= 1) return { num: mbps(m), unit: "Mbps" }
+  return { num: String(Math.round(Math.max(0, bps) / 1024)), unit: "KB/s" }
+}
 
-  // While the tunnel is up the world sees the server's address, so resolve it
-  // once and show the IP the user actually appears as - never the hostname.
-  useEffect(() => {
-    if (!connected || !serverIp) {
-      setServerAddr("")
-      return
-    }
-    let alive = true
-    let timer: number | undefined
-    // The first lookup through a fresh tunnel can be cold, and a single
-    // miss used to leave the strip showing the raw name for the rest of
-    // the session. Keep asking for a bit before settling for the name.
-    const attempt = (n: number) => {
-      api
-        .resolveHost(serverIp)
-        .then((ip) => {
-          if (!alive) return
-          if (ip) setServerAddr(ip)
-          else if (n < 5) timer = window.setTimeout(() => attempt(n + 1), 3000)
-        })
-        .catch(() => {
-          if (alive && n < 5) timer = window.setTimeout(() => attempt(n + 1), 3000)
-        })
-    }
-    attempt(0)
-    return () => {
-      alive = false
-      if (timer) window.clearTimeout(timer)
-    }
-  }, [connected, serverIp])
-
-  // The strip facts: where this machine appears from, read off its public
-  // address. The lookup races its providers on the Rust side, and the last
-  // answer is cached so a launch never starts on a dash.
+/** Where this machine appears from, read off its public address. The lookup
+    races its providers on the Rust side, and the last answer is cached so a
+    launch never starts on a dash. */
+function useGeo(connected: boolean) {
   const [geo, setGeo] = useState<{ ip: string; place: string; isp: string } | null>(() => {
     try {
       const raw = localStorage.getItem("qc-geo")
@@ -132,323 +90,159 @@ export function Hero() {
       if (timer) window.clearTimeout(timer)
     }
   }, [connected])
-  const ipText = geo?.ip || "-"
+  return geo
+}
 
-  // The dial starts centered and parks left the moment Connect is pressed.
-  // The reading zone fades in beside it only after the slide has had room
-  // to travel; on the way back the zone exits first, then the dial returns.
+/** While the tunnel is up the world sees the server's address, so resolve it
+    once and show the IP the user actually appears as - never the hostname. */
+function useServerAddr(connected: boolean, serverIp: string) {
+  const [addr, setAddr] = useState("")
+  useEffect(() => {
+    if (!connected || !serverIp) {
+      setAddr("")
+      return
+    }
+    let alive = true
+    let timer: number | undefined
+    // The first lookup through a fresh tunnel can be cold, and a single
+    // miss used to leave the panel showing the raw name for the rest of
+    // the session. Keep asking for a bit before settling for the name.
+    const attempt = (n: number) => {
+      api
+        .resolveHost(serverIp)
+        .then((ip) => {
+          if (!alive) return
+          if (ip) setAddr(ip)
+          else if (n < 5) timer = window.setTimeout(() => attempt(n + 1), 3000)
+        })
+        .catch(() => {
+          if (alive && n < 5) timer = window.setTimeout(() => attempt(n + 1), 3000)
+        })
+    }
+    attempt(0)
+    return () => {
+      alive = false
+      if (timer) window.clearTimeout(timer)
+    }
+  }, [connected, serverIp])
+  return addr
+}
+
+/**
+ * The connection card: the dial and its reading side by side, one layout in
+ * every state. The word, the profile, and while the tunnel is up the clock,
+ * the moved bytes and the live rates. Nothing travels, nothing fades.
+ */
+export function Hero() {
+  const { t } = useI18n()
+  const { phase, connected, busy, toggle, card, rx, tx, sessionStart, status } = useApp()
+
   const state: DialState = phase === "on" ? "on" : phase === "connecting" ? "connecting" : "idle"
   const name = card?.name.split(" (")[0] ?? ""
-  const active = phase === "connecting" || phase === "on"
-
-  const [showInfo, setShowInfo] = useState(false)
-  useEffect(() => {
-    if (!active) {
-      setShowInfo(false)
-      return
-    }
-    const id = window.setTimeout(() => setShowInfo(true), 250)
-    return () => window.clearTimeout(id)
-  }, [active])
-
-  const [dialLeft, setDialLeft] = useState(false)
-  useEffect(() => {
-    if (active) {
-      setDialLeft(true)
-      return
-    }
-    if (phase === "stopping") {
-      // Short hold only: the zone exit leads by a beat, then the dial
-      // answers at once. A long hold here reads as a dead pause.
-      const id = window.setTimeout(() => setDialLeft(false), 140)
-      return () => window.clearTimeout(id)
-    }
-    setDialLeft(false)
-  }, [active, phase])
+  const working = phase === "connecting"
 
   useTick(1000, connected)
   const traffic = useTraffic(rx, tx)
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
-      <div className="flex min-h-0 flex-1 items-center">
-        <motion.div
-          layout
-          transition={SPRING}
-          className={cn(
-            /* The reading zone is taller than the dial, so without a floor the
-               row would resize as the zone comes and goes and the spring would
-               wobble the dial with it. Held at the zone's own height, the row
-               never changes and the glide stays flat. */
-            "flex min-h-[188px] flex-1 items-center",
-            dialLeft ? "justify-start gap-8" : "justify-center",
-          )}
-        >
-          <motion.div layout transition={SPRING} className="flex shrink-0 items-center justify-center">
-            <Dial state={state} onClick={toggle} disabled={busy && phase !== "connecting"} />
-          </motion.div>
-
-          <AnimatePresence mode="popLayout">
-            {showInfo && (
-              <motion.div
-                key="info"
-                initial={{ opacity: 0, x: 16 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 12 }}
-                transition={{ duration: 0.32, ease: EASE_OUT, delay: 0.06 }}
-                className="min-w-0 flex-1"
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span
-                      aria-hidden
-                      className={cn(
-                        "size-1.5 rounded-full",
-                        connected ? "bg-[var(--green)]" : "pulse-dot bg-[var(--brand)]",
-                      )}
-                    />
-                    <span
-                      className={cn(
-                        "truncate text-[12.5px]",
-                        connected ? "text-[var(--green)]" : "text-txt2",
-                      )}
-                    >
-                      {connected ? t("connected") : t("working")}
-                    </span>
-                  </div>
-                  {connected ? (
-                    <>
-                      <p className="mt-2 truncate text-[22px] font-semibold leading-tight text-txt" dir="auto">
-                        {name}
-                      </p>
-                      <p className="mt-0.5 truncate text-[12.5px] text-txt3" dir="auto">
-                        {displayHost(card?.sni)}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="mt-2 truncate text-[15px] font-medium text-txt" dir="auto">
-                      {t("talking")}
-                    </p>
-                  )}
-                  {status ? (
-                    <div className="mt-2 select-text text-[11.5px] leading-snug text-txt3">{status}</div>
-                  ) : null}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-
-        <QuotaZone />
-      </div>
-
-      {/* the strip: facts while down, the live session while up */}
-      <div className="mt-3 grid min-h-[64px] grid-cols-3 items-center divide-x divide-line border-t border-line pt-3">
-        {connected ? (
-          <>
-            <Cell
-              label={t("sessLabel")}
-              value={sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
-              sub={`↓ ${fmtBytes(rx)}   ↑ ${fmtBytes(tx)}`}
+    <section className="flex min-h-0 flex-1 items-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
+      <div className="flex w-full items-center gap-7">
+        <Dial state={state} onClick={toggle} disabled={busy && phase !== "connecting"} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span
+              aria-hidden
+              className={cn(
+                "size-1.5 rounded-full",
+                connected ? "bg-[var(--green)]" : working ? "pulse-dot bg-[var(--brand)]" : "bg-txt3",
+              )}
             />
-            <Cell className="px-5" label={t("yourIp")} value={serverAddr || ipText} select />
-            <Cell
-              className="ps-5"
-              label={t("liveLabel")}
-              right={`${t("peakLbl")} ${traffic.peak.num} ${traffic.peak.unit}`}
-              value={`${traffic.rate.num} ${traffic.rate.unit}`}
-              sub={`↓ ${traffic.down.num} ${traffic.down.unit}   ↑ ${traffic.up.num} ${traffic.up.unit}`}
-            />
-          </>
-        ) : (
-          <>
-            <Cell className="pe-5" label={t("yourLocation")} value={geo?.place || "-"} />
-            <Cell className="px-5" label={t("yourIp")} value={ipText} select />
-            <Cell className="ps-5" label={t("statusLbl")} value={t("notConnected")} />
-          </>
-        )}
+            <span
+              className={cn(
+                "truncate text-[13px]",
+                connected ? "text-[var(--green)]" : "text-txt2",
+              )}
+            >
+              {connected ? t("connected") : working ? t("working") : t("notConnected")}
+            </span>
+          </div>
+          <p className="mt-3 truncate text-[18px] font-semibold leading-tight text-txt" dir="auto">
+            {name || "-"}
+          </p>
+          <p className="mt-0.5 truncate font-mono text-[11.5px] text-txt3" dir="auto">
+            {displayHost(card?.sni)}
+          </p>
+          {connected ? (
+            <div className="mt-3 flex flex-col gap-1 text-[12px] tabular-nums text-txt2">
+              <span className="truncate">
+                <span className="text-txt3">{t("sessLabel")} </span>
+                {sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
+                <span className="text-txt3"> · ↓ {fmtBytes(rx)} ↑ {fmtBytes(tx)}</span>
+              </span>
+              <span className="truncate">
+                <span className="text-txt3">{t("liveLabel")} · </span>↓ {traffic.down.num} {traffic.down.unit}
+                {"  "}↑ {traffic.up.num} {traffic.up.unit}
+              </span>
+            </div>
+          ) : null}
+          {status ? (
+            <div className="mt-2 select-text text-[11px] leading-snug text-txt3">{status}</div>
+          ) : null}
+        </div>
       </div>
     </section>
   )
 }
 
-/** The WE line panel: the reading when linked, the invite when not. */
-function QuotaZone() {
+/** The facts panel: where this machine sits and appears from right now. */
+export function FactsCard() {
   const { t } = useI18n()
-  const quota = useQuota()
-  const [quotaOpen, setQuotaOpen] = useState(false)
-  const mainUnit = useMemo(
-    () => quota.units.find((u) => u.total > 0),
-    [quota.units],
-  )
-
-  // The linked WE line reads itself once per launch; the tap refreshes it.
-  useEffect(() => {
-    void quotaRefresh()
-  }, [])
-
-  const pct =
-    mainUnit && mainUnit.total > 0
-      ? Math.max(0, Math.min(100, (mainUnit.remain / mainUnit.total) * 100))
-      : 0
+  const { connected, serverIp } = useApp()
+  const geo = useGeo(connected)
+  const serverAddr = useServerAddr(connected, serverIp)
+  const ipText = connected ? serverAddr || geo?.ip || "-" : geo?.ip || "-"
 
   return (
-    <div className="ms-6 w-[300px] shrink-0 self-stretch border-s border-line ps-6">
-      <div className="flex h-full flex-col justify-center">
-        {quota.linked && mainUnit ? (
-          <div>
-            <div className="flex items-center gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
-                <WeMark className="w-[22px]" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <h2 className="truncate text-[13.5px] font-semibold text-txt">{t("weQuota")}</h2>
-                <p className="mt-0.5 truncate text-[11px] text-txt2" dir="auto" title={mainUnit.offer || "WE"}>
-                  {mainUnit.offer || "WE"}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => void quotaRefresh(true)}
-                title={t("weRefresh")}
-                aria-label={t("weRefresh")}
-                disabled={quota.phase === "busy"}
-                className="grid size-8 shrink-0 place-items-center rounded-full border border-line bg-white/[0.02] text-txt2 transition-colors hover:border-[var(--brand-line)] hover:text-brand-strong disabled:cursor-wait"
-              >
-                <RefreshCw className={cn("size-3.5", quota.phase === "busy" && "animate-spin")} aria-hidden />
-              </button>
-            </div>
-            <div className="mt-4 text-[24px] font-semibold leading-none tabular-nums text-txt">
-              {fmtQuota(mainUnit.remain)}
-            </div>
-            <div className="mt-1.5 text-[12px] text-txt2">
-              {t("weLeft")} {fmtQuota(mainUnit.total)}
-            </div>
-            <div className="mt-3.5 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
-              <div
-                className="h-full rounded-full bg-[var(--brand-vivid)] transition-[width] duration-700 ease-out"
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-            <div className="mt-2 flex items-baseline justify-between gap-2 text-[11px] text-txt3">
-              <span className="truncate">
-                {t("weUsed")} {fmtQuota(mainUnit.used)}
-              </span>
-              {quota.updatedAt ? (
-                <span className="shrink-0 tabular-nums">
-                  {t("weUpdated")}{" "}
-                  {new Date(quota.updatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-                </span>
-              ) : null}
-            </div>
-            {quota.phase === "error" && quota.msgKey ? (
-              <p className="mt-1.5 truncate text-[10.5px] text-[var(--red)]" dir="auto">
-                {t(quota.msgKey as Parameters<typeof t>[0])}
-                {quota.msgRaw ? ` (${quota.msgRaw})` : ""}
-              </p>
-            ) : null}
-            {mainUnit.buckets.filter((b) => b.remain > 0).length ? (
-              <div className="mt-3.5 border-t border-line pt-3">
-                <div className="flex flex-col gap-2.5">
-                  {mainUnit.buckets
-                    .filter((b) => b.remain > 0)
-                    .slice(0, 3)
-                    .map((b) => {
-                      const k = bucketKey(b.item)
-                      const bpct = b.total > 0 ? Math.max(0, Math.min(100, (b.remain / b.total) * 100)) : 0
-                      return (
-                        <div key={b.item || b.label}>
-                          <div className="flex items-baseline justify-between gap-3 text-[11.5px]">
-                            <span className="truncate text-txt3">{k ? t(k) : b.label || "WE"}</span>
-                            <span className="shrink-0 tabular-nums text-txt2">
-                              {fmtQuota(b.remain)} {t("weLeft")} {fmtQuota(b.total)}
-                            </span>
-                          </div>
-                          <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/[0.05]">
-                            <div
-                              className="h-full rounded-full bg-[rgb(46_123_246/0.55)]"
-                              style={{ width: `${bpct}%` }}
-                            />
-                          </div>
-                        </div>
-                      )
-                    })}
-                </div>
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <div>
-            <div className="flex items-center gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
-                <WeMark className="w-[22px]" />
-              </span>
-              <h2 className="min-w-0 truncate text-[13.5px] font-semibold text-txt">{t("weQuota")}</h2>
-            </div>
-            <p className="mt-2 text-[11px] leading-snug text-txt2">{t("weQuotaSub")}</p>
-            <button
-              type="button"
-              onClick={() => setQuotaOpen(true)}
-              className="mt-3 flex h-9 w-full items-center justify-center rounded-[9px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-3.5 text-[12.5px] font-medium text-[var(--brand-strong)] transition-colors hover:border-[var(--brand-strong)]"
-            >
-              {t("weLink")}
-            </button>
-            <p className="mt-2 text-[10.5px] leading-snug text-txt3">{t("weLinkHint")}</p>
-          </div>
-        )}
+    <section className="rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
+      <div className="flex flex-col divide-y divide-line">
+        <FactRow label={t("yourLocation")} value={geo?.place || "-"} />
+        <FactRow label={t("yourIp")} value={ipText} select />
+        <FactRow
+          label={t("statusLbl")}
+          value={connected ? t("connected") : t("notConnected")}
+          dot={connected ? "on" : "off"}
+        />
       </div>
-      <WeQuotaDialog open={quotaOpen} onOpenChange={setQuotaOpen} />
-    </div>
+    </section>
   )
 }
 
-/** The package buckets read by their meaning; unknown items keep their own label. */
-function bucketKey(item: string): "weBucketMain" | "weBucketGaming" | "weBucketStreaming" | null {
-  const s = item.toLowerCase()
-  if (s.includes("gaming")) return "weBucketGaming"
-  if (s.includes("racing") || s.includes("stream")) return "weBucketStreaming"
-  if (s.includes("_data")) return "weBucketMain"
-  return null
-}
-
-/** One strip cell: a quiet label, then the value with its own reading. */
-function Cell({
+/** One fact as a line: the name left, the reading right. */
+function FactRow({
   label,
   value,
-  sub,
-  right,
   select,
-  className,
+  dot,
 }: {
   label: string
   value: string
-  sub?: string
-  right?: ReactNode
   select?: boolean
-  className?: string
+  dot?: "on" | "off"
 }) {
   return (
-    <div className={cn("min-w-0", className)}>
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="truncate text-[11px] text-txt3">{label}</span>
-        {right ? <span className="shrink-0 truncate text-[10.5px] tabular-nums text-txt3">{right}</span> : null}
-      </div>
-      <div
-        className={cn("mt-1 truncate text-[15px] font-medium leading-tight tabular-nums text-txt", select && "select-text")}
-        dir="auto"
-        title={value}
-      >
-        {value}
-      </div>
-      {sub ? <div className="mt-0.5 truncate text-[11px] tabular-nums text-txt3">{sub}</div> : null}
+    <div className="flex items-center justify-between gap-3 py-2.5">
+      <span className="shrink-0 text-[12px] text-txt3">{label}</span>
+      <span className="flex min-w-0 items-center gap-2">
+        {dot ? (
+          <span
+            aria-hidden
+            className={cn("size-1.5 shrink-0 rounded-full", dot === "on" ? "bg-[var(--green)]" : "bg-txt3")}
+          />
+        ) : null}
+        <span className={cn("truncate text-[13px] text-txt", select && "select-text")} dir="auto">
+          {value}
+        </span>
+      </span>
     </div>
   )
-}
-
-/** Bytes per second as the live number: Mbps once it is a real rate,
-    KB/s below that. Used for both the big value and the peak. */
-function rateText(bps: number): { num: string; unit: string } {
-  const m = (Math.max(0, bps) * 8) / 1e6
-  if (m >= 1) return { num: mbps(m), unit: "Mbps" }
-  return { num: String(Math.round(Math.max(0, bps) / 1024)), unit: "KB/s" }
 }

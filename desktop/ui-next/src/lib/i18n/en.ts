@@ -298,6 +298,7 @@ export const en = {
   "weBucketMain": "Main",
   "weBucketGaming": "Gaming",
   "weBucketStreaming": "Streaming",
+  "wePackage": "Package",
   "weLinkHint": "Number and password stay on this PC only",
   "weLoginFail": "Number or password refused",
   "weNetFail": "Could not reach WE from this PC",

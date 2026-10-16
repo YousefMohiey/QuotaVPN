@@ -298,6 +298,7 @@ export const ar = {
   "weBucketMain": "الرئيسي",
   "weBucketGaming": "الألعاب",
   "weBucketStreaming": "البث",
+  "wePackage": "الباقة",
   "weLinkHint": "الرقم وكلمة السر يبقيان على هذا الجهاز فقط",
   "weLoginFail": "الرقم أو كلمة السر مرفوضة",
   "weNetFail": "تعذر الوصول إلى WE من هذا الجهاز",

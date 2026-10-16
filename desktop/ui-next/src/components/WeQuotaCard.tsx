@@ -1,0 +1,151 @@
+import { useEffect, useMemo, useState } from "react"
+import { RefreshCw } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { WeMark } from "./WeMark"
+import { useI18n } from "@/lib/i18n"
+import { fmtQuota, quotaRefresh, useQuota } from "@/state/quota"
+import { WeQuotaDialog } from "./WeQuotaDialog"
+
+/**
+ * The package panel, and the only place on Home the WE line reads: the big
+ * remaining number on top, the bar under it, and the package split holding
+ * the foot. Unlinked it is the invite, centered in the same panel.
+ */
+export function WeQuotaCard() {
+  const { t } = useI18n()
+  const quota = useQuota()
+  const [quotaOpen, setQuotaOpen] = useState(false)
+  const mainUnit = useMemo(() => quota.units.find((u) => u.total > 0), [quota.units])
+
+  // The linked WE line reads itself once per launch; the tap refreshes it.
+  useEffect(() => {
+    void quotaRefresh()
+  }, [])
+
+  const pct =
+    mainUnit && mainUnit.total > 0
+      ? Math.max(0, Math.min(100, (mainUnit.remain / mainUnit.total) * 100))
+      : 0
+  const buckets = useMemo(
+    () => (mainUnit ? mainUnit.buckets.filter((b) => b.remain > 0).slice(0, 3) : []),
+    [mainUnit],
+  )
+
+  return (
+    <section className="flex min-h-0 flex-1 flex-col rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
+      {quota.linked && mainUnit ? (
+        <>
+          <div className="flex items-center gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
+              <WeMark className="w-[22px]" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate text-[13.5px] font-semibold text-txt">{t("weQuota")}</h2>
+              <p className="mt-0.5 truncate text-[11px] text-txt2" dir="auto" title={mainUnit.offer || "WE"}>
+                {mainUnit.offer || "WE"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void quotaRefresh(true)}
+              title={t("weRefresh")}
+              aria-label={t("weRefresh")}
+              disabled={quota.phase === "busy"}
+              className="grid size-8 shrink-0 place-items-center rounded-full border border-line bg-white/[0.02] text-txt2 transition-colors hover:border-[var(--brand-line)] hover:text-brand-strong disabled:cursor-wait"
+            >
+              <RefreshCw className={cn("size-3.5", quota.phase === "busy" && "animate-spin")} aria-hidden />
+            </button>
+          </div>
+
+          <div className="my-auto">
+            <div className="mt-6 text-[34px] font-semibold leading-none tabular-nums text-txt">
+              {fmtQuota(mainUnit.remain)}
+            </div>
+            <div className="mt-2 text-[12px] text-txt2">
+              {t("weLeft")} {fmtQuota(mainUnit.total)}
+            </div>
+            <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/[0.06]">
+              <div
+                className="h-full rounded-full bg-[var(--brand-vivid)] transition-[width] duration-700 ease-out"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <div className="mt-2 flex items-baseline justify-between gap-2 text-[11px] text-txt3">
+              <span className="truncate">
+                {t("weUsed")} {fmtQuota(mainUnit.used)}
+              </span>
+              {quota.updatedAt ? (
+                <span className="shrink-0 tabular-nums">
+                  {t("weUpdated")}{" "}
+                  {new Date(quota.updatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                </span>
+              ) : null}
+            </div>
+            {quota.phase === "error" && quota.msgKey ? (
+              <p className="mt-1.5 truncate text-[10.5px] text-[var(--red)]" dir="auto">
+                {t(quota.msgKey as Parameters<typeof t>[0])}
+                {quota.msgRaw ? ` (${quota.msgRaw})` : ""}
+              </p>
+            ) : null}
+          </div>
+
+          {buckets.length ? (
+            <div className="mt-auto border-t border-line pt-3.5">
+              <p className="text-[11px] text-txt3">{t("wePackage")}</p>
+              <div className="mt-2.5 flex flex-col gap-3">
+                {buckets.map((b) => {
+                  const k = bucketKey(b.item)
+                  const bpct = b.total > 0 ? Math.max(0, Math.min(100, (b.remain / b.total) * 100)) : 0
+                  return (
+                    <div key={b.item || b.label}>
+                      <div className="flex items-baseline justify-between gap-3 text-[12px]">
+                        <span className="truncate text-txt3">{k ? t(k) : b.label || "WE"}</span>
+                        <span className="shrink-0 tabular-nums text-txt2">
+                          {fmtQuota(b.remain)} {t("weLeft")} {fmtQuota(b.total)}
+                        </span>
+                      </div>
+                      <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/[0.05]">
+                        <div
+                          className="h-full rounded-full bg-[rgb(46_123_246/0.55)]"
+                          style={{ width: `${bpct}%` }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <div className="flex flex-1 flex-col justify-center">
+          <div className="flex items-center gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
+              <WeMark className="w-[22px]" />
+            </span>
+            <h2 className="min-w-0 truncate text-[13.5px] font-semibold text-txt">{t("weQuota")}</h2>
+          </div>
+          <p className="mt-2.5 text-[12px] leading-snug text-txt2">{t("weQuotaSub")}</p>
+          <button
+            type="button"
+            onClick={() => setQuotaOpen(true)}
+            className="mt-4 flex h-9 w-full items-center justify-center rounded-[9px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-3.5 text-[12.5px] font-medium text-[var(--brand-strong)] transition-colors hover:border-[var(--brand-strong)]"
+          >
+            {t("weLink")}
+          </button>
+          <p className="mt-2.5 text-[10.5px] leading-snug text-txt3">{t("weLinkHint")}</p>
+        </div>
+      )}
+      <WeQuotaDialog open={quotaOpen} onOpenChange={setQuotaOpen} />
+    </section>
+  )
+}
+
+/** The package buckets read by their meaning; unknown items keep their own label. */
+function bucketKey(item: string): "weBucketMain" | "weBucketGaming" | "weBucketStreaming" | null {
+  const s = item.toLowerCase()
+  if (s.includes("gaming")) return "weBucketGaming"
+  if (s.includes("racing") || s.includes("stream")) return "weBucketStreaming"
+  if (s.includes("_data")) return "weBucketMain"
+  return null
+}
