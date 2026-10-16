@@ -7,7 +7,7 @@ import { Dial, type DialState } from "./Dial"
 import { displayHost, fmtBytes, fmtDuration, mbps } from "@/lib/format"
 
 /** A one-second heartbeat for the session clock; polling still drives data. */
-function useTick(ms: number, on: boolean) {
+export function useTick(ms: number, on: boolean) {
   const [, set] = useState(0)
   useEffect(() => {
     if (!on) return
@@ -17,7 +17,7 @@ function useTick(ms: number, on: boolean) {
 }
 
 /** Live rates from the adapter counters: combined, per direction, and peak. */
-function useTraffic(rx: number, tx: number) {
+export function useTraffic(rx: number, tx: number) {
   const hist = useRef<number[]>([])
   const last = useRef({ rx: 0, tx: 0, t: Date.now(), down: 0, up: 0 })
 
@@ -44,7 +44,7 @@ function useTraffic(rx: number, tx: number) {
 
 /** Bytes per second as the live number: Mbps once it is a real rate,
     KB/s below that. Used for both the big value and the peak. */
-function rateText(bps: number): { num: string; unit: string } {
+export function rateText(bps: number): { num: string; unit: string } {
   const m = (Math.max(0, bps) * 8) / 1e6
   if (m >= 1) return { num: mbps(m), unit: "Mbps" }
   return { num: String(Math.round(Math.max(0, bps) / 1024)), unit: "KB/s" }
@@ -53,7 +53,7 @@ function rateText(bps: number): { num: string; unit: string } {
 /** Where this machine appears from, read off its public address. The lookup
     races its providers on the Rust side, and the last answer is cached so a
     launch never starts on a dash. */
-function useGeo(connected: boolean) {
+export function useGeo(connected: boolean) {
   const [geo, setGeo] = useState<{ ip: string; place: string; isp: string } | null>(() => {
     try {
       const raw = localStorage.getItem("qc-geo")
@@ -95,7 +95,7 @@ function useGeo(connected: boolean) {
 
 /** While the tunnel is up the world sees the server's address, so resolve it
     once and show the IP the user actually appears as - never the hostname. */
-function useServerAddr(connected: boolean, serverIp: string) {
+export function useServerAddr(connected: boolean, serverIp: string) {
   const [addr, setAddr] = useState("")
   useEffect(() => {
     if (!connected || !serverIp) {
@@ -203,10 +203,11 @@ export function FactsCard() {
   const ipText = connected ? serverAddr || geo?.ip || "-" : geo?.ip || "-"
 
   return (
-    <section className="rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
+    <section className="rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] px-5 py-4">
       <div className="flex flex-col divide-y divide-line">
         <FactRow label={t("yourLocation")} value={geo?.place || "-"} />
         <FactRow label={t("yourIp")} value={ipText} select />
+        <FactRow label={t("ispLbl")} value={geo?.isp || "-"} />
         <FactRow
           label={t("statusLbl")}
           value={connected ? t("connected") : t("notConnected")}
@@ -231,7 +232,7 @@ function FactRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-3 py-2.5">
-      <span className="shrink-0 text-[12px] text-txt3">{label}</span>
+      <span className="shrink-0 text-[12px] text-txt2">{label}</span>
       <span className="flex min-w-0 items-center gap-2">
         {dot ? (
           <span

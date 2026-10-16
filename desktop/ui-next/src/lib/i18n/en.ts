@@ -39,6 +39,8 @@ export const en = {
   "startTest": "Start test",
   "startAgain": "Start again",
   "statusLbl": "Status",
+  "ispLbl": "ISP",
+  "profilesTitle": "Profiles",
   "btnReady": "Ready",
   "btnMeasuring": "Measuring",
   "btnComplete": "Complete",

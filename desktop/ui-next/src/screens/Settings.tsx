@@ -197,6 +197,7 @@ export function Settings() {
       {/* the cards sit right under the header, as the owner wants */}
       <div className="flex flex-col gap-3">
       <WeQuotaCard />
+
       <SettingCard
         icon={<Languages className="size-5" strokeWidth={1.7} aria-hidden />}
         title={t("language")}

@@ -42,6 +42,8 @@ export const ar = {
   "startTest": "بدء الاختبار",
   "startAgain": "إعادة الاختبار",
   "statusLbl": "الحالة",
+  "ispLbl": "مزود الخدمة",
+  "profilesTitle": "ملفات الاتصال",
   "btnReady": "جاهز",
   "btnMeasuring": "جارٍ القياس",
   "btnComplete": "اكتمل",

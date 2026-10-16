@@ -32,7 +32,7 @@ export function WeQuotaCard() {
   )
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
+    <section className="flex min-h-0 flex-1 flex-col rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] px-5 pt-4 pb-5">
       {quota.linked && mainUnit ? (
         <>
           <div className="flex items-center gap-3">
@@ -58,19 +58,19 @@ export function WeQuotaCard() {
           </div>
 
           <div className="my-auto">
-            <div className="mt-6 text-[34px] font-semibold leading-none tabular-nums text-txt">
+            <div className="mt-4 text-[30px] font-semibold leading-none tabular-nums text-txt">
               {fmtQuota(mainUnit.remain)}
             </div>
             <div className="mt-2 text-[12px] text-txt2">
               {t("weLeft")} {fmtQuota(mainUnit.total)}
             </div>
-            <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/[0.06]">
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/[0.06]">
               <div
                 className="h-full rounded-full bg-[var(--brand-vivid)] transition-[width] duration-700 ease-out"
                 style={{ width: `${pct}%` }}
               />
             </div>
-            <div className="mt-2 flex items-baseline justify-between gap-2 text-[11px] text-txt3">
+            <div className="mt-2 flex items-baseline justify-between gap-2 text-[11.5px] text-txt2">
               <span className="truncate">
                 {t("weUsed")} {fmtQuota(mainUnit.used)}
               </span>
@@ -90,25 +90,21 @@ export function WeQuotaCard() {
           </div>
 
           {buckets.length ? (
-            <div className="mt-auto border-t border-line pt-3.5">
-              <p className="text-[11px] text-txt3">{t("wePackage")}</p>
-              <div className="mt-2.5 flex flex-col gap-3">
+            <div className="mt-auto border-t border-line pt-3">
+              <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.07em] text-txt2">{t("wePackage")}</p>
+              <div className="grid grid-cols-3 gap-3">
                 {buckets.map((b) => {
                   const k = bucketKey(b.item)
-                  const bpct = b.total > 0 ? Math.max(0, Math.min(100, (b.remain / b.total) * 100)) : 0
                   return (
-                    <div key={b.item || b.label}>
-                      <div className="flex items-baseline justify-between gap-3 text-[12px]">
-                        <span className="truncate text-txt3">{k ? t(k) : b.label || "WE"}</span>
-                        <span className="shrink-0 tabular-nums text-txt2">
-                          {fmtQuota(b.remain)} {t("weLeft")} {fmtQuota(b.total)}
-                        </span>
+                    <div key={b.item || b.label} className="min-w-0">
+                      <div className="truncate text-[11px] font-semibold uppercase tracking-[0.07em] text-txt2">
+                        {k ? t(k) : b.label || "WE"}
                       </div>
-                      <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/[0.05]">
-                        <div
-                          className="h-full rounded-full bg-[rgb(46_123_246/0.55)]"
-                          style={{ width: `${bpct}%` }}
-                        />
+                      <div className="mt-1 truncate text-[14px] font-semibold tabular-nums text-txt">
+                        {fmtQuota(b.remain)}
+                      </div>
+                      <div className="mt-0.5 truncate text-[11px] tabular-nums text-txt3">
+                        {t("weLeft")} {fmtQuota(b.total)}
                       </div>
                     </div>
                   )

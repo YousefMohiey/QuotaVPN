@@ -10,6 +10,7 @@ import { useApp, type PresetKind } from "@/state/app"
 import { useI18n } from "@/lib/i18n"
 import { CUSTOM_SNI, DEFAULT_SNI, SNIS, labelForSni } from "@/lib/snis"
 import { cn } from "@/lib/utils"
+import { HomeConcept } from "./HomeConcepts"
 
 // The Home screen is two columns: the left stack acts (connect, then the
 // controls, then the facts) and the right rail reads (the WE package, then
@@ -56,6 +57,12 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
         : t("appsExcept")
   const routingCount = appsMode !== "all" && apps.length ? ` · ${apps.length}` : ""
   const trHint = transport === "hy2" ? t("trNoteHy2") : transport === "wg" ? t("trNoteWg") : ""
+
+  // The chosen arrangement (4) is the default now; ?alt=1 / 2 / 3 still
+  // previews the earlier candidates from the pick round.
+  const alt = new URLSearchParams(window.location.search).get("alt") ?? "4"
+  if (alt === "1" || alt === "2" || alt === "3" || alt === "4")
+    return <HomeConcept alt={alt} onOpenApps={onOpenApps} />
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1040px] flex-col">
