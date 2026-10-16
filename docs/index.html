@@ -196,8 +196,8 @@
     background:#10141c; overflow:hidden; padding:0; max-width:1120px; margin:0 auto;
     transition:border-color .3s var(--ease)}
   .frame:hover{border-color:rgb(255 255 255 / .22)}
-  .stage{position:relative; aspect-ratio:1060/700; border-radius:15px; overflow:hidden}
-  .stage iframe{position:absolute; top:0; left:0; width:1060px; height:700px; border:0; display:block;
+  .stage{position:relative; aspect-ratio:1280/800; border-radius:15px; overflow:hidden}
+  .stage iframe{position:absolute; top:0; left:0; width:1280px; height:800px; border:0; display:block;
     transform-origin:0 0; transform:scale(var(--s,1))}
   .stage .still{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:none}
   .stage::after{content:""; position:absolute; inset:0; opacity:1; pointer-events:none; transition:opacity .55s var(--ease);
@@ -600,7 +600,7 @@
   function fit(){
     var win = document.getElementById('winBody');
     var phone = document.getElementById('phoneScreen');
-    if(win) win.style.setProperty('--s', (win.clientWidth / 1060).toFixed(4));
+    if(win) win.style.setProperty('--s', (win.clientWidth / 1280).toFixed(4));
     if(phone) phone.style.setProperty('--s', (phone.clientWidth / 360).toFixed(4));
   }
   fit();

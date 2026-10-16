@@ -293,7 +293,7 @@ function QuotaZone() {
       : 0
 
   return (
-    <div className="ms-6 w-[240px] shrink-0 self-stretch border-s border-line ps-6">
+    <div className="ms-6 w-[300px] shrink-0 self-stretch border-s border-line ps-6">
       <div className="flex h-full flex-col justify-center">
         {quota.linked && mainUnit ? (
           <div>
@@ -347,6 +347,35 @@ function QuotaZone() {
                 {quota.msgRaw ? ` (${quota.msgRaw})` : ""}
               </p>
             ) : null}
+            {mainUnit.buckets.filter((b) => b.remain > 0).length ? (
+              <div className="mt-3.5 border-t border-line pt-3">
+                <div className="flex flex-col gap-2.5">
+                  {mainUnit.buckets
+                    .filter((b) => b.remain > 0)
+                    .slice(0, 3)
+                    .map((b) => {
+                      const k = bucketKey(b.item)
+                      const bpct = b.total > 0 ? Math.max(0, Math.min(100, (b.remain / b.total) * 100)) : 0
+                      return (
+                        <div key={b.item || b.label}>
+                          <div className="flex items-baseline justify-between gap-3 text-[11.5px]">
+                            <span className="truncate text-txt3">{k ? t(k) : b.label || "WE"}</span>
+                            <span className="shrink-0 tabular-nums text-txt2">
+                              {fmtQuota(b.remain)} {t("weLeft")} {fmtQuota(b.total)}
+                            </span>
+                          </div>
+                          <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/[0.05]">
+                            <div
+                              className="h-full rounded-full bg-[rgb(46_123_246/0.55)]"
+                              style={{ width: `${bpct}%` }}
+                            />
+                          </div>
+                        </div>
+                      )
+                    })}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : (
           <div>
@@ -371,6 +400,15 @@ function QuotaZone() {
       <WeQuotaDialog open={quotaOpen} onOpenChange={setQuotaOpen} />
     </div>
   )
+}
+
+/** The package buckets read by their meaning; unknown items keep their own label. */
+function bucketKey(item: string): "weBucketMain" | "weBucketGaming" | "weBucketStreaming" | null {
+  const s = item.toLowerCase()
+  if (s.includes("gaming")) return "weBucketGaming"
+  if (s.includes("racing") || s.includes("stream")) return "weBucketStreaming"
+  if (s.includes("_data")) return "weBucketMain"
+  return null
 }
 
 /** One strip cell: a quiet label, then the value with its own reading. */

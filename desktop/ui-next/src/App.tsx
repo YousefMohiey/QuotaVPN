@@ -173,7 +173,7 @@ export default function App() {
             aria-hidden
             className="pointer-events-none sticky top-0 z-20 -mb-14 h-14 bg-gradient-to-b from-[#0c0d10] via-[#0c0d10]/85 to-transparent"
           />
-          <div className="relative mx-auto h-full w-full max-w-[900px] px-8 pb-6 pt-14">
+          <div className="relative mx-auto h-full w-full max-w-[1104px] px-8 pb-6 pt-14">
             <AnimatePresence mode="popLayout" initial={false}>
               <motion.div
                 key={tab}

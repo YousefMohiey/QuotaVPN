@@ -15,11 +15,11 @@
       {
         "label": "main",
         "title": "QuotaVPN",
-        "width": 1060,
-        "height": 700,
+        "width": 1280,
+        "height": 800,
         "decorations": false,
-        "minWidth": 940,
-        "minHeight": 620,
+        "minWidth": 1100,
+        "minHeight": 700,
         "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,CalculateNativeWinOcclusion --disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows"
       }
     ],

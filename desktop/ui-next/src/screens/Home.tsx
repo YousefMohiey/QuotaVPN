@@ -60,8 +60,9 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1040px] flex-col gap-3">
       <Hero />
 
-      <section className="flex min-h-[275px] flex-1 flex-col justify-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
-          <div className="grid grid-cols-2 gap-3" role="group" aria-label={t("setupTitle")}>
+      <section className="flex min-h-[320px] flex-1 items-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
+        <div className="grid w-full grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+          <div className="flex flex-col justify-center gap-3 pe-5" role="group" aria-label={t("setupTitle")}>
             {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
               const mine = cards.find((c) => c.card_type === kind)
               const sni = mine?.sni ?? DEFAULT_SNI[kind]
@@ -84,7 +85,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     void ensurePresetCard(kind).finally(() => setCreating(null))
                   }}
                   className={cn(
-                    "flex items-center gap-3 rounded-[12px] border p-3 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
+                    "flex items-center gap-3 rounded-[12px] border p-4 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
                     isActive
                       ? "border-[var(--brand-line)] bg-[var(--brand-bg)]"
                       : "border-line bg-white/[0.02] hover:border-[var(--brand-line)]",
@@ -122,8 +123,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
               )
             })}
           </div>
-          <div className="my-2 border-t border-line" aria-hidden />
-          <div className="flex flex-col divide-y divide-line">
+          <div className="flex flex-col justify-center divide-y divide-line border-s border-line ps-5">
             <RowField label={t("domainSni")}>
               {customOpen ? (
                 <div className="flex w-full items-center gap-2">
@@ -192,6 +192,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
               />
             </RowField>
           </div>
+        </div>
       </section>
 
       <PickerDialog
@@ -225,7 +226,7 @@ function RowField({
   children: ReactNode
 }) {
   return (
-    <div className="flex items-center gap-3 py-2">
+    <div className="flex items-center gap-3 py-3">
       <span className="w-28 shrink-0 truncate text-[12px] text-txt2">{label}</span>
       <div className="min-w-0 flex-1">
         {children}
