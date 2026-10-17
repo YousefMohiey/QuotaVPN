@@ -119,17 +119,19 @@ export function WeQuotaCard() {
             <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
               <WeMark className="w-[22px]" />
             </span>
-            <h2 className="min-w-0 truncate text-[13.5px] font-semibold text-txt">{t("weQuota")}</h2>
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate text-[13.5px] font-semibold text-txt">{t("weQuota")}</h2>
+              <p className="mt-1 text-[11.5px] leading-snug text-txt2">{t("weQuotaSub")}</p>
+              <p className="mt-1.5 text-[10.5px] leading-snug text-txt3">{t("weLinkHint")}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setQuotaOpen(true)}
+              className="flex h-9 shrink-0 items-center rounded-[9px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-4 text-[12.5px] font-medium text-[var(--brand-strong)] transition-colors hover:border-[var(--brand-strong)]"
+            >
+              {t("weLink")}
+            </button>
           </div>
-          <p className="mt-2.5 text-[12px] leading-snug text-txt2">{t("weQuotaSub")}</p>
-          <button
-            type="button"
-            onClick={() => setQuotaOpen(true)}
-            className="mt-4 flex h-9 w-full items-center justify-center rounded-[9px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-3.5 text-[12.5px] font-medium text-[var(--brand-strong)] transition-colors hover:border-[var(--brand-strong)]"
-          >
-            {t("weLink")}
-          </button>
-          <p className="mt-2.5 text-[10.5px] leading-snug text-txt3">{t("weLinkHint")}</p>
         </div>
       )}
       <WeQuotaDialog open={quotaOpen} onOpenChange={setQuotaOpen} />

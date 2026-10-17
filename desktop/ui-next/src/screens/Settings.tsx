@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { FlaskConical, Languages, Power, RefreshCw, ShieldCheck } from "lucide-react"
+import { Languages, Power, RefreshCw } from "lucide-react"
 import { Toggle } from "@/components/Toggle"
 import { WeMark } from "@/components/WeMark"
 import { Segmented } from "@/components/Segmented"
@@ -62,8 +62,9 @@ function WeQuotaCard() {
           <p className="mt-0.5 text-[12.5px] leading-relaxed text-txt2">
             {t("weQuotaSub")}
           </p>
+          {!q.linked && <p className="mt-1 text-[11px] leading-snug text-txt3">{t("weLinkHint")}</p>}
         </div>
-        {q.linked && (
+        {q.linked ? (
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
@@ -84,21 +85,16 @@ function WeQuotaCard() {
               {t("weUnlink")}
             </button>
           </div>
-        )}
-      </div>
-
-      {!q.linked && (
-        <div className="mt-3 flex items-center gap-3">
+        ) : (
           <button
             type="button"
             onClick={() => setQuotaOpen(true)}
-            className="flex h-9 items-center rounded-[10px] bg-[var(--brand-vivid)] px-3.5 text-[13px] font-medium text-white transition-[filter] hover:brightness-110"
+            className="flex h-9 shrink-0 items-center rounded-[10px] bg-[var(--brand-vivid)] px-4 text-[13px] font-medium text-white transition-[filter] hover:brightness-110"
           >
             {t("weLink")}
           </button>
-          <p className="text-[11.5px] text-txt3">{t("weLinkHint")}</p>
-        </div>
-      )}
+        )}
+      </div>
       <WeQuotaDialog open={quotaOpen} onOpenChange={setQuotaOpen} />
     </section>
   )
@@ -187,57 +183,6 @@ export function Settings() {
         : updateState === "idle"
           ? "bg-[var(--line-strong)]"
           : "bg-[var(--brand-vivid)]"
-
-  /** One release channel as a selectable card: icon, name, one quiet line,
-      and the radio dot at the edge. Switching it re-checks right away. */
-  const channelCard = (ch: "normal" | "experimental") => {
-    const isActive = updateChannel === ch
-    const Icon = ch === "experimental" ? FlaskConical : ShieldCheck
-    return (
-      <button
-        key={ch}
-        type="button"
-        aria-pressed={isActive}
-        onClick={() => {
-          if (!isActive) void setUpdateChannel(ch)
-        }}
-        className={cn(
-          "flex items-start gap-3 rounded-[12px] border p-3.5 text-start transition-colors duration-200",
-          isActive
-            ? "border-[var(--brand-line)] bg-[var(--brand-bg)]"
-            : "border-line bg-white/[0.02] hover:border-[var(--brand-line)]",
-        )}
-      >
-        <span
-          className={cn(
-            "grid size-10 shrink-0 place-items-center rounded-[10px] border transition-colors",
-            isActive
-              ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong"
-              : "border-line bg-white/[0.03] text-txt3",
-          )}
-        >
-          <Icon className="size-[18px]" strokeWidth={1.8} aria-hidden />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className={cn("block text-[14px] font-semibold", isActive ? "text-txt" : "text-txt2")}>
-            {ch === "experimental" ? t("chExp") : t("chStable")}
-          </span>
-          <span className="mt-0.5 block text-[11.5px] leading-snug text-txt3">
-            {ch === "experimental" ? t("chExpBody") : t("chStableBody")}
-          </span>
-        </span>
-        <span
-          aria-hidden
-          className={cn(
-            "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border-[1.5px] transition-colors",
-            isActive ? "border-[var(--brand)]" : "border-line-strong",
-          )}
-        >
-          {isActive && <span className="size-[7px] rounded-full bg-[var(--brand)]" />}
-        </span>
-      </button>
-    )
-  }
 
   return (
     <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-3">
@@ -337,12 +282,25 @@ export function Settings() {
           </div>
         </div>
 
-        <div className="mt-4 border-t border-line pt-4">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.07em] text-txt2">{t("chTitle")}</p>
-          <div className="mt-3 grid grid-cols-2 gap-3" role="group" aria-label={t("chTitle")}>
-            {channelCard("normal")}
-            {channelCard("experimental")}
+        <div className="mt-4 flex items-center justify-between gap-4 border-t border-line pt-4">
+          <div className="min-w-0">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.07em] text-txt2">{t("chTitle")}</p>
+            <p className="mt-1.5 text-[11.5px] leading-snug text-txt3">
+              {updateChannel === "experimental" ? t("chExpBody") : t("chStableBody")}
+            </p>
           </div>
+          <Segmented
+            id="chan"
+            value={updateChannel}
+            options={[
+              { value: "normal", label: t("chStable") },
+              { value: "experimental", label: t("chExp") },
+            ]}
+            onChange={(v) => {
+              if (v !== updateChannel) void setUpdateChannel(v)
+            }}
+            className="shrink-0"
+          />
         </div>
       </section>
       </div>
