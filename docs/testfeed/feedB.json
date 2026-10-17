@@ -1,6 +1,6 @@
 {
   "version": "0.4.0",
-  "build": "5870f86",
+  "build": "2791944",
   "notes": "The voice card only reads connected after a real round trip through the VPN comes back, and a connect that grinds stops with a clear message instead of sitting on Connecting",
   "pub_date": "2026-10-17T21:18:56Z",
   "platforms": {
