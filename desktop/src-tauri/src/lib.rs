@@ -1631,6 +1631,12 @@ async fn updater(app: &tauri::AppHandle, channel: &str) -> Result<tauri_plugin_u
 /// The newest published release that carries a compiled update feed,
 /// pre-releases included, as the experimental channel's endpoint. Releases
 /// without a latest.json asset (like the engine package) are skipped.
+///
+/// The list GitHub returns is NOT reliably newest-first (observed: older
+/// test builds before newer ones), so the pick is by the release's own
+/// created timestamp, the greatest winning. Taking the first entry that
+/// merely looks valid resolved a stale feed and would have offered an
+/// older build as an update.
 async fn experimental_feed_url() -> Option<String> {
     const REPO: &str = "YousefMohiey/QuotaVPN";
     let client = reqwest::Client::builder()
@@ -1640,7 +1646,7 @@ async fn experimental_feed_url() -> Option<String> {
         .ok()?;
     let body = client
         .get(format!(
-            "https://api.github.com/repos/{REPO}/releases?per_page=10"
+            "https://api.github.com/repos/{REPO}/releases?per_page=30"
         ))
         .send()
         .await
@@ -1649,20 +1655,30 @@ async fn experimental_feed_url() -> Option<String> {
         .await
         .ok()?;
     let list: serde_json::Value = serde_json::from_str(&body).ok()?;
-    let first = list.as_array()?.iter().find(|r| {
-        r.get("draft").and_then(|v| v.as_bool()) != Some(true)
-            && r.get("tag_name")
+    let best = list
+        .as_array()?
+        .iter()
+        .filter(|r| {
+            r.get("draft").and_then(|v| v.as_bool()) != Some(true)
+                && r.get("tag_name")
+                    .and_then(|v| v.as_str())
+                    .is_some_and(|t| t.starts_with('v'))
+                && r
+                    .get("assets")
+                    .and_then(|v| v.as_array())
+                    .is_some_and(|a| {
+                        a.iter()
+                            .any(|x| x.get("name").and_then(|n| n.as_str()) == Some("latest.json"))
+                    })
+        })
+        .max_by_key(|r| {
+            // ISO 8601 UTC timestamps compare as strings, so the latest
+            // release wins regardless of the order the API chose.
+            r.get("created_at")
                 .and_then(|v| v.as_str())
-                .is_some_and(|t| t.starts_with('v'))
-            && r
-                .get("assets")
-                .and_then(|v| v.as_array())
-                .is_some_and(|a| {
-                    a.iter()
-                        .any(|x| x.get("name").and_then(|n| n.as_str()) == Some("latest.json"))
-                })
-    })?;
-    let tag = first.get("tag_name")?.as_str()?;
+                .unwrap_or("")
+        })?;
+    let tag = best.get("tag_name")?.as_str()?;
     Some(format!(
         "https://github.com/{REPO}/releases/download/{tag}/latest.json"
     ))
