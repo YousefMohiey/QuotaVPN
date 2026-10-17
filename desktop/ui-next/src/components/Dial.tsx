@@ -5,8 +5,8 @@ import { useI18n } from "@/lib/i18n"
 
 export type DialState = "idle" | "connecting" | "on"
 
-/** The one button that matters: a solid key with one lit edge, state told
-    by the ring and the word, no glass and no glow. */
+/** The one button that matters: the glass disc, one lit line, state told
+    by the ring and the word. */
 export function Dial({
   state,
   onClick,
@@ -29,14 +29,14 @@ export function Dial({
       transition={{ type: "spring", stiffness: 460, damping: 32 }}
       className={cn(
         "relative grid size-[204px] shrink-0 place-items-center rounded-full border transition-colors duration-300 disabled:opacity-70",
-        /* solid surface with one lit edge and one shaded edge: a real key,
-           depth without glass */
-        "bg-[linear-gradient(180deg,#20242c,#14161c)] shadow-[0_20px_44px_rgb(0_0_0/0.5),0_2px_8px_rgb(0_0_0/0.4),inset_0_1px_0_rgb(255_255_255/0.10),inset_0_-2px_6px_rgb(0_0_0/0.35)]",
+        /* the glass material: translucent fill, one lit line, nothing else */
+        "bg-white/[0.05] backdrop-blur-[14px] backdrop-saturate-150",
+        "shadow-[inset_0_1px_0_rgb(255_255_255/0.10)]",
         state === "on"
-          ? "border-[rgb(92_178_142/0.65)] text-[var(--green)]"
+          ? "border-[var(--green-line)] text-[var(--green)]"
           : state === "connecting"
             ? "border-[var(--brand-line)] text-brand-strong"
-            : "border-[rgb(255_255_255/0.14)] text-txt hover:border-[rgb(255_255_255/0.28)]",
+            : "border-[rgb(255_255_255/0.14)] text-txt hover:border-[rgb(255_255_255/0.26)]",
       )}
     >
       {state === "connecting" && (
