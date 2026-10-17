@@ -92,11 +92,11 @@ export function WeQuotaCard() {
           {buckets.length ? (
             <div className="mt-auto border-t border-line pt-3">
               <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.07em] text-txt2">{t("wePackage")}</p>
-              <div className="grid grid-cols-3 gap-3">
-                {buckets.map((b) => {
+              <div className="grid grid-cols-3 divide-x divide-line">
+                {buckets.map((b, i) => {
                   const k = bucketKey(b.item)
                   return (
-                    <div key={b.item || b.label} className="min-w-0">
+                    <div key={b.item || b.label} className={cn("min-w-0", i === 0 ? "pe-3" : i === buckets.length - 1 ? "ps-3" : "px-3")}>
                       <div className="truncate text-[11px] font-semibold uppercase tracking-[0.07em] text-txt2">
                         {k ? t(k) : b.label || "WE"}
                       </div>

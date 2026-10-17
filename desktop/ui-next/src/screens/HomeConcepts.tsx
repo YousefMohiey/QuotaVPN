@@ -41,20 +41,20 @@ function ConnectStack({ strip = false, stretch = false, profiles }: { strip?: bo
         <div className="mt-3 flex min-w-0 flex-col items-center">
         <span
           className={cn(
-            "inline-flex items-center gap-2 text-[13px] font-medium",
-            connected ? "text-[var(--green)]" : working ? "text-brand-strong" : "text-txt2",
+            "inline-flex items-center gap-2 text-[13.5px] font-medium",
+            connected ? "text-[var(--green)]" : working ? "text-brand-strong" : "text-txt",
           )}
         >
           <span
             aria-hidden
             className={cn(
-              "size-1.5 rounded-full",
+              "size-2 rounded-full",
               connected ? "bg-[var(--green)]" : working ? "pulse-dot bg-[var(--brand)]" : "bg-txt3",
             )}
           />
           {connected ? t("connected") : working ? t("working") : t("notConnected")}
         </span>
-        {profiles ? <div className="mt-2.5 flex w-full justify-center">{profiles}</div> : null}
+        {profiles ? <div className="mt-5 flex w-full justify-center">{profiles}</div> : null}
         {connected ? (
           <p className="mt-1.5 max-w-full truncate text-[12.5px] tabular-nums text-txt2">
             <span className="text-txt3">{t("sessLabel")} </span>
@@ -63,7 +63,7 @@ function ConnectStack({ strip = false, stretch = false, profiles }: { strip?: bo
             {traffic.down.unit} ↑ {traffic.up.num} {traffic.up.unit}
           </p>
         ) : (
-          <p className="mt-1.5 max-w-full truncate font-mono text-[11.5px] text-txt2" dir="auto">
+          <p className="mt-1.5 max-w-full truncate font-mono text-[11.5px] text-txt3" dir="auto">
             {displayHost(card?.sni)}
           </p>
         )}
@@ -84,7 +84,7 @@ function FactsStrip() {
   const ipText = connected ? serverAddr || geo?.ip || "-" : geo?.ip || "-"
 
   return (
-    <div className="mt-2.5 grid w-full grid-cols-3 items-start divide-x divide-line border-t border-line pt-2.5 text-start">
+    <div className="mt-3 grid w-full grid-cols-3 items-start divide-x divide-line border-t border-line pt-3 text-start">
       <div className="flex min-w-0 flex-col pe-5">
         <span className="text-[11px] font-semibold uppercase tracking-[0.07em] text-txt2">{t("yourLocation")}</span>
         <span className="mt-1 truncate text-[13.5px] font-medium text-txt" dir="auto" title={geo?.place || ""}>
@@ -383,7 +383,7 @@ export function HomeConcept({ alt, onOpenApps }: { alt: string; onOpenApps: () =
   )
 
   const connectionCard = (
-    <section className="flex flex-col justify-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] px-5 py-4">
+    <section className="flex flex-col justify-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] px-5 pt-4 pb-5">
       <div className="flex items-center gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
           <SlidersHorizontal className="size-[18px]" aria-hidden />
@@ -460,7 +460,7 @@ export function HomeConcept({ alt, onOpenApps }: { alt: string; onOpenApps: () =
           <div className="flex min-h-0 flex-[3_1_auto] flex-col">
             <ConnectStack strip stretch profiles={profileSwitcher} />
           </div>
-          <div className="grid min-h-0 flex-[1_1_auto] grid-cols-[minmax(0,6.5fr)_minmax(0,5.5fr)] gap-3">
+          <div className="grid min-h-0 flex-[1_1_auto] grid-cols-2 gap-3">
             {connectionCard}
             <WeQuotaCard />
           </div>
