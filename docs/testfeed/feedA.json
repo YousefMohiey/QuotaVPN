@@ -1,0 +1,12 @@
+{
+  "version": "0.4.0",
+  "build": "deadbee",
+  "notes": "The voice card only reads connected after a real round trip through the VPN comes back, and a connect that grinds stops with a clear message instead of sitting on Connecting",
+  "pub_date": "2026-10-17T21:18:56Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSURUeFFwSCtEZmJKT2MyQlJlL2JpV21sRnk3cHNVV250d0tHTm10Vm1FQjRyTFcvOG1weUVWdTRjU05LWjRyWnd3bFJhK0laRmllSmRNMEZxeU5SR0FZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMjcxOTI4CWZpbGU6UXVvdGFWUE5fMC40LjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjAuNC4wClVSay9QbUhjdy82dGxDOEg5akVPek4wWnVUSnh1ZVNNRTBwNTY2c3pTZUp1L3BEOEZlNk4rZ2s2OEVVc29YODd1RkhwUWZ5bFRWTmZLT2FYL3F1ekRnPT0K",
+      "url": "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.4.0-test10/QuotaVPN_0.4.0_x64-setup.exe"
+    }
+  }
+}
