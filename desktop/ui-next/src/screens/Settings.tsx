@@ -102,7 +102,7 @@ function WeQuotaCard() {
 
 export function Settings() {
   const { t, lang, setLang } = useI18n()
-  const { update, updateState, checkUpdates, applyUpdate, updatePct, version, updateChannel, setUpdateChannel } =
+  const { update, updateState, updateError, checkUpdates, applyUpdate, updatePct, version, updateChannel, setUpdateChannel } =
     useApp()
   // The cached value paints on the first frame; the engine read (a registry
   // lookup now) reconciles a moment later.
@@ -170,7 +170,7 @@ export function Settings() {
           : updateState === "installing"
             ? t("upInstalling")
             : updateState === "error"
-              ? t("upFail")
+              ? updateError || t("upFail")
               : cur
                 ? t("upCur").replace("{v}", cur)
                 : ""
@@ -248,11 +248,13 @@ export function Settings() {
             <div className="mt-0.5 text-[12.5px] leading-relaxed text-txt2">{t("upRowBody")}</div>
           </div>
           <div className="flex shrink-0 items-center gap-3">
-            <span aria-live="polite" className="flex items-center gap-2 text-[12px] text-txt3">
+            <span aria-live="polite" className="flex max-w-[420px] items-center gap-2 text-[12px] text-txt3">
               {updateText ? (
                 <>
-                  <span aria-hidden className={cn("size-1.5 rounded-full", upTone)} />
-                  {updateText}
+                  <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", upTone)} />
+                  <span className="truncate" title={updateText}>
+                    {updateText}
+                  </span>
                 </>
               ) : null}
             </span>

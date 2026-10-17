@@ -1596,6 +1596,14 @@ fn up_to_date(current: &str) -> UpdateInfo {
 /// built-in endpoint, which GitHub only serves for full releases.
 async fn updater(app: &tauri::AppHandle, channel: &str) -> Result<tauri_plugin_updater::Updater, String> {
     let mut builder = app.updater_builder();
+    // The plugin's default compare demands a strictly newer version number,
+    // but a build of a version line (every test build, every hotfix re-release)
+    // keeps its number and differs only by build stamp. Accept equals here and
+    // let offer_equal_version make the real call: it refuses a feed stamp that
+    // is missing or identical to this build, so nothing loops. Without this the
+    // check resolved the right feed and then reported "up to date" anyway
+    // because 0.4.0 is not newer than 0.4.0.
+    builder = builder.version_comparator(|current, remote| remote.version >= current);
     if let Ok(raw) = std::env::var("QC_FEED_URL") {
         let raw = raw.trim();
         if !raw.is_empty() {
@@ -1674,6 +1682,20 @@ fn set_update_channel(channel: String, state: tauri::State<State>) -> Result<(),
     Ok(())
 }
 
+/// The check failure with the whole source chain spelled out: the plugin's
+/// own Display stops at "error sending request", and the cause underneath is
+/// the only part that says why.
+fn check_failed(e: tauri_plugin_updater::Error) -> String {
+    let mut msg = e.to_string();
+    let mut src = std::error::Error::source(&e);
+    while let Some(s) = src {
+        msg.push_str(": ");
+        msg.push_str(&s.to_string());
+        src = s.source();
+    }
+    format!("check failed: {msg}")
+}
+
 #[tauri::command]
 async fn check_update(app: tauri::AppHandle, state: tauri::State<'_, State>) -> Result<UpdateInfo, String> {
     const REPO: &str = "YousefMohiey/QuotaVPN";
@@ -1683,7 +1705,7 @@ async fn check_update(app: tauri::AppHandle, state: tauri::State<'_, State>) -> 
         .await?
         .check()
         .await
-        .map_err(|e| format!("check failed: {e}"))?;
+        .map_err(check_failed)?;
     match found {
         Some(u) => {
             // An equal version number is a re-release: it is only real
@@ -1756,7 +1778,7 @@ async fn apply_update(app: tauri::AppHandle, state: tauri::State<'_, State>) -> 
         .await?
         .check()
         .await
-        .map_err(|e| format!("check failed: {e}"))?
+        .map_err(check_failed)?
         .ok_or_else(|| "Already on the latest build".to_string())?;
     // Same guard as the check: an equal version number with a feed build
     // stamp that is missing, empty or identical to this build is not an

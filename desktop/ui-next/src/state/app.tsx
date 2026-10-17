@@ -37,6 +37,9 @@ type Value = {
   sessionStart: number | null
   update: UpdateInfo | null
   updateState: "idle" | "checking" | "latest" | "available" | "installing" | "error"
+  // Why the last check failed, verbatim, so the row can say what actually
+  // happened instead of a generic network guess.
+  updateError: string
   version: string
   refresh: () => Promise<void>
   refreshing: boolean
@@ -106,6 +109,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [sessionStart, setSessionStart] = useState<number | null>(null)
   const [update, setUpdate] = useState<UpdateInfo | null>(null)
   const [updateState, setUpdateState] = useState<Value["updateState"]>("idle")
+  const [updateError, setUpdateError] = useState("")
   const [updatePct, setUpdatePct] = useState<number | null>(null)
   const [version, setVersion] = useState("")
   const [updateChannel, setUpdateChannelState] = useState<"normal" | "experimental">("normal")
@@ -750,11 +754,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const checkUpdates = useCallback(async () => {
     setUpdateState("checking")
+    setUpdateError("")
     try {
       const info = await api.checkUpdate()
       setUpdate(info)
       setUpdateState(info.available ? "available" : "latest")
-    } catch {
+    } catch (e) {
+      setUpdateError(typeof e === "string" ? e.replace(/^check failed: /, "") : String(e))
       setUpdateState("error")
     }
   }, [])
@@ -1039,6 +1045,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     sessionStart,
     update,
     updateState,
+    updateError,
     version,
     updateChannel,
     setUpdateChannel,
