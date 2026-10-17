@@ -282,18 +282,22 @@ pub fn resolve_server_ips(host: &str) -> Result<Vec<String>, String> {
 
 /// Destination networks of the game's VOICE infrastructure: Vivox and the
 /// hosting companies its media ran on. This list matches the route lines of
-/// the working community OpenVPN config for Egypt (user-supplied
+/// the working community OpenVPN config for Egypt (the owner-supplied
 /// "Valorant1.ovpn", which labels these exact ranges "Valorant Voice Chat
-/// IPs"), and Riot itself has pointed users at traceroutes to 74.201.103.x
-/// when voice misbehaved. They are matched WITHOUT process scoping or
-/// sniffing, so they also catch the flows where the game talks to a voice
-/// server by raw IP on a port nobody published. Live-tested: from Egypt the
-/// direct path to 74.201.103.25 times out while the same connection through
-/// the tunnel answers in ms.
+/// IPs"), line for line, down to a /24 where we once carried a wider /16.
+/// They are matched WITHOUT process scoping or sniffing, so they also catch
+/// the flows where the game talks to a voice server by raw IP on a port
+/// nobody published. The network ranges are the part that actually carries
+/// voice; every extra port rule this feature once had was retired because it
+/// also swept game-adjacent and third-party flows (the Riot client's own
+/// master connection, other games' Steam-range UDP) into the tunnel, which
+/// showed up as lag and a brief in-game disconnect the moment the tunnel
+/// came up. Live-tested: from Egypt the direct path to a voice IP times
+/// out while the same connection through the tunnel answers in ms.
 const VOICE_CIDRS: [&str; 8] = [
     "20.0.0.0/8",
     "63.251.140.0/24",
-    "69.25.0.0/16",
+    "69.25.124.0/24",
     "70.42.0.0/16",
     "74.201.0.0/16",
     "85.0.0.0/8",
@@ -306,9 +310,9 @@ const VOICE_CIDRS: [&str; 8] = [
 /// `apps_mode` picks the per-app routing: "allow" sends ONLY the listed
 /// process names through the tunnel, "block" sends everything EXCEPT them,
 /// anything else routes the whole PC.
-/// `voice` adds the VALORANT voice rules: only the voice/STUN ports and the
-/// Vivox endpoints of the listed Riot processes ride the tunnel, everything
-/// else (the game's own traffic included) stays direct.
+/// `voice` adds the VALORANT voice rules: only the voice networks and the
+/// Riot-scoped STUN/Vivox hedges ride the tunnel, everything else (the
+/// game's own traffic included) stays direct.
 pub fn write_tun_config(
     uuid: &str,
     host: &str,
@@ -402,14 +406,17 @@ pub fn write_tun_config(
                 "outbound": "proxy"
             }),
         );
-        rules.insert(
-            1,
-            serde_json::json!({
-                "process_name": riot,
-                "port_range": ["8393:8400"],
-                "outbound": "proxy"
-            }),
-        );
+        // The Riot-scoped STUN hedge stays: it cannot sweep anything but the
+        // listed processes. What does NOT come back: the Riot-process
+        // 8393:8400 rule (Riot's own port table labels that range Installer
+        // and Master - the game client's own launch and lobby traffic, which
+        // belongs DIRECT, and tunneling it was a prime suspect for the
+        // in-game disconnect people saw when the helper engaged), and the
+        // unscoped 27016:27024 / 54000:54012 media ranges in both directions
+        // (they swept third-party Steam-range and random-source-port flows
+        // into the tunnel; the voice networks above are what actually carry
+        // the media, proven by the community OpenVPN config this forked
+        // from, which carries no port rules at all).
         rules.insert(
             1,
             serde_json::json!({
@@ -419,25 +426,6 @@ pub fn write_tun_config(
                 "outbound": "proxy"
             }),
         );
-        // Riot publishes the voice media ranges per region: UDP 27016-27024
-        // in NA/EU and UDP 54000-54012 in AP/SE. These carry the actual
-        // audio. The first version of this feature routed only signaling and
-        // STUN, so the media kept taking the direct path and voice stayed
-        // bad. They are matched WITHOUT process scoping (the ranges are
-        // exclusive to the voice engine, and UDP process matching is the
-        // flakier half of sing-box's feature set) and on BOTH sides of the
-        // flow, because the published range can show up as either the
-        // destination or the client's own bound port.
-        for range in ["54000:54012", "27016:27024"] {
-            rules.insert(
-                1,
-                serde_json::json!({"network": "udp", "port_range": [range], "outbound": "proxy"}),
-            );
-            rules.insert(
-                1,
-                serde_json::json!({"network": "udp", "source_port_range": [range], "outbound": "proxy"}),
-            );
-        }
     }
     {
         // IPv6 is captured by the tun (so it cannot leak around the VPN) but
@@ -922,16 +910,32 @@ mod tests {
         // never carried, so new v6 flows fall back to v4 instead of dying.
         assert_eq!(rules[0]["ip_version"], 6);
         assert_eq!(rules[0]["action"], "reject");
-        // the voice port rule rides the tunnel (port_range, not port:
-        // sing-box 1.14 accepts ranges only through port_range)
+        // the scoped STUN hedge rides the tunnel (port_range, not port:
+        // sing-box 1.14 accepts ranges only through port_range) and is the
+        // only port rule allowed in the set: anything unscoped would sweep
+        // third-party flows into the tunnel and bring back the lag and the
+        // in-game disconnect this feature was fixed for.
         assert!(rules.iter().any(|r| r["port_range"][0] == "3478:3480" && r["outbound"] == "proxy"));
-        // The published voice MEDIA ranges ride the tunnel in both forms:
-        // EU voice is UDP 27016-27024, AP/SE is 54000-54012, matched without
-        // process scoping and on either side of the flow.
-        assert!(rules.iter().any(|r| r["port_range"][0] == "27016:27024" && r["outbound"] == "proxy"));
-        assert!(rules.iter().any(|r| r["source_port_range"][0] == "27016:27024" && r["outbound"] == "proxy"));
-        assert!(rules.iter().any(|r| r["port_range"][0] == "54000:54012" && r["outbound"] == "proxy"));
-        assert!(rules.iter().any(|r| r["source_port_range"][0] == "54000:54012" && r["outbound"] == "proxy"));
+        assert!(
+            !rules.iter().any(|r| {
+                r["outbound"] == "proxy"
+                    && r.get("process_name").is_none()
+                    && (r.get("port_range").is_some() || r.get("source_port_range").is_some())
+            }),
+            "an unscoped port rule leaked into the voice set"
+        );
+        // The Riot client's master/installer range must stay out: Riot's own
+        // port table labels 8393-8400 Installer and Master, and tunneling it
+        // took the game's launch and lobby traffic abroad.
+        assert!(!rules.iter().any(|r| r["port_range"][0] == "8393:8400"));
+        // The /16 we once carried was a widening of the source config; the
+        // list stays line for line with the community file the feature forked
+        // from.
+        assert!(!rules.iter().any(|r| {
+            r["ip_cidr"]
+                .as_array()
+                .map_or(false, |a| a.iter().any(|x| x.as_str() == Some("69.25.0.0/16")))
+        }));
         // The voice infrastructure NETWORKS ride the tunnel on every port and
         // protocol; live-tested from Egypt: the direct path to a voice IP
         // times out while the same connection succeeds through the tunnel.
@@ -940,6 +944,7 @@ mod tests {
                 && r["ip_cidr"].as_array().map_or(false, |a| {
                     a.iter().any(|x| x.as_str() == Some("74.201.0.0/16"))
                         && a.iter().any(|x| x.as_str() == Some("20.0.0.0/8"))
+                        && a.iter().any(|x| x.as_str() == Some("69.25.124.0/24"))
                 })
         }));
         // The sniff action must precede the domain rule, or a sniffed domain
