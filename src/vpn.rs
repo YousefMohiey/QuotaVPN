@@ -19,7 +19,7 @@ const NO_WINDOW: u32 = 0;
 const ENGINE_TAG: &str = "awg-1.14.1";
 const ENGINE_VER: &str = "1.14.1";
 const ENGINE_URL: &str =
-    "https://github.com/YousefMohiey/QuotaCards/releases/download/engine-awg-1141/engine-awg-1141.zip";
+    "https://github.com/YousefMohiey/QuotaVPN/releases/download/engine-awg-1141/engine-awg-1141.zip";
 const WINTUN_TAG: &str = "0.14.1";
 const WINTUN_URL: &str = "https://www.wintun.net/builds/wintun-0.14.1.zip";
 
