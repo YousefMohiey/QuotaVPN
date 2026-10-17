@@ -569,6 +569,20 @@ pub fn write_tun_config(
             "default_domain_resolver": "direct-dns"
         }
     });
+    // Voice-only sessions take the lesson from the community OpenVPN config
+    // this feature forked from: its route-nopull plus explicit routes confine
+    // the tunnel to the voice networks at the KERNEL level. Without this,
+    // auto_route captures the whole PC into the userspace stack, so the
+    // game's own flows get pulled through it the moment the helper engages
+    // (the in-game disconnect) and pay userspace overhead while it runs
+    // (the lag). With it, only traffic destined to the voice networks is
+    // ever routed into the tun; everything else, the game included, never
+    // touches it. Sessions with real app lists, whole-device sessions and
+    // block-mode sessions must NOT get this: they are defined by capturing
+    // everything and classifying per connection.
+    if apps_only && voice && apps.is_empty() {
+        cfg["inbounds"][0]["route_address"] = serde_json::json!(VOICE_CIDRS.to_vec());
+    }
     // The WireGuard endpoint lives in its own top-level list; omit the key
     // entirely for the other transports so the shape stays minimal.
     if !endpoints.as_array().map(|a| a.is_empty()).unwrap_or(true) {
@@ -936,6 +950,15 @@ mod tests {
                 .as_array()
                 .map_or(false, |a| a.iter().any(|x| x.as_str() == Some("69.25.0.0/16")))
         }));
+        // The helper must not capture the whole PC: only traffic addressed to
+        // the voice networks is routed into the tun (the community config's
+        // route-nopull shape). Everything else, the game included, stays on
+        // the physical NIC and never touches the userspace stack.
+        let ra = v["inbounds"][0]["route_address"].as_array().unwrap();
+        assert_eq!(ra.len(), 8);
+        assert!(ra.iter().any(|x| x.as_str() == Some("74.201.0.0/16")));
+        assert!(ra.iter().any(|x| x.as_str() == Some("69.25.124.0/24")));
+        assert_eq!(v["inbounds"][0]["auto_route"], true);
         // The voice infrastructure NETWORKS ride the tunnel on every port and
         // protocol; live-tested from Egypt: the direct path to a voice IP
         // times out while the same connection succeeds through the tunnel.
@@ -993,9 +1016,13 @@ mod tests {
         }));
         // allow-mode finals stay: everything else direct
         assert_eq!(v["route"]["final"], "direct");
+        // merged sessions keep the full capture: per-app matching has to see
+        // every connection, so no route_address narrowing here
+        assert!(v["inbounds"][0].get("route_address").is_none());
         // whole-device session plus the helper: everything rides the tunnel
         let v2 = cfg_voice("all", &[], true);
         assert_eq!(v2["route"]["final"], "proxy");
+        assert!(v2["inbounds"][0].get("route_address").is_none());
         assert!(v2["route"]["rules"].as_array().unwrap().iter().any(|r| r["port_range"][0] == "3478:3480"));
         if engine_dir().join("sing-box.exe").exists() {
             check_config().expect("engine accepts the merged config");
