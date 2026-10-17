@@ -48,6 +48,7 @@ struct UiState {
     ssh_port: u16,
     cards: Vec<Card>,
     version: String,
+    update_channel: String,
 }
 
 fn snapshot(cfg: &AppConfig) -> UiState {
@@ -57,6 +58,7 @@ fn snapshot(cfg: &AppConfig) -> UiState {
         ssh_port: cfg.ssh_port,
         cards: cfg.cards.clone(),
         version: String::new(),
+        update_channel: cfg.update_channel.clone(),
     }
 }
 
@@ -1547,9 +1549,12 @@ fn up_to_date(current: &str) -> UpdateInfo {
     }
 }
 
-/// The updater handle. QC_FEED_URL repoints it at a local feed so the
-/// check and install paths can be exercised without publishing a release.
-fn updater(app: &tauri::AppHandle) -> Result<tauri_plugin_updater::Updater, String> {
+/// The updater handle for a channel. QC_FEED_URL repoints it at a local
+/// feed so the check and install paths can be exercised without publishing
+/// a release. The experimental channel resolves the newest published
+/// release itself, pre-releases included; the stable channel keeps the
+/// built-in endpoint, which GitHub only serves for full releases.
+async fn updater(app: &tauri::AppHandle, channel: &str) -> Result<tauri_plugin_updater::Updater, String> {
     let mut builder = app.updater_builder();
     if let Ok(raw) = std::env::var("QC_FEED_URL") {
         let raw = raw.trim();
@@ -1559,17 +1564,83 @@ fn updater(app: &tauri::AppHandle) -> Result<tauri_plugin_updater::Updater, Stri
                 .endpoints(vec![url])
                 .map_err(|e| format!("bad QC_FEED_URL: {e}"))?;
         }
+    } else if channel == "experimental" {
+        if let Some(raw) = experimental_feed_url().await {
+            if let Ok(url) = reqwest::Url::parse(&raw) {
+                builder = builder
+                    .endpoints(vec![url])
+                    .map_err(|e| format!("bad feed url: {e}"))?;
+            }
+        }
+        // A lookup that fails leaves the stable endpoint in place: the
+        // check still works, it just cannot see test builds this round.
     }
     builder
         .build()
         .map_err(|e| format!("updater unavailable: {e}"))
 }
 
+/// The newest published release that carries a compiled update feed,
+/// pre-releases included, as the experimental channel's endpoint. Releases
+/// without a latest.json asset (like the engine package) are skipped.
+async fn experimental_feed_url() -> Option<String> {
+    const REPO: &str = "YousefMohiey/QuotaVPN";
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(8))
+        .user_agent("QuotaVPN")
+        .build()
+        .ok()?;
+    let body = client
+        .get(format!(
+            "https://api.github.com/repos/{REPO}/releases?per_page=10"
+        ))
+        .send()
+        .await
+        .ok()?
+        .text()
+        .await
+        .ok()?;
+    let list: serde_json::Value = serde_json::from_str(&body).ok()?;
+    let first = list.as_array()?.iter().find(|r| {
+        r.get("draft").and_then(|v| v.as_bool()) != Some(true)
+            && r.get("tag_name")
+                .and_then(|v| v.as_str())
+                .is_some_and(|t| t.starts_with('v'))
+            && r
+                .get("assets")
+                .and_then(|v| v.as_array())
+                .is_some_and(|a| {
+                    a.iter()
+                        .any(|x| x.get("name").and_then(|n| n.as_str()) == Some("latest.json"))
+                })
+    })?;
+    let tag = first.get("tag_name")?.as_str()?;
+    Some(format!(
+        "https://github.com/{REPO}/releases/download/{tag}/latest.json"
+    ))
+}
+
+/// The update channel the user picked: "normal" or "experimental". The
+/// check and install paths read it back from the config on every call, so
+/// a switch takes effect on the next check.
 #[tauri::command]
-async fn check_update(app: tauri::AppHandle) -> Result<UpdateInfo, String> {
-    const REPO: &str = "YousefMohiey/QuotaCards";
+fn set_update_channel(channel: String, state: tauri::State<State>) -> Result<(), String> {
+    let ch = if channel == "experimental" { "experimental" } else { "normal" };
+    let mut cfg = state.0.lock().unwrap();
+    if cfg.update_channel != ch {
+        cfg.update_channel = ch.to_string();
+        cfg.save();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn check_update(app: tauri::AppHandle, state: tauri::State<'_, State>) -> Result<UpdateInfo, String> {
+    const REPO: &str = "YousefMohiey/QuotaVPN";
     let current = app.package_info().version.to_string();
-    let found = updater(&app)?
+    let channel = state.0.lock().unwrap().update_channel.clone();
+    let found = updater(&app, &channel)
+        .await?
         .check()
         .await
         .map_err(|e| format!("check failed: {e}"))?;
@@ -1577,7 +1648,8 @@ async fn check_update(app: tauri::AppHandle) -> Result<UpdateInfo, String> {
         Some(u) => {
             // An equal version number is a re-release: it is only real
             // when the feed carries a build stamp other than this one.
-            let available = if u.version == current {
+            let equal = u.version == current;
+            let available = if equal {
                 updater::offer_equal_version(
                     u.raw_json.get("build").and_then(|v| v.as_str()),
                     BUILD_STAMP,
@@ -1590,7 +1662,14 @@ async fn check_update(app: tauri::AppHandle) -> Result<UpdateInfo, String> {
             }
             Ok(UpdateInfo {
                 available: true,
-                url: format!("https://github.com/{REPO}/releases/tag/v{}", u.version),
+                // A same-version re-release carries a different build stamp,
+                // so its tag cannot be derived from the version: send the
+                // user to the release list instead of a tag URL.
+                url: if equal {
+                    format!("https://github.com/{REPO}/releases")
+                } else {
+                    format!("https://github.com/{REPO}/releases/tag/v{}", u.version)
+                },
                 latest: u.version,
                 // First line of the release notes, so the update notice can say
                 // what the build actually is (a hotfix reads as one) instead of
@@ -1630,9 +1709,11 @@ async fn check_update(app: tauri::AppHandle) -> Result<UpdateInfo, String> {
 /// then restart into the new build. Progress goes to the UI as
 /// `update-progress` events with a `pct` field.
 #[tauri::command]
-async fn apply_update(app: tauri::AppHandle) -> Result<String, String> {
+async fn apply_update(app: tauri::AppHandle, state: tauri::State<'_, State>) -> Result<String, String> {
     let current = app.package_info().version.to_string();
-    let update = updater(&app)?
+    let channel = state.0.lock().unwrap().update_channel.clone();
+    let update = updater(&app, &channel)
+        .await?
         .check()
         .await
         .map_err(|e| format!("check failed: {e}"))?
@@ -1915,6 +1996,7 @@ pub fn run() {
             resolve_host,
             check_update,
             apply_update,
+            set_update_channel,
             net_info,
             app_icons,
             speed_servers,

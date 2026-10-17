@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { Languages, Power, RefreshCw } from "lucide-react"
+import { FlaskConical, Languages, Power, RefreshCw, ShieldCheck } from "lucide-react"
 import { Toggle } from "@/components/Toggle"
 import { WeMark } from "@/components/WeMark"
 import { Segmented } from "@/components/Segmented"
@@ -106,7 +106,8 @@ function WeQuotaCard() {
 
 export function Settings() {
   const { t, lang, setLang } = useI18n()
-  const { update, updateState, checkUpdates, applyUpdate, updatePct, version } = useApp()
+  const { update, updateState, checkUpdates, applyUpdate, updatePct, version, updateChannel, setUpdateChannel } =
+    useApp()
   // The cached value paints on the first frame; the engine read (a registry
   // lookup now) reconciles a moment later.
   const [startup, setStartup] = useState(() => {
@@ -187,6 +188,57 @@ export function Settings() {
           ? "bg-[var(--line-strong)]"
           : "bg-[var(--brand-vivid)]"
 
+  /** One release channel as a selectable card: icon, name, one quiet line,
+      and the radio dot at the edge. Switching it re-checks right away. */
+  const channelCard = (ch: "normal" | "experimental") => {
+    const isActive = updateChannel === ch
+    const Icon = ch === "experimental" ? FlaskConical : ShieldCheck
+    return (
+      <button
+        key={ch}
+        type="button"
+        aria-pressed={isActive}
+        onClick={() => {
+          if (!isActive) void setUpdateChannel(ch)
+        }}
+        className={cn(
+          "flex items-start gap-3 rounded-[12px] border p-3.5 text-start transition-colors duration-200",
+          isActive
+            ? "border-[var(--brand-line)] bg-[var(--brand-bg)]"
+            : "border-line bg-white/[0.02] hover:border-[var(--brand-line)]",
+        )}
+      >
+        <span
+          className={cn(
+            "grid size-10 shrink-0 place-items-center rounded-[10px] border transition-colors",
+            isActive
+              ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong"
+              : "border-line bg-white/[0.03] text-txt3",
+          )}
+        >
+          <Icon className="size-[18px]" strokeWidth={1.8} aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className={cn("block text-[14px] font-semibold", isActive ? "text-txt" : "text-txt2")}>
+            {ch === "experimental" ? t("chExp") : t("chStable")}
+          </span>
+          <span className="mt-0.5 block text-[11.5px] leading-snug text-txt3">
+            {ch === "experimental" ? t("chExpBody") : t("chStableBody")}
+          </span>
+        </span>
+        <span
+          aria-hidden
+          className={cn(
+            "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border-[1.5px] transition-colors",
+            isActive ? "border-[var(--brand)]" : "border-line-strong",
+          )}
+        >
+          {isActive && <span className="size-[7px] rounded-full bg-[var(--brand)]" />}
+        </span>
+      </button>
+    )
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-3">
       <div className="mb-1 min-w-0">
@@ -234,12 +286,23 @@ export function Settings() {
         }
       />
 
-      <SettingCard
-        icon={<RefreshCw className="size-5" strokeWidth={1.7} aria-hidden />}
-        title={t("updRow")}
-        sub={t("upRowBody")}
-        control={
-          <div className="flex items-center gap-3">
+      <section className="rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] px-5 py-4">
+        <div className="flex items-center gap-4">
+          <span className="grid size-12 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
+            <RefreshCw className="size-5" strokeWidth={1.7} aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-[15px] font-semibold text-txt">{t("updRow")}</h2>
+              {updateChannel === "experimental" ? (
+                <span className="rounded-full border border-[var(--brand-line)] bg-[var(--brand-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-brand-strong">
+                  {t("chBadge")}
+                </span>
+              ) : null}
+            </div>
+            <div className="mt-0.5 text-[12.5px] leading-relaxed text-txt2">{t("upRowBody")}</div>
+          </div>
+          <div className="flex shrink-0 items-center gap-3">
             <span aria-live="polite" className="flex items-center gap-2 text-[12px] text-txt3">
               {updateText ? (
                 <>
@@ -272,8 +335,16 @@ export function Settings() {
               </button>
             )}
           </div>
-        }
-      />
+        </div>
+
+        <div className="mt-4 border-t border-line pt-4">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.07em] text-txt2">{t("chTitle")}</p>
+          <div className="mt-3 grid grid-cols-2 gap-3" role="group" aria-label={t("chTitle")}>
+            {channelCard("normal")}
+            {channelCard("experimental")}
+          </div>
+        </div>
+      </section>
       </div>
     </div>
   )

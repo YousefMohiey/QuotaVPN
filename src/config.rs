@@ -42,6 +42,10 @@ pub struct AppConfig {
     /// the launch refresh run once per update instead of on every open.
     #[serde(default)]
     pub healed_version: String,
+    /// Update channel the user picked. Empty or "normal" tracks official
+    /// releases only; "experimental" also takes the newest test builds.
+    #[serde(default)]
+    pub update_channel: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

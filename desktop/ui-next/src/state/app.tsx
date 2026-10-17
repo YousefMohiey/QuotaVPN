@@ -58,6 +58,8 @@ type Value = {
   toggle: () => void
   checkUpdates: () => void
   applyUpdate: () => void
+  updateChannel: "normal" | "experimental"
+  setUpdateChannel: (c: "normal" | "experimental") => void
   loadApps: () => Promise<Array<{ pkg: string; label: string }>>
   voiceRunning: boolean
   voiceOn: boolean
@@ -105,6 +107,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [updateState, setUpdateState] = useState<Value["updateState"]>("idle")
   const [updatePct, setUpdatePct] = useState<number | null>(null)
   const [version, setVersion] = useState("")
+  const [updateChannel, setUpdateChannelState] = useState<"normal" | "experimental">("normal")
   const [refreshing, setRefreshing] = useState(false)
   const refreshingRef = useRef(false)
   const busyRef = useRef(false)
@@ -148,6 +151,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         setServerIp(st.server_ip)
         setCards(st.cards)
         setVersion(st.version)
+        setUpdateChannelState(st.update_channel === "experimental" ? "experimental" : "normal")
         setCardUuid((cur) => (st.cards.some((c) => c.uuid === cur) ? cur : st.cards[0]?.uuid ?? ""))
         // The preset follows the first card when nothing was ever picked,
         // so a returning install opens on the kind it actually uses.
@@ -697,6 +701,25 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  /** Switch the release channel: persist, drop the old channel's verdict,
+      then look again so the user sees what the new channel offers. */
+  const setUpdateChannel = useCallback(
+    async (ch: "normal" | "experimental") => {
+      const prev = updateChannel
+      setUpdateChannelState(ch)
+      setUpdate(null)
+      setUpdateState("idle")
+      try {
+        await api.setUpdateChannel(ch)
+      } catch {
+        setUpdateChannelState(prev)
+        return
+      }
+      void checkUpdates()
+    },
+    [updateChannel, checkUpdates],
+  )
+
   const applyUpdate = useCallback(async () => {
     // One press, one download: a second press while installing is ignored
     // here and refused again in the backend.
@@ -959,6 +982,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     update,
     updateState,
     version,
+    updateChannel,
+    setUpdateChannel,
     refresh,
     refreshing,
     hardRefresh,

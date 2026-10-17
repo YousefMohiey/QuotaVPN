@@ -26,6 +26,7 @@ export type UiState = {
   ssh_port: number
   cards: Card[]
   version: string
+  update_channel: string
 }
 
 export type TunnelState = { running: boolean; error: string }
@@ -144,6 +145,7 @@ export const api = {
   probeTunnel: () => call<CmdResult>("tunnel_probe"),
   checkUpdate: () => call<UpdateInfo>("check_update"),
   applyUpdate: () => call<string>("apply_update"),
+  setUpdateChannel: (channel: string) => call<unknown>("set_update_channel", { channel }),
   weQuotaChallenge: (identifier: string) =>
     call<WeChallenge>("we_quota_challenge", { identifier }),
   weQuotaLogin: (landline: string, password: string, code: string) =>
