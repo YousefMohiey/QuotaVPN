@@ -305,6 +305,31 @@ const VOICE_CIDRS: [&str; 8] = [
     "216.52.0.0/16",
 ];
 
+/// A localhost port nobody is using right now, for the engine's Clash API.
+/// Bind-then-drop: the engine re-binds it a moment later; a stale collision
+/// would only ever cost the health check, never the tunnel itself.
+fn free_local_port() -> u16 {
+    std::net::TcpListener::bind("127.0.0.1:0")
+        .and_then(|l| l.local_addr())
+        .map(|a| a.port())
+        .unwrap_or(15309)
+}
+
+/// A per-run secret for that localhost control channel. Not cryptographic;
+/// the listener only ever faces 127.0.0.1 and lives with the session.
+fn session_secret() -> String {
+    let n = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let pid = std::process::id() as u128;
+    format!(
+        "{:016x}{:016x}",
+        (n as u64) ^ 0x9E37_79B9_7F4A_7C15u64,
+        ((n >> 64) as u64).wrapping_add(pid as u64)
+    )
+}
+
 /// Full TUN client config for one card. Self-signed server cert → insecure
 /// (same trust as the share links); SNI stamp preserved.
 /// `apps_mode` picks the per-app routing: "allow" sends ONLY the listed
@@ -569,6 +594,20 @@ pub fn write_tun_config(
             "default_domain_resolver": "direct-dns"
         }
     });
+    // A localhost-only control channel the app itself uses: the engine's
+    // Clash API answers "is the upstream actually carrying traffic" with a
+    // real dial through the proxy outbound. Process-and-routes liveness stays
+    // green while the server path is dead, which is the exact lie the owner
+    // caught ("says connected when it is not"). Random port, per-run secret,
+    // written next to the config for the app to read.
+    let clash_port = free_local_port();
+    let clash_secret = session_secret();
+    cfg["experimental"] = serde_json::json!({
+        "clash_api": {
+            "external_controller": format!("127.0.0.1:{clash_port}"),
+            "secret": clash_secret.clone()
+        }
+    });
     // Voice-only sessions take the lesson from the community OpenVPN config
     // this feature forked from: its route-nopull plus explicit routes confine
     // the tunnel to the voice networks at the KERNEL level. Without this,
@@ -602,6 +641,12 @@ pub fn write_tun_config(
     // must follow the session's own addresses, not the one-time constants.
     let _ = std::fs::write(p.with_file_name("tun-ip.txt"), &tun_ip);
     let _ = std::fs::write(p.with_file_name("tun-ip6.txt"), &tun_v6);
+    // The Clash API coordinates for the health check (tunnel_health reads
+    // these; the port rides a fresh bind, the secret dies with the session).
+    let _ = std::fs::write(
+        p.with_file_name("clash-ctl.txt"),
+        format!("{clash_port}\n{clash_secret}\n"),
+    );
     Ok(p)
 }
 

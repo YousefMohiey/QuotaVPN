@@ -19,6 +19,7 @@ export function Voice() {
     card,
     voiceOn: on,
     voiceBusy: busy,
+    voiceHealth: health,
     voiceMsg: msg,
     setVoiceHelper: setHelper,
   } = useApp()
@@ -104,7 +105,16 @@ export function Voice() {
                       </h3>
                       <p className="mt-0.5 flex items-center gap-1.5 truncate text-[12.5px] text-txt2">
                         <span
-                          className={cn("size-1.5 shrink-0 rounded-full", on ? "bg-[var(--green)]" : "bg-txt3")}
+                          className={cn(
+                            "size-1.5 shrink-0 rounded-full",
+                            on
+                              ? health === "ok"
+                                ? "bg-[var(--green)]"
+                                : health === "bad"
+                                  ? "bg-[var(--amber)]"
+                                  : "bg-txt3"
+                              : "bg-txt3",
+                          )}
                           aria-hidden
                         />
                         {busy
@@ -112,13 +122,17 @@ export function Voice() {
                             ? t("voiceDisconnecting")
                             : t("voiceConnecting")
                           : on
-                            ? t("voiceConnected")
+                            ? health === "ok"
+                              ? t("voiceConnected")
+                              : health === "bad"
+                                ? t("voiceUnhealthy")
+                                : t("voiceChecking")
                             : t("voiceOffSub")}
                       </p>
                     </div>
                     <ChevronRight className="size-5 shrink-0 text-txt3" aria-hidden />
                   </div>
-                  {on && (
+                  {on && health === "ok" && (
                     <div className="mt-3 flex items-center gap-3 rounded-[10px] border border-[var(--green-line)] bg-[var(--green-bg)] p-3">
                       <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[var(--green)] text-white">
                         <Check className="size-3.5" strokeWidth={3} aria-hidden />

@@ -62,6 +62,7 @@ type Value = {
   setUpdateChannel: (c: "normal" | "experimental") => void
   loadApps: () => Promise<Array<{ pkg: string; label: string }>>
   voiceRunning: boolean
+  voiceHealth: "unknown" | "ok" | "bad"
   voiceOn: boolean
   voiceBusy: boolean
   voiceMsg: string
@@ -136,6 +137,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [voiceRunning, setVoiceRunning] = useState(false)
   const [voiceBusy, setVoiceBusy] = useState(false)
   const [voiceMsg, setVoiceMsg] = useState("")
+  // The engine's own answer to "is the upstream actually carrying": a real
+  // dial through the proxy outbound. Process-and-routes liveness stays green
+  // while the server path is dead, and that lie is what this closes.
+  const [voiceHealth, setVoiceHealth] = useState<"unknown" | "ok" | "bad">("unknown")
   const voiceBusyRef = useRef(false)
   const voiceRunningRef = useRef(false)
   voiceBusyRef.current = voiceBusy
@@ -295,6 +300,56 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // While the helper runs, ask the engine for a REAL round trip through the
+  // proxy outbound (its Clash API dials a known endpoint through it). One
+  // retry absorbs a transient miss; a second failure is the verdict, and the
+  // card stays honest instead of claiming a connection that is not carrying.
+  useEffect(() => {
+    if (!voiceRunning) {
+      setVoiceHealth("unknown")
+      return
+    }
+    let alive = true
+    const one = async () => {
+      try {
+        return await api.tunnelHealth()
+      } catch {
+        return -1
+      }
+    }
+    const check = async () => {
+      let d = await one()
+      if (d < 0) {
+        await new Promise((res) => window.setTimeout(res, 3000))
+        d = await one()
+      }
+      if (alive) setVoiceHealth(d >= 0 ? "ok" : "bad")
+    }
+    void check()
+    const id = window.setInterval(() => void check(), 20000)
+    return () => {
+      alive = false
+      window.clearInterval(id)
+    }
+  }, [voiceRunning])
+
+  // The start and stop calls can grind through engine retries; the UI must
+  // never sit on "Connecting" forever, so the wait is bounded and says so.
+  const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T> =>
+    new Promise((resolve, reject) => {
+      const id = window.setTimeout(() => reject("timeout"), ms)
+      p.then(
+        (v) => {
+          window.clearTimeout(id)
+          resolve(v)
+        },
+        (e) => {
+          window.clearTimeout(id)
+          reject(e)
+        },
+      )
+    })
+
   const setVoiceHelper = useCallback(
     async (next: boolean): Promise<boolean> => {
       if (voiceBusyRef.current) return false
@@ -308,10 +363,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           // rules, a voice-only session just stops.
           const merged = localStorage.getItem("qc-voice-merged") === "1"
           if (merged && card) {
-            const r = await api.start(card.uuid, appsMode, apps, transport, false)
+            const r = await withTimeout(api.start(card.uuid, appsMode, apps, transport, false), 45000)
             if (!r.ok) setVoiceMsg(r.msg)
           } else {
-            const r = await api.stop()
+            const r = await withTimeout(api.stop(), 45000)
             setVoiceRunning(false)
             if (!r.ok) setVoiceMsg(r.msg)
           }
@@ -326,7 +381,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         // A running session keeps its configuration and gains the voice
         // rules; with nothing running this starts a voice-only session.
         const merged = voiceRunningRef.current
-        const r = await api.start(card.uuid, merged ? appsMode : "allow", merged ? apps : [], transport, true)
+        const r = await withTimeout(
+          api.start(card.uuid, merged ? appsMode : "allow", merged ? apps : [], transport, true),
+          45000,
+        )
         if (r.ok) {
           localStorage.setItem("qc-voice-active", "1")
           localStorage.setItem("qc-voice-merged", merged ? "1" : "0")
@@ -346,7 +404,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         setVoiceMsg(r.msg)
         return false
       } catch (e) {
-        setVoiceMsg(typeof e === "string" ? e : String(e))
+        setVoiceMsg(e === "timeout" ? t("voiceSlow") : typeof e === "string" ? e : String(e))
         return false
       } finally {
         voiceBusyRef.current = false
@@ -1006,6 +1064,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     applyUpdate,
     loadApps,
     voiceRunning,
+    voiceHealth,
     voiceOn,
     voiceBusy,
     voiceMsg,

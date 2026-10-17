@@ -858,6 +858,46 @@ async fn tunnel_status(engine: tauri::State<'_, Engine>) -> Result<TunnelState, 
     }
 }
 
+/// A real liveness check for the tunnel: ask the engine, over its localhost
+/// Clash API, to dial a known endpoint through the proxy outbound and report
+/// the round trip. -1 means the upstream is not carrying traffic, which is
+/// what keeps the UI from claiming "connected" while the server path is dead.
+#[tauri::command]
+async fn tunnel_health() -> Result<i64, String> {
+    let raw = std::fs::read_to_string(vpn::engine_dir().join("clash-ctl.txt"))
+        .map_err(|e| e.to_string())?;
+    let mut lines = raw.lines();
+    let port: u16 = lines
+        .next()
+        .unwrap_or("")
+        .trim()
+        .parse()
+        .map_err(|_| "clash port".to_string())?;
+    let secret = lines.next().unwrap_or("").trim().to_string();
+    let url = format!(
+        "http://127.0.0.1:{port}/proxies/proxy/delay?url=https%3A%2F%2Fwww.gstatic.com%2Fgenerate_204&timeout=6000"
+    );
+    let client = match reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(8))
+        .build()
+    {
+        Ok(c) => c,
+        Err(_) => return Ok(-1),
+    };
+    match client
+        .get(url)
+        .header("Authorization", format!("Bearer {secret}"))
+        .send()
+        .await
+    {
+        Ok(r) => {
+            let v: serde_json::Value = r.json().await.unwrap_or(serde_json::Value::Null);
+            Ok(v["delay"].as_i64().unwrap_or(-1))
+        }
+        Err(_) => Ok(-1),
+    }
+}
+
 /// Session counts for the tunnel itself: the TUN adapter's own byte
 /// counters (InOctets = downloaded, OutOctets = uploaded). The adapter
 /// only exists while the engine runs, so zeros mean nothing to show.
@@ -1988,6 +2028,7 @@ pub fn run() {
             tunnel_start,
             tunnel_stop,
             tunnel_status,
+            tunnel_health,
             tunnel_traffic,
             tunnel_log,
             tunnel_copy_log,

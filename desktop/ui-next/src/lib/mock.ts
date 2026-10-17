@@ -57,6 +57,8 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
       return ok("Engine stopped.") as T
     case "tunnel_status":
       return { running, error: "" } as TunnelState as T
+    case "tunnel_health":
+      return 180 as T
     case "process_running":
       return false as T
     case "autostart_get":
