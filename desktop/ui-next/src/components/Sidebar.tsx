@@ -19,7 +19,7 @@ const PRIMARY: Array<{ id: Tab; icon: ComponentType<{ className?: string; stroke
 
 export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
   const { t } = useI18n()
-  const { version, update, updateState } = useApp()
+  const { version, update, updateState, updateChannel } = useApp()
 
   return (
     <aside className="glass-side flex w-[236px] shrink-0 flex-col">
@@ -32,6 +32,11 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
               <span className="truncate text-[15px] font-semibold text-txt">QuotaVPN</span>
               {version && <span className="shrink-0 text-[10.5px] text-txt3">v{version}</span>}
             </div>
+            {updateChannel === "experimental" && (
+              <span className="mt-1.5 inline-flex rounded-full border border-[var(--brand-line)] bg-[var(--brand-bg)] px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.07em] text-brand-strong">
+                {t("chBadge")}
+              </span>
+            )}
           </div>
         </div>
 
