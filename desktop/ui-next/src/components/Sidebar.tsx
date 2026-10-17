@@ -26,7 +26,7 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
       {/* identity: the mark plus the build on one baseline */}
       <div className="px-3.5 pb-3 pt-4">
         <div className="flex items-center gap-3">
-          <img src="/icon.png" alt="" aria-hidden className="size-14 shrink-0" />
+          <img src="./icon.png" alt="" aria-hidden className="size-14 shrink-0" />
           <div className="min-w-0">
             <div className="flex items-baseline gap-3">
               <span className="truncate text-[15px] font-semibold text-txt">QuotaVPN</span>
