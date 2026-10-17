@@ -52,7 +52,10 @@ export function rateText(bps: number): { num: string; unit: string } {
 
 /** Where this machine appears from, read off its public address. The lookup
     races its providers on the Rust side, and the last answer is cached so a
-    launch never starts on a dash. */
+    launch never starts on a dash. A lookup that lands right after a
+    disconnect can still ride the dying tunnel and report the exit the user
+    just left, so while disconnected the answer is challenged until it stops
+    matching that exit. */
 export function useGeo(connected: boolean) {
   const [geo, setGeo] = useState<{ ip: string; place: string; isp: string } | null>(() => {
     try {
@@ -62,14 +65,27 @@ export function useGeo(connected: boolean) {
       return null
     }
   })
+  // The address seen while the tunnel is up: after a disconnect a fresh
+  // lookup must move away from it before it is trusted.
+  const exitRef = useRef<string | null>(null)
   useEffect(() => {
     let alive = true
     let timer: number | undefined
-    const grab = (n: number) => {
+    let n = 0
+    const budget = connected ? 2 : 6
+    const grab = () => {
       void netInfo()
         .then((v) => {
           if (!alive) return
           if (v && v.ip) {
+            if (connected) exitRef.current = v.ip
+            // Still reporting the exit we just left: the tunnel teardown is
+            // racing this lookup. Keep asking before believing it.
+            if (!connected && exitRef.current && v.ip === exitRef.current && n < budget) {
+              n += 1
+              timer = window.setTimeout(grab, 2500)
+              return
+            }
             setGeo(v)
             try {
               localStorage.setItem("qc-geo", JSON.stringify(v))
@@ -78,13 +94,21 @@ export function useGeo(connected: boolean) {
             }
             return
           }
-          if (n < 2) timer = window.setTimeout(() => grab(n + 1), 2500)
+          if (n < budget) {
+            n += 1
+            timer = window.setTimeout(grab, 2500)
+          }
         })
         .catch(() => {
-          if (alive && n < 2) timer = window.setTimeout(() => grab(n + 1), 2500)
+          if (alive && n < budget) {
+            n += 1
+            timer = window.setTimeout(grab, 2500)
+          }
         })
     }
-    grab(0)
+    // After a disconnect let the adapter teardown land before asking: an
+    // immediate lookup used to ride the last packets of the tunnel.
+    timer = window.setTimeout(grab, connected ? 0 : 2000)
     return () => {
       alive = false
       if (timer) window.clearTimeout(timer)
