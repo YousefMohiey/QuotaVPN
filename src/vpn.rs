@@ -826,18 +826,37 @@ pub fn egress_ip_direct() -> Result<String, String> {
     Ok(ip)
 }
 
-/// Is any default route still pointing into our TUN interface?
+/// Is any route pointing into our TUN interface? Two session shapes count:
+/// whole-device / app sessions pull a default route into the tun, while the
+/// voice session confines the tun to its `route_address` entries (the voice
+/// networks) and never owns a default route. Requiring a default route is
+/// exactly what left the voice helper looping on "Connecting" while a
+/// healthy engine was already carrying the voice traffic.
 pub fn tun_routes_present() -> bool {
     let ip = current_tun_ip();
     run_hidden("route", &["print", "-4"])
-        .map(|o| {
-            let t = String::from_utf8_lossy(&o.stdout);
-            t.lines().any(|l| {
-                let l = l.trim_start();
-                l.starts_with("0.0.0.0") && l.contains(ip.as_str())
-            })
-        })
+        .map(|o| routes_present_in(&String::from_utf8_lossy(&o.stdout), &ip))
         .unwrap_or(false)
+}
+
+/// Split out so the parsing is testable: a line counts when it is ours
+/// (carries the session's tun address) and is either the default route or
+/// one of the voice networks the voice-only session installs. The adapter's
+/// own subnet line (172.x.x.0 On-link) never counts - a bare adapter is not
+/// a session.
+fn routes_present_in(table: &str, ip: &str) -> bool {
+    table.lines().any(|l| {
+        let l = l.trim_start();
+        if !l.contains(ip) {
+            return false;
+        }
+        if l.starts_with("0.0.0.0") {
+            return true;
+        }
+        VOICE_CIDRS
+            .iter()
+            .any(|c| l.starts_with(c.split('/').next().unwrap_or(c)))
+    })
 }
 
 /// Kill our orphan engine (matched by our config path, never anyone else's)
@@ -1040,6 +1059,31 @@ mod tests {
         if engine_dir().join("sing-box.exe").exists() {
             check_config().expect("engine accepts the voice config");
         }
+    }
+
+    #[test]
+    fn route_check_sees_voice_sessions_and_defaults() {
+        // The voice session confines the tun with route_address: the routes
+        // it installs are the voice networks (real table lines, captured on
+        // Windows), never a default route. Looking only for 0.0.0.0 sent the
+        // helper into a connect-kill-retry loop while it was healthy.
+        let voice = "\
+         20.0.0.0        255.0.0.0       172.19.0.2       172.19.0.1      0\n\
+     63.251.140.0    255.255.255.0       172.19.0.2       172.19.0.1      0\n\
+       172.19.0.0  255.255.255.240         On-link        172.19.0.1    256\n";
+        assert!(routes_present_in(voice, "172.19.0.1"));
+        // Whole-device and app sessions keep finding their default route.
+        assert!(routes_present_in(
+            "          0.0.0.0          0.0.0.0         On-link        172.19.0.1      0\n",
+            "172.19.0.1"
+        ));
+        // A bare adapter with only its own subnet line is not a session.
+        assert!(!routes_present_in(
+            "       172.19.0.0  255.255.255.240         On-link        172.19.0.1    256\n",
+            "172.19.0.1"
+        ));
+        // Someone else's tunnel must never count.
+        assert!(!routes_present_in(voice, "10.88.0.1"));
     }
 
     #[test]
