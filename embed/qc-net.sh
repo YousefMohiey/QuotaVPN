@@ -172,7 +172,12 @@ else:
     print("ABSENT")
 PY
 SH
-sudo chmod +x /usr/local/bin/qc-hy2-pass /usr/local/bin/qc-list /usr/local/bin/qc-wg-pub /usr/local/bin/qc-wg-add /usr/local/bin/qc-wg-del
+sudo tee /usr/local/bin/qc-awg-params >/dev/null <<'SH'
+#!/bin/bash
+# AmneziaWG obfuscation parameters (one set per server, shared by all cards).
+cat /etc/amneziawg/params.json
+SH
+sudo chmod +x /usr/local/bin/qc-hy2-pass /usr/local/bin/qc-list /usr/local/bin/qc-wg-pub /usr/local/bin/qc-wg-add /usr/local/bin/qc-wg-del /usr/local/bin/qc-awg-params
 
 echo "== firewall =="
 sudo iptables -C INPUT -p udp --dport $HY2_PORT -j ACCEPT 2>/dev/null || \
@@ -187,7 +192,8 @@ sudo tee /usr/local/bin/qc-agent >/dev/null <<'AGENT'
 #!/bin/bash
 # qc-agent v2 — restricted forced command for the QuotaCards embedded key.
 # Allowed: qc-add / qc-revoke (xray uuids), qc-hy2-pass, qc-wg-pub (no arg),
-# qc-wg-add / qc-wg-del (uuid arg). Everything else is rejected.
+# qc-awg-params (no arg), qc-wg-add / qc-wg-del (uuid arg). Everything else is
+# rejected.
 set -u
 cmd="${SSH_ORIGINAL_COMMAND:-}"
 op="${cmd%% *}"
@@ -205,7 +211,7 @@ case "$op" in
       *[!0-9a-fA-F-]*) echo "bad id"; exit 1;;
     esac
     ;;
-  qc-hy2-pass|qc-wg-pub|qc-list)
+  qc-hy2-pass|qc-wg-pub|qc-list|qc-awg-params)
     [ "$has_arg" = "0" ] || { echo denied; exit 1; }
     ;;
   *) echo denied; exit 1;;
@@ -248,6 +254,8 @@ elif [ "$op" = "qc-wg-add" ]; then
   sudo /usr/local/bin/qc-wg-add "$arg"
 elif [ "$op" = "qc-wg-del" ]; then
   sudo /usr/local/bin/qc-wg-del "$arg"
+elif [ "$op" = "qc-awg-params" ]; then
+  sudo /usr/local/bin/qc-awg-params
 fi
 [ "$op" = "qc-add" ] || [ "$op" = "qc-revoke" ] && sudo /bin/systemctl restart xray
 echo OK
