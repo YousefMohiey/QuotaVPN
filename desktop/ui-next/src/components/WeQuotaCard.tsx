@@ -5,6 +5,7 @@ import { WeMark } from "./WeMark"
 import { useI18n } from "@/lib/i18n"
 import { fmtQuota, quotaRefresh, useQuota } from "@/state/quota"
 import { WeQuotaDialog } from "./WeQuotaDialog"
+import { Tip } from "./Tip"
 
 /**
  * The package panel, and the only place on Home the WE line reads: the big
@@ -49,16 +50,17 @@ export function WeQuotaCard() {
                 {mainUnit.offer || "WE"}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => void quotaRefresh(true)}
-              title={t("weRefresh")}
-              aria-label={t("weRefresh")}
-              disabled={quota.phase === "busy"}
-              className="grid size-8 shrink-0 place-items-center rounded-full border border-line bg-white/[0.02] text-txt2 transition-colors hover:border-[var(--brand-line)] hover:text-brand-strong disabled:cursor-wait"
-            >
-              <RefreshCw className={cn("size-3.5", quota.phase === "busy" && "animate-spin")} aria-hidden />
-            </button>
+            <Tip text={t("weRefresh")}>
+              <button
+                type="button"
+                onClick={() => void quotaRefresh(true)}
+                aria-label={t("weRefresh")}
+                disabled={quota.phase === "busy"}
+                className="grid size-8 shrink-0 place-items-center rounded-full border border-line bg-white/[0.02] text-txt2 transition-colors hover:border-[var(--brand-line)] hover:text-brand-strong disabled:cursor-wait"
+              >
+                <RefreshCw className={cn("size-3.5", quota.phase === "busy" && "animate-spin")} aria-hidden />
+              </button>
+            </Tip>
           </div>
 
           <div className="my-auto">

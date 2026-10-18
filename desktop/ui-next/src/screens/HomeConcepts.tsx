@@ -7,6 +7,7 @@ import { WeQuotaCard } from "@/components/WeQuotaCard"
 import { FactsCard, useGeo, useServerAddr, useTick, useTraffic } from "@/components/Hero"
 import { PickerDialog, type PickerItem } from "@/components/PickerDialog"
 import { Segmented } from "@/components/Segmented"
+import { Tip } from "@/components/Tip"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useApp, type PresetKind } from "@/state/app"
@@ -104,19 +105,20 @@ function FactsStrip() {
       </div>
       <div className="flex min-w-0 flex-col px-5">
         <span className="text-[11px] font-semibold uppercase tracking-[0.07em] text-txt2">{t("yourIp")}</span>
-        <button
-          type="button"
-          onClick={() => void copyIp()}
-          title={t("copy")}
-          aria-label={`${t("copy")} ${ipText}`}
-          className={cn(
-            "mt-1 min-w-0 cursor-pointer truncate rounded-[4px] text-start text-[13.5px] font-medium tabular-nums transition-colors focus-visible:outline-none",
-            "hover:text-[var(--brand)] focus-visible:text-[var(--brand)]",
-            copied ? "text-[var(--green)]" : "text-txt",
-          )}
-        >
-          {copied ? t("copied") : ipText}
-        </button>
+        <Tip text={t("copy")} className="mt-1">
+          <button
+            type="button"
+            onClick={() => void copyIp()}
+            aria-label={`${t("copy")} ${ipText}`}
+            className={cn(
+              "min-w-0 cursor-pointer truncate rounded-[4px] text-start text-[13.5px] font-medium tabular-nums transition-colors focus-visible:outline-none",
+              "hover:text-[var(--brand)] focus-visible:text-[var(--brand)]",
+              copied ? "text-[var(--green)]" : "text-txt",
+            )}
+          >
+            {copied ? t("copied") : ipText}
+          </button>
+        </Tip>
       </div>
       <div className="flex min-w-0 flex-col ps-5">
         <span className="text-[11px] font-semibold uppercase tracking-[0.07em] text-txt2">{t("ispLbl")}</span>
@@ -167,7 +169,6 @@ export function HomeConcept({ alt, onOpenApps }: { alt: string; onOpenApps: () =
         ? t("appsOnly")
         : t("appsExcept")
   const routingCount = appsMode !== "all" && apps.length ? ` · ${apps.length}` : ""
-  const trHint = transport === "hy2" ? t("trNoteHy2") : transport === "wg" ? t("trNoteWg") : ""
 
   const profileButton = (kind: PresetKind) => {
     const mine = cards.find((c) => c.card_type === kind)
@@ -342,7 +343,7 @@ export function HomeConcept({ alt, onOpenApps }: { alt: string; onOpenApps: () =
       )}
       {rowField(
         t("transport"),
-        trHint,
+        "",
         <Segmented
           id="transport"
           value={transport}

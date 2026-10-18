@@ -5,6 +5,7 @@ import { useApp } from "@/state/app"
 import { api, netInfo } from "@/lib/ipc"
 import { copyText } from "@/lib/clipboard"
 import { Dial, type DialState } from "./Dial"
+import { Tip } from "./Tip"
 import { displayHost, fmtBytes, fmtDuration, mbps } from "@/lib/format"
 
 /** A one-second heartbeat for the session clock; polling still drives data. */
@@ -276,20 +277,21 @@ function FactRow({
           />
         ) : null}
         {copy ? (
-          <button
-            type="button"
-            onClick={() => void take()}
-            title={t("copy")}
-            aria-label={`${t("copy")} ${value}`}
-            className={cn(
-              "min-w-0 cursor-pointer truncate rounded-[4px] text-[13px] transition-colors focus-visible:outline-none",
-              "hover:text-[var(--brand)] focus-visible:text-[var(--brand)]",
-              copied ? "text-[var(--green)]" : "text-txt",
-            )}
-            dir="auto"
-          >
-            {copied ? t("copied") : value}
-          </button>
+          <Tip text={t("copy")}>
+            <button
+              type="button"
+              onClick={() => void take()}
+              aria-label={`${t("copy")} ${value}`}
+              className={cn(
+                "min-w-0 cursor-pointer truncate rounded-[4px] text-[13px] transition-colors focus-visible:outline-none",
+                "hover:text-[var(--brand)] focus-visible:text-[var(--brand)]",
+                copied ? "text-[var(--green)]" : "text-txt",
+              )}
+              dir="auto"
+            >
+              {copied ? t("copied") : value}
+            </button>
+          </Tip>
         ) : (
           <span className="truncate text-[13px] text-txt" dir="auto">
             {value}

@@ -56,7 +56,6 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
         ? t("appsOnly")
         : t("appsExcept")
   const routingCount = appsMode !== "all" && apps.length ? ` · ${apps.length}` : ""
-  const trHint = transport === "hy2" ? t("trNoteHy2") : transport === "wg" ? t("trNoteWg") : ""
 
   // The chosen arrangement (4) is the default now; ?alt=1 / 2 / 3 still
   // previews the earlier candidates from the pick round.
@@ -127,7 +126,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 </button>
               </RowField>
 
-              <RowField label={t("transport")} hint={trHint}>
+              <RowField label={t("transport")}>
                 <Segmented
                   id="transport"
                   value={transport}
