@@ -303,6 +303,7 @@ export const en = {
   "weRefresh": "Refresh",
   "weUnlink": "Unlink",
   "weLeft": "left of",
+  "weOf": "of",
   "weUsed": "Used",
   "weRefreshed": "Updated just now",
   "weUpdated": "Updated",

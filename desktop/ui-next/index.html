@@ -13,12 +13,19 @@
     <script>
       /* The browser demo opens on the linked WE line: seed the saved WE
          credentials so the silent refresh restores the mocked account, the
-         way a real second launch reads itself. This only runs when the Tauri
-         bridge is absent, so the desktop build is never touched. */
+         way a real second launch reads itself. The ?unlinked switch clears
+         them instead, previewing the invite state a fresh install starts
+         from. This only runs when the Tauri bridge is absent, so the
+         desktop build is never touched. */
       try {
-        if (!("__TAURI_INTERNALS__" in window) && !localStorage.getItem("qc-we-number")) {
-          localStorage.setItem("qc-we-number", "0100000000");
-          localStorage.setItem("qc-we-pass", "demo");
+        if (!("__TAURI_INTERNALS__" in window)) {
+          if (new URLSearchParams(location.search).has("unlinked")) {
+            localStorage.removeItem("qc-we-number");
+            localStorage.removeItem("qc-we-pass");
+          } else if (!localStorage.getItem("qc-we-number")) {
+            localStorage.setItem("qc-we-number", "0100000000");
+            localStorage.setItem("qc-we-pass", "demo");
+          }
         }
       } catch (e) {}
     </script>

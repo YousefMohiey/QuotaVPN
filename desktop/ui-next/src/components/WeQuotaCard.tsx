@@ -30,6 +30,10 @@ export function WeQuotaCard() {
     () => (mainUnit ? mainUnit.buckets.filter((b) => b.remain > 0).slice(0, 3) : []),
     [mainUnit],
   )
+  const [numPart, unitPart = ""] = useMemo(
+    () => fmtQuota(mainUnit?.remain ?? 0).split(" "),
+    [mainUnit],
+  )
 
   return (
     <section className="flex min-h-0 flex-1 flex-col rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] px-5 pt-4 pb-5">
@@ -40,8 +44,8 @@ export function WeQuotaCard() {
               <WeMark className="w-[22px]" />
             </span>
             <div className="min-w-0 flex-1">
-              <h2 className="truncate text-[13.5px] font-semibold text-txt">{t("weQuota")}</h2>
-              <p className="mt-0.5 truncate text-[11px] text-txt2" dir="auto" title={mainUnit.offer || "WE"}>
+              <h2 className="truncate text-[14.5px] font-semibold text-txt">{t("weQuota")}</h2>
+              <p className="mt-0.5 truncate text-[11.5px] text-txt2" dir="auto" title={mainUnit.offer || "WE"}>
                 {mainUnit.offer || "WE"}
               </p>
             </div>
@@ -58,24 +62,25 @@ export function WeQuotaCard() {
           </div>
 
           <div className="my-auto">
-            <div className="mt-4 text-[30px] font-semibold leading-none tabular-nums text-txt">
-              {fmtQuota(mainUnit.remain)}
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[34px] font-semibold leading-none tabular-nums text-txt">{numPart}</span>
+              <span className="text-[18px] font-medium text-txt2">{unitPart}</span>
             </div>
-            <div className="mt-2 text-[12px] text-txt2">
+            <div className="mt-1.5 text-[12.5px] text-txt2">
               {t("weLeft")} {fmtQuota(mainUnit.total)}
             </div>
-            <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/[0.06]">
+            <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white/[0.06]">
               <div
                 className="h-full rounded-full bg-[var(--brand-vivid)] transition-[width] duration-700 ease-out"
                 style={{ width: `${pct}%` }}
               />
             </div>
-            <div className="mt-2 flex items-baseline justify-between gap-2 text-[11.5px] text-txt2">
-              <span className="truncate">
+            <div className="mt-2.5 flex items-baseline justify-between gap-2 text-[11.5px]">
+              <span className="truncate text-txt2">
                 {t("weUsed")} {fmtQuota(mainUnit.used)}
               </span>
               {quota.updatedAt ? (
-                <span className="shrink-0 tabular-nums">
+                <span className="shrink-0 tabular-nums text-txt3">
                   {t("weUpdated")}{" "}
                   {new Date(quota.updatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
                 </span>
@@ -90,21 +95,28 @@ export function WeQuotaCard() {
           </div>
 
           {buckets.length ? (
-            <div className="mt-auto border-t border-line pt-3">
-              <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.07em] text-txt2">{t("wePackage")}</p>
+            <div className="mt-auto border-t border-line pt-3.5">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.07em] text-txt2">{t("wePackage")}</p>
               <div className="grid grid-cols-3 divide-x divide-line">
                 {buckets.map((b, i) => {
                   const k = bucketKey(b.item)
+                  const bpct = b.total > 0 ? Math.max(0, Math.min(100, (b.remain / b.total) * 100)) : 0
                   return (
                     <div key={b.item || b.label} className={cn("min-w-0", i === 0 ? "pe-3" : i === buckets.length - 1 ? "ps-3" : "px-3")}>
                       <div className="truncate text-[11px] font-semibold uppercase tracking-[0.07em] text-txt2">
                         {k ? t(k) : b.label || "WE"}
                       </div>
-                      <div className="mt-1 truncate text-[14px] font-semibold tabular-nums text-txt">
+                      <div className="mt-1.5 truncate text-[15px] font-semibold tabular-nums text-txt">
                         {fmtQuota(b.remain)}
                       </div>
-                      <div className="mt-0.5 truncate text-[11px] tabular-nums text-txt3">
-                        {t("weLeft")} {fmtQuota(b.total)}
+                      <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.06]">
+                        <div
+                          className="h-full rounded-full bg-[var(--brand-vivid)] transition-[width] duration-700 ease-out"
+                          style={{ width: `${bpct}%` }}
+                        />
+                      </div>
+                      <div className="mt-1.5 truncate text-[11px] tabular-nums text-txt3">
+                        {t("weOf")} {fmtQuota(b.total)}
                       </div>
                     </div>
                   )
@@ -114,24 +126,20 @@ export function WeQuotaCard() {
           ) : null}
         </>
       ) : (
-        <div className="flex flex-1 flex-col justify-center">
-          <div className="flex items-center gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
-              <WeMark className="w-[22px]" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <h2 className="truncate text-[13.5px] font-semibold text-txt">{t("weQuota")}</h2>
-              <p className="mt-1 text-[11.5px] leading-snug text-txt2">{t("weQuotaSub")}</p>
-              <p className="mt-1.5 text-[10.5px] leading-snug text-txt3">{t("weLinkHint")}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setQuotaOpen(true)}
-              className="flex h-9 shrink-0 items-center rounded-[9px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-4 text-[12.5px] font-medium text-[var(--brand-strong)] transition-colors hover:border-[var(--brand-strong)]"
-            >
-              {t("weLink")}
-            </button>
-          </div>
+        <div className="flex flex-1 flex-col items-center justify-center text-center">
+          <span className="grid size-14 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
+            <WeMark className="w-[30px]" />
+          </span>
+          <h2 className="mt-3.5 text-[16.5px] font-semibold text-txt">{t("weQuota")}</h2>
+          <p className="mt-1 text-[13.5px] leading-relaxed text-txt2">{t("weQuotaSub")}</p>
+          <button
+            type="button"
+            onClick={() => setQuotaOpen(true)}
+            className="mt-4 flex h-10 shrink-0 items-center rounded-[10px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-5 text-[13.5px] font-medium text-[var(--brand-strong)] transition-colors hover:border-[var(--brand-strong)]"
+          >
+            {t("weLink")}
+          </button>
+          <p className="mt-3 text-[11.5px] leading-snug text-txt3">{t("weLinkHint")}</p>
         </div>
       )}
       <WeQuotaDialog open={quotaOpen} onOpenChange={setQuotaOpen} />

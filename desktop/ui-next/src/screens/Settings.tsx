@@ -238,20 +238,20 @@ export function Settings() {
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h2 className="text-[15px] font-semibold text-txt">{t("updRow")}</h2>
+              <h2 className="text-[16.5px] font-semibold text-txt">{t("updRow")}</h2>
               {updateChannel === "experimental" ? (
                 <span className="rounded-full border border-[var(--brand-line)] bg-[var(--brand-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-brand-strong">
                   {t("chBadge")}
                 </span>
               ) : null}
             </div>
-            <div className="mt-0.5 text-[12.5px] leading-relaxed text-txt2">{t("upRowBody")}</div>
+            <div className="mt-1 text-[13.5px] leading-relaxed text-txt2">{t("upRowBody")}</div>
           </div>
           <div className="flex shrink-0 items-center gap-3">
-            <span aria-live="polite" className="flex max-w-[420px] items-center gap-2 text-[12px] text-txt3">
+            <span aria-live="polite" className="flex max-w-[440px] items-center gap-2 text-[13.5px] text-txt2">
               {updateText ? (
                 <>
-                  <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", upTone)} />
+                  <span aria-hidden className={cn("size-2 shrink-0 rounded-full", upTone)} />
                   <span className="truncate" title={updateText}>
                     {updateText}
                   </span>
@@ -262,7 +262,7 @@ export function Settings() {
               type="button"
               onClick={() => void checkUpdates()}
               disabled={updateState === "checking"}
-              className="flex h-9 items-center gap-2 rounded-[10px] border border-line bg-white/[0.02] px-3.5 text-[13px] text-txt transition-colors hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] disabled:cursor-wait"
+              className="flex h-10 items-center gap-2 rounded-[10px] border border-line bg-white/[0.02] px-4 text-[13.5px] text-txt transition-colors hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] disabled:cursor-wait"
             >
               <RefreshCw className={cn("size-3.5", updateState === "checking" && "animate-spin")} aria-hidden />
               {updateState === "checking" ? t("upChecking") : t("upCheck")}
@@ -272,7 +272,7 @@ export function Settings() {
                 type="button"
                 onClick={() => void applyUpdate()}
                 disabled={updateState === "installing"}
-                className="flex h-9 items-center rounded-[10px] bg-[var(--brand-vivid)] px-3.5 text-[13px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
+                className="flex h-10 items-center rounded-[10px] bg-[var(--brand-vivid)] px-4 text-[13.5px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
               >
                 {updateState === "installing"
                   ? updatePct !== null
@@ -284,10 +284,10 @@ export function Settings() {
           </div>
         </div>
 
-        <div className="mt-4 flex items-center justify-between gap-4 border-t border-line pt-4">
+        <div className="mt-3.5 flex items-center justify-between gap-4 border-t border-line pt-3.5">
           <div className="min-w-0">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.07em] text-txt2">{t("chTitle")}</p>
-            <p className="mt-1.5 text-[11.5px] leading-snug text-txt3">
+            <p className="text-[12.5px] font-semibold uppercase tracking-[0.07em] text-txt2">{t("chTitle")}</p>
+            <p className="mt-1.5 text-[13px] leading-snug text-txt3">
               {updateChannel === "experimental" ? t("chExpBody") : t("chStableBody")}
             </p>
           </div>

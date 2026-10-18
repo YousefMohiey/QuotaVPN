@@ -303,6 +303,7 @@ export const ar = {
   "weRefresh": "تحديث",
   "weUnlink": "فك الربط",
   "weLeft": "متبقٍ من",
+  "weOf": "من أصل",
   "weUsed": "المستخدم",
   "weRefreshed": "تم التحديث الآن",
   "weUpdated": "آخر تحديث",
