@@ -231,7 +231,7 @@ export const ar = {
   "chStable": "تحديثات عادية",
   "chStableBody": "إصدارات مختبرة فقط، وهي الافتراضية",
   "chExp": "تحديثات تجريبية",
-  "chExpBody": "أحدث إصدارات الاختبار فور جهوزيتها",
+  "chExpBody": "أحدث الإصدارات التجريبية فور جهوزيتها",
   "chBadge": "تجريبي",
   "startupTitle": "التشغيل مع بدء Windows",
   "startupBody": "فتح QuotaVPN تلقائيًا عند تسجيل الدخول",

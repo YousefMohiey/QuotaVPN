@@ -228,7 +228,7 @@ export const en = {
   "chStable": "Normal updates",
   "chStableBody": "Tested builds only, the ones everyone runs",
   "chExp": "Experimental updates",
-  "chExpBody": "The newest test builds the moment they are ready",
+  "chExpBody": "The newest experimental builds the moment they are ready",
   "chBadge": "Experimental",
   "startupTitle": "Start with Windows",
   "startupBody": "Open QuotaVPN automatically when you sign in",
