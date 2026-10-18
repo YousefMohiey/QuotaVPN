@@ -171,50 +171,60 @@ export function Hero() {
   const traffic = useTraffic(rx, tx)
 
   return (
-    <section className="flex min-h-0 flex-1 items-center justify-center">
-      <div className="flex w-full max-w-[420px] flex-col items-center text-center">
-        <Dial state={state} onClick={toggle} disabled={busy && phase !== "connecting"} />
-        <div className="mt-6 flex items-center gap-2">
-          <span
-            aria-hidden
-            className={cn(
-              "size-1.5 rounded-full",
-              connected ? "bg-[var(--green)]" : working ? "pulse-dot bg-[var(--brand)]" : "bg-txt3",
-            )}
-          />
-          <span
-            className={cn(
-              "truncate font-display text-[14.5px] font-medium tracking-[-0.01em]",
-              connected ? "text-[var(--green)]" : "text-txt2",
-            )}
-          >
-            {connected ? t("connected") : working ? t("working") : t("notConnected")}
-          </span>
-        </div>
-        <p className="mt-2 w-full truncate font-display text-[22px] font-semibold leading-[1.15] tracking-[-0.025em] text-txt" dir="auto">
-          {name || "-"}
-        </p>
-        <p className="mt-1.5 truncate font-mono text-[10.5px] text-txt3" dir="auto">
-          {displayHost(card?.sni)}
-        </p>
-        {connected ? (
-          <div className="mt-5 flex items-center justify-center gap-5 text-[11px] tabular-nums text-txt2">
-            <span className="truncate">
-              <span className="text-txt3">{t("sessLabel")} </span>
-              {sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
-            </span>
-            <span className="h-3 w-px bg-[var(--line)]" aria-hidden />
-            <span className="truncate">
-              ↓ {traffic.down.num} {traffic.down.unit}
-              {"  "}↑ {traffic.up.num} {traffic.up.unit}
+    <section className="flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 items-center justify-center">
+        <div className="flex w-full max-w-[420px] flex-col items-center text-center">
+          <Dial state={state} onClick={toggle} disabled={busy && phase !== "connecting"} />
+          <div className="mt-6 flex items-center gap-2">
+            <span
+              aria-hidden
+              className={cn(
+                "size-1.5 rounded-full",
+                connected ? "bg-[var(--green)]" : working ? "pulse-dot bg-[var(--brand)]" : "bg-txt3",
+              )}
+            />
+            <span
+              className={cn(
+                "truncate font-display text-[14.5px] font-medium tracking-[-0.01em]",
+                connected ? "text-[var(--green)]" : "text-txt2",
+              )}
+            >
+              {connected ? t("connected") : working ? t("working") : t("notConnected")}
             </span>
           </div>
-        ) : null}
-        {status ? (
-          <div className="mt-2.5 max-w-[360px] text-[11px] leading-snug text-txt3">{status}</div>
-        ) : null}
+          {status ? (
+            <div className="mt-3 max-w-[360px] text-[11px] leading-snug text-txt3">{status}</div>
+          ) : null}
+        </div>
+      </div>
+
+      {/* the identity sits on the readings band, so the dial keeps the free air */}
+      <div className="flex w-full shrink-0 flex-col items-center pb-4 text-center">
+        <p className="w-full truncate font-display text-[20px] font-semibold leading-[1.15] tracking-[-0.025em] text-txt" dir="auto">
+          {name || "-"}
+        </p>
+        <p className="mt-1 truncate font-mono text-[10.5px] text-txt3" dir="auto">
+          {displayHost(card?.sni)}
+        </p>
+      </div>
+
+      {/* the session readings take the lower band so the stage is never a hole */}
+      <div className="grid shrink-0 grid-cols-3 divide-x divide-line border-t border-line pt-4">
+        <Reading label={t("sessLabel")} value={connected && sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"} />
+        <Reading label={t("statDown")} value={connected ? `${traffic.down.num} ${traffic.down.unit}` : "-"} />
+        <Reading label={t("statUp")} value={connected ? `${traffic.up.num} ${traffic.up.unit}` : "-"} />
       </div>
     </section>
+  )
+}
+
+/** One reading in the session band: label above, value under it. */
+function Reading({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex min-w-0 flex-col items-center gap-1 px-3">
+      <span className="truncate text-[10.5px] font-medium uppercase tracking-[0.09em] text-txt3">{label}</span>
+      <span className="truncate text-[13px] font-medium tabular-nums text-txt">{value}</span>
+    </div>
   )
 }
 
@@ -227,7 +237,7 @@ export function FactsCard() {
   const ipText = connected ? serverAddr || geo?.ip || "-" : geo?.ip || "-"
 
   return (
-    <section className="rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] px-5 py-4">
+    <section className="rounded-[var(--r-card)] border border-line bg-[var(--panel)] px-5 py-4">
       <div className="flex flex-col divide-y divide-line">
         <FactRow label={t("yourLocation")} value={geo?.place || "-"} />
         <FactRow label={t("yourIp")} value={ipText} copy />

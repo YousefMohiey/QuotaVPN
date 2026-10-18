@@ -101,7 +101,7 @@ export function SpeedDial({
   return (
     <div
       className={cn(
-        "relative h-[240px] w-[240px] [@media(max-height:660px)]:h-[156px] [@media(max-height:660px)]:w-[156px]",
+        "relative h-[300px] w-[300px] [@media(max-height:660px)]:h-[172px] [@media(max-height:660px)]:w-[172px]",
         phase === "done" && "cursor-pointer",
       )}
       onClick={phase === "done" ? onStart : undefined}
@@ -192,7 +192,7 @@ export function SpeedDial({
           disabled={!idle}
           aria-label={t("startTest")}
           className={cn(
-            "absolute left-1/2 top-1/2 grid size-[172px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border transition-[opacity,border-color,transform] duration-300 [@media(max-height:660px)]:size-[150px]",
+            "absolute left-1/2 top-1/2 grid size-[216px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border transition-[opacity,border-color,transform] duration-300 [@media(max-height:660px)]:size-[150px]",
             "border-[rgb(255_255_255/0.14)] bg-black/35 shadow-[inset_0_1px_0_rgb(255_255_255/0.10)] backdrop-blur-[14px] backdrop-saturate-150",
             "hover:border-[rgb(255_255_255/0.26)] active:scale-[0.985] [-webkit-tap-highlight-color:transparent]",
             idle ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",

@@ -106,7 +106,7 @@ export function Apps({ onBack }: { onBack: () => void }) {
   const bulkOff = appsMode === "all"
 
   return (
-    <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-3">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1120px] flex-col gap-3">
       <div className="px-1">
         <nav aria-label="Breadcrumb" className="flex items-center gap-0.5 text-[12px]">
           <button
@@ -119,14 +119,14 @@ export function Apps({ onBack }: { onBack: () => void }) {
           <ChevronRight className="size-3.5 shrink-0 text-txt3" aria-hidden />
           <span className="px-1.5 py-0.5 text-txt2">{t("routing")}</span>
         </nav>
-        <h1 className="mt-2 text-[30px] font-semibold leading-tight text-txt">{t("routing")}</h1>
-        <p className="mt-1 text-[15px] text-txt2">{t("appsBody")}</p>
-        <p className="mt-0.5 text-[13px] text-txt3">{t("appsHint")}</p>
+        <h1 className="mt-2 font-display text-[22px] font-semibold leading-tight tracking-[-0.02em] text-txt">{t("routing")}</h1>
+        <p className="mt-1 text-[12.5px] text-txt2">{t("appsBody")}</p>
+        <p className="mt-0.5 text-[12px] text-txt3">{t("appsHint")}</p>
       </div>
 
       {/* the controls stay up while the list scrolls beneath them */}
       <div className="sticky top-0 z-10 bg-[var(--bg)] pb-3">
-        <div className="overflow-hidden rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)]">
+        <div className="overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
           <div className="flex flex-wrap items-center gap-2 p-3">
             <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-txt">
               {t("appsModeLbl")}
@@ -157,14 +157,14 @@ export function Apps({ onBack }: { onBack: () => void }) {
                 }}
                 placeholder={t("appsSearch")}
                 aria-label={t("appsSearch")}
-                className="h-9 w-full rounded-[10px] border border-line bg-white/[0.02] ps-8 text-[13px] text-txt outline-none transition-colors placeholder:text-txt3 focus:border-[var(--brand-line)]"
+                className="h-8 w-full rounded-[7px] border border-line bg-white/[0.02] ps-8 text-[12px] text-txt outline-none transition-colors placeholder:text-txt3 focus:border-[var(--brand-line)]"
               />
             </div>
             <button
               type="button"
               disabled={bulkOff || filtered.length === 0}
               onClick={selectMatches}
-              className="h-9 shrink-0 rounded-[10px] border border-[var(--brand-line)] px-2.5 text-[12px] text-brand-strong transition-colors hover:bg-[var(--brand-bg)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+              className="h-8 shrink-0 rounded-[7px] border border-[var(--brand-line)] px-2.5 text-[12px] text-brand-strong transition-colors hover:bg-[var(--brand-bg)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
             >
               {q
                 ? t("appsSelectMatches").replace("{m}", String(filtered.length))
@@ -174,7 +174,7 @@ export function Apps({ onBack }: { onBack: () => void }) {
               type="button"
               disabled={bulkOff || apps.length === 0}
               onClick={() => setApps([])}
-              className="h-9 shrink-0 rounded-[10px] border border-line px-2.5 text-[12px] text-[rgb(207_112_120/0.8)] transition-colors hover:border-[var(--red-line)] hover:bg-[var(--red-bg)] hover:text-[var(--red)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line disabled:hover:bg-transparent disabled:hover:text-[rgb(207_112_120/0.8)]"
+              className="h-8 shrink-0 rounded-[7px] border border-line px-2.5 text-[12px] text-[rgb(207_112_120/0.8)] transition-colors hover:border-[var(--red-line)] hover:bg-[var(--red-bg)] hover:text-[var(--red)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line disabled:hover:bg-transparent disabled:hover:text-[rgb(207_112_120/0.8)]"
             >
               {t("appsClearSel")}
             </button>
@@ -182,7 +182,7 @@ export function Apps({ onBack }: { onBack: () => void }) {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)]">
+      <div className="overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
         <div className="flex flex-wrap items-start justify-between gap-3 px-4 pb-3 pt-3.5">
           <div className="min-w-0">
             <h2 className="text-[15px] font-semibold text-txt">{t("appsListTitle")}</h2>
@@ -196,7 +196,7 @@ export function Apps({ onBack }: { onBack: () => void }) {
         </div>
 
         <div
-          className="flex flex-col gap-2 px-3 pb-3"
+          className="flex flex-col divide-y divide-line border-t border-line"
           role="listbox"
           aria-multiselectable="true"
           onFocus={() => setListActive(true)}
@@ -242,17 +242,17 @@ export function Apps({ onBack }: { onBack: () => void }) {
                     }
                   }}
                   className={cn(
-                    "flex w-full scroll-mt-36 items-center gap-3 rounded-[12px] border border-line bg-[rgb(18_19_23/0.72)] px-3.5 py-2.5 text-start transition-colors hover:border-line-strong focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-line)]",
+                    "flex w-full scroll-mt-36 items-center gap-3 px-4 py-2 text-start transition-colors hover:bg-white/[0.03] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-line)]",
                     appsMode === "all" && "opacity-70",
-                    on ? "border-[var(--brand-line)] bg-[var(--brand-bg)]" : focused && "bg-white/[0.04]",
+                    on ? "bg-[var(--brand-bg)]" : focused && "bg-white/[0.04]",
                   )}
                 >
                   <span
                     aria-hidden
-                    className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-[8px] border border-line bg-white/[0.03]"
+                    className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-[7px] border border-line bg-white/[0.03]"
                   >
                     {icon ? (
-                      <img src={icon} alt="" draggable={false} className="size-5 select-none" />
+                      <img src={icon} alt="" draggable={false} className="size-4 select-none" />
                     ) : (
                       <span className="text-[12px] font-semibold uppercase text-txt3">
                         {row.label.slice(0, 1)}
@@ -260,7 +260,7 @@ export function Apps({ onBack }: { onBack: () => void }) {
                     )}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className={cn("block truncate text-[13.5px]", on ? "text-txt" : "text-txt2")} dir="auto">
+                    <span className={cn("block truncate text-[12.5px]", on ? "text-txt" : "text-txt2")} dir="auto">
                       {row.label}
                     </span>
                     <span className="block truncate text-[11px] text-txt3" dir="auto">

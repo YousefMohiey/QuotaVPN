@@ -29,7 +29,7 @@ export function Dial({
       whileTap={disabled ? undefined : { scale: 0.985 }}
       transition={{ type: "spring", stiffness: 460, damping: 32 }}
       className={cn(
-        "relative grid size-[224px] shrink-0 place-items-center rounded-full border bg-[#13161a] shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_22px_48px_rgb(0_0_0/0.5),0_2px_6px_rgb(0_0_0/0.4)] transition-[background-color,border-color,color,box-shadow] duration-300 disabled:opacity-70",
+        "relative grid size-[264px] shrink-0 place-items-center rounded-full border bg-[#13161a] shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_22px_48px_rgb(0_0_0/0.5),0_2px_6px_rgb(0_0_0/0.4)] transition-[background-color,border-color,color,box-shadow] duration-300 disabled:opacity-70",
         state === "on"
           ? "border-[var(--green-line)] bg-[#101713] text-[var(--green)]"
           : state === "connecting"

@@ -49,7 +49,7 @@ function RunCard({
   return (
     <div
       className={cn(
-        "group relative rounded-[14px] border border-line bg-[rgb(18_19_23/0.72)] transition-colors hover:border-line-strong",
+        "group relative rounded-[14px] border border-line bg-[var(--panel)] transition-colors hover:border-line-strong",
         picked && "border-[var(--brand-line)] bg-[var(--brand-bg)]",
       )}
     >
@@ -198,11 +198,11 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
   ]
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1040px] flex-col gap-4">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1120px] flex-col gap-3">
       <div className="flex items-end justify-between gap-6">
         <div className="min-w-0 flex-1">
-          <h1 className="text-[30px] font-semibold leading-tight text-txt">{t("history")}</h1>
-          <p className="mt-1 text-[15px] text-txt2">{t("histTag")}</p>
+          <h1 className="font-display text-[22px] font-semibold leading-tight tracking-[-0.02em] text-txt">{t("history")}</h1>
+          <p className="mt-1 text-[12.5px] text-txt2">{t("histTag")}</p>
         </div>
         {history.length > 0 && (
           <div className="flex shrink-0 items-center gap-2.5">
@@ -231,16 +231,37 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
       </div>
 
       {history.length === 0 ? (
-        <section className="flex flex-1 flex-col items-center justify-center gap-3 rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] px-5 py-12 text-center">
-          <span className="grid size-12 place-items-center rounded-full border border-line bg-white/[0.02] text-txt3">
-            <HistoryIcon className="size-5" strokeWidth={1.7} aria-hidden />
-          </span>
-          <p className="text-[13.5px] text-txt2">{t("histEmpty")}</p>
-        </section>
+        <>
+          {/* the structure stays visible even with nothing in it */}
+          <section className="grid shrink-0 grid-cols-3 divide-x divide-line overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+            {bestCells.map((s) => (
+              <div key={s.label} className="flex min-w-0 flex-col gap-2 px-5 py-3.5">
+                <span className="flex items-center gap-2 text-[10.5px] uppercase tracking-[0.09em] text-txt3">
+                  <s.icon className="size-3.5 shrink-0" strokeWidth={1.7} aria-hidden />
+                  <span className="truncate">{s.label}</span>
+                </span>
+                <span className="font-display text-[18px] leading-none font-semibold text-txt3">-</span>
+              </div>
+            ))}
+          </section>
+
+          <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+            <div className="flex items-center gap-2 border-b border-line px-5 py-3">
+              <HistoryIcon className="size-3.5 text-txt3" strokeWidth={1.7} aria-hidden />
+              <span className="text-[12px] font-medium text-txt">{t("history")}</span>
+            </div>
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 px-5 py-8 text-center">
+              <span className="grid size-12 place-items-center rounded-full border border-line text-txt3">
+                <HistoryIcon className="size-5" strokeWidth={1.7} aria-hidden />
+              </span>
+              <p className="text-[13px] text-txt2">{t("histEmpty")}</p>
+            </div>
+          </section>
+        </>
       ) : (
         <>
           {/* the log in three numbers, drawn like the speed page strip */}
-          <section className="grid grid-cols-3 divide-x divide-line rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)]">
+          <section className="grid grid-cols-3 divide-x divide-line rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
             {bestCells.map((s) => (
               <div key={s.label} className="flex min-w-0 flex-col gap-2 px-5 py-3.5">
                 <span className="flex items-center gap-2 text-[11px] text-txt3">
@@ -250,7 +271,7 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
                 <span className="flex items-baseline gap-1.5">
                   <span
                     className={cn(
-                      "text-[24px] leading-none font-semibold tabular-nums",
+                      "font-display text-[18px] leading-none font-semibold tabular-nums",
                       s.value === null ? "text-txt3" : "text-txt",
                     )}
                   >
@@ -314,7 +335,7 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
       )}
 
       <Dialog open={pending !== null} onOpenChange={(o) => !o && setPending(null)}>
-        <DialogContent className="max-w-[360px] gap-0 overflow-hidden rounded-[16px] p-0">
+        <DialogContent className="max-w-[360px] gap-0 overflow-hidden rounded-[var(--r-card)] p-0">
           <div className="px-5 pb-4 pt-4">
             <DialogHeader className="gap-1.5">
               <DialogTitle className="text-[14px] font-semibold">{title}</DialogTitle>

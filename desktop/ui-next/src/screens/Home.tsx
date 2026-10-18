@@ -125,7 +125,9 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
       </section>
 
       {/* the settings strip: three controls, one line each */}
-      <section className="grid grid-cols-[1fr_1.12fr_1.34fr] divide-x divide-line overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+      {/* the settings band and the readings share one slab, hairline between */}
+      <section className="shrink-0 overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+      <section className="grid grid-cols-[1fr_1.12fr_1.34fr] divide-x divide-line">
         <Field label={t("domainSni")}>
           {customOpen ? (
             <div className="flex w-full min-w-0 items-center gap-1.5">
@@ -196,6 +198,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
 
       {/* the readings strip: four facts, one line each */}
       <FactsStrip />
+      </section>
 
       <PickerDialog
         open={domainOpen}
@@ -244,7 +247,7 @@ function FactsStrip() {
   }
 
   return (
-    <section className="grid grid-cols-3 divide-x divide-line overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+    <div className="grid grid-cols-3 divide-x divide-line border-t border-line">
       <Fact label={t("yourIp")}>
         <Tip text={t("copy")}>
           <button
@@ -263,7 +266,7 @@ function FactsStrip() {
       </Fact>
       <Fact label={t("yourLocation")} value={geo?.place || "-"} />
       <Fact label={t("ispLbl")} value={geo?.isp || "-"} />
-    </section>
+    </div>
   )
 }
 

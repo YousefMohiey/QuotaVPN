@@ -45,7 +45,7 @@ export function PickerDialog({
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="max-w-[380px] gap-0 overflow-hidden rounded-[16px] border-line bg-[var(--popover)] p-0">
+      <DialogContent className="max-w-[380px] gap-0 overflow-hidden rounded-[var(--r-card)] border-line bg-[var(--popover)] p-0">
         <div className="border-b border-line px-4 pb-3.5 pt-4">
           <DialogTitle className="pe-7 text-[14px] font-semibold text-txt">{title}</DialogTitle>
           <div className="relative mt-3">
