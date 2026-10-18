@@ -176,15 +176,14 @@
     line-height: 1.45;
     font-variant-numeric: tabular-nums;
     overflow: hidden;
-    /* The app is a product surface, not a document: text does not select by
-       accident. Fields and the few values people copy stay selectable. */
+    /* The app is a product surface, not a document: nothing selects. Fields
+       stay editable; the one value people copy is press-to-copy instead. */
     -webkit-user-select: none;
     user-select: none;
   }
   input,
   textarea,
-  [contenteditable="true"],
-  .select-text {
+  [contenteditable="true"] {
     -webkit-user-select: text;
     user-select: text;
   }

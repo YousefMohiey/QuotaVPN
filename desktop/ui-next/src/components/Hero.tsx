@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils"
 import { useI18n } from "@/lib/i18n"
 import { useApp } from "@/state/app"
 import { api, netInfo } from "@/lib/ipc"
+import { copyText } from "@/lib/clipboard"
 import { Dial, type DialState } from "./Dial"
 import { displayHost, fmtBytes, fmtDuration, mbps } from "@/lib/format"
 
@@ -210,7 +211,7 @@ export function Hero() {
             </div>
           ) : null}
           {status ? (
-            <div className="mt-2 select-text text-[11px] leading-snug text-txt3">{status}</div>
+            <div className="mt-2 text-[11px] leading-snug text-txt3">{status}</div>
           ) : null}
         </div>
       </div>
@@ -230,7 +231,7 @@ export function FactsCard() {
     <section className="rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] px-5 py-4">
       <div className="flex flex-col divide-y divide-line">
         <FactRow label={t("yourLocation")} value={geo?.place || "-"} />
-        <FactRow label={t("yourIp")} value={ipText} select />
+        <FactRow label={t("yourIp")} value={ipText} copy />
         <FactRow label={t("ispLbl")} value={geo?.isp || "-"} />
         <FactRow
           label={t("statusLbl")}
@@ -242,18 +243,28 @@ export function FactsCard() {
   )
 }
 
-/** One fact as a line: the name left, the reading right. */
+/** One fact as a line: the name left, the reading right. A copy row turns
+    its reading into a press target: the value goes to the clipboard and the
+    line says so for a moment. Nothing on the surface selects. */
 function FactRow({
   label,
   value,
-  select,
+  copy,
   dot,
 }: {
   label: string
   value: string
-  select?: boolean
+  copy?: boolean
   dot?: "on" | "off"
 }) {
+  const { t } = useI18n()
+  const [copied, setCopied] = useState(false)
+  const take = async () => {
+    if (!copy || !value || value === "-") return
+    if (!(await copyText(value))) return
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1400)
+  }
   return (
     <div className="flex items-center justify-between gap-3 py-2.5">
       <span className="shrink-0 text-[12px] text-txt2">{label}</span>
@@ -264,9 +275,26 @@ function FactRow({
             className={cn("size-1.5 shrink-0 rounded-full", dot === "on" ? "bg-[var(--green)]" : "bg-txt3")}
           />
         ) : null}
-        <span className={cn("truncate text-[13px] text-txt", select && "select-text")} dir="auto">
-          {value}
-        </span>
+        {copy ? (
+          <button
+            type="button"
+            onClick={() => void take()}
+            title={t("copy")}
+            aria-label={`${t("copy")} ${value}`}
+            className={cn(
+              "min-w-0 cursor-pointer truncate rounded-[4px] text-[13px] transition-colors focus-visible:outline-none",
+              "hover:text-[var(--brand)] focus-visible:text-[var(--brand)]",
+              copied ? "text-[var(--green)]" : "text-txt",
+            )}
+            dir="auto"
+          >
+            {copied ? t("copied") : value}
+          </button>
+        ) : (
+          <span className="truncate text-[13px] text-txt" dir="auto">
+            {value}
+          </span>
+        )}
       </span>
     </div>
   )

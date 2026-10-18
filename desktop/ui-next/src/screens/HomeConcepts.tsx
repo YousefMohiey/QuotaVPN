@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react"
 import { ChevronDown, ChevronRight, Gamepad2, SlidersHorizontal, Tv, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { copyText } from "@/lib/clipboard"
 import { Dial, type DialState } from "@/components/Dial"
 import { WeQuotaCard } from "@/components/WeQuotaCard"
 import { FactsCard, useGeo, useServerAddr, useTick, useTraffic } from "@/components/Hero"
@@ -67,7 +68,7 @@ function ConnectStack({ strip = false, stretch = false, profiles }: { strip?: bo
             {displayHost(card?.sni)}
           </p>
         )}
-        {status ? <div className="mt-1 max-w-full select-text truncate text-[11px] text-txt3">{status}</div> : null}
+        {status ? <div className="mt-1 max-w-full truncate text-[11px] text-txt3">{status}</div> : null}
         </div>
       </div>
       {strip ? <FactsStrip /> : null}
@@ -82,6 +83,16 @@ function FactsStrip() {
   const geo = useGeo(connected)
   const serverAddr = useServerAddr(connected, serverIp)
   const ipText = connected ? serverAddr || geo?.ip || "-" : geo?.ip || "-"
+  const [copied, setCopied] = useState(false)
+
+  // The address is the one value people take out of the app, so it copies on
+  // a press. Nothing here selects: the rest of the surface stays untouchable.
+  const copyIp = async () => {
+    if (!ipText || ipText === "-") return
+    if (!(await copyText(ipText))) return
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1400)
+  }
 
   return (
     <div className="mt-3 grid w-full grid-cols-3 items-start divide-x divide-line border-t border-line pt-3 text-start">
@@ -93,9 +104,19 @@ function FactsStrip() {
       </div>
       <div className="flex min-w-0 flex-col px-5">
         <span className="text-[11px] font-semibold uppercase tracking-[0.07em] text-txt2">{t("yourIp")}</span>
-        <span className="mt-1 select-text truncate text-[13.5px] font-medium tabular-nums text-txt" dir="auto">
-          {ipText}
-        </span>
+        <button
+          type="button"
+          onClick={() => void copyIp()}
+          title={t("copy")}
+          aria-label={`${t("copy")} ${ipText}`}
+          className={cn(
+            "mt-1 min-w-0 cursor-pointer truncate rounded-[4px] text-start text-[13.5px] font-medium tabular-nums transition-colors focus-visible:outline-none",
+            "hover:text-[var(--brand)] focus-visible:text-[var(--brand)]",
+            copied ? "text-[var(--green)]" : "text-txt",
+          )}
+        >
+          {copied ? t("copied") : ipText}
+        </button>
       </div>
       <div className="flex min-w-0 flex-col ps-5">
         <span className="text-[11px] font-semibold uppercase tracking-[0.07em] text-txt2">{t("ispLbl")}</span>
