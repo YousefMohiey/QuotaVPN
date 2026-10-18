@@ -105,7 +105,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                       <span className="block truncate text-[12px] font-medium" dir="auto">
                         {t(kind === "Gamerz" ? "kindGamerz" : "kindStreamerz")}
                       </span>
-                      <span className="mt-px block truncate font-mono text-[9.5px] text-txt3" dir="auto">
+                      <span className="mt-px block truncate font-mono text-[11px] text-txt3" dir="auto">
                         {sni}
                       </span>
                     </span>
@@ -224,7 +224,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-col gap-1.5 px-4 py-2.5">
-      <span className="truncate text-[10.5px] font-medium uppercase tracking-[0.09em] text-txt2">{label}</span>
+      <span className="truncate text-[11px] font-medium uppercase tracking-[0.09em] text-txt2">{label}</span>
       <div className="min-w-0">{children}</div>
     </div>
   )
@@ -273,7 +273,7 @@ function FactsStrip() {
 function Fact({ label, value, dot, children }: { label: string; value?: string; dot?: "on" | "off"; children?: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-col gap-1 px-4 py-2.5">
-      <span className="truncate text-[10.5px] font-medium uppercase tracking-[0.09em] text-txt2">{label}</span>
+      <span className="truncate text-[11px] font-medium uppercase tracking-[0.09em] text-txt2">{label}</span>
       <span className="flex min-w-0 items-center gap-1.5">
         {dot ? (
           <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", dot === "on" ? "bg-[var(--green)]" : "bg-txt3")} />

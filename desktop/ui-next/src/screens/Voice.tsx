@@ -53,7 +53,7 @@ export function Voice() {
         <div className="min-w-0">
           <h1 className="font-display text-[22px] font-semibold leading-tight tracking-[-0.02em] text-txt">{t("voiceTitle")}</h1>
           <p className="mt-0.5 text-[12.5px] text-txt2">{t("voiceTagline")}</p>
-          <p className="mt-0.5 text-[11.5px] font-medium text-txt2">{t("voicePingBold")}</p>
+          <p className="mt-0.5 text-[12px] font-medium text-txt2">{t("voicePingBold")}</p>
         </div>
       </div>
 
@@ -84,7 +84,7 @@ export function Voice() {
 
           <div className="mt-auto flex items-start gap-4 border-t border-line px-5 py-3.5">
             <Info className="size-4 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
-            <p className="max-w-[560px] text-[11.5px] leading-relaxed text-txt3">{t("launchPanelBody")}</p>
+            <p className="max-w-[560px] text-[12px] leading-relaxed text-txt3">{t("launchPanelBody")}</p>
           </div>
         </div>
 
@@ -99,7 +99,7 @@ export function Voice() {
               aria-hidden
             />
             <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-txt">{t("voiceRowTitle")}</span>
-            <span className="max-w-[45%] shrink-0 truncate text-end text-[11px] text-txt3">
+            <span className="max-w-[45%] shrink-0 truncate text-end text-[12px] text-txt3">
               {busy
                 ? on
                   ? t("voiceDisconnecting")
@@ -124,7 +124,7 @@ export function Voice() {
               {busy ? <Loader2 className="size-5 animate-spin" aria-hidden /> : <Mic className="size-5" aria-hidden />}
             </span>
             <p className="font-display text-[16px] font-semibold text-txt">{on ? t("voiceActive") : t("voiceOffTitle")}</p>
-            {msg && <p className="max-w-[320px] text-[11.5px] leading-relaxed text-txt3">{msg}</p>}
+            {msg && <p className="max-w-[320px] text-[12px] leading-relaxed text-txt3">{msg}</p>}
           </div>
 
 
@@ -135,7 +135,7 @@ export function Voice() {
               </span>
               <div className="min-w-0 text-start">
                 <p className="text-[12px] font-medium text-txt">{t("voiceReadyTitle")}</p>
-                <p className="mt-0.5 text-[11.5px] text-txt2">{t("voiceReadyBody")}</p>
+                <p className="mt-0.5 text-[12px] text-txt2">{t("voiceReadyBody")}</p>
               </div>
             </div>
           )}

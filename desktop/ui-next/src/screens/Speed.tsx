@@ -665,7 +665,7 @@ export function Speed() {
             onStop={stop}
           />
           {shown.length > 0 && !(phase === "done" && fmt(peak, unit) === fmt(value, unit)) && (
-            <div className="text-[11.5px] tabular-nums text-txt3">
+            <div className="text-[12px] tabular-nums text-txt3">
               {t("peak")} {fmt(peak, unit)} {unit}
             </div>
           )}
@@ -677,7 +677,7 @@ export function Speed() {
             <div className="min-w-0 flex-1">
               <div className="truncate text-[12.5px] font-medium text-txt">{t("speedTest")}</div>
             </div>
-            <div className="max-w-[45%] truncate text-end text-[11px] text-txt3">
+            <div className="max-w-[45%] truncate text-end text-[12px] text-txt3">
               {phase === "done" ? t("doneLabel") : running ? t("measuring") : hint || t("idle")}
             </div>
           </div>
@@ -836,7 +836,7 @@ function ReadingCell({
         >
           {value === null ? "-" : fmt(value, unit === "ms" ? "ms" : "Mbps")}
         </span>
-        <span className="text-[10.5px] text-txt3">{unit}</span>
+        <span className="text-[11px] text-txt3">{unit}</span>
       </span>
     </button>
   )
@@ -857,7 +857,7 @@ function FactRow({
     <div className="flex min-w-0 items-center gap-3.5 px-5 py-3">
       <Icon className="size-4 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
       <div className="min-w-0">
-        <div className="text-[10.5px] font-medium tracking-[0.08em] text-txt3 uppercase">{title}</div>
+        <div className="text-[11px] font-medium tracking-[0.08em] text-txt3 uppercase">{title}</div>
         <div className={cn("mt-0.5 leading-snug font-semibold break-words text-txt", fitSize(main, true))} dir="auto">
           {main}
         </div>
@@ -876,5 +876,5 @@ function FactRow({
 function fitSize(s: string, main: boolean): string {
   const n = s.length
   if (main) return n > 30 ? "text-[12px]" : n > 20 ? "text-[13px]" : "text-[14px]"
-  return n > 30 ? "text-[10px]" : n > 24 ? "text-[10.5px]" : "text-[11.5px]"
+  return n > 30 ? "text-[12px]" : n > 24 ? "text-[12px]" : "text-[12.5px]"
 }

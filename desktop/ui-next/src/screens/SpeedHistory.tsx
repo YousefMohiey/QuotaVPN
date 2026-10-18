@@ -68,7 +68,7 @@ function RunCard({
         <div className="-mx-4 mt-2.5 grid grid-cols-4 divide-x divide-line border-t border-line">
           {cells.map((c, i) => (
             <span key={c.label + i} className="min-w-0 px-3.5 py-2.5">
-              <span className="flex items-center gap-1.5 text-[10.5px] text-txt3">
+              <span className="flex items-center gap-1.5 text-[11px] text-txt3">
                 {c.icon && <c.icon className="size-3 shrink-0" strokeWidth={1.7} aria-hidden />}
                 <span className="truncate">{c.label}</span>
               </span>
@@ -76,7 +76,7 @@ function RunCard({
                 <span className={cn("text-[16px] font-semibold leading-none tabular-nums", c.value === "-" ? "text-txt3" : "text-txt")}>
                   {c.value}
                 </span>
-                <span className="text-[10px] text-txt3">{c.unit}</span>
+                <span className="text-[11px] text-txt3">{c.unit}</span>
               </span>
             </span>
           ))}
@@ -236,7 +236,7 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
           <section className="grid shrink-0 grid-cols-3 divide-x divide-line overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
             {bestCells.map((s) => (
               <div key={s.label} className="flex min-w-0 flex-col gap-2 px-5 py-3.5">
-                <span className="flex items-center gap-2 text-[10.5px] uppercase tracking-[0.09em] text-txt3">
+                <span className="flex items-center gap-2 text-[11px] uppercase tracking-[0.09em] text-txt3">
                   <s.icon className="size-3.5 shrink-0" strokeWidth={1.7} aria-hidden />
                   <span className="truncate">{s.label}</span>
                 </span>
@@ -288,7 +288,7 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
             {days.map((d) => (
               <div key={d.key}>
                 <div className="flex items-center gap-3 px-0.5">
-                  <span className="text-[10.5px] font-medium tracking-[0.08em] text-txt3 uppercase">
+                  <span className="text-[11px] font-medium tracking-[0.08em] text-txt3 uppercase">
                     {dayLabel(d.at)}
                   </span>
                   <span className="h-px flex-1 bg-[var(--line)]" aria-hidden />
@@ -326,7 +326,7 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
             type="button"
             disabled={picked.length === 0}
             onClick={() => setPending({ kind: "many" })}
-            className="flex h-9 items-center gap-1.5 rounded-[10px] bg-[var(--brand-vivid)] px-3.5 text-[13px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex h-9 items-center gap-1.5 rounded-[10px] bg-[var(--brand)] px-3.5 text-[13px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Trash2 className="size-3.5" aria-hidden />
             {t("delete")}

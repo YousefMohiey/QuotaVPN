@@ -57,7 +57,7 @@ function WeQuotaRow() {
         <div className="min-w-0 flex-1">
           <h2 className="text-[12.5px] font-medium text-txt">{t("weQuota")}</h2>
           <p className="mt-0.5 text-[12px] leading-relaxed text-txt2">{t("weQuotaSub")}</p>
-          {!q.linked && <p className="mt-1 text-[11px] leading-snug text-txt3">{t("weLinkHint")}</p>}
+          {!q.linked && <p className="mt-1 text-[12px] leading-snug text-txt3">{t("weLinkHint")}</p>}
         </div>
         {q.linked ? (
           <div className="flex shrink-0 items-center gap-2">
@@ -84,7 +84,7 @@ function WeQuotaRow() {
           <button
             type="button"
             onClick={() => setQuotaOpen(true)}
-            className="flex h-8 shrink-0 items-center rounded-[7px] bg-[var(--brand-vivid)] px-3 text-[12px] font-medium text-white transition-[filter] hover:brightness-110"
+            className="flex h-8 shrink-0 items-center rounded-[7px] bg-[var(--brand)] px-3 text-[12px] font-medium text-white transition-[filter] hover:brightness-110"
           >
             {t("weLink")}
           </button>
@@ -212,7 +212,7 @@ export function Settings() {
             sub={
               <>
                 {t("startupBody")}
-                {startupMsg ? <p className="mt-1 text-[11.5px] text-[var(--red)]">{startupMsg}</p> : null}
+                {startupMsg ? <p className="mt-1 text-[12px] text-[var(--red)]">{startupMsg}</p> : null}
               </>
             }
             control={<Toggle on={startup} busy={false} onFlip={() => void flipStartup(!startup)} label={t("startupTitle")} />}
@@ -227,12 +227,12 @@ export function Settings() {
             <RefreshCw className="size-3.5 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
             <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-txt">{t("updRow")}</span>
             {updateChannel === "experimental" ? (
-              <span className="shrink-0 rounded-full border border-[var(--brand-line)] bg-[var(--brand-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-brand-strong">
+              <span className="shrink-0 rounded-full border border-[var(--brand-line)] bg-[var(--brand-bg)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.07em] text-brand-strong">
                 {t("chBadge")}
               </span>
             ) : null}
             {updateText ? (
-              <span aria-live="polite" className="flex min-w-0 max-w-[180px] items-center gap-2 text-[11px] text-txt2">
+              <span aria-live="polite" className="flex min-w-0 max-w-[180px] items-center gap-2 text-[12px] text-txt2">
                 <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", upTone)} />
                 <span className="truncate" title={updateText}>
                   {updateText}
@@ -244,7 +244,7 @@ export function Settings() {
           <div className="flex flex-col items-center gap-4 px-5 py-7 text-center">
             <div className="flex flex-col items-center gap-1.5">
               <span className="font-display text-[30px] font-semibold leading-none tabular-nums text-txt">{cur || "-"}</span>
-              <span className="text-[10.5px] font-medium uppercase tracking-[0.09em] text-txt3">{t("chCur")}</span>
+              <span className="text-[11px] font-medium uppercase tracking-[0.09em] text-txt3">{t("chCur")}</span>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2">
               <button
@@ -261,7 +261,7 @@ export function Settings() {
                   type="button"
                   onClick={() => void applyUpdate()}
                   disabled={updateState === "installing"}
-                  className="flex h-8 items-center rounded-[7px] bg-[var(--brand-vivid)] px-3 text-[12px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
+                  className="flex h-8 items-center rounded-[7px] bg-[var(--brand)] px-3 text-[12px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
                 >
                   {updateState === "installing"
                     ? updatePct !== null
@@ -271,11 +271,11 @@ export function Settings() {
                 </button>
               )}
             </div>
-            <p className="max-w-[300px] text-[11.5px] leading-relaxed text-txt3">{t("upRowBody")}</p>
+            <p className="max-w-[300px] text-[12px] leading-relaxed text-txt3">{t("upRowBody")}</p>
           </div>
 
           <div className="mt-auto border-t border-line px-5 py-3.5">
-            <p className="text-[10.5px] font-medium uppercase tracking-[0.09em] text-txt3">{t("chTitle")}</p>
+            <p className="text-[11px] font-medium uppercase tracking-[0.09em] text-txt3">{t("chTitle")}</p>
             <p className="mt-1 text-[12px] leading-snug text-txt2">
               {updateChannel === "experimental" ? t("chExpBody") : t("chStableBody")}
             </p>
@@ -289,7 +289,7 @@ export function Settings() {
               onChange={(v) => {
                 if (v !== updateChannel) void setUpdateChannel(v)
               }}
-              className="mt-3"
+              className="mt-3 border-0 bg-transparent p-0"
             />
           </div>
         </section>

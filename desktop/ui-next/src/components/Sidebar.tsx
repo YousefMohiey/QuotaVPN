@@ -37,7 +37,7 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-1.5">
               <span className="truncate font-display text-[13.5px] font-semibold tracking-[-0.01em] text-txt">QuotaVPN</span>
-              {version && <span className="shrink-0 font-mono text-[9.5px] text-txt3">v{version}</span>}
+              {version && <span className="shrink-0 font-mono text-[11px] text-txt3">v{version}</span>}
             </div>
             {updateChannel === "experimental" && (
               <span className="mt-1 inline-flex rounded-[4px] border border-[var(--brand-line)] px-1.5 py-px text-[9px] font-semibold uppercase tracking-[0.08em] text-brand-strong">
@@ -64,7 +64,7 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
                 <span className="block truncate text-[11px] font-medium text-brand-strong" dir="auto">
                   {t("updRemind")} · v{update.latest}
                 </span>
-                <span className="block truncate text-[10px] text-txt3" dir="auto">
+                <span className="block truncate text-[11px] text-txt3" dir="auto">
                   {update.notes || t("updRemindSub")}
                 </span>
               </span>

@@ -203,7 +203,7 @@ export function Hero() {
         <p className="w-full truncate font-display text-[20px] font-semibold leading-[1.15] tracking-[-0.025em] text-txt" dir="auto">
           {name || "-"}
         </p>
-        <p className="mt-1 truncate font-mono text-[10.5px] text-txt3" dir="auto">
+        <p className="mt-1 truncate font-mono text-[11px] text-txt3" dir="auto">
           {displayHost(card?.sni)}
         </p>
       </div>
@@ -222,7 +222,7 @@ export function Hero() {
 function Reading({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex min-w-0 flex-col items-center gap-1 px-3">
-      <span className="truncate text-[10.5px] font-medium uppercase tracking-[0.09em] text-txt3">{label}</span>
+      <span className="truncate text-[11px] font-medium uppercase tracking-[0.09em] text-txt3">{label}</span>
       <span className="truncate text-[13px] font-medium tabular-nums text-txt">{value}</span>
     </div>
   )

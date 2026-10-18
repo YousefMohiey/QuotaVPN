@@ -226,7 +226,7 @@ export function SpeedDial({
             </span>
             <span className="mt-2 flex items-center gap-1.5">
               <Icon className="size-3.5 text-brand-strong" strokeWidth={1.9} aria-hidden />
-              <span className="text-[11.5px] text-txt2 [@media(max-height:660px)]:text-[9.5px]">
+              <span className="text-[11.5px] text-txt2 [@media(max-height:660px)]:text-[11px]">
                 {unit}
               </span>
             </span>

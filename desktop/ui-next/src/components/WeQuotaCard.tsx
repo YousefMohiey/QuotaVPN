@@ -89,7 +89,7 @@ export function WeQuotaCard() {
               ) : null}
             </div>
             {quota.phase === "error" && quota.msgKey ? (
-              <p className="mt-1.5 truncate text-[10.5px] text-[var(--red)]" dir="auto">
+              <p className="mt-1.5 truncate text-[11px] text-[var(--red)]" dir="auto">
                 {t(quota.msgKey as Parameters<typeof t>[0])}
                 {quota.msgRaw ? ` (${quota.msgRaw})` : ""}
               </p>
@@ -98,14 +98,14 @@ export function WeQuotaCard() {
 
           {buckets.length ? (
             <div className="mt-auto border-t border-line pt-3.5">
-              <p className="mb-2.5 text-[10.5px] font-medium uppercase tracking-[0.08em] text-txt2">{t("wePackage")}</p>
+              <p className="mb-2.5 text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("wePackage")}</p>
               <div className="flex flex-col gap-2.5">
                 {buckets.map((b) => {
                   const k = bucketKey(b.item)
                   const bpct = b.total > 0 ? Math.max(0, Math.min(100, (b.remain / b.total) * 100)) : 0
                   return (
                     <div key={b.item || b.label} className="flex min-w-0 items-center gap-3">
-                      <span className="w-[74px] shrink-0 truncate text-[10px] font-medium uppercase tracking-[0.06em] text-txt3">
+                      <span className="w-[74px] shrink-0 truncate text-[11px] font-medium uppercase tracking-[0.06em] text-txt3">
                         {k ? t(k) : b.label || "WE"}
                       </span>
                       <span className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-white/[0.07]">

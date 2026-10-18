@@ -76,8 +76,8 @@
 
   /* Text: three steps, all readable on --panel. */
   --txt: #f3f5f7;
-  --txt2: #9ca3ac;
-  --txt3: #6c727b;
+  --txt2: #a3aab3;
+  --txt3: #858c97;
 
   /* One accent + muted semantics. Saturated hues read as generated. */
   --brand: #2c5fd8;

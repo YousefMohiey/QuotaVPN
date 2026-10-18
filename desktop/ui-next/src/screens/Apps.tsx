@@ -136,6 +136,7 @@ export function Apps({ onBack }: { onBack: () => void }) {
               id="apps-mode"
               value={appsMode}
               onChange={(m: AppsMode) => setAppsMode(m)}
+              className="border-0 bg-transparent p-0"
               options={[
                 { value: "all", label: t("appsAll") },
                 { value: "allow", label: t("appsOnly") },
@@ -243,13 +244,12 @@ export function Apps({ onBack }: { onBack: () => void }) {
                   }}
                   className={cn(
                     "flex w-full scroll-mt-36 items-center gap-3 px-4 py-2 text-start transition-colors hover:bg-white/[0.03] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-line)]",
-                    appsMode === "all" && "opacity-70",
                     on ? "bg-[var(--brand-bg)]" : focused && "bg-white/[0.04]",
                   )}
                 >
                   <span
                     aria-hidden
-                    className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-[7px] border border-line bg-white/[0.03]"
+                    className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-[7px] bg-white/[0.03]"
                   >
                     {icon ? (
                       <img src={icon} alt="" draggable={false} className="size-4 select-none" />
