@@ -1,20 +1,21 @@
 import { useState, type ReactNode } from "react"
 import { ChevronDown, ChevronRight, Gamepad2, Tv } from "lucide-react"
-import { Hero, FactsCard } from "@/components/Hero"
+import { Hero, useGeo, useServerAddr } from "@/components/Hero"
 import { WeQuotaCard } from "@/components/WeQuotaCard"
 import { PickerDialog, type PickerItem } from "@/components/PickerDialog"
 import { Segmented } from "@/components/Segmented"
+import { Tip } from "@/components/Tip"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { copyText } from "@/lib/clipboard"
 import { useApp, type PresetKind } from "@/state/app"
 import { useI18n } from "@/lib/i18n"
 import { CUSTOM_SNI, DEFAULT_SNI, SNIS, labelForSni } from "@/lib/snis"
 import { cn } from "@/lib/utils"
-import { HomeConcept } from "./HomeConcepts"
 
-// The Home screen is two columns: the left stack acts (connect, then the
-// controls, then the facts) and the right rail reads (the WE package, then
-// the profiles). Nothing travels between states.
+// Home, the instrument: one slab for the connection and the line, one strip
+// for the three settings that shape it, one strip for the readings. Structure
+// comes from hairlines, not from stacked cards.
 export function Home({ onOpenApps }: { onOpenApps: () => void }) {
   const { t } = useI18n()
   const { cards, card, pickCard, preset, setPreset, ensurePresetCard, applyDomain, transport, setTransport, appsMode, apps } = useApp()
@@ -57,98 +58,20 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
         : t("appsExcept")
   const routingCount = appsMode !== "all" && apps.length ? ` · ${apps.length}` : ""
 
-  // The chosen arrangement (4) is the default now; ?alt=1 / 2 / 3 still
-  // previews the earlier candidates from the pick round.
-  const alt = new URLSearchParams(window.location.search).get("alt") ?? "4"
-  if (alt === "1" || alt === "2" || alt === "3" || alt === "4")
-    return <HomeConcept alt={alt} onOpenApps={onOpenApps} />
-
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1040px] flex-col">
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,7fr)_minmax(0,5fr)] gap-3">
-        {/* left: the action stack */}
-        <div className="flex min-h-0 flex-col gap-3">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1120px] flex-col gap-3">
+      {/* the slab: the dial and its reading on the left, the line and the
+          two profiles on the right, one hairline between them */}
+      <section className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.32fr)_minmax(0,1fr)] overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+        <div className="flex min-h-0 flex-col justify-center p-7">
           <Hero />
-
-          <section className="flex flex-col justify-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
-            <div className="flex flex-col divide-y divide-line">
-              <RowField label={t("domainSni")}>
-                {customOpen ? (
-                  <div className="flex w-full items-center gap-2">
-                    <Input
-                      autoFocus
-                      value={customVal}
-                      onChange={(e) => setCustomVal(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") void submitCustom()
-                        if (e.key === "Escape") setCustomOpen(false)
-                      }}
-                      placeholder="example.com"
-                      aria-label={t("domainSni")}
-                      className="h-10 rounded-[10px] border-line bg-white/[0.02] text-[13px]"
-                    />
-                    <Button
-                      size="sm"
-                      className="h-10 shrink-0 rounded-[10px] px-3.5 text-[13px]"
-                      disabled={domainBusy || !customVal.trim()}
-                      onClick={() => void submitCustom()}
-                    >
-                      {t("apply")}
-                    </Button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    aria-busy={domainBusy}
-                    onClick={() => setDomainOpen(true)}
-                    className="group flex h-10 w-full items-center justify-between gap-3 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt transition-colors duration-200 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
-                  >
-                    <span className={cn("truncate", domText.length > 17 && "text-[11px]")} dir="auto">{domText}</span>
-                    <ChevronDown className="size-4 shrink-0 text-txt2 transition-[color,transform] duration-200 group-hover:translate-y-px group-hover:text-brand-strong" aria-hidden />
-                  </button>
-                )}
-              </RowField>
-
-              <RowField label={t("routing")}>
-                <button
-                  type="button"
-                  onClick={onOpenApps}
-                  className="group flex h-10 w-full items-center justify-between gap-3 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt transition-colors duration-200 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)]"
-                >
-                  <span className="truncate" dir="auto">
-                    {routing}
-                    {routingCount}
-                  </span>
-                  <ChevronRight
-                    className="size-4 shrink-0 text-txt2 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-brand-strong"
-                    aria-hidden
-                  />
-                </button>
-              </RowField>
-
-              <RowField label={t("transport")}>
-                <Segmented
-                  id="transport"
-                  value={transport}
-                  onChange={setTransport}
-                  boxed
-                  options={[
-                    { value: "vless", label: t("trStandard") },
-                    { value: "hy2", label: "Hysteria2", hint: t("trNoteHy2") },
-                    { value: "wg", label: t("trWg"), hint: t("trNoteWg") },
-                  ]}
-                />
-              </RowField>
-            </div>
-          </section>
         </div>
 
-        {/* right: the reading rail */}
-        <div className="flex min-h-0 flex-col gap-3">
+        <aside className="flex min-h-0 flex-col border-s border-line">
           <WeQuotaCard />
 
-          <section className="flex flex-col justify-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
-            <div className="flex flex-col gap-3" role="group" aria-label={t("setupTitle")}>
+          <div className="border-t border-line p-3.5" role="group" aria-label={t("setupTitle")}>
+            <div className="grid grid-cols-2 gap-2">
               {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
                 const mine = cards.find((c) => c.card_type === kind)
                 const sni = mine?.sni ?? DEFAULT_SNI[kind]
@@ -171,49 +94,108 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                       void ensurePresetCard(kind).finally(() => setCreating(null))
                     }}
                     className={cn(
-                      "flex items-center gap-3 rounded-[12px] border p-4 text-start transition-colors duration-200 disabled:cursor-wait disabled:opacity-70",
+                      "flex min-w-0 items-center gap-2 rounded-[8px] border px-2.5 py-2 text-start transition-colors duration-150 disabled:cursor-wait disabled:opacity-70",
                       isActive
-                        ? "border-[var(--brand-line)] bg-[var(--brand-bg)]"
-                        : "border-line bg-white/[0.02] hover:border-[var(--brand-line)]",
+                        ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-txt"
+                        : "border-line text-txt2 hover:border-line-strong hover:text-txt",
                     )}
                   >
-                    <span
-                      className={cn(
-                        "grid size-10 shrink-0 place-items-center rounded-[10px] border transition-colors",
-                        isActive
-                          ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong"
-                          : "border-line bg-white/[0.03] text-txt3",
-                      )}
-                    >
-                      <Icon className="size-[18px]" aria-hidden />
-                    </span>
+                    <Icon className={cn("size-4 shrink-0", isActive ? "text-brand-strong" : "text-txt3")} aria-hidden />
                     <span className="min-w-0 flex-1">
-                      <span
-                        className={cn("block truncate text-[14px] font-semibold", isActive ? "text-txt" : "text-txt2")}
-                        dir="auto"
-                      >
+                      <span className="block truncate text-[12px] font-medium" dir="auto">
                         {t(kind === "Gamerz" ? "kindGamerz" : "kindStreamerz")}
                       </span>
-                      <span className="mt-0.5 block truncate font-mono text-[11px] text-txt3">{sni}</span>
+                      <span className="mt-px block truncate font-mono text-[9.5px] text-txt3" dir="auto">
+                        {sni}
+                      </span>
                     </span>
                     <span
                       aria-hidden
                       className={cn(
-                        "grid size-4 shrink-0 place-items-center rounded-full border-[1.5px] transition-colors",
-                        isActive ? "border-[var(--brand)]" : "border-line-strong",
+                        "size-1.5 shrink-0 rounded-full",
+                        isActive ? "bg-[var(--brand-vivid)]" : "bg-transparent",
                       )}
-                    >
-                      {isActive && <span className="size-[7px] rounded-full bg-[var(--brand)]" />}
-                    </span>
+                    />
                   </button>
                 )
               })}
             </div>
-          </section>
+          </div>
+        </aside>
+      </section>
 
-          <FactsCard />
-        </div>
-      </div>
+      {/* the settings strip: three controls, one line each */}
+      <section className="grid grid-cols-[1fr_1.12fr_1.34fr] divide-x divide-line overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+        <Field label={t("domainSni")}>
+          {customOpen ? (
+            <div className="flex w-full min-w-0 items-center gap-1.5">
+              <Input
+                autoFocus
+                value={customVal}
+                onChange={(e) => setCustomVal(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void submitCustom()
+                  if (e.key === "Escape") setCustomOpen(false)
+                }}
+                placeholder="example.com"
+                aria-label={t("domainSni")}
+                className="h-8 min-w-0 rounded-[7px] border-line bg-white/[0.02] px-2 text-[12px]"
+              />
+              <Button
+                size="sm"
+                className="h-8 shrink-0 rounded-[7px] px-2.5 text-[12px]"
+                disabled={domainBusy || !customVal.trim()}
+                onClick={() => void submitCustom()}
+              >
+                {t("apply")}
+              </Button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              aria-busy={domainBusy}
+              onClick={() => setDomainOpen(true)}
+              className="group flex h-8 w-full min-w-0 items-center justify-between gap-2 rounded-[7px] border border-line bg-white/[0.02] px-2.5 text-[12px] text-txt transition-colors duration-150 hover:border-[var(--brand-line)]"
+            >
+              <span className="truncate" dir="auto">
+                {domText}
+              </span>
+              <ChevronDown className="size-3.5 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
+            </button>
+          )}
+        </Field>
+
+        <Field label={t("routing")}>
+          <button
+            type="button"
+            onClick={onOpenApps}
+            className="group flex h-8 w-full min-w-0 items-center justify-between gap-2 rounded-[7px] border border-line bg-white/[0.02] px-2.5 text-[12px] text-txt transition-colors duration-150 hover:border-[var(--brand-line)]"
+          >
+            <span className="truncate" dir="auto">
+              {routing}
+              {routingCount}
+            </span>
+            <ChevronRight className="size-3.5 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
+          </button>
+        </Field>
+
+        <Field label={t("transport")}>
+          <Segmented
+            id="transport"
+            value={transport}
+            onChange={setTransport}
+            boxed
+            options={[
+              { value: "vless", label: t("trStandard") },
+              { value: "hy2", label: "Hysteria2", hint: t("trNoteHy2") },
+              { value: "wg", label: t("trWg"), hint: t("trNoteWg") },
+            ]}
+          />
+        </Field>
+      </section>
+
+      {/* the readings strip: four facts, one line each */}
+      <FactsStrip />
 
       <PickerDialog
         open={domainOpen}
@@ -235,23 +217,70 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
   )
 }
 
-/** One config row: the label sits left, the control takes the right. */
-function RowField({
-  label,
-  hint,
-  children,
-}: {
-  label: string
-  hint?: string
-  children: ReactNode
-}) {
+/** One cell of the settings strip: a label above, the control under it. */
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex items-center gap-3 py-3">
-      <span className="w-28 shrink-0 truncate text-[12px] text-txt2">{label}</span>
-      <div className="min-w-0 flex-1">
-        {children}
-        {hint ? <p className="mt-1 text-[11px] text-txt3">{hint}</p> : null}
-      </div>
+    <div className="flex min-w-0 flex-col gap-1.5 px-4 py-2.5">
+      <span className="truncate text-[10.5px] font-medium uppercase tracking-[0.09em] text-txt2">{label}</span>
+      <div className="min-w-0">{children}</div>
+    </div>
+  )
+}
+
+/** The readings: where this machine sits and appears from right now. */
+function FactsStrip() {
+  const { t } = useI18n()
+  const { connected, serverIp } = useApp()
+  const geo = useGeo(connected)
+  const serverAddr = useServerAddr(connected, serverIp)
+  const ipText = connected ? serverAddr || geo?.ip || "-" : geo?.ip || "-"
+  const [copied, setCopied] = useState(false)
+
+  const take = async () => {
+    if (!ipText || ipText === "-") return
+    if (!(await copyText(ipText))) return
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1400)
+  }
+
+  return (
+    <section className="grid grid-cols-3 divide-x divide-line overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+      <Fact label={t("yourIp")}>
+        <Tip text={t("copy")}>
+          <button
+            type="button"
+            onClick={() => void take()}
+            aria-label={`${t("copy")} ${ipText}`}
+            className={cn(
+              "min-w-0 cursor-pointer truncate rounded-[4px] text-[12.5px] tabular-nums transition-colors hover:text-brand-strong",
+              copied ? "text-[var(--green)]" : "text-txt",
+            )}
+            dir="auto"
+          >
+            {copied ? t("copied") : ipText}
+          </button>
+        </Tip>
+      </Fact>
+      <Fact label={t("yourLocation")} value={geo?.place || "-"} />
+      <Fact label={t("ispLbl")} value={geo?.isp || "-"} />
+    </section>
+  )
+}
+
+function Fact({ label, value, dot, children }: { label: string; value?: string; dot?: "on" | "off"; children?: ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1 px-4 py-2.5">
+      <span className="truncate text-[10.5px] font-medium uppercase tracking-[0.09em] text-txt2">{label}</span>
+      <span className="flex min-w-0 items-center gap-1.5">
+        {dot ? (
+          <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", dot === "on" ? "bg-[var(--green)]" : "bg-txt3")} />
+        ) : null}
+        {children ?? (
+          <span className="truncate text-[12.5px] text-txt" dir="auto">
+            {value}
+          </span>
+        )}
+      </span>
     </div>
   )
 }

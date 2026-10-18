@@ -10,6 +10,9 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: { "@": path.resolve(dirname, "./src") },
+    // One React, always: radix and motion both declare their own peer copy,
+    // and two copies in the dev graph crash every hook call.
+    dedupe: ["react", "react-dom"],
   },
   clearScreen: false,
   server: {

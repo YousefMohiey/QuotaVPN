@@ -37,7 +37,7 @@ export function WeQuotaCard() {
   )
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] px-5 pt-4 pb-5">
+    <section className="flex min-h-0 flex-1 flex-col px-5 pb-5 pt-5">
       {quota.linked && mainUnit ? (
         <>
           <div className="flex items-center gap-3">
@@ -65,10 +65,10 @@ export function WeQuotaCard() {
 
           <div className="my-auto">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-[34px] font-semibold leading-none tabular-nums text-txt">{numPart}</span>
-              <span className="text-[18px] font-medium text-txt2">{unitPart}</span>
+              <span className="font-display text-[24px] font-semibold leading-none tabular-nums tracking-[-0.02em] text-txt">{numPart}</span>
+              <span className="text-[15px] font-medium text-txt2">{unitPart}</span>
             </div>
-            <div className="mt-1.5 text-[12.5px] text-txt2">
+            <div className="mt-1.5 text-[12px] text-txt2">
               {t("weLeft")} {fmtQuota(mainUnit.total)}
             </div>
             <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white/[0.06]">
@@ -98,28 +98,26 @@ export function WeQuotaCard() {
 
           {buckets.length ? (
             <div className="mt-auto border-t border-line pt-3.5">
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.07em] text-txt2">{t("wePackage")}</p>
-              <div className="grid grid-cols-3 divide-x divide-line">
-                {buckets.map((b, i) => {
+              <p className="mb-2.5 text-[10.5px] font-medium uppercase tracking-[0.08em] text-txt2">{t("wePackage")}</p>
+              <div className="flex flex-col gap-2.5">
+                {buckets.map((b) => {
                   const k = bucketKey(b.item)
                   const bpct = b.total > 0 ? Math.max(0, Math.min(100, (b.remain / b.total) * 100)) : 0
                   return (
-                    <div key={b.item || b.label} className={cn("min-w-0", i === 0 ? "pe-3" : i === buckets.length - 1 ? "ps-3" : "px-3")}>
-                      <div className="truncate text-[11px] font-semibold uppercase tracking-[0.07em] text-txt2">
+                    <div key={b.item || b.label} className="flex min-w-0 items-center gap-3">
+                      <span className="w-[74px] shrink-0 truncate text-[10px] font-medium uppercase tracking-[0.06em] text-txt3">
                         {k ? t(k) : b.label || "WE"}
-                      </div>
-                      <div className="mt-1.5 truncate text-[15px] font-semibold tabular-nums text-txt">
-                        {fmtQuota(b.remain)}
-                      </div>
-                      <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.06]">
-                        <div
-                          className="h-full rounded-full bg-[var(--brand-vivid)] transition-[width] duration-700 ease-out"
+                      </span>
+                      <span className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-white/[0.07]">
+                        <span
+                          className="block h-full rounded-full bg-[var(--brand-vivid)] transition-[width] duration-700 ease-out"
                           style={{ width: `${bpct}%` }}
                         />
-                      </div>
-                      <div className="mt-1.5 truncate text-[11px] tabular-nums text-txt3">
-                        {t("weOf")} {fmtQuota(b.total)}
-                      </div>
+                      </span>
+                      <span className="shrink-0 text-end text-[11.5px] tabular-nums text-txt2">
+                        <span className="text-txt">{fmtQuota(b.remain)}</span>
+                        <span className="text-txt3"> / {fmtQuota(b.total)}</span>
+                      </span>
                     </div>
                   )
                 })}

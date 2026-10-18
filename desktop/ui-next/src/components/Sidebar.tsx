@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react"
-import { ArrowDownToLine, Gauge, History as HistoryIcon, Home, Settings as SettingsIcon } from "lucide-react"
+import { ArrowDownToLine, Gauge, History as HistoryIcon, Home as HomeIcon, Settings as SettingsIcon } from "lucide-react"
 import type { ComponentType } from "react"
 import { ValorantMark } from "@/components/ValorantMark"
 import { cn } from "@/lib/utils"
@@ -11,29 +11,36 @@ export type Tab = "home" | "speed" | "voice" | "history" | "result" | "apps" | "
 const EASE_OUT = [0.1, 0.9, 0.2, 1] as const
 
 const PRIMARY: Array<{ id: Tab; icon: ComponentType<{ className?: string; strokeWidth?: number; "aria-hidden"?: boolean }>; key: StrKey }> = [
-  { id: "home", icon: Home, key: "tabHome" },
+  { id: "home", icon: HomeIcon, key: "tabHome" },
   { id: "voice", icon: ValorantMark, key: "tabVoice" },
   { id: "speed", icon: Gauge, key: "tabSpeed" },
   { id: "history", icon: HistoryIcon, key: "history" },
 ]
 
+/** The rail: identity, the four places, the live state, settings. One tone
+    step above the page, one hairline to the right, nothing else. */
 export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
   const { t } = useI18n()
   const { version, update, updateState, updateChannel } = useApp()
 
+  const rows = [
+    ...PRIMARY.map((p) => ({ ...p, active: tab === p.id || (p.id === "home" && tab === "apps") || (p.id === "history" && tab === "result") })),
+    { id: "settings" as Tab, icon: SettingsIcon as typeof SettingsIcon, key: "tabSettings" as StrKey, active: tab === "settings" },
+  ]
+
   return (
-    <aside className="glass-side flex w-[236px] shrink-0 flex-col">
-      {/* identity: the mark plus the build on one baseline */}
-      <div className="px-3.5 pb-3 pt-4">
-        <div className="flex items-center gap-3">
-          <img src="./icon.png" alt="" aria-hidden className="size-14 shrink-0" />
-          <div className="min-w-0">
-            <div className="flex items-baseline gap-3">
-              <span className="truncate text-[15px] font-semibold text-txt">QuotaVPN</span>
-              {version && <span className="shrink-0 text-[10.5px] text-txt3">v{version}</span>}
+    <aside className="flex w-[208px] shrink-0 flex-col border-e border-line bg-[var(--side)]">
+      {/* identity: mark, wordmark, build number on one line */}
+      <div className="px-4 pb-3.5 pt-4">
+        <div className="flex items-center gap-2.5">
+          <img src="./icon.png" alt="" aria-hidden className="size-8 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-baseline gap-1.5">
+              <span className="truncate font-display text-[13.5px] font-semibold tracking-[-0.01em] text-txt">QuotaVPN</span>
+              {version && <span className="shrink-0 font-mono text-[9.5px] text-txt3">v{version}</span>}
             </div>
             {updateChannel === "experimental" && (
-              <span className="mt-1.5 inline-flex rounded-full border border-[var(--brand-line)] bg-[var(--brand-bg)] px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.07em] text-brand-strong">
+              <span className="mt-1 inline-flex rounded-[4px] border border-[var(--brand-line)] px-1.5 py-px text-[9px] font-semibold uppercase tracking-[0.08em] text-brand-strong">
                 {t("chBadge")}
               </span>
             )}
@@ -50,16 +57,14 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.3, ease: EASE_OUT }}
               onClick={() => onTab("settings")}
-              className="mt-2 flex w-full items-center gap-2 rounded-[12px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-2.5 py-2 text-start transition-colors hover:border-[var(--brand)]"
+              className="mt-2.5 flex w-full items-center gap-2 rounded-[8px] border border-line px-2 py-1.5 text-start transition-colors hover:border-[var(--brand-line)]"
             >
-              <span className="relative grid size-4 shrink-0 place-items-center" aria-hidden>
-                <ArrowDownToLine className="relative size-3.5 text-brand-strong" />
-              </span>
+              <ArrowDownToLine className="size-3.5 shrink-0 text-brand-strong" aria-hidden />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[11.5px] font-medium text-brand-strong" dir="auto">
+                <span className="block truncate text-[11px] font-medium text-brand-strong" dir="auto">
                   {t("updRemind")} · v{update.latest}
                 </span>
-                <span className="block truncate text-[10.5px] text-txt3" dir="auto">
+                <span className="block truncate text-[10px] text-txt3" dir="auto">
                   {update.notes || t("updRemindSub")}
                 </span>
               </span>
@@ -68,57 +73,24 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
         </AnimatePresence>
       </div>
 
-      <nav className="mt-1.5 flex flex-col gap-1 px-2.5" aria-label="Main">
-        {PRIMARY.map(({ id, icon: Icon, key }) => {
-          const active = tab === id || (id === "home" && tab === "apps") || (id === "history" && tab === "result")
-          return (
-            <button
-              key={id}
-              onClick={() => onTab(id)}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "relative flex h-10 items-center gap-3 rounded-[12px] px-3.5 text-[13.5px] transition-colors",
-                active
-                  ? "bg-white/[0.06] font-medium text-txt"
-                  : "text-txt2 hover:bg-white/[0.04] hover:text-txt",
-              )}
-            >
-              {active && (
-                <motion.span
-                  layoutId="nav-accent"
-                  className="absolute inset-y-[9px] start-[-10px] w-[3px] rounded-full bg-brand"
-                  transition={{ type: "spring", stiffness: 520, damping: 40 }}
-                />
-              )}
-              <Icon className={cn("size-[20px] shrink-0", active ? "text-brand-strong" : "text-txt2")} strokeWidth={2} aria-hidden />
-              <span className="truncate">{t(key)}</span>
-            </button>
-          )
-        })}
+      <nav className="flex flex-col gap-0.5 px-2.5" aria-label="Main">
+        {rows.map(({ id, icon: Icon, key, active }) => (
+          <button
+            key={id}
+            onClick={() => onTab(id)}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "flex h-9 items-center gap-2.5 rounded-[8px] px-2.5 text-[12.5px] transition-colors duration-150",
+              active ? "bg-white/[0.055] font-medium text-txt" : "text-txt2 hover:bg-white/[0.03] hover:text-txt",
+            )}
+          >
+            <Icon className={cn("size-[17px] shrink-0", active ? "text-brand-strong" : "text-txt2")} strokeWidth={1.9} aria-hidden />
+            <span className="truncate">{t(key)}</span>
+          </button>
+        ))}
       </nav>
 
-      <div className="mt-auto flex flex-col gap-1 p-2.5">
-        <button
-          onClick={() => onTab("settings")}
-          aria-current={tab === "settings" ? "page" : undefined}
-          className={cn(
-            "relative flex h-10 items-center gap-3 rounded-[12px] px-3.5 text-[13.5px] transition-colors",
-            tab === "settings"
-              ? "bg-white/[0.06] font-medium text-txt"
-              : "text-txt2 hover:bg-white/[0.04] hover:text-txt",
-          )}
-        >
-          {tab === "settings" && (
-            <motion.span
-              layoutId="nav-accent"
-              className="absolute inset-y-[9px] start-[-10px] w-[3px] rounded-full bg-brand"
-              transition={{ type: "spring", stiffness: 520, damping: 40 }}
-            />
-          )}
-          <SettingsIcon className={cn("size-[20px] shrink-0", tab === "settings" ? "text-brand-strong" : "text-txt2")} strokeWidth={2} aria-hidden />
-          <span>{t("tabSettings")}</span>
-        </button>
-      </div>
+      {/* the live state sits in the hero; the rail keeps only the places */}
     </aside>
   )
 }

@@ -6,7 +6,7 @@ import { api, netInfo } from "@/lib/ipc"
 import { copyText } from "@/lib/clipboard"
 import { Dial, type DialState } from "./Dial"
 import { Tip } from "./Tip"
-import { displayHost, fmtBytes, fmtDuration, mbps } from "@/lib/format"
+import { displayHost, fmtDuration, mbps } from "@/lib/format"
 
 /** A one-second heartbeat for the session clock; polling still drives data. */
 export function useTick(ms: number, on: boolean) {
@@ -171,50 +171,48 @@ export function Hero() {
   const traffic = useTraffic(rx, tx)
 
   return (
-    <section className="flex min-h-0 flex-1 items-center rounded-[16px] border border-line bg-[rgb(18_19_23/0.72)] p-5">
-      <div className="flex w-full items-center gap-7">
+    <section className="flex min-h-0 flex-1 items-center justify-center">
+      <div className="flex w-full max-w-[420px] flex-col items-center text-center">
         <Dial state={state} onClick={toggle} disabled={busy && phase !== "connecting"} />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className={cn(
-                "size-1.5 rounded-full",
-                connected ? "bg-[var(--green)]" : working ? "pulse-dot bg-[var(--brand)]" : "bg-txt3",
-              )}
-            />
-            <span
-              className={cn(
-                "truncate text-[13px]",
-                connected ? "text-[var(--green)]" : "text-txt2",
-              )}
-            >
-              {connected ? t("connected") : working ? t("working") : t("notConnected")}
+        <div className="mt-6 flex items-center gap-2">
+          <span
+            aria-hidden
+            className={cn(
+              "size-1.5 rounded-full",
+              connected ? "bg-[var(--green)]" : working ? "pulse-dot bg-[var(--brand)]" : "bg-txt3",
+            )}
+          />
+          <span
+            className={cn(
+              "truncate font-display text-[14.5px] font-medium tracking-[-0.01em]",
+              connected ? "text-[var(--green)]" : "text-txt2",
+            )}
+          >
+            {connected ? t("connected") : working ? t("working") : t("notConnected")}
+          </span>
+        </div>
+        <p className="mt-2 w-full truncate font-display text-[22px] font-semibold leading-[1.15] tracking-[-0.025em] text-txt" dir="auto">
+          {name || "-"}
+        </p>
+        <p className="mt-1.5 truncate font-mono text-[10.5px] text-txt3" dir="auto">
+          {displayHost(card?.sni)}
+        </p>
+        {connected ? (
+          <div className="mt-5 flex items-center justify-center gap-5 text-[11px] tabular-nums text-txt2">
+            <span className="truncate">
+              <span className="text-txt3">{t("sessLabel")} </span>
+              {sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
+            </span>
+            <span className="h-3 w-px bg-[var(--line)]" aria-hidden />
+            <span className="truncate">
+              ↓ {traffic.down.num} {traffic.down.unit}
+              {"  "}↑ {traffic.up.num} {traffic.up.unit}
             </span>
           </div>
-          <p className="mt-3 truncate text-[18px] font-semibold leading-tight text-txt" dir="auto">
-            {name || "-"}
-          </p>
-          <p className="mt-0.5 truncate font-mono text-[11.5px] text-txt3" dir="auto">
-            {displayHost(card?.sni)}
-          </p>
-          {connected ? (
-            <div className="mt-3 flex flex-col gap-1 text-[12px] tabular-nums text-txt2">
-              <span className="truncate">
-                <span className="text-txt3">{t("sessLabel")} </span>
-                {sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-"}
-                <span className="text-txt3"> · ↓ {fmtBytes(rx)} ↑ {fmtBytes(tx)}</span>
-              </span>
-              <span className="truncate">
-                <span className="text-txt3">{t("liveLabel")} · </span>↓ {traffic.down.num} {traffic.down.unit}
-                {"  "}↑ {traffic.up.num} {traffic.up.unit}
-              </span>
-            </div>
-          ) : null}
-          {status ? (
-            <div className="mt-2 text-[11px] leading-snug text-txt3">{status}</div>
-          ) : null}
-        </div>
+        ) : null}
+        {status ? (
+          <div className="mt-2.5 max-w-[360px] text-[11px] leading-snug text-txt3">{status}</div>
+        ) : null}
       </div>
     </section>
   )
