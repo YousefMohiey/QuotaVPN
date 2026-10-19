@@ -23,11 +23,11 @@ export function WeQuotaCard() {
     void quotaRefresh()
   }, [])
 
-  // the headline reads what is left, so the bar underneath measures what has
-  // been spent: the two together, never two different stories
+  // every bar on this panel measures what is left, the same thing the big
+  // numbers say; the used figure stays a number, never a second bar
   const pct =
     mainUnit && mainUnit.total > 0
-      ? Math.max(0, Math.min(100, (mainUnit.used / mainUnit.total) * 100))
+      ? Math.max(0, Math.min(100, (mainUnit.remain / mainUnit.total) * 100))
       : 0
   const buckets = useMemo(
     () => (mainUnit ? mainUnit.buckets.filter((b) => b.remain > 0).slice(0, 3) : []),
@@ -75,7 +75,7 @@ export function WeQuotaCard() {
             </div>
             <div
               role="progressbar"
-              aria-valuenow={Math.round(mainUnit?.used ?? 0)}
+              aria-valuenow={Math.round(mainUnit?.remain ?? 0)}
               aria-valuemin={0}
               aria-valuemax={Math.round(mainUnit?.total ?? 0)}
               aria-label={t("weQuota")}
@@ -141,27 +141,24 @@ export function WeQuotaCard() {
                         <Icon className={buckets.length === 1 ? "size-4" : "size-3.5"} aria-hidden />
                       </span>
                       <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{label}</span>
-                      <span className="ml-auto shrink-0 text-[11px] tabular-nums text-txt2">{fmtQuota(b.total)}</span>
+                      <span className="ml-auto shrink-0 text-[11px] tabular-nums text-txt2">
+                        {fmtQuota(b.remain)} / {fmtQuota(b.total)}
+                      </span>
                     </div>
                     <div className="flex min-w-0 items-baseline gap-1.5">
                       <span
                         className={cn(
                           "font-display font-semibold leading-none tabular-nums text-txt",
-                          buckets.length === 1 ? "text-[34px]" : buckets.length === 2 ? "text-[22px]" : "text-[21px]",
+                          buckets.length === 1 ? "text-[34px]" : buckets.length === 2 ? "text-[24px]" : "text-[22px]",
                         )}
                       >
-                        {fmtQuota(used)}
+                        {fmtQuota(b.remain)}
                       </span>
-                      <span className="shrink-0 text-[11px] text-txt2">{t("weUsed")}</span>
-                      {buckets.length === 3 ? (
-                        <span className="ml-auto shrink-0 text-[11px] tabular-nums text-txt2">
-                          {fmtQuota(b.remain)} {t("weLeftShort")}
-                        </span>
-                      ) : null}
+                      <span className="shrink-0 text-[11px] text-txt2">{t("weLeftShort")}</span>
                     </div>
                     <span
                       role="progressbar"
-                      aria-valuenow={Math.round(used)}
+                      aria-valuenow={Math.round(b.remain)}
                       aria-valuemin={0}
                       aria-valuemax={Math.round(b.total)}
                       aria-label={label}
@@ -172,19 +169,9 @@ export function WeQuotaCard() {
                           "block h-full origin-left rounded-full transition-transform duration-[240ms] ease-linear",
                           upct >= 99 ? "bg-[var(--red)]" : "bg-[var(--brand-vivid)]",
                         )}
-                        style={{ transform: `scaleX(${upct / 100})` }}
+                        style={{ transform: `scaleX(${(100 - upct) / 100})` }}
                       />
                     </span>
-                    {buckets.length < 3 ? (
-                      <div className="flex items-center justify-between gap-2 text-[11px] tabular-nums text-txt2">
-                        <span className="truncate">
-                          {fmtQuota(b.remain)} {t("weLeftShort")}
-                        </span>
-                        <span className="shrink-0">
-                          {Math.round(upct)}% {t("weOf")} {fmtQuota(b.total)}
-                        </span>
-                      </div>
-                    ) : null}
                   </article>
                 )
               })}

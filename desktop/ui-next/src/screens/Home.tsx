@@ -123,15 +123,12 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
           type="button"
           onClick={() => void take()}
           aria-label={`${t("copy")} ${ipText}`}
-          className="press group flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-[7px] border border-line bg-white/[0.02] px-2.5 transition-colors duration-150 hover:border-[var(--brand-line)]"
+          className="press group inline-flex min-w-0 items-center gap-1.5 text-[12.5px] tabular-nums transition-colors"
         >
-          <span
-            className={cn("min-w-0 truncate text-[12.5px] tabular-nums", copied ? "text-[var(--green)]" : "text-txt")}
-            dir="auto"
-          >
+          <span className={cn("truncate", copied ? "text-[var(--green)]" : "text-txt")} dir="auto">
             {copied ? t("copied") : ipText}
           </span>
-          <Copy className="size-3.5 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
+          <Copy className="size-3 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
         </button>
       </Tip>
     ) },
@@ -139,9 +136,9 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
     { id: "isp", label: t("ispLbl"), icon: Building2, cls: "col-span-2", body: <span className="truncate text-[12.5px] text-txt" dir="auto">{geo?.isp || "-"}</span> },
   ]
 
-  const strip = (from: number, to: number) => (
+  const controls = (
     <section className="grid shrink-0 grid-cols-3 overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
-      {cells.slice(from, to).map((c, i) => (
+      {cells.slice(0, 3).map((c, i) => (
         <div
           key={c.id}
           className={cn("flex min-h-0 min-w-0 flex-col justify-center gap-1.5 px-4 py-3", i < 2 && "border-e border-line")}
@@ -150,66 +147,77 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
             {c.icon ? <c.icon className="size-3.5 shrink-0 text-txt3" aria-hidden /> : null}
             <span className="truncate">{c.label}</span>
           </span>
-          {c.onClick ? (
-            c.id === "domain" && customOpen ? (
-              <div className="flex w-full min-w-0 items-center gap-1.5">
-                <Input
-                  autoFocus
-                  value={customVal}
-                  onChange={(e) => setCustomVal(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") void submitCustom()
-                    if (e.key === "Escape") setCustomOpen(false)
-                  }}
-                  placeholder="example.com"
-                  aria-label={t("domainSni")}
-                  className="h-9 min-w-0 rounded-[7px] border-line bg-white/[0.02] px-2 text-[12.5px]"
-                />
-                <Button
-                  size="sm"
-                  className="h-9 shrink-0 rounded-[7px] px-2.5 text-[12px]"
-                  disabled={domainBusy || !customVal.trim()}
-                  onClick={() => void submitCustom()}
-                >
-                  {t("apply")}
-                </Button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={c.onClick}
-                aria-busy={c.id === "domain" ? domainBusy : undefined}
-                className="press group flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-[7px] border border-line bg-white/[0.02] px-2.5 text-txt transition-colors duration-150 hover:border-[var(--brand-line)]"
+          {c.id === "domain" && customOpen ? (
+            <div className="flex w-full min-w-0 items-center gap-1.5">
+              <Input
+                autoFocus
+                value={customVal}
+                onChange={(e) => setCustomVal(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void submitCustom()
+                  if (e.key === "Escape") setCustomOpen(false)
+                }}
+                placeholder="example.com"
+                aria-label={t("domainSni")}
+                className="h-9 min-w-0 rounded-[7px] border-line bg-white/[0.02] px-2 text-[12.5px]"
+              />
+              <Button
+                size="sm"
+                className="h-9 shrink-0 rounded-[7px] px-2.5 text-[12px]"
+                disabled={domainBusy || !customVal.trim()}
+                onClick={() => void submitCustom()}
               >
-                {c.body}
-                {c.chevron === "down" ? (
-                  <ChevronDown className="size-3.5 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
-                ) : (
-                  <ChevronRight className="size-3.5 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
-                )}
-              </button>
-            )
+                {t("apply")}
+              </Button>
+            </div>
+          ) : c.onClick ? (
+            <button
+              type="button"
+              onClick={c.onClick}
+              aria-busy={c.id === "domain" ? domainBusy : undefined}
+              className="press group flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-[7px] border border-line bg-white/[0.02] px-2.5 text-txt transition-colors duration-150 hover:border-[var(--brand-line)]"
+            >
+              {c.body}
+              {c.chevron === "down" ? (
+                <ChevronDown className="size-3.5 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
+              ) : (
+                <ChevronRight className="size-3.5 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
+              )}
+            </button>
           ) : (
             <span className="flex min-w-0">{c.body}</span>
           )}
           {c.id === "domain" && domainErr ? (
-            <span className="truncate text-[11px] text-[var(--amber)]" role="alert">{domainErr}</span>
+            <span className="truncate text-[11px] text-[var(--red)]" role="alert">{domainErr}</span>
           ) : null}
         </div>
       ))}
     </section>
   )
 
+  // what the session reports, said once in a line instead of in second slab
+  const readings = (
+    <div className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 px-1 pb-0.5 text-[11.5px]">
+      {cells.slice(3).map((c) => (
+        <span key={c.id} className="flex min-w-0 items-center gap-1.5">
+          <span className="shrink-0 text-txt3">{c.label}</span>
+          <span className="min-w-0 truncate text-txt">{c.body}</span>
+        </span>
+      ))}
+    </div>
+  )
+
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1180px] flex-col gap-2.5">
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2.5">
         <div className="flex min-h-0 flex-col">
-          {/* the machine: one control, its state, the profiles it applies to, then the readings */}
+          {/* one hero: the control sits in the middle of its own room, and
+              everything else on this card answers it */}
           <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
-            <div className="flex min-h-0 flex-1 items-center gap-4 px-5 py-4">
-              <Dial size={158} state={state} onClick={toggle} disabled={busy && phase !== "connecting"} />
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="flex min-w-0 items-center gap-2">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3.5 px-5 py-4">
+              <Dial size={196} state={state} onClick={toggle} disabled={busy && phase !== "connecting"} />
+              <div className="flex min-w-0 flex-col items-center gap-1 text-center">
+                <span className="flex min-w-0 items-center justify-center gap-2">
                   <span
                     aria-hidden
                     className={cn("size-2 shrink-0 rounded-full", connected ? "bg-[var(--green)]" : working ? "pulse-dot bg-[var(--brand)]" : "bg-txt3")}
@@ -227,16 +235,14 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     {connected ? t("connected") : working ? t("working") : t("notConnected")}
                   </motion.span>
                 </span>
-                <span className="truncate font-mono text-[11.5px] text-txt2" dir="auto">
+                <span className="max-w-[260px] truncate font-mono text-[11.5px] text-txt2" dir="auto">
                   {displayHost(card?.sni) || "-"}
                 </span>
                 {status ? (
-                  <span className="mt-1 line-clamp-2 text-[11.5px] leading-snug text-txt2" role="status">{status}</span>
+                  <span className="mt-0.5 line-clamp-2 max-w-[280px] text-[11.5px] leading-snug text-txt2" role="status">{status}</span>
                 ) : null}
               </div>
-            </div>
-
-            <div className="grid shrink-0 grid-cols-2 gap-2.5 px-5 pb-4" role="group" aria-label={t("setupTitle")}>
+              <div className="grid w-full max-w-[420px] shrink-0 grid-cols-2 gap-2.5" role="group" aria-label={t("setupTitle")}>
             {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
               const mine = cards.find((c) => c.card_type === kind)
               const sni = mine?.sni ?? DEFAULT_SNI[kind]
@@ -286,9 +292,9 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 </button>
               )
             })}
-            </div>
+              </div>
 
-            <div className="grid shrink-0 grid-cols-3 border-t border-line">
+            <div className="mt-1 grid w-full shrink-0 grid-cols-3 border-t border-line">
               {[
                 { label: t("sessLabel"), value: connected && sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-" },
                 { label: t("statDown"), value: connected ? `${traffic.down.num} ${traffic.down.unit}` : "-" },
@@ -303,7 +309,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 </span>
               ))}
             </div>
-          </section>
+            </div>          </section>
         </div>
 
         <aside className="flex min-h-0 flex-col overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
@@ -311,8 +317,8 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
         </aside>
       </div>
 
-      {strip(0, 3)}
-      {strip(3, 6)}
+      {controls}
+      {readings}
 
       <PickerDialog
         open={domainOpen}

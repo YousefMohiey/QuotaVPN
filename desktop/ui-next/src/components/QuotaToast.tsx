@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
-import { TriangleAlert, X } from "lucide-react"
+import { Info, X } from "lucide-react"
 import { useApp } from "@/state/app"
 import { useI18n } from "@/lib/i18n"
 
@@ -21,13 +21,13 @@ export function QuotaToast() {
       {transport !== "vless" && !closed && (
         <motion.div
           role="status"
-          initial={{ opacity: 0, x: 24 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 24 }}
+          exit={{ opacity: 0, y: 16 }}
           transition={{ duration: 0.28, ease: EASE_OUT }}
-          className="fixed right-4 top-14 z-[60] flex w-[380px] max-w-[calc(100vw-2rem)] items-start gap-2.5 rounded-[12px] border border-warn-line bg-warn-bg px-3.5 py-3 text-[12.5px] leading-[1.5] text-warn shadow-[0_18px_50px_rgb(0_0_0/0.5)] backdrop-blur-[24px]"
+          className="fixed bottom-6 right-6 z-[60] flex w-[320px] max-w-[calc(100vw-3rem)] items-start gap-2.5 rounded-[12px] border border-[var(--brand-line)] bg-[#10151b]/95 px-3 py-2.5 text-[12px] leading-[1.5] text-txt2 shadow-[0_18px_50px_rgb(0_0_0/0.5)] backdrop-blur-[24px]"
         >
-          <TriangleAlert className="mt-px size-4 shrink-0" aria-hidden />
+          <Info className="mt-px size-4 shrink-0 text-brand-strong" aria-hidden />
           <span className="min-w-0 flex-1">{t("quotaWarn")}</span>
           <button
             type="button"
