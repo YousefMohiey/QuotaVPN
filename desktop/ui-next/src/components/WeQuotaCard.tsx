@@ -39,7 +39,7 @@ export function WeQuotaCard() {
   )
 
   return (
-    <section className="flex min-h-0 flex-col gap-3.5 border-s border-line bg-[var(--side)] px-5 py-5">
+    <section className="flex min-h-0 flex-col gap-3 border-s border-line bg-[var(--side)] px-5 py-4">
       {quota.linked && mainUnit ? (
         <>
           <div className="flex shrink-0 items-center justify-between gap-2">
@@ -67,10 +67,10 @@ export function WeQuotaCard() {
             </span>
           </div>
 
-          <div className="shrink-0 rounded-[12px] bg-white/[0.025] px-4 py-4">
+          <div className="shrink-0 rounded-[12px] bg-white/[0.03] px-4 py-3.5">
             <div className="flex min-w-0 items-baseline gap-2">
-              <span className="font-display text-[44px] font-semibold leading-none tracking-[-0.035em] tabular-nums text-txt">{numPart}</span>
-              <span className="text-[15px] font-medium text-txt2">{unitPart}</span>
+              <span className="font-display text-[48px] font-semibold leading-none tracking-[-0.035em] tabular-nums text-txt">{numPart}</span>
+              <span className="text-[16px] font-medium text-txt2">{unitPart}</span>
             </div>
             <div className="mt-1 flex items-baseline justify-between gap-3 text-[12px] text-txt2">
               <span className="truncate">
@@ -86,7 +86,7 @@ export function WeQuotaCard() {
               aria-valuemin={0}
               aria-valuemax={Math.round(mainUnit.total)}
               aria-label={t("weQuota")}
-              className="mt-3.5 h-3 w-full overflow-hidden rounded-full bg-white/[0.06]"
+              className="mt-3.5 h-3.5 w-full overflow-hidden rounded-full bg-white/[0.08]"
             >
               <div
                 className="h-full origin-left rounded-full bg-[var(--brand-vivid)] transition-transform duration-[240ms] ease-linear"
@@ -108,19 +108,18 @@ export function WeQuotaCard() {
 
           {buckets.length ? (
             <div className="flex min-h-0 flex-1 flex-col divide-y divide-line border-t border-line">
-              <div className="flex shrink-0 items-baseline justify-between gap-2 py-2 text-[11px] uppercase tracking-[0.09em] text-txt2">
+              <div className="flex shrink-0 items-baseline gap-2 py-2 text-[11px] uppercase tracking-[0.09em] text-txt2">
                 <span>{t("wePackage")}</span>
-                <span className="normal-case tracking-normal text-txt3">{t("wePackNote")}</span>
               </div>
               {buckets.map((b) => {
                 const k = bucketKey(b.item)
                 const label = k ? t(k) : b.label || "WE"
                 const upct = b.total > 0 ? Math.max(0, Math.min(100, ((b.total - b.remain) / b.total) * 100)) : 0
                 return (
-                  <div key={b.item || b.label} className={cn("flex min-h-0 min-w-0 flex-col gap-2.5 py-3.5", buckets.length > 1 ? "flex-1 justify-center" : "justify-start")}>
+                  <div key={b.item || b.label} className={cn("flex min-h-0 min-w-0 flex-col gap-2.5 py-3", buckets.length > 1 ? "flex-1 justify-center" : "justify-start")}>
                     <div className="flex min-w-0 items-baseline justify-between gap-2">
-                      <span className="truncate text-[11px] font-medium uppercase tracking-[0.09em] text-txt2">{label}</span>
-                      <span className="shrink-0 text-[12px] tabular-nums text-txt2">
+                      <span className="truncate text-[11.5px] font-medium uppercase tracking-[0.09em] text-txt2">{label}</span>
+                      <span className="shrink-0 text-[13px] tabular-nums text-txt2">
                         <span className="font-medium text-txt">{fmtQuota(b.remain)}</span> / {fmtQuota(b.total)}
                       </span>
                     </div>
@@ -130,7 +129,7 @@ export function WeQuotaCard() {
                       aria-valuemin={0}
                       aria-valuemax={Math.round(b.total)}
                       aria-label={label}
-                      className={cn("w-full shrink-0 overflow-hidden rounded-full bg-white/[0.07]", buckets.length === 1 ? "h-2.5" : "h-2")}
+                      className={cn("w-full shrink-0 overflow-hidden rounded-full bg-white/[0.08]", buckets.length === 1 ? "h-3" : "h-2.5")}
                     >
                       <span
                         className={cn(

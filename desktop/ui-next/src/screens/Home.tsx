@@ -140,10 +140,6 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
           <Dial size={206} state={state} onClick={toggle} disabled={busy && phase !== "connecting"} />
           <div className="flex min-w-0 flex-col items-center gap-1 text-center">
             <span className="flex min-w-0 items-center justify-center gap-2">
-              <span
-                aria-hidden
-                className={cn("size-2 shrink-0 rounded-full", connected ? "bg-[var(--green)]" : working ? "pulse-dot bg-[var(--brand)]" : "bg-txt3")}
-              />
               <motion.span
                 key={connected ? "on" : working ? "connecting" : "off"}
                 initial={calm ? { opacity: 0 } : { opacity: 0, y: 2 }}
@@ -251,7 +247,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
         <WeQuotaCard />
       </div>
 
-      <section className="grid shrink-0 grid-cols-[1fr_1fr_1.15fr] overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+      <section className="grid shrink-0 grid-cols-[1fr_1fr_1.4fr] overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
         {cells.slice(0, 3).map((c, i) => (
           <div
             key={c.id}
