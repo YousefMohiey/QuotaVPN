@@ -2,7 +2,6 @@ import { AnimatePresence, motion } from "motion/react"
 import { ArrowDownToLine, Gauge, History as HistoryIcon, Home as HomeIcon, Settings as SettingsIcon } from "lucide-react"
 import type { ComponentType } from "react"
 import { ValorantMark } from "@/components/ValorantMark"
-import { QuotaMark } from "@/components/QuotaMark"
 import { cn } from "@/lib/utils"
 import { useI18n, type StrKey } from "@/lib/i18n"
 import { useApp } from "@/state/app"
@@ -34,10 +33,10 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
       {/* identity: mark, wordmark, build number on one line */}
       <div className="px-4 pb-4 pt-5">
         <div className="flex items-center gap-3">
-          <QuotaMark className="size-10 shrink-0" />
+          <img src="./icon.png" alt="" aria-hidden className="size-11 shrink-0" />
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-1.5">
-              <span className="truncate font-display text-[15px] font-semibold tracking-[-0.01em] text-txt">QuotaVPN</span>
+              <span className="truncate font-display text-[17px] font-semibold tracking-[-0.01em] text-txt">QuotaVPN</span>
               {version && <span className="shrink-0 font-mono text-[11px] text-txt3">v{version}</span>}
             </div>
             {updateChannel === "experimental" && (
@@ -81,11 +80,11 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
             onClick={() => onTab(id)}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex h-11 items-center gap-3 rounded-[10px] px-3 text-[13.5px] transition-colors duration-150",
+              "flex h-12 items-center gap-3 rounded-[10px] px-3 text-[15px] transition-colors duration-150",
               active ? "bg-white/[0.055] font-medium text-txt" : "text-txt2 hover:bg-white/[0.03] hover:text-txt",
             )}
           >
-            <Icon className={cn("size-[19px] shrink-0", active ? "text-brand-strong" : "text-txt2")} strokeWidth={1.8} aria-hidden />
+            <Icon className={cn("size-[22px] shrink-0", active ? "text-brand-strong" : "text-txt2")} strokeWidth={1.8} aria-hidden />
             <span className="truncate">{t(key)}</span>
           </button>
         ))}
