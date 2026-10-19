@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { motion, useReducedMotion } from "motion/react"
 import { Building2, ChevronDown, ChevronRight, Copy, Gamepad2, Globe, LayoutGrid, Link2, MapPin, Tv } from "lucide-react"
-import { useGeo, useServerAddr, useTick, useTraffic } from "@/components/Hero"
+import { useGeo, useServerAddr } from "@/components/Hero"
 import { Dial, type DialState } from "@/components/Dial"
 import { WeQuotaCard } from "@/components/WeQuotaCard"
 import { PickerDialog, type PickerItem } from "@/components/PickerDialog"
@@ -10,7 +10,8 @@ import { Tip } from "@/components/Tip"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { copyText } from "@/lib/clipboard"
-import { displayHost, fmtDuration } from "@/lib/format"
+import { flagFor } from "@/lib/flags"
+import { displayHost } from "@/lib/format"
 import { useApp, type PresetKind } from "@/state/app"
 import { useI18n } from "@/lib/i18n"
 import { CUSTOM_SNI, DEFAULT_SNI, SNIS, labelForSni } from "@/lib/snis"
@@ -40,17 +41,11 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
     busy,
     phase,
     toggle,
-    rx,
-    tx,
-    sessionStart,
     serverIp,
     status,
     setStatus,
   } = useApp()
 
-  // The command bar reads the same numbers the stage never hid.
-  useTick(1000, connected)
-  const traffic = useTraffic(rx, tx)
   const state: DialState = phase === "on" ? "on" : phase === "connecting" ? "connecting" : "idle"
   const working = phase === "connecting"
 
@@ -223,16 +218,33 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
           </div>
 
           <div className="grid w-full max-w-[440px] shrink-0 grid-cols-3 overflow-hidden rounded-[10px] bg-white/[0.03]">
-            {[
-              { label: t("sessLabel"), value: connected && sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-" },
-              { label: t("statDown"), value: connected ? `${traffic.down.num} ${traffic.down.unit}` : "-" },
-              { label: t("statUp"), value: connected ? `${traffic.up.num} ${traffic.up.unit}` : "-" },
-            ].map((r) => (
-              <span key={r.label} className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-2.5">
-                <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{r.label}</span>
-                <span className="truncate text-[13.5px] tabular-nums text-txt">{r.value}</span>
+            <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-2.5">
+              <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("yourIp")}</span>
+              <Tip text={t("copy")}>
+                <button
+                  type="button"
+                  onClick={() => void take()}
+                  aria-label={`${t("copy")} ${ipText}`}
+                  className="press group flex min-w-0 items-center gap-1.5 text-[13px] tabular-nums transition-colors"
+                >
+                  <span className={cn("truncate", copied ? "text-[var(--green)]" : "text-txt")} dir="auto">
+                    {copied ? t("copied") : ipText}
+                  </span>
+                  <Copy className="size-3 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
+                </button>
+              </Tip>
+            </span>
+            <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-2.5">
+              <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("yourLocation")}</span>
+              <span className="flex min-w-0 max-w-full items-center gap-1 text-[13px] text-txt">
+                <span className="shrink-0" aria-hidden>{geo?.place ? flagFor(geo.place) : ""}</span>
+                <span className="truncate" dir="auto">{geo?.place || "-"}</span>
               </span>
-            ))}
+            </span>
+            <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-2.5">
+              <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("ispLbl")}</span>
+              <span className="truncate text-[13px] text-txt" dir="auto">{geo?.isp || "-"}</span>
+            </span>
           </div>
         </section>
 
@@ -287,18 +299,14 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
             {c.id === "domain" && domainErr ? (
               <span className="truncate text-[11px] text-[var(--red)]" role="alert">{domainErr}</span>
             ) : null}
+            {c.id === "transport" ? (
+              <span className="truncate text-[12px] text-txt2" dir="auto">
+                {transport === "hy2" ? t("trNoteHy2") : transport === "wg" ? t("trNoteWg") : t("trNoteVless")}
+              </span>
+            ) : null}
           </div>
         ))}
       </section>
-
-      <div className="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-1 px-1 text-[11.5px]">
-        {cells.slice(3).map((c) => (
-          <span key={c.id} className="flex min-w-0 items-center gap-2">
-            <span className="shrink-0 text-txt3">{c.label}</span>
-            <span className="min-w-0 truncate text-txt">{c.body}</span>
-          </span>
-        ))}
-      </div>
 
       <PickerDialog
         open={domainOpen}

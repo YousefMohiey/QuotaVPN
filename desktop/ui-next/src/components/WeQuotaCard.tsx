@@ -67,12 +67,12 @@ export function WeQuotaCard() {
             </span>
           </div>
 
-          <div className="shrink-0">
+          <div className="shrink-0 rounded-[12px] bg-white/[0.025] px-4 py-4">
             <div className="flex min-w-0 items-baseline gap-2">
-              <span className="font-display text-[40px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-txt">{numPart}</span>
+              <span className="font-display text-[44px] font-semibold leading-none tracking-[-0.035em] tabular-nums text-txt">{numPart}</span>
               <span className="text-[15px] font-medium text-txt2">{unitPart}</span>
             </div>
-            <div className="mt-1.5 flex items-baseline justify-between gap-3 text-[12px] text-txt2">
+            <div className="mt-1 flex items-baseline justify-between gap-3 text-[12px] text-txt2">
               <span className="truncate">
                 {t("weLeft")} {fmtQuota(mainUnit.total)}
               </span>
@@ -86,22 +86,20 @@ export function WeQuotaCard() {
               aria-valuemin={0}
               aria-valuemax={Math.round(mainUnit.total)}
               aria-label={t("weQuota")}
-              className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-white/[0.06]"
+              className="mt-3.5 h-3 w-full overflow-hidden rounded-full bg-white/[0.06]"
             >
               <div
                 className="h-full origin-left rounded-full bg-[var(--brand-vivid)] transition-transform duration-[240ms] ease-linear"
                 style={{ transform: `scaleX(${pct / 100})` }}
               />
             </div>
-            <div className="mt-2 flex items-baseline justify-end gap-2 text-[11px]">
-              {quota.updatedAt ? (
-                <span className="shrink-0 tabular-nums text-txt3">
-                  {t("weUpdated")} {new Date(quota.updatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-                </span>
-              ) : null}
-            </div>
+            {quota.updatedAt ? (
+              <div className="mt-2 flex items-baseline justify-end text-[11.5px] tabular-nums text-txt3">
+                {t("weUpdated")} {new Date(quota.updatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+              </div>
+            ) : null}
             {quota.phase === "error" && quota.msgKey ? (
-              <p className="mt-1.5 truncate text-[11px] text-[var(--red)]" dir="auto">
+              <p className="mt-2 truncate text-[11px] text-[var(--red)]" dir="auto">
                 {t(quota.msgKey as Parameters<typeof t>[0])}
                 {quota.msgRaw ? ` (${quota.msgRaw})` : ""}
               </p>
@@ -119,11 +117,11 @@ export function WeQuotaCard() {
                 const label = k ? t(k) : b.label || "WE"
                 const upct = b.total > 0 ? Math.max(0, Math.min(100, ((b.total - b.remain) / b.total) * 100)) : 0
                 return (
-                  <div key={b.item || b.label} className={cn("flex min-h-0 min-w-0 flex-col gap-2 py-3", buckets.length > 1 ? "flex-1 justify-center" : "justify-start")}>
+                  <div key={b.item || b.label} className={cn("flex min-h-0 min-w-0 flex-col gap-2.5 py-3.5", buckets.length > 1 ? "flex-1 justify-center" : "justify-start")}>
                     <div className="flex min-w-0 items-baseline justify-between gap-2">
                       <span className="truncate text-[11px] font-medium uppercase tracking-[0.09em] text-txt2">{label}</span>
-                      <span className="shrink-0 text-[11.5px] tabular-nums text-txt2">
-                        <span className="text-txt">{fmtQuota(b.remain)}</span> / {fmtQuota(b.total)}
+                      <span className="shrink-0 text-[12px] tabular-nums text-txt2">
+                        <span className="font-medium text-txt">{fmtQuota(b.remain)}</span> / {fmtQuota(b.total)}
                       </span>
                     </div>
                     <span
@@ -132,7 +130,7 @@ export function WeQuotaCard() {
                       aria-valuemin={0}
                       aria-valuemax={Math.round(b.total)}
                       aria-label={label}
-                      className={cn("w-full shrink-0 overflow-hidden rounded-full bg-white/[0.07]", buckets.length === 1 ? "h-2.5" : "h-1.5")}
+                      className={cn("w-full shrink-0 overflow-hidden rounded-full bg-white/[0.07]", buckets.length === 1 ? "h-2.5" : "h-2")}
                     >
                       <span
                         className={cn(
