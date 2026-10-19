@@ -17,7 +17,6 @@ export function Voice() {
   const {
     card,
     voiceOn: on,
-    voiceRunning: running,
     voiceBusy: busy,
     voiceHealth: health,
     voiceMsg: msg,
@@ -105,25 +104,6 @@ export function Voice() {
           {msg ? (
             <span className="max-w-[420px] text-[12px] leading-snug text-txt3" role="status">{msg}</span>
           ) : null}
-        </div>
-
-        <div className="grid w-full max-w-[520px] shrink-0 grid-cols-3 overflow-hidden rounded-[10px] bg-white/[0.03]">
-          <span className="flex min-w-0 flex-col items-center gap-1 px-2 py-3">
-            <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("voiceRowTitle")}</span>
-            <span className={cn("truncate text-[14px]", healthy ? "text-[var(--green)]" : "text-txt")}>
-              {on ? t("wordOn") : t("wordOff")}
-            </span>
-          </span>
-          <span className="flex min-w-0 flex-col items-center gap-1 px-2 py-3">
-            <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("voiceHelperLbl")}</span>
-            <span className="truncate text-[14px] text-txt">{running ? t("wordOn") : t("wordOff")}</span>
-          </span>
-          <span className="flex min-w-0 flex-col items-center gap-1 px-2 py-3">
-            <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("profileLbl")}</span>
-            <span className="truncate text-[14px] text-txt">
-              {card?.card_type === "Streamerz" ? t("kindStreamerz") : t("kindGamerz")}
-            </span>
-          </span>
         </div>
 
         <div className="flex items-center gap-3">
