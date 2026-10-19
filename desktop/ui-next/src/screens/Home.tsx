@@ -137,7 +137,8 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
   ]
 
   const controls = (
-    <section className="grid shrink-0 grid-cols-3 overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+    <section className="flex shrink-0 flex-col overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+    <div className="grid grid-cols-3">
       {cells.slice(0, 3).map((c, i) => (
         <div
           key={c.id}
@@ -192,12 +193,8 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
           ) : null}
         </div>
       ))}
-    </section>
-  )
-
-  // what the session reports, said once in a line instead of in second slab
-  const readings = (
-    <div className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 px-1 pb-0.5 text-[11.5px]">
+    </div>
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-line px-4 py-2.5 text-[11.5px]">
       {cells.slice(3).map((c) => (
         <span key={c.id} className="flex min-w-0 items-center gap-1.5">
           <span className="shrink-0 text-txt3">{c.label}</span>
@@ -205,11 +202,12 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
         </span>
       ))}
     </div>
+    </section>
   )
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1180px] flex-col gap-2.5">
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2.5">
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] gap-2.5">
         <div className="flex min-h-0 flex-col">
           {/* one hero: the control sits in the middle of its own room, and
               everything else on this card answers it */}
@@ -318,7 +316,6 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
       </div>
 
       {controls}
-      {readings}
 
       <PickerDialog
         open={domainOpen}
