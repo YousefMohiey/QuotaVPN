@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ChevronDown, ChevronRight, Gamepad2, Tv } from "lucide-react"
+import { Building2, ChevronDown, ChevronRight, Copy, Gamepad2, Globe, LayoutGrid, Link2, MapPin, Tv } from "lucide-react"
 import { useGeo, useServerAddr, useTick, useTraffic } from "@/components/Hero"
 import { Dial, type DialState } from "@/components/Dial"
 import { WeQuotaCard } from "@/components/WeQuotaCard"
@@ -105,29 +105,34 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
     window.setTimeout(() => setCopied(false), 1400)
   }
 
-  const cells: Array<{ id: string; label: string; body: React.ReactNode; cls: string; chevron?: "down" | "right"; onClick?: () => void }> = [
-    { id: "domain", label: t("domainSni"), cls: "col-span-3 border-e border-b border-line", body: <span className="truncate text-[12.5px] text-txt" dir="auto">{domText}</span>, chevron: "down", onClick: () => setDomainOpen(true) },
-    { id: "routing", label: t("routing"), cls: "col-span-3 border-b border-line", body: <span className="truncate text-[12.5px] text-txt" dir="auto">{routing}{routingCount}</span>, chevron: "right", onClick: onOpenApps },
-    { id: "transport", label: t("transport"), cls: "col-span-6 border-b border-line", body: <Segmented id="transport" value={transport} onChange={setTransport} boxed options={[
+  const cells: Array<{ id: string; label: string; icon?: typeof Globe; body: React.ReactNode; cls: string; chevron?: "down" | "right"; onClick?: () => void }> = [
+    { id: "domain", label: t("domainSni"), icon: Globe, cls: "col-span-3 border-e border-b border-line", body: <span className="truncate text-[12.5px] text-txt" dir="auto">{domText}</span>, chevron: "down", onClick: () => setDomainOpen(true) },
+    { id: "routing", label: t("routing"), icon: LayoutGrid, cls: "col-span-3 border-b border-line", body: <span className="truncate text-[12.5px] text-txt" dir="auto">{routing}{routingCount}</span>, chevron: "right", onClick: onOpenApps },
+    { id: "transport", label: t("transport"), icon: Link2, cls: "col-span-6 border-b border-line", body: <Segmented id="transport" value={transport} onChange={setTransport} boxed options={[
       { value: "vless", label: t("trStandard") },
       { value: "hy2", label: "Hysteria2", hint: t("trNoteHy2") },
       { value: "wg", label: t("trWg"), hint: t("trNoteWg") },
     ]} /> },
-    { id: "ip", label: t("yourIp"), cls: "col-span-2 border-e border-line", body: (
+    { id: "ip", label: t("yourIp"), icon: MapPin, cls: "col-span-2 border-e border-line", body: (
       <Tip text={t("copy")}>
         <button
           type="button"
           onClick={() => void take()}
           aria-label={`${t("copy")} ${ipText}`}
-          className={cn("press min-w-0 cursor-pointer truncate rounded-[4px] text-[12.5px] tabular-nums transition-colors hover:text-brand-strong", copied ? "text-[var(--green)]" : "text-txt")}
-          dir="auto"
+          className="press group flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-[7px] border border-line bg-white/[0.02] px-2.5 transition-colors duration-150 hover:border-[var(--brand-line)]"
         >
-          {copied ? t("copied") : ipText}
+          <span
+            className={cn("min-w-0 truncate text-[12.5px] tabular-nums", copied ? "text-[var(--green)]" : "text-txt")}
+            dir="auto"
+          >
+            {copied ? t("copied") : ipText}
+          </span>
+          <Copy className="size-3.5 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
         </button>
       </Tip>
     ) },
-    { id: "location", label: t("yourLocation"), cls: "col-span-2 border-e border-line", body: <span className="truncate text-[12.5px] text-txt" dir="auto">{geo?.place || "-"}</span> },
-    { id: "isp", label: t("ispLbl"), cls: "col-span-2", body: <span className="truncate text-[12.5px] text-txt" dir="auto">{geo?.isp || "-"}</span> },
+    { id: "location", label: t("yourLocation"), icon: MapPin, cls: "col-span-2 border-e border-line", body: <span className="truncate text-[12.5px] text-txt" dir="auto">{geo?.place || "-"}</span> },
+    { id: "isp", label: t("ispLbl"), icon: Building2, cls: "col-span-2", body: <span className="truncate text-[12.5px] text-txt" dir="auto">{geo?.isp || "-"}</span> },
   ]
 
   const strip = (from: number, to: number) => (
@@ -137,7 +142,10 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
           key={c.id}
           className={cn("flex min-h-0 min-w-0 flex-col justify-center gap-1.5 px-4 py-3", i < 2 && "border-e border-line")}
         >
-          <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{c.label}</span>
+          <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">
+            {c.icon ? <c.icon className="size-3.5 shrink-0 text-txt3" aria-hidden /> : null}
+            <span className="truncate">{c.label}</span>
+          </span>
           {c.onClick ? (
             c.id === "domain" && customOpen ? (
               <div className="flex w-full min-w-0 items-center gap-1.5">
@@ -151,11 +159,11 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   }}
                   placeholder="example.com"
                   aria-label={t("domainSni")}
-                  className="h-8 min-w-0 rounded-[7px] border-line bg-white/[0.02] px-2 text-[12px]"
+                  className="h-9 min-w-0 rounded-[7px] border-line bg-white/[0.02] px-2 text-[12.5px]"
                 />
                 <Button
                   size="sm"
-                  className="h-8 shrink-0 rounded-[7px] px-2.5 text-[12px]"
+                  className="h-9 shrink-0 rounded-[7px] px-2.5 text-[12px]"
                   disabled={domainBusy || !customVal.trim()}
                   onClick={() => void submitCustom()}
                 >
@@ -167,7 +175,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 type="button"
                 onClick={c.onClick}
                 aria-busy={c.id === "domain" ? domainBusy : undefined}
-                className="press group flex h-8 w-full min-w-0 items-center justify-between gap-2 rounded-[7px] border border-line bg-white/[0.02] px-2.5 text-txt transition-colors duration-150 hover:border-[var(--brand-line)]"
+                className="press group flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-[7px] border border-line bg-white/[0.02] px-2.5 text-txt transition-colors duration-150 hover:border-[var(--brand-line)]"
               >
                 {c.body}
                 {c.chevron === "down" ? (
@@ -190,10 +198,9 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1180px] flex-col gap-2.5">
-      {/* the two halves: what you connect as and through, and what the line holds */}
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2.5">
         <div className="flex min-h-0 flex-col gap-2.5">
-          <div className="grid min-h-[84px] shrink-0 grid-cols-2 gap-2.5" role="group" aria-label={t("setupTitle")}>
+          <div className="grid shrink-0 grid-cols-2 gap-2.5" role="group" aria-label={t("setupTitle")}>
             {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
               const mine = cards.find((c) => c.card_type === kind)
               const sni = mine?.sni ?? DEFAULT_SNI[kind]
@@ -216,49 +223,68 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     void ensurePresetCard(kind).finally(() => setCreating(null))
                   }}
                   className={cn(
-                    "press flex min-h-0 min-w-0 flex-col justify-between gap-1 rounded-[var(--r-card)] border p-3 text-start transition-colors duration-150 disabled:cursor-wait disabled:opacity-70",
+                    "press flex min-h-0 min-w-0 items-center gap-2.5 rounded-[var(--r-card)] border px-3 py-2.5 text-start transition-colors duration-150 disabled:cursor-wait disabled:opacity-70",
                     isActive
                       ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-txt"
                       : "border-line bg-[var(--panel)] text-txt2 hover:border-line-strong hover:text-txt",
                   )}
                 >
-                  <span className="flex min-w-0 items-center gap-2">
-                    <Icon className={cn("size-4 shrink-0", isActive ? "text-brand-strong" : "text-txt3")} aria-hidden />
-                    <span className="truncate text-[12.5px] font-medium">{t(kind === "Gamerz" ? "kindGamerz" : "kindStreamerz")}</span>
-                    <span aria-hidden className={cn("ml-auto size-1.5 shrink-0 rounded-full", isActive ? "bg-[var(--brand-vivid)]" : "bg-txt3/40")} />
+                  <span
+                    className={cn(
+                      "grid size-8 shrink-0 place-items-center rounded-[9px] border transition-colors duration-150",
+                      isActive ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong" : "border-line bg-white/[0.02] text-txt3",
+                    )}
+                  >
+                    <Icon className="size-4" aria-hidden />
                   </span>
-                  <span className="truncate font-mono text-[10.5px] text-txt3" dir="auto">{sni}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[12.5px] font-medium">{t(kind === "Gamerz" ? "kindGamerz" : "kindStreamerz")}</span>
+                    <span className="mt-0.5 block truncate font-mono text-[11px] text-txt2" dir="auto">{sni}</span>
+                  </span>
                 </button>
               )
             })}
           </div>
 
-          <section className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)] px-5 py-4">
-            <Dial size={236} state={state} onClick={toggle} disabled={busy && phase !== "connecting"} />
-            <div className="flex min-w-0 flex-col items-center gap-1 text-center">
-              <span className="flex items-center gap-2">
-                <span
-                  aria-hidden
-                  className={cn("size-2 shrink-0 rounded-full", connected ? "bg-[var(--green)]" : working ? "pulse-dot bg-[var(--brand)]" : "bg-txt3")}
-                />
-                <span className={cn("truncate font-display text-[22px] font-semibold leading-tight tracking-[-0.02em] transition-colors duration-300", connected ? "text-[var(--green)]" : "text-txt")}>
-                  {connected ? t("connected") : working ? t("working") : t("notConnected")}
+          {/* the machine: one control, its state, then what the session is doing */}
+          <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+            <div className="flex min-h-0 flex-1 items-center gap-5 px-5 py-4">
+              <Dial size={208} state={state} onClick={toggle} disabled={busy && phase !== "connecting"} />
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span
+                    aria-hidden
+                    className={cn("size-2 shrink-0 rounded-full", connected ? "bg-[var(--green)]" : working ? "pulse-dot bg-[var(--brand)]" : "bg-txt3")}
+                  />
+                  <span
+                    className={cn(
+                      "truncate font-display text-[23px] font-semibold leading-tight tracking-[-0.02em] transition-colors duration-300",
+                      connected ? "text-[var(--green)]" : "text-txt",
+                    )}
+                  >
+                    {connected ? t("connected") : working ? t("working") : t("notConnected")}
+                  </span>
                 </span>
-              </span>
-              <span className="truncate font-mono text-[11px] text-txt3" dir="auto">{displayHost(card?.sni) || "-"}</span>
-              {status ? (
-                <span className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-txt2" role="status">{status}</span>
-              ) : null}
+                <span className="truncate font-mono text-[11.5px] text-txt2" dir="auto">
+                  {displayHost(card?.sni) || "-"}
+                </span>
+                {status ? (
+                  <span className="mt-1 line-clamp-2 text-[11.5px] leading-snug text-txt2" role="status">{status}</span>
+                ) : null}
+              </div>
             </div>
-            <div className="grid w-full grid-cols-3 gap-2 border-t border-line pt-3">
+            <div className="grid shrink-0 grid-cols-3 border-t border-line">
               {[
                 { label: t("sessLabel"), value: connected && sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-" },
                 { label: t("statDown"), value: connected ? `${traffic.down.num} ${traffic.down.unit}` : "-" },
                 { label: t("statUp"), value: connected ? `${traffic.up.num} ${traffic.up.unit}` : "-" },
-              ].map((r) => (
-                <span key={r.label} className="flex min-w-0 flex-col items-center gap-0.5">
-                  <span className="truncate text-[10.5px] uppercase tracking-[0.06em] text-txt2">{r.label}</span>
-                  <span className="truncate text-[13px] tabular-nums text-txt">{r.value}</span>
+              ].map((r, i) => (
+                <span
+                  key={r.label}
+                  className={cn("flex min-w-0 flex-col items-center gap-0.5 px-3 py-2.5", i < 2 && "border-e border-line")}
+                >
+                  <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{r.label}</span>
+                  <span className="truncate text-[13.5px] tabular-nums text-txt">{r.value}</span>
                 </span>
               ))}
             </div>

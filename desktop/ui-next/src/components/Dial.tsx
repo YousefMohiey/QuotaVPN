@@ -40,7 +40,7 @@ export function Dial({
           ? "border-[var(--green-line)] bg-[#101713] text-[var(--green)]"
           : state === "connecting"
             ? "border-[var(--brand-line)] text-brand-strong"
-            : "border-[rgb(255_255_255/0.14)] text-txt hover:border-[var(--brand-line)] hover:bg-[#151a20]",
+            : "border-[rgb(255_255_255/0.14)] text-txt hover:border-[var(--brand-line)] hover:bg-[#151a20] [&_svg]:text-brand-strong/80 hover:[&_svg]:text-brand-strong",
       )}
     >
       {state === "connecting" && (

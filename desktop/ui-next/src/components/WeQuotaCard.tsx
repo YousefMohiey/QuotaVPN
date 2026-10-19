@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { RefreshCw } from "lucide-react"
+import { Gamepad2, Layers, Play, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { WeMark } from "./WeMark"
 import { useI18n } from "@/lib/i18n"
@@ -23,9 +23,11 @@ export function WeQuotaCard() {
     void quotaRefresh()
   }, [])
 
+  // the headline reads what is left, so the bar underneath measures what has
+  // been spent: the two together, never two different stories
   const pct =
     mainUnit && mainUnit.total > 0
-      ? Math.max(0, Math.min(100, (mainUnit.remain / mainUnit.total) * 100))
+      ? Math.max(0, Math.min(100, (mainUnit.used / mainUnit.total) * 100))
       : 0
   const buckets = useMemo(
     () => (mainUnit ? mainUnit.buckets.filter((b) => b.remain > 0).slice(0, 3) : []),
@@ -73,7 +75,7 @@ export function WeQuotaCard() {
             </div>
             <div
               role="progressbar"
-              aria-valuenow={Math.round(mainUnit?.remain ?? 0)}
+              aria-valuenow={Math.round(mainUnit?.used ?? 0)}
               aria-valuemin={0}
               aria-valuemax={Math.round(mainUnit?.total ?? 0)}
               aria-label={t("weQuota")}
@@ -104,43 +106,52 @@ export function WeQuotaCard() {
           </div>
 
           {buckets.length ? (
-            <div className="mt-4 flex min-h-0 flex-1 flex-col border-t border-line pt-4">
+            <div className="mt-4 flex min-h-0 flex-1 flex-col gap-2.5 border-t border-line pt-4">
               <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("wePackage")}</p>
-              <div className="mt-3 flex min-h-0 flex-1 flex-col justify-between gap-4">
-              {buckets.map((b) => {
+              {buckets.map((b, i) => {
                 const k = bucketKey(b.item)
-                const bpct = b.total > 0 ? Math.max(0, Math.min(100, (b.remain / b.total) * 100)) : 0
-                const tone =
-                  bpct <= 0 ? "bg-[var(--red)]" : bpct <= 12 ? "bg-[var(--amber)]" : "bg-[var(--brand-vivid)]"
                 const label = k ? t(k) : b.label || "WE"
+                const used = Math.max(0, b.total - b.remain)
+                const upct = b.total > 0 ? Math.max(0, Math.min(100, (used / b.total) * 100)) : 0
+                const Icon = i === 1 ? Gamepad2 : i === 2 ? Play : Layers
                 return (
-                  <div key={b.item || b.label} className="flex min-w-0 flex-col gap-2">
-                    <div className="flex min-w-0 items-baseline justify-between gap-2">
-                      <span className="truncate text-[11px] font-medium uppercase tracking-[0.06em] text-txt2">{label}</span>
-                      <span className="shrink-0 text-[11.5px] tabular-nums text-txt2">
-                        <span className="text-txt">{fmtQuota(b.remain)}</span> / {fmtQuota(b.total)}
+                  <article
+                    key={b.item || b.label}
+                    className="flex min-h-0 flex-1 flex-col justify-between gap-1.5 rounded-[10px] bg-white/[0.03] px-3.5 py-2.5"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="grid size-7 shrink-0 place-items-center rounded-[8px] bg-white/[0.04] text-brand-strong">
+                        <Icon className="size-3.5" aria-hidden />
+                      </span>
+                      <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{label}</span>
+                      <span className="ml-auto shrink-0 text-[11px] tabular-nums text-txt2">{fmtQuota(b.total)}</span>
+                    </div>
+                    <div className="flex min-w-0 items-baseline gap-1.5">
+                      <span className="font-display text-[21px] font-semibold leading-none tabular-nums text-txt">{fmtQuota(used)}</span>
+                      <span className="shrink-0 text-[11px] text-txt2">{t("weUsed")}</span>
+                      <span className="ml-auto shrink-0 text-[11px] tabular-nums text-txt2">
+                        {fmtQuota(b.remain)} {t("weLeftShort")}
                       </span>
                     </div>
                     <span
                       role="progressbar"
-                      aria-valuenow={Math.round(b.remain)}
+                      aria-valuenow={Math.round(used)}
                       aria-valuemin={0}
                       aria-valuemax={Math.round(b.total)}
                       aria-label={label}
-                      className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.07]"
+                      className="h-2 w-full shrink-0 overflow-hidden rounded-full bg-white/[0.07]"
                     >
                       <span
-                        className={cn("block h-full origin-left rounded-full transition-transform duration-[240ms] ease-linear", tone)}
-                        style={{ transform: `scaleX(${bpct / 100})` }}
+                        className={cn(
+                          "block h-full origin-left rounded-full transition-transform duration-[240ms] ease-linear",
+                          upct >= 99 ? "bg-[var(--red)]" : "bg-[var(--brand-vivid)]",
+                        )}
+                        style={{ transform: `scaleX(${upct / 100})` }}
                       />
                     </span>
-                    <span className="text-[10.5px] tabular-nums text-txt3">
-                      {fmtQuota(b.remain)} {t("weLeftShort")}
-                    </span>
-                  </div>
+                  </article>
                 )
               })}
-              </div>
             </div>
           ) : null}
         </>
