@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { motion, useReducedMotion } from "motion/react"
 import { Building2, ChevronDown, ChevronRight, Copy, Gamepad2, Globe, LayoutGrid, Link2, MapPin, Tv } from "lucide-react"
 import { useGeo, useServerAddr, useTick, useTraffic } from "@/components/Hero"
 import { Dial, type DialState } from "@/components/Dial"
@@ -20,6 +21,9 @@ import { cn } from "@/lib/utils"
 // One action, one reading, no dead space.
 export function Home({ onOpenApps }: { onOpenApps: () => void }) {
   const { t } = useI18n()
+  // motion is a report on state, never a decoration: with reduced motion the
+  // values still change, they just arrive instead of travelling
+  const calm = useReducedMotion()
   const {
     cards,
     card,
@@ -199,8 +203,40 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1180px] flex-col gap-2.5">
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2.5">
-        <div className="flex min-h-0 flex-col gap-2.5">
-          <div className="grid shrink-0 grid-cols-2 gap-2.5" role="group" aria-label={t("setupTitle")}>
+        <div className="flex min-h-0 flex-col">
+          {/* the machine: one control, its state, the profiles it applies to, then the readings */}
+          <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+            <div className="flex min-h-0 flex-1 items-center gap-4 px-5 py-4">
+              <Dial size={158} state={state} onClick={toggle} disabled={busy && phase !== "connecting"} />
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span
+                    aria-hidden
+                    className={cn("size-2 shrink-0 rounded-full", connected ? "bg-[var(--green)]" : working ? "pulse-dot bg-[var(--brand)]" : "bg-txt3")}
+                  />
+                  <motion.span
+                    key={connected ? "on" : working ? "connecting" : "off"}
+                    initial={calm ? { opacity: 0 } : { opacity: 0, y: 2 }}
+                    animate={calm ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                    transition={{ duration: calm ? 0.12 : 0.18, ease: [0.23, 1, 0.32, 1] }}
+                    className={cn(
+                      "truncate font-display text-[22px] font-semibold leading-tight tracking-[-0.02em]",
+                      connected ? "text-[var(--green)]" : "text-txt",
+                    )}
+                  >
+                    {connected ? t("connected") : working ? t("working") : t("notConnected")}
+                  </motion.span>
+                </span>
+                <span className="truncate font-mono text-[11.5px] text-txt2" dir="auto">
+                  {displayHost(card?.sni) || "-"}
+                </span>
+                {status ? (
+                  <span className="mt-1 line-clamp-2 text-[11.5px] leading-snug text-txt2" role="status">{status}</span>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="grid shrink-0 grid-cols-2 gap-2.5 px-5 pb-4" role="group" aria-label={t("setupTitle")}>
             {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
               const mine = cards.find((c) => c.card_type === kind)
               const sni = mine?.sni ?? DEFAULT_SNI[kind]
@@ -223,56 +259,35 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     void ensurePresetCard(kind).finally(() => setCreating(null))
                   }}
                   className={cn(
-                    "press flex min-h-0 min-w-0 items-center gap-2.5 rounded-[var(--r-card)] border px-3 py-2.5 text-start transition-colors duration-150 disabled:cursor-wait disabled:opacity-70",
-                    isActive
-                      ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-txt"
-                      : "border-line bg-[var(--panel)] text-txt2 hover:border-line-strong hover:text-txt",
+                    "press relative flex min-h-0 min-w-0 items-center gap-2.5 overflow-hidden rounded-[var(--r-card)] px-3 py-2.5 text-start transition-colors duration-150 disabled:cursor-wait disabled:opacity-70",
+                    isActive ? "text-txt" : "text-txt2 hover:bg-white/[0.02] hover:text-txt",
                   )}
                 >
+                  {isActive ? (
+                    <motion.span
+                      layoutId="profile-ring"
+                      aria-hidden
+                      className="absolute inset-0 rounded-[var(--r-card)] border border-[var(--brand-line)] bg-[var(--brand-bg)]"
+                      transition={calm ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 40 }}
+                    />
+                  ) : null}
                   <span
                     className={cn(
-                      "grid size-8 shrink-0 place-items-center rounded-[9px] border transition-colors duration-150",
-                      isActive ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong" : "border-line bg-white/[0.02] text-txt3",
+                      "relative grid size-8 shrink-0 place-items-center rounded-[9px] bg-white/[0.04] transition-colors duration-150",
+                      isActive ? "text-brand-strong" : "text-txt3",
                     )}
                   >
                     <Icon className="size-4" aria-hidden />
                   </span>
-                  <span className="min-w-0 flex-1">
+                  <span className="relative min-w-0 flex-1">
                     <span className="block truncate text-[12.5px] font-medium">{t(kind === "Gamerz" ? "kindGamerz" : "kindStreamerz")}</span>
                     <span className="mt-0.5 block truncate font-mono text-[11px] text-txt2" dir="auto">{sni}</span>
                   </span>
                 </button>
               )
             })}
-          </div>
-
-          {/* the machine: one control, its state, then what the session is doing */}
-          <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
-            <div className="flex min-h-0 flex-1 items-center gap-5 px-5 py-4">
-              <Dial size={208} state={state} onClick={toggle} disabled={busy && phase !== "connecting"} />
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="flex min-w-0 items-center gap-2">
-                  <span
-                    aria-hidden
-                    className={cn("size-2 shrink-0 rounded-full", connected ? "bg-[var(--green)]" : working ? "pulse-dot bg-[var(--brand)]" : "bg-txt3")}
-                  />
-                  <span
-                    className={cn(
-                      "truncate font-display text-[23px] font-semibold leading-tight tracking-[-0.02em] transition-colors duration-300",
-                      connected ? "text-[var(--green)]" : "text-txt",
-                    )}
-                  >
-                    {connected ? t("connected") : working ? t("working") : t("notConnected")}
-                  </span>
-                </span>
-                <span className="truncate font-mono text-[11.5px] text-txt2" dir="auto">
-                  {displayHost(card?.sni) || "-"}
-                </span>
-                {status ? (
-                  <span className="mt-1 line-clamp-2 text-[11.5px] leading-snug text-txt2" role="status">{status}</span>
-                ) : null}
-              </div>
             </div>
+
             <div className="grid shrink-0 grid-cols-3 border-t border-line">
               {[
                 { label: t("sessLabel"), value: connected && sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-" },

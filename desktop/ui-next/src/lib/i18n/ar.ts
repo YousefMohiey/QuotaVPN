@@ -314,6 +314,7 @@ export const ar = {
   "weBucketMain": "الرئيسي",
   "weBucketGaming": "الألعاب",
   "weBucketStreaming": "البث",
+  "wePackageNone": "لا توجد باقات على هذا الخط",
   "wePackage": "الباقة",
   "weLinkHint": "الرقم وكلمة السر يبقيان على هذا الجهاز فقط",
   "weLoginFail": "الرقم أو كلمة السر مرفوضة",

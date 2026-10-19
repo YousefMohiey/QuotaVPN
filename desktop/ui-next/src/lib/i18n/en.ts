@@ -314,6 +314,7 @@ export const en = {
   "weBucketMain": "Main",
   "weBucketGaming": "Gaming",
   "weBucketStreaming": "Streaming",
+  "wePackageNone": "No packages on this line",
   "wePackage": "Package",
   "weLinkHint": "Number and password stay on this PC only",
   "weLoginFail": "Number or password refused",

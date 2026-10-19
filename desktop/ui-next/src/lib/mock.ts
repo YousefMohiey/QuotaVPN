@@ -120,11 +120,23 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
           total: 200,
           used: 74.5,
           remain: 125.5,
+          // the demo can be asked for fewer packages (?buckets=1|2) so the
+          // adaptive layout is testable without touching a real account
           buckets: [
             { label: "Main Quota", item: "C_TED_Primary_Fixed_Data", total: 100, remain: 62.5 },
             { label: "Gaming quota X 2", item: "C_TED_Primary_Fixed_Sonic_Gaming", total: 50, remain: 35 },
             { label: "Streaming quota X 2", item: "C_TED_Primary_Fixed_Sonic_AllRacing", total: 50, remain: 28 },
-          ],
+          ].slice(
+            0,
+            (() => {
+              const raw =
+                typeof window !== "undefined"
+                  ? new URLSearchParams(window.location.search).get("buckets")
+                  : null
+              const n = raw ? Number(raw) : 3
+              return Number.isFinite(n) && n >= 1 && n <= 3 ? n : 3
+            })(),
+          ),
         },
       ] as unknown as T
     case "we_quota_logout":

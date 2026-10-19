@@ -108,6 +108,15 @@ export function WeQuotaCard() {
           {buckets.length ? (
             <div className="mt-4 flex min-h-0 flex-1 flex-col gap-2.5 border-t border-line pt-4">
               <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("wePackage")}</p>
+              {buckets.length === 0 ? (
+                <div className="flex min-h-0 flex-1 items-center justify-center text-[11.5px] text-txt2">
+                  {t("wePackageNone")}
+                </div>
+              ) : (
+              <div
+                className={cn("grid min-h-0 flex-1 gap-2.5", buckets.length === 2 ? "grid-cols-2" : "grid-cols-1")}
+                style={{ gridTemplateRows: `repeat(${buckets.length === 2 ? 1 : buckets.length}, minmax(0, 1fr))` }}
+              >
               {buckets.map((b, i) => {
                 const k = bucketKey(b.item)
                 const label = k ? t(k) : b.label || "WE"
@@ -117,21 +126,38 @@ export function WeQuotaCard() {
                 return (
                   <article
                     key={b.item || b.label}
-                    className="flex min-h-0 flex-1 flex-col justify-between gap-1.5 rounded-[10px] bg-white/[0.03] px-3.5 py-2.5"
+                    className={cn(
+                      "flex min-h-0 flex-1 flex-col rounded-[10px] bg-white/[0.03] px-3.5 py-2.5",
+                      buckets.length === 3 ? "justify-between gap-1.5" : "justify-center gap-3",
+                    )}
                   >
                     <div className="flex min-w-0 items-center gap-2">
-                      <span className="grid size-7 shrink-0 place-items-center rounded-[8px] bg-white/[0.04] text-brand-strong">
-                        <Icon className="size-3.5" aria-hidden />
+                      <span
+                        className={cn(
+                          "grid shrink-0 place-items-center rounded-[8px] bg-white/[0.04] text-brand-strong",
+                          buckets.length === 1 ? "size-8" : "size-7",
+                        )}
+                      >
+                        <Icon className={buckets.length === 1 ? "size-4" : "size-3.5"} aria-hidden />
                       </span>
                       <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{label}</span>
                       <span className="ml-auto shrink-0 text-[11px] tabular-nums text-txt2">{fmtQuota(b.total)}</span>
                     </div>
                     <div className="flex min-w-0 items-baseline gap-1.5">
-                      <span className="font-display text-[21px] font-semibold leading-none tabular-nums text-txt">{fmtQuota(used)}</span>
-                      <span className="shrink-0 text-[11px] text-txt2">{t("weUsed")}</span>
-                      <span className="ml-auto shrink-0 text-[11px] tabular-nums text-txt2">
-                        {fmtQuota(b.remain)} {t("weLeftShort")}
+                      <span
+                        className={cn(
+                          "font-display font-semibold leading-none tabular-nums text-txt",
+                          buckets.length === 1 ? "text-[34px]" : buckets.length === 2 ? "text-[22px]" : "text-[21px]",
+                        )}
+                      >
+                        {fmtQuota(used)}
                       </span>
+                      <span className="shrink-0 text-[11px] text-txt2">{t("weUsed")}</span>
+                      {buckets.length === 3 ? (
+                        <span className="ml-auto shrink-0 text-[11px] tabular-nums text-txt2">
+                          {fmtQuota(b.remain)} {t("weLeftShort")}
+                        </span>
+                      ) : null}
                     </div>
                     <span
                       role="progressbar"
@@ -139,7 +165,7 @@ export function WeQuotaCard() {
                       aria-valuemin={0}
                       aria-valuemax={Math.round(b.total)}
                       aria-label={label}
-                      className="h-2 w-full shrink-0 overflow-hidden rounded-full bg-white/[0.07]"
+                      className={cn("w-full shrink-0 overflow-hidden rounded-full bg-white/[0.07]", buckets.length === 1 ? "h-2.5" : "h-2")}
                     >
                       <span
                         className={cn(
@@ -149,9 +175,21 @@ export function WeQuotaCard() {
                         style={{ transform: `scaleX(${upct / 100})` }}
                       />
                     </span>
+                    {buckets.length < 3 ? (
+                      <div className="flex items-center justify-between gap-2 text-[11px] tabular-nums text-txt2">
+                        <span className="truncate">
+                          {fmtQuota(b.remain)} {t("weLeftShort")}
+                        </span>
+                        <span className="shrink-0">
+                          {Math.round(upct)}% {t("weOf")} {fmtQuota(b.total)}
+                        </span>
+                      </div>
+                    ) : null}
                   </article>
                 )
               })}
+              </div>
+              )}
             </div>
           ) : null}
         </>
