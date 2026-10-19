@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Gamepad2, Layers, Play, RefreshCw } from "lucide-react"
+import { RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { WeMark } from "./WeMark"
 import { useI18n } from "@/lib/i18n"
@@ -39,61 +39,64 @@ export function WeQuotaCard() {
   )
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col px-4 pb-3.5 pt-3.5">
+    <section className="flex min-h-0 flex-col gap-3.5 border-s border-line bg-[var(--side)] px-5 py-5">
       {quota.linked && mainUnit ? (
         <>
-          <div className="flex items-center gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
-              <WeMark className="w-[22px]" />
+          <div className="flex shrink-0 items-center justify-between gap-2">
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="grid size-7 shrink-0 place-items-center rounded-full bg-white/[0.04] text-txt">
+                <WeMark className="w-[15px]" />
+              </span>
+              <span className="truncate text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">{t("weQuota")}</span>
             </span>
-            <div className="min-w-0 flex-1">
-              <h2 className="truncate text-[14.5px] font-semibold text-txt">{t("weQuota")}</h2>
-              <p className="mt-0.5 truncate text-[11.5px] text-txt2" dir="auto" title={mainUnit.offer || "WE"}>
+            <span className="flex shrink-0 items-center gap-1.5">
+              <span className="max-w-[120px] truncate rounded-full bg-white/[0.04] px-2 py-0.5 text-[11px] text-txt2" title={mainUnit.offer || "WE"} dir="auto">
                 {mainUnit.offer || "WE"}
-              </p>
-            </div>
-            <Tip text={t("weRefresh")}>
-              <button
-                type="button"
-                onClick={() => void quotaRefresh(true)}
-                aria-label={t("weRefresh")}
-                disabled={quota.phase === "busy"}
-                className="press grid size-8 shrink-0 place-items-center rounded-full border border-line bg-white/[0.02] text-txt2 transition-colors hover:border-[var(--brand-line)] hover:text-brand-strong disabled:cursor-wait"
-              >
-                <RefreshCw className={cn("size-3.5", quota.phase === "busy" && "animate-spin")} aria-hidden />
-              </button>
-            </Tip>
+              </span>
+              <Tip text={t("weRefresh")}>
+                <button
+                  type="button"
+                  onClick={() => void quotaRefresh(true)}
+                  aria-label={t("weRefresh")}
+                  disabled={quota.phase === "busy"}
+                  className="press grid size-7 shrink-0 place-items-center rounded-full text-txt3 transition-colors hover:text-brand-strong disabled:cursor-wait"
+                >
+                  <RefreshCw className={cn("size-3.5", quota.phase === "busy" && "animate-spin")} aria-hidden />
+                </button>
+              </Tip>
+            </span>
           </div>
 
-          <div className="mt-3">
-            <div className="flex items-baseline gap-1.5">
-              <span className="font-display text-[33px] font-semibold leading-none tabular-nums tracking-[-0.02em] text-txt">{numPart}</span>
-              <span className="text-[17px] font-medium text-txt2">{unitPart}</span>
+          <div className="shrink-0">
+            <div className="flex min-w-0 items-baseline gap-2">
+              <span className="font-display text-[40px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-txt">{numPart}</span>
+              <span className="text-[15px] font-medium text-txt2">{unitPart}</span>
             </div>
-            <div className="mt-1.5 text-[12px] text-txt2">
-              {t("weLeft")} {fmtQuota(mainUnit.total)}
+            <div className="mt-1.5 flex items-baseline justify-between gap-3 text-[12px] text-txt2">
+              <span className="truncate">
+                {t("weLeft")} {fmtQuota(mainUnit.total)}
+              </span>
+              <span className="shrink-0 text-[11.5px] tabular-nums text-txt3">
+                {t("weUsed")} {fmtQuota(mainUnit.used)}
+              </span>
             </div>
             <div
               role="progressbar"
-              aria-valuenow={Math.round(mainUnit?.remain ?? 0)}
+              aria-valuenow={Math.round(mainUnit.remain)}
               aria-valuemin={0}
-              aria-valuemax={Math.round(mainUnit?.total ?? 0)}
+              aria-valuemax={Math.round(mainUnit.total)}
               aria-label={t("weQuota")}
-              className="mt-3.5 h-3 overflow-hidden rounded-full bg-white/[0.06]"
+              className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-white/[0.06]"
             >
               <div
                 className="h-full origin-left rounded-full bg-[var(--brand-vivid)] transition-transform duration-[240ms] ease-linear"
                 style={{ transform: `scaleX(${pct / 100})` }}
               />
             </div>
-            <div className="mt-2.5 flex items-baseline justify-between gap-2 text-[11.5px]">
-              <span className="truncate text-txt2">
-                {t("weUsed")} {fmtQuota(mainUnit.used)}
-              </span>
+            <div className="mt-2 flex items-baseline justify-end gap-2 text-[11px]">
               {quota.updatedAt ? (
                 <span className="shrink-0 tabular-nums text-txt3">
-                  {t("weUpdated")}{" "}
-                  {new Date(quota.updatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                  {t("weUpdated")} {new Date(quota.updatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
                 </span>
               ) : null}
             </div>
@@ -106,55 +109,22 @@ export function WeQuotaCard() {
           </div>
 
           {buckets.length ? (
-            <div className="mt-4 flex min-h-0 flex-1 flex-col gap-2.5 border-t border-line pt-4">
-              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("wePackage")}</p>
-              {buckets.length === 0 ? (
-                <div className="flex min-h-0 flex-1 items-center justify-center text-[11.5px] text-txt2">
-                  {t("wePackageNone")}
-                </div>
-              ) : (
-              <div
-                className={cn("grid min-h-0 flex-1 gap-2.5", buckets.length === 2 ? "grid-cols-2" : "grid-cols-1")}
-                style={{ gridTemplateRows: `repeat(${buckets.length === 2 ? 1 : buckets.length}, minmax(0, 1fr))` }}
-              >
-              {buckets.map((b, i) => {
+            <div className="flex min-h-0 flex-1 flex-col divide-y divide-line border-t border-line">
+              <div className="flex shrink-0 items-baseline justify-between gap-2 py-2 text-[11px] uppercase tracking-[0.09em] text-txt2">
+                <span>{t("wePackage")}</span>
+                <span className="normal-case tracking-normal text-txt3">{t("wePackNote")}</span>
+              </div>
+              {buckets.map((b) => {
                 const k = bucketKey(b.item)
                 const label = k ? t(k) : b.label || "WE"
-                const used = Math.max(0, b.total - b.remain)
-                const upct = b.total > 0 ? Math.max(0, Math.min(100, (used / b.total) * 100)) : 0
-                const Icon = i === 1 ? Gamepad2 : i === 2 ? Play : Layers
+                const upct = b.total > 0 ? Math.max(0, Math.min(100, ((b.total - b.remain) / b.total) * 100)) : 0
                 return (
-                  <article
-                    key={b.item || b.label}
-                    className={cn(
-                      "flex min-h-0 flex-1 flex-col rounded-[10px] bg-white/[0.03] px-3.5 py-2.5",
-                      buckets.length === 3 ? "justify-between gap-1.5" : "justify-center gap-3",
-                    )}
-                  >
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span
-                        className={cn(
-                          "grid shrink-0 place-items-center rounded-[8px] bg-white/[0.04] text-brand-strong",
-                          buckets.length === 1 ? "size-8" : "size-7",
-                        )}
-                      >
-                        <Icon className={buckets.length === 1 ? "size-4" : "size-3.5"} aria-hidden />
+                  <div key={b.item || b.label} className={cn("flex min-h-0 min-w-0 flex-col gap-2 py-3", buckets.length > 1 ? "flex-1 justify-center" : "justify-start")}>
+                    <div className="flex min-w-0 items-baseline justify-between gap-2">
+                      <span className="truncate text-[11px] font-medium uppercase tracking-[0.09em] text-txt2">{label}</span>
+                      <span className="shrink-0 text-[11.5px] tabular-nums text-txt2">
+                        <span className="text-txt">{fmtQuota(b.remain)}</span> / {fmtQuota(b.total)}
                       </span>
-                      <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{label}</span>
-                      <span className="ml-auto shrink-0 text-[11px] tabular-nums text-txt2">
-                        {fmtQuota(b.remain)} / {fmtQuota(b.total)}
-                      </span>
-                    </div>
-                    <div className="flex min-w-0 items-baseline gap-1.5">
-                      <span
-                        className={cn(
-                          "font-display font-semibold leading-none tabular-nums text-txt",
-                          buckets.length === 1 ? "text-[34px]" : buckets.length === 2 ? "text-[24px]" : "text-[22px]",
-                        )}
-                      >
-                        {fmtQuota(b.remain)}
-                      </span>
-                      <span className="shrink-0 text-[11px] text-txt2">{t("weLeftShort")}</span>
                     </div>
                     <span
                       role="progressbar"
@@ -162,7 +132,7 @@ export function WeQuotaCard() {
                       aria-valuemin={0}
                       aria-valuemax={Math.round(b.total)}
                       aria-label={label}
-                      className={cn("w-full shrink-0 overflow-hidden rounded-full bg-white/[0.07]", buckets.length === 1 ? "h-2.5" : "h-2")}
+                      className={cn("w-full shrink-0 overflow-hidden rounded-full bg-white/[0.07]", buckets.length === 1 ? "h-2.5" : "h-1.5")}
                     >
                       <span
                         className={cn(
@@ -172,13 +142,15 @@ export function WeQuotaCard() {
                         style={{ transform: `scaleX(${(100 - upct) / 100})` }}
                       />
                     </span>
-                  </article>
+                  </div>
                 )
               })}
-              </div>
-              )}
             </div>
-          ) : null}
+          ) : (
+            <div className="flex min-h-0 flex-1 items-center justify-center text-[11.5px] text-txt2">
+              {t("wePackageNone")}
+            </div>
+          )}
         </>
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center text-center">

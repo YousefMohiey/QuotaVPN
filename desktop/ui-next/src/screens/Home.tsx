@@ -136,111 +136,41 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
     { id: "isp", label: t("ispLbl"), icon: Building2, cls: "col-span-2", body: <span className="truncate text-[12.5px] text-txt" dir="auto">{geo?.isp || "-"}</span> },
   ]
 
-  const controls = (
-    <section className="flex shrink-0 flex-col overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
-    <div className="grid grid-cols-3">
-      {cells.slice(0, 3).map((c, i) => (
-        <div
-          key={c.id}
-          className={cn("flex min-h-0 min-w-0 flex-col justify-center gap-1.5 px-4 py-3", i < 2 && "border-e border-line")}
-        >
-          <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">
-            {c.icon ? <c.icon className="size-3.5 shrink-0 text-txt3" aria-hidden /> : null}
-            <span className="truncate">{c.label}</span>
-          </span>
-          {c.id === "domain" && customOpen ? (
-            <div className="flex w-full min-w-0 items-center gap-1.5">
-              <Input
-                autoFocus
-                value={customVal}
-                onChange={(e) => setCustomVal(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void submitCustom()
-                  if (e.key === "Escape") setCustomOpen(false)
-                }}
-                placeholder="example.com"
-                aria-label={t("domainSni")}
-                className="h-9 min-w-0 rounded-[7px] border-line bg-white/[0.02] px-2 text-[12.5px]"
-              />
-              <Button
-                size="sm"
-                className="h-9 shrink-0 rounded-[7px] px-2.5 text-[12px]"
-                disabled={domainBusy || !customVal.trim()}
-                onClick={() => void submitCustom()}
-              >
-                {t("apply")}
-              </Button>
-            </div>
-          ) : c.onClick ? (
-            <button
-              type="button"
-              onClick={c.onClick}
-              aria-busy={c.id === "domain" ? domainBusy : undefined}
-              className="press group flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-[7px] border border-line bg-white/[0.02] px-2.5 text-txt transition-colors duration-150 hover:border-[var(--brand-line)]"
-            >
-              {c.body}
-              {c.chevron === "down" ? (
-                <ChevronDown className="size-3.5 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
-              ) : (
-                <ChevronRight className="size-3.5 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
-              )}
-            </button>
-          ) : (
-            <span className="flex min-w-0">{c.body}</span>
-          )}
-          {c.id === "domain" && domainErr ? (
-            <span className="truncate text-[11px] text-[var(--red)]" role="alert">{domainErr}</span>
-          ) : null}
-        </div>
-      ))}
-    </div>
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-line px-4 py-2.5 text-[11.5px]">
-      {cells.slice(3).map((c) => (
-        <span key={c.id} className="flex min-w-0 items-center gap-1.5">
-          <span className="shrink-0 text-txt3">{c.label}</span>
-          <span className="min-w-0 truncate text-txt">{c.body}</span>
-        </span>
-      ))}
-    </div>
-    </section>
-  )
-
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1180px] flex-col gap-2.5">
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] gap-2.5">
-        <div className="flex min-h-0 flex-col">
-          {/* one hero: the control sits in the middle of its own room, and
-              everything else on this card answers it */}
-          <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3.5 px-5 py-4">
-              <Dial size={196} state={state} onClick={toggle} disabled={busy && phase !== "connecting"} />
-              <div className="flex min-w-0 flex-col items-center gap-1 text-center">
-                <span className="flex min-w-0 items-center justify-center gap-2">
-                  <span
-                    aria-hidden
-                    className={cn("size-2 shrink-0 rounded-full", connected ? "bg-[var(--green)]" : working ? "pulse-dot bg-[var(--brand)]" : "bg-txt3")}
-                  />
-                  <motion.span
-                    key={connected ? "on" : working ? "connecting" : "off"}
-                    initial={calm ? { opacity: 0 } : { opacity: 0, y: 2 }}
-                    animate={calm ? { opacity: 1 } : { opacity: 1, y: 0 }}
-                    transition={{ duration: calm ? 0.12 : 0.18, ease: [0.23, 1, 0.32, 1] }}
-                    className={cn(
-                      "truncate font-display text-[22px] font-semibold leading-tight tracking-[-0.02em]",
-                      connected ? "text-[var(--green)]" : "text-txt",
-                    )}
-                  >
-                    {connected ? t("connected") : working ? t("working") : t("notConnected")}
-                  </motion.span>
-                </span>
-                <span className="max-w-[260px] truncate font-mono text-[11.5px] text-txt2" dir="auto">
-                  {displayHost(card?.sni) || "-"}
-                </span>
-                {status ? (
-                  <span className="mt-0.5 line-clamp-2 max-w-[280px] text-[11.5px] leading-snug text-txt2" role="status">{status}</span>
-                ) : null}
-              </div>
-              <div className="grid w-full max-w-[420px] shrink-0 grid-cols-2 gap-2.5" role="group" aria-label={t("setupTitle")}>
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1180px] flex-col gap-3">
+      {/* one field: the control owns the left, the line owns the right, and a
+          flat band underneath carries the settings the session runs on */}
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+        <section className="flex min-h-0 flex-col items-center justify-center gap-4 px-6 py-5">
+          <Dial size={206} state={state} onClick={toggle} disabled={busy && phase !== "connecting"} />
+          <div className="flex min-w-0 flex-col items-center gap-1 text-center">
+            <span className="flex min-w-0 items-center justify-center gap-2">
+              <span
+                aria-hidden
+                className={cn("size-2 shrink-0 rounded-full", connected ? "bg-[var(--green)]" : working ? "pulse-dot bg-[var(--brand)]" : "bg-txt3")}
+              />
+              <motion.span
+                key={connected ? "on" : working ? "connecting" : "off"}
+                initial={calm ? { opacity: 0 } : { opacity: 0, y: 2 }}
+                animate={calm ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                transition={{ duration: calm ? 0.12 : 0.18, ease: [0.23, 1, 0.32, 1] }}
+                className={cn(
+                  "truncate font-display text-[23px] font-semibold leading-tight tracking-[-0.02em]",
+                  connected ? "text-[var(--green)]" : "text-txt",
+                )}
+              >
+                {connected ? t("connected") : working ? t("working") : t("notConnected")}
+              </motion.span>
+            </span>
+            <span className="max-w-[260px] truncate font-mono text-[11.5px] text-txt2" dir="auto">
+              {displayHost(card?.sni) || "-"}
+            </span>
+            {status ? (
+              <span className="mt-0.5 line-clamp-2 max-w-[280px] text-[11.5px] leading-snug text-txt2" role="status">{status}</span>
+            ) : null}
+          </div>
+
+          <div className="grid w-full max-w-[440px] shrink-0 grid-cols-2 gap-2.5" role="group" aria-label={t("setupTitle")}>
             {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
               const mine = cards.find((c) => c.card_type === kind)
               const sni = mine?.sni ?? DEFAULT_SNI[kind]
@@ -263,15 +193,15 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     void ensurePresetCard(kind).finally(() => setCreating(null))
                   }}
                   className={cn(
-                    "press relative flex min-h-0 min-w-0 items-center gap-2.5 overflow-hidden rounded-[var(--r-card)] px-3 py-2.5 text-start transition-colors duration-150 disabled:cursor-wait disabled:opacity-70",
-                    isActive ? "text-txt" : "text-txt2 hover:bg-white/[0.02] hover:text-txt",
+                    "press relative flex min-h-0 min-w-0 items-center gap-2.5 overflow-hidden rounded-[10px] px-3 py-2.5 text-start transition-colors duration-150 disabled:cursor-wait disabled:opacity-70",
+                    isActive ? "text-txt" : "text-txt2 hover:bg-white/[0.03] hover:text-txt",
                   )}
                 >
                   {isActive ? (
                     <motion.span
                       layoutId="profile-ring"
                       aria-hidden
-                      className="absolute inset-0 rounded-[var(--r-card)] border border-[var(--brand-line)] bg-[var(--brand-bg)]"
+                      className="absolute inset-0 rounded-[10px] bg-[var(--brand-bg)] shadow-[inset_0_0_0_1px_var(--brand-line)]"
                       transition={calm ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 40 }}
                     />
                   ) : null}
@@ -290,32 +220,85 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 </button>
               )
             })}
-              </div>
+          </div>
 
-            <div className="mt-1 grid w-full shrink-0 grid-cols-3 border-t border-line">
-              {[
-                { label: t("sessLabel"), value: connected && sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-" },
-                { label: t("statDown"), value: connected ? `${traffic.down.num} ${traffic.down.unit}` : "-" },
-                { label: t("statUp"), value: connected ? `${traffic.up.num} ${traffic.up.unit}` : "-" },
-              ].map((r, i) => (
-                <span
-                  key={r.label}
-                  className={cn("flex min-w-0 flex-col items-center gap-0.5 px-3 py-2.5", i < 2 && "border-e border-line")}
-                >
-                  <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{r.label}</span>
-                  <span className="truncate text-[13.5px] tabular-nums text-txt">{r.value}</span>
-                </span>
-              ))}
-            </div>
-            </div>          </section>
-        </div>
+          <div className="grid w-full max-w-[440px] shrink-0 grid-cols-3 overflow-hidden rounded-[10px] bg-white/[0.03]">
+            {[
+              { label: t("sessLabel"), value: connected && sessionStart ? fmtDuration((Date.now() - sessionStart) / 1000) : "-" },
+              { label: t("statDown"), value: connected ? `${traffic.down.num} ${traffic.down.unit}` : "-" },
+              { label: t("statUp"), value: connected ? `${traffic.up.num} ${traffic.up.unit}` : "-" },
+            ].map((r) => (
+              <span key={r.label} className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-2.5">
+                <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{r.label}</span>
+                <span className="truncate text-[13.5px] tabular-nums text-txt">{r.value}</span>
+              </span>
+            ))}
+          </div>
+        </section>
 
-        <aside className="flex min-h-0 flex-col overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
-          <WeQuotaCard />
-        </aside>
+        <WeQuotaCard />
       </div>
 
-      {controls}
+      <section className="grid shrink-0 grid-cols-[1fr_1fr_1.15fr] overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+        {cells.slice(0, 3).map((c, i) => (
+          <div
+            key={c.id}
+            className={cn("flex min-w-0 flex-col justify-center gap-2 px-5 py-4", i < 2 && "border-e border-line")}
+          >
+            <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
+              {c.icon ? <c.icon className="size-3.5 shrink-0 text-txt3" aria-hidden /> : null}
+              <span className="truncate">{c.label}</span>
+            </span>
+            {c.id === "domain" && customOpen ? (
+              <div className="flex w-full min-w-0 items-center gap-1.5">
+                <Input
+                  autoFocus
+                  value={customVal}
+                  onChange={(e) => setCustomVal(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void submitCustom()
+                    if (e.key === "Escape") setCustomOpen(false)
+                  }}
+                  placeholder="example.com"
+                  aria-label={t("domainSni")}
+                  className="h-8 min-w-0 rounded-[7px] border-line bg-white/[0.02] px-2 text-[12.5px]"
+                />
+                <Button size="sm" className="h-8 shrink-0 rounded-[7px] px-2.5 text-[12px]" disabled={domainBusy || !customVal.trim()} onClick={() => void submitCustom()}>
+                  {t("apply")}
+                </Button>
+              </div>
+            ) : c.onClick ? (
+              <button
+                type="button"
+                onClick={c.onClick}
+                aria-busy={c.id === "domain" ? domainBusy : undefined}
+                className="press group flex min-w-0 items-center justify-between gap-2 text-start text-txt transition-colors duration-150"
+              >
+                {c.body}
+                {c.chevron === "down" ? (
+                  <ChevronDown className="size-3.5 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
+                ) : (
+                  <ChevronRight className="size-3.5 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
+                )}
+              </button>
+            ) : (
+              <span className="flex min-w-0">{c.body}</span>
+            )}
+            {c.id === "domain" && domainErr ? (
+              <span className="truncate text-[11px] text-[var(--red)]" role="alert">{domainErr}</span>
+            ) : null}
+          </div>
+        ))}
+      </section>
+
+      <div className="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-1 px-1 text-[11.5px]">
+        {cells.slice(3).map((c) => (
+          <span key={c.id} className="flex min-w-0 items-center gap-2">
+            <span className="shrink-0 text-txt3">{c.label}</span>
+            <span className="min-w-0 truncate text-txt">{c.body}</span>
+          </span>
+        ))}
+      </div>
 
       <PickerDialog
         open={domainOpen}

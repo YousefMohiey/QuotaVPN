@@ -315,6 +315,7 @@ export const ar = {
   "weBucketGaming": "الألعاب",
   "weBucketStreaming": "البث",
   "wePackageNone": "لا توجد باقات على هذا الخط",
+  "wePackNote": "المتبقي / الإجمالي",
   "wePackage": "الباقة",
   "weLinkHint": "الرقم وكلمة السر يبقيان على هذا الجهاز فقط",
   "weLoginFail": "الرقم أو كلمة السر مرفوضة",
