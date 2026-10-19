@@ -305,6 +305,7 @@ export const ar = {
   "weConfirm": "تأكيد",
   "weRefresh": "تحديث",
   "weUnlink": "فك الربط",
+  "weLeftShort": "متبقي",
   "weLeft": "متبقٍ من",
   "weOf": "من أصل",
   "weUsed": "المستخدم",

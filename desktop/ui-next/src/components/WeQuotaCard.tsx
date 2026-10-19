@@ -104,39 +104,42 @@ export function WeQuotaCard() {
           </div>
 
           {buckets.length ? (
-            <div className="mt-3.5 flex flex-col gap-3.5 border-t border-line pt-3.5">
-              <p className="mb-2.5 text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("wePackage")}</p>
-              <div className="flex flex-col gap-3.5">
-                {buckets.map((b) => {
-                  const k = bucketKey(b.item)
-                  const bpct = b.total > 0 ? Math.max(0, Math.min(100, (b.remain / b.total) * 100)) : 0
-                  const tone =
-                    bpct <= 0 ? "bg-[var(--red)]" : bpct <= 12 ? "bg-[var(--amber)]" : "bg-[var(--brand-vivid)]"
-                  return (
-                    <div key={b.item || b.label} className="flex min-w-0 items-center gap-2.5">
-                      <span className="w-[74px] shrink-0 truncate text-[11px] font-medium uppercase tracking-[0.06em] text-txt2">
-                        {k ? t(k) : b.label || "WE"}
-                      </span>
-                      <span
-                        role="progressbar"
-                        aria-valuenow={Math.round(b.remain)}
-                        aria-valuemin={0}
-                        aria-valuemax={Math.round(b.total)}
-                        aria-label={k ? t(k) : b.label || "WE"}
-                        className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white/[0.07]"
-                      >
-                        <span
-                          className={cn("block h-full origin-left rounded-full transition-transform duration-[240ms] ease-linear", tone)}
-                          style={{ transform: `scaleX(${bpct / 100})` }}
-                        />
-                      </span>
-                      <span className="shrink-0 text-end text-[11.5px] tabular-nums text-txt2">
-                        <span className="text-txt">{fmtQuota(b.remain)}</span>
-                        <span className="text-txt3"> / {fmtQuota(b.total)}</span>
+            <div className="mt-4 flex min-h-0 flex-1 flex-col border-t border-line pt-4">
+              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("wePackage")}</p>
+              <div className="mt-3 flex min-h-0 flex-1 flex-col justify-between gap-4">
+              {buckets.map((b) => {
+                const k = bucketKey(b.item)
+                const bpct = b.total > 0 ? Math.max(0, Math.min(100, (b.remain / b.total) * 100)) : 0
+                const tone =
+                  bpct <= 0 ? "bg-[var(--red)]" : bpct <= 12 ? "bg-[var(--amber)]" : "bg-[var(--brand-vivid)]"
+                const label = k ? t(k) : b.label || "WE"
+                return (
+                  <div key={b.item || b.label} className="flex min-w-0 flex-col gap-2">
+                    <div className="flex min-w-0 items-baseline justify-between gap-2">
+                      <span className="truncate text-[11px] font-medium uppercase tracking-[0.06em] text-txt2">{label}</span>
+                      <span className="shrink-0 text-[11.5px] tabular-nums text-txt2">
+                        <span className="text-txt">{fmtQuota(b.remain)}</span> / {fmtQuota(b.total)}
                       </span>
                     </div>
-                  )
-                })}
+                    <span
+                      role="progressbar"
+                      aria-valuenow={Math.round(b.remain)}
+                      aria-valuemin={0}
+                      aria-valuemax={Math.round(b.total)}
+                      aria-label={label}
+                      className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.07]"
+                    >
+                      <span
+                        className={cn("block h-full origin-left rounded-full transition-transform duration-[240ms] ease-linear", tone)}
+                        style={{ transform: `scaleX(${bpct / 100})` }}
+                      />
+                    </span>
+                    <span className="text-[10.5px] tabular-nums text-txt3">
+                      {fmtQuota(b.remain)} {t("weLeftShort")}
+                    </span>
+                  </div>
+                )
+              })}
               </div>
             </div>
           ) : null}

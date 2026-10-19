@@ -305,6 +305,7 @@ export const en = {
   "weConfirm": "Confirm",
   "weRefresh": "Refresh",
   "weUnlink": "Unlink",
+  "weLeftShort": "left",
   "weLeft": "left of",
   "weOf": "of",
   "weUsed": "Used",

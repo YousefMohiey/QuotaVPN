@@ -27,7 +27,7 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
   const ok = (msg = ""): CmdResult => ({ ok: true, msg })
   switch (cmd) {
     case "get_state":
-      return { server_ip: "qc-speed.example.com", ssh_user: "ubuntu", ssh_port: 22, cards, version: "0.4.5", update_channel: "normal" } as T
+      return { server_ip: "qc-speed.example.com", ssh_user: "ubuntu", ssh_port: 22, cards, version: "0.4.6", update_channel: "normal" } as T
     case "probe_server":
       return ok("Server reachable.") as T
     case "generate_card": {
