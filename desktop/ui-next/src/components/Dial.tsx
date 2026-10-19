@@ -7,7 +7,8 @@ export type DialState = "idle" | "connecting" | "on"
 
 /** The one button that matters, kept to the owner's reference: a flat disc
     with one thin ring, the state told by colour alone (grey idle, green
-    connected, brand while connecting). No glass, no glow, no arc. */
+    connected, brand while connecting), plus one dashed arc that turns only
+    while a connection is actually being negotiated. */
 export function Dial({
   state,
   onClick,
@@ -45,7 +46,7 @@ export function Dial({
       {state === "connecting" && (
         <span
           aria-hidden
-          className="absolute -inset-px rounded-full border-2 border-transparent border-t-[var(--brand)] [animation:spin_1.15s_linear_infinite]"
+          className="absolute -inset-px rounded-full border-2 border-transparent border-t-[var(--brand)] [animation:spin_1.15s_linear_infinite] motion-reduce:animate-none motion-reduce:opacity-60"
         />
       )}
       {/* the power over the word, sized to the circle it lives in */}

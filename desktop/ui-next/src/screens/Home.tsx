@@ -119,7 +119,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
           type="button"
           onClick={() => void take()}
           aria-label={`${t("copy")} ${ipText}`}
-          className={cn("min-w-0 cursor-pointer truncate rounded-[4px] text-[12.5px] tabular-nums transition-colors hover:text-brand-strong", copied ? "text-[var(--green)]" : "text-txt")}
+          className={cn("press min-w-0 cursor-pointer truncate rounded-[4px] text-[12.5px] tabular-nums transition-colors hover:text-brand-strong", copied ? "text-[var(--green)]" : "text-txt")}
           dir="auto"
         >
           {copied ? t("copied") : ipText}
@@ -158,7 +158,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   void ensurePresetCard(kind).finally(() => setCreating(null))
                 }}
                 className={cn(
-                  "flex flex-col gap-1.5 rounded-[var(--r-card)] border p-3 text-start transition-colors duration-150 disabled:cursor-wait disabled:opacity-70",
+                  "press flex flex-col gap-1.5 rounded-[var(--r-card)] border p-3 text-start transition-colors duration-150 disabled:cursor-wait disabled:opacity-70",
                   isActive
                     ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-txt"
                     : "border-line bg-[var(--panel)] text-txt2 hover:border-line-strong hover:text-txt",
@@ -203,7 +203,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   aria-hidden
                   className={cn("size-2 shrink-0 rounded-full", connected ? "bg-[var(--green)]" : working ? "pulse-dot bg-[var(--brand)]" : "bg-txt3")}
                 />
-                <span className={cn("truncate font-display text-[26px] font-semibold leading-tight tracking-[-0.02em]", connected ? "text-[var(--green)]" : "text-txt")}>
+                <span className={cn("truncate font-display text-[26px] font-semibold leading-tight tracking-[-0.02em] transition-colors duration-300", connected ? "text-[var(--green)]" : "text-txt")}>
                   {connected ? t("connected") : working ? t("working") : t("notConnected")}
                 </span>
               </div>
@@ -252,7 +252,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                       type="button"
                       onClick={c.onClick}
                       aria-busy={c.label === t("domainSni") ? domainBusy : undefined}
-                      className="group flex h-8 w-full min-w-0 items-center justify-between gap-2 rounded-[7px] border border-line bg-white/[0.02] px-2.5 text-txt transition-colors duration-150 hover:border-[var(--brand-line)]"
+                      className="press group flex h-8 w-full min-w-0 items-center justify-between gap-2 rounded-[7px] border border-line bg-white/[0.02] px-2.5 text-txt transition-colors duration-150 hover:border-[var(--brand-line)]"
                     >
                       {c.body}
                       {c.chevron === "down" ? (

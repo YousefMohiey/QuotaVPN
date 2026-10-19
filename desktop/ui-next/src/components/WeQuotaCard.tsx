@@ -56,7 +56,7 @@ export function WeQuotaCard() {
                 onClick={() => void quotaRefresh(true)}
                 aria-label={t("weRefresh")}
                 disabled={quota.phase === "busy"}
-                className="grid size-8 shrink-0 place-items-center rounded-full border border-line bg-white/[0.02] text-txt2 transition-colors hover:border-[var(--brand-line)] hover:text-brand-strong disabled:cursor-wait"
+                className="press grid size-8 shrink-0 place-items-center rounded-full border border-line bg-white/[0.02] text-txt2 transition-colors hover:border-[var(--brand-line)] hover:text-brand-strong disabled:cursor-wait"
               >
                 <RefreshCw className={cn("size-3.5", quota.phase === "busy" && "animate-spin")} aria-hidden />
               </button>
@@ -80,8 +80,8 @@ export function WeQuotaCard() {
               className="mt-3.5 h-3 overflow-hidden rounded-full bg-white/[0.06]"
             >
               <div
-                className="h-full rounded-full bg-[var(--brand-vivid)] transition-[width] duration-700 ease-out"
-                style={{ width: `${pct}%` }}
+                className="h-full origin-left rounded-full bg-[var(--brand-vivid)] transition-transform duration-[240ms] ease-linear"
+                style={{ transform: `scaleX(${pct / 100})` }}
               />
             </div>
             <div className="mt-2.5 flex items-baseline justify-between gap-2 text-[11.5px]">
@@ -126,8 +126,8 @@ export function WeQuotaCard() {
                         className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white/[0.07]"
                       >
                         <span
-                          className={cn("block h-full rounded-full transition-[width] duration-700 ease-out", tone)}
-                          style={{ width: `${bpct}%` }}
+                          className={cn("block h-full origin-left rounded-full transition-transform duration-[240ms] ease-linear", tone)}
+                          style={{ transform: `scaleX(${bpct / 100})` }}
                         />
                       </span>
                       <span className="shrink-0 text-end text-[11.5px] tabular-nums text-txt2">
