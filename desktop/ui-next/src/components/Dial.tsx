@@ -12,10 +12,14 @@ export function Dial({
   state,
   onClick,
   disabled,
+  size = 264,
+  compact = false,
 }: {
   state: DialState
   onClick: () => void
   disabled?: boolean
+  size?: number
+  compact?: boolean
 }) {
   const { t } = useI18n()
   const label = state === "connecting" ? t("working") : state === "on" ? t("disconnect") : t("connect")
@@ -28,8 +32,9 @@ export function Dial({
       aria-label={label}
       whileTap={disabled ? undefined : { scale: 0.985 }}
       transition={{ type: "spring", stiffness: 460, damping: 32 }}
+      style={{ width: size, height: size }}
       className={cn(
-        "relative grid size-[264px] shrink-0 place-items-center rounded-full border bg-[#13161a] shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_22px_48px_rgb(0_0_0/0.5),0_2px_6px_rgb(0_0_0/0.4)] transition-[background-color,border-color,color,box-shadow] duration-300 disabled:opacity-70",
+        "relative grid shrink-0 place-items-center rounded-full border bg-[#13161a] shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_22px_48px_rgb(0_0_0/0.5),0_2px_6px_rgb(0_0_0/0.4)] transition-[background-color,border-color,color,box-shadow] duration-300 disabled:opacity-70",
         state === "on"
           ? "border-[var(--green-line)] bg-[#101713] text-[var(--green)]"
           : state === "connecting"
@@ -44,9 +49,9 @@ export function Dial({
         />
       )}
       {/* the power over the word, sized to the circle it lives in */}
-      <span className="flex flex-col items-center gap-3.5">
-        <Power className="size-10" strokeWidth={1.6} aria-hidden />
-        <span className="font-display text-[15px] font-semibold tracking-[0.01em]">{label}</span>
+      <span className={cn("flex flex-col items-center", compact ? "gap-1.5" : "gap-3.5")}>
+        <Power className={compact ? "size-6" : "size-10"} strokeWidth={1.6} aria-hidden />
+        {compact ? null : <span className="font-display text-[15px] font-semibold tracking-[0.01em]">{label}</span>}
       </span>
     </motion.button>
   )

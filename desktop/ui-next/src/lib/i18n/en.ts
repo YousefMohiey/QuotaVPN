@@ -320,4 +320,5 @@ export const en = {
   "weCaptchaFail": "Could not reach the check image",
   "weOffersFail": "Quota read refused",
   "weGenericFail": "Something failed, try again",
+  "copyFailed": "Could not copy",
 } as const

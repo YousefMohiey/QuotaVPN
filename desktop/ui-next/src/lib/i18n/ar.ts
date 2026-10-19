@@ -320,4 +320,5 @@ export const ar = {
   "weCaptchaFail": "تعذر الوصول لصورة التحقق",
   "weOffersFail": "تعذرت قراءة الباقة",
   "weGenericFail": "حدث خطأ حاول مجدداً",
+  "copyFailed": "تعذر النسخ",
 } as const

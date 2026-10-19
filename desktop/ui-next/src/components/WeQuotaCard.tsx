@@ -37,7 +37,7 @@ export function WeQuotaCard() {
   )
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col px-5 pb-5 pt-5">
+    <section className="flex min-h-0 flex-1 flex-col px-4 pb-3.5 pt-3.5">
       {quota.linked && mainUnit ? (
         <>
           <div className="flex items-center gap-3">
@@ -63,15 +63,22 @@ export function WeQuotaCard() {
             </Tip>
           </div>
 
-          <div className="my-auto">
+          <div className="mt-3">
             <div className="flex items-baseline gap-1.5">
-              <span className="font-display text-[24px] font-semibold leading-none tabular-nums tracking-[-0.02em] text-txt">{numPart}</span>
-              <span className="text-[15px] font-medium text-txt2">{unitPart}</span>
+              <span className="font-display text-[33px] font-semibold leading-none tabular-nums tracking-[-0.02em] text-txt">{numPart}</span>
+              <span className="text-[17px] font-medium text-txt2">{unitPart}</span>
             </div>
             <div className="mt-1.5 text-[12px] text-txt2">
               {t("weLeft")} {fmtQuota(mainUnit.total)}
             </div>
-            <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white/[0.06]">
+            <div
+              role="progressbar"
+              aria-valuenow={Math.round(mainUnit?.remain ?? 0)}
+              aria-valuemin={0}
+              aria-valuemax={Math.round(mainUnit?.total ?? 0)}
+              aria-label={t("weQuota")}
+              className="mt-3.5 h-3 overflow-hidden rounded-full bg-white/[0.06]"
+            >
               <div
                 className="h-full rounded-full bg-[var(--brand-vivid)] transition-[width] duration-700 ease-out"
                 style={{ width: `${pct}%` }}
@@ -97,20 +104,29 @@ export function WeQuotaCard() {
           </div>
 
           {buckets.length ? (
-            <div className="mt-auto border-t border-line pt-3.5">
+            <div className="mt-3.5 flex flex-col gap-3.5 border-t border-line pt-3.5">
               <p className="mb-2.5 text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("wePackage")}</p>
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-3.5">
                 {buckets.map((b) => {
                   const k = bucketKey(b.item)
                   const bpct = b.total > 0 ? Math.max(0, Math.min(100, (b.remain / b.total) * 100)) : 0
+                  const tone =
+                    bpct <= 0 ? "bg-[var(--red)]" : bpct <= 12 ? "bg-[var(--amber)]" : "bg-[var(--brand-vivid)]"
                   return (
-                    <div key={b.item || b.label} className="flex min-w-0 items-center gap-3">
-                      <span className="w-[74px] shrink-0 truncate text-[11px] font-medium uppercase tracking-[0.06em] text-txt3">
+                    <div key={b.item || b.label} className="flex min-w-0 items-center gap-2.5">
+                      <span className="w-[74px] shrink-0 truncate text-[11px] font-medium uppercase tracking-[0.06em] text-txt2">
                         {k ? t(k) : b.label || "WE"}
                       </span>
-                      <span className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-white/[0.07]">
+                      <span
+                        role="progressbar"
+                        aria-valuenow={Math.round(b.remain)}
+                        aria-valuemin={0}
+                        aria-valuemax={Math.round(b.total)}
+                        aria-label={k ? t(k) : b.label || "WE"}
+                        className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white/[0.07]"
+                      >
                         <span
-                          className="block h-full rounded-full bg-[var(--brand-vivid)] transition-[width] duration-700 ease-out"
+                          className={cn("block h-full rounded-full transition-[width] duration-700 ease-out", tone)}
                           style={{ width: `${bpct}%` }}
                         />
                       </span>

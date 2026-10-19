@@ -32,6 +32,7 @@ type Value = {
   busy: boolean
   phase: Phase
   status: string
+  setStatus: (s: string) => void
   rx: number
   tx: number
   sessionStart: number | null
@@ -96,6 +97,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [cards, setCards] = useState<Card[]>([])
   const [cardUuid, setCardUuid] = useState<string>(() => read("qc-card", ""))
   const [preset, setPresetState] = useState<PresetKind>(() => read<PresetKind>("qc-preset", "Gamerz"))
+  // Mirrors the preset so a failed card creation can put the switch back where
+  // it was, instead of leaving a kind selected that has no card behind it.
+  const presetRef = useRef<PresetKind>(preset)
+  useEffect(() => {
+    presetRef.current = preset
+  }, [preset])
   const [appsMode, setAppsModeState] = useState<AppsMode>(() => read<AppsMode>("qc-apps-mode", "all"))
   const [apps, setAppsState] = useState<string[]>(() => read<string[]>("qc-apps", []))
   const [transport, setTransportState] = useState<Transport>(() => read<Transport>("qc-transport", "vless"))
@@ -907,6 +914,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const ensurePresetCard = useCallback(
     async (p: PresetKind) => {
       if (presetBusyRef.current) return { ok: true, msg: "" }
+      const prevPreset = presetRef.current
+      const rollbackPreset = () => {
+        setPresetState(prevPreset)
+        write("qc-preset", prevPreset)
+      }
       setPresetState(p)
       write("qc-preset", p)
       const existing = cardsRef.current.find((c) => c.card_type === p)
@@ -919,6 +931,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       try {
         const g = await api.generateCard(p, p, DEFAULT_SNI[p])
         if (!g.ok) {
+          rollbackPreset()
           setStatus(g.msg)
           return g
         }
@@ -930,11 +943,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           setCardUuid(created.uuid)
           write("qc-card", created.uuid)
         } else {
+          rollbackPreset()
           setStatus(g.msg)
         }
         return g
       } catch (e) {
         const r = { ok: false, msg: String(e) }
+        rollbackPreset()
         setStatus(r.msg)
         return r
       } finally {
@@ -1040,6 +1055,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     busy,
     phase,
     status,
+    setStatus,
     rx,
     tx,
     sessionStart,
