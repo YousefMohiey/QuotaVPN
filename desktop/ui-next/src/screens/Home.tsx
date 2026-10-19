@@ -295,11 +295,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
             {c.id === "domain" && domainErr ? (
               <span className="truncate text-[11px] text-[var(--red)]" role="alert">{domainErr}</span>
             ) : null}
-            {c.id === "transport" ? (
-              <span className="truncate text-[12px] text-txt2" dir="auto">
-                {transport === "hy2" ? t("trNoteHy2") : transport === "wg" ? t("trNoteWg") : t("trNoteVless")}
-              </span>
-            ) : null}
+
           </div>
         ))}
       </section>

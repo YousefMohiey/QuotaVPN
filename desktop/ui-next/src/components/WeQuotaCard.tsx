@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { RefreshCw } from "lucide-react"
+import { Gamepad2, Layers, Play, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { WeMark } from "./WeMark"
 import { useI18n } from "@/lib/i18n"
@@ -39,7 +39,7 @@ export function WeQuotaCard() {
   )
 
   return (
-    <section className="flex min-h-0 flex-col gap-3 border-s border-line bg-[var(--side)] px-5 py-4">
+    <section className="flex min-h-0 flex-col gap-2.5 border-s border-line bg-[var(--side)] px-4 py-3.5">
       {quota.linked && mainUnit ? (
         <>
           <div className="flex shrink-0 items-center justify-between gap-2">
@@ -67,7 +67,7 @@ export function WeQuotaCard() {
             </span>
           </div>
 
-          <div className="shrink-0 rounded-[12px] bg-white/[0.03] px-4 py-3.5">
+          <div className="shrink-0 rounded-[12px] bg-white/[0.03] px-3.5 py-3">
             <div className="flex min-w-0 items-baseline gap-2">
               <span className="font-display text-[48px] font-semibold leading-none tracking-[-0.035em] tabular-nums text-txt">{numPart}</span>
               <span className="text-[16px] font-medium text-txt2">{unitPart}</span>
@@ -107,19 +107,24 @@ export function WeQuotaCard() {
           </div>
 
           {buckets.length ? (
-            <div className="flex min-h-0 flex-1 flex-col divide-y divide-line border-t border-line">
-              <div className="flex shrink-0 items-baseline gap-2 py-2 text-[11px] uppercase tracking-[0.09em] text-txt2">
-                <span>{t("wePackage")}</span>
-              </div>
+            <div className="flex min-h-0 flex-1 flex-col gap-2">
+              <span className="shrink-0 text-[11px] font-medium uppercase tracking-[0.09em] text-txt2">{t("wePackage")}</span>
               {buckets.map((b) => {
                 const k = bucketKey(b.item)
                 const label = k ? t(k) : b.label || "WE"
                 const upct = b.total > 0 ? Math.max(0, Math.min(100, ((b.total - b.remain) / b.total) * 100)) : 0
+                const Icon = k === "weBucketGaming" ? Gamepad2 : k === "weBucketStreaming" ? Play : Layers
                 return (
-                  <div key={b.item || b.label} className={cn("flex min-h-0 min-w-0 flex-col gap-2.5 py-3", buckets.length > 1 ? "flex-1 justify-center" : "justify-start")}>
-                    <div className="flex min-w-0 items-baseline justify-between gap-2">
-                      <span className="truncate text-[11.5px] font-medium uppercase tracking-[0.09em] text-txt2">{label}</span>
-                      <span className="shrink-0 text-[13px] tabular-nums text-txt2">
+                  <div
+                    key={b.item || b.label}
+                    className="flex min-h-0 min-w-0 flex-1 flex-col justify-center gap-2.5 rounded-[10px] bg-white/[0.035] px-3 py-2.5"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="grid size-6 shrink-0 place-items-center rounded-[7px] bg-white/[0.06] text-brand-strong">
+                        <Icon className="size-3.5" aria-hidden />
+                      </span>
+                      <span className="truncate text-[11.5px] font-medium uppercase tracking-[0.08em] text-txt2">{label}</span>
+                      <span className="ms-auto shrink-0 text-[12.5px] tabular-nums text-txt2">
                         <span className="font-medium text-txt">{fmtQuota(b.remain)}</span> / {fmtQuota(b.total)}
                       </span>
                     </div>
@@ -129,7 +134,7 @@ export function WeQuotaCard() {
                       aria-valuemin={0}
                       aria-valuemax={Math.round(b.total)}
                       aria-label={label}
-                      className={cn("w-full shrink-0 overflow-hidden rounded-full bg-white/[0.08]", buckets.length === 1 ? "h-3" : "h-2.5")}
+                      className="h-2.5 w-full shrink-0 overflow-hidden rounded-full bg-white/[0.08]"
                     >
                       <span
                         className={cn(
