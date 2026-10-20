@@ -2,17 +2,21 @@ import { useState } from "react"
 import { Loader2, Mic } from "lucide-react"
 import { motion, useReducedMotion } from "motion/react"
 import { ValorantMark } from "@/components/ValorantMark"
-import { Toggle } from "@/components/Toggle"
 import { useI18n } from "@/lib/i18n"
 import { useApp } from "@/state/app"
 import { cn } from "@/lib/utils"
 
-// The Valorant page: one surface, laid out like a targeting field. The theme is
-// carried by geometry, not by costume: two rotated planes cut the field, corner
-// ticks frame it, and the control sits inside a diamond reticle that takes the
-// state colour. No glow, no red, no game chrome.
-// The helper's state and the game watcher live in the app state, so leaving
-// this page never pauses the watching.
+// The Valorant page, laid out the way the game lays out a HUD: nothing centred,
+// a wordmark pinned to the top left, the control on the right, the state in a
+// block of its own, and the switches on the floor. Chamfered plates, skewed
+// rules and edge ticks carry the character; the palette stays graphite and blue.
+
+const PLATE =
+  "polygon(16% 0, 84% 0, 100% 16%, 100% 84%, 84% 100%, 16% 100%, 0 84%, 0 16%)"
+const PANEL = "polygon(28px 0, 100% 0, 100% calc(100% - 28px), calc(100% - 28px) 100%, 0 100%, 0 28px)"
+const CHIP = "polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px)"
+const SWITCH = "polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px)"
+const KNOB = "polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px)"
 
 export function Voice() {
   const { t } = useI18n()
@@ -63,91 +67,116 @@ export function Voice() {
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1180px] flex-col">
-      <section className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-5 overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)] px-6 py-6">
-        {/* the field: two rotated planes, and ticks on the corners */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute left-1/2 top-1/2 size-[520px] -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[48px] border border-white/[0.03]"
-        />
-        <span
-          aria-hidden
-          className="pointer-events-none absolute left-1/2 top-1/2 size-[400px] -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[34px] border border-white/[0.045]"
-        />
-        <span aria-hidden className="pointer-events-none absolute left-5 top-5 size-4 border-l border-t border-[rgb(255_255_255/0.14)]" />
-        <span aria-hidden className="pointer-events-none absolute right-5 top-5 size-4 border-r border-t border-[rgb(255_255_255/0.14)]" />
-        <span aria-hidden className="pointer-events-none absolute bottom-5 left-5 size-4 border-b border-l border-[rgb(255_255_255/0.14)]" />
-        <span aria-hidden className="pointer-events-none absolute bottom-5 right-5 size-4 border-b border-r border-[rgb(255_255_255/0.14)]" />
-
-        <div className="relative flex items-center gap-2.5">
-          <ValorantMark className={cn("size-[18px] shrink-0", healthy ? "text-[var(--green)]" : on ? "text-brand-strong" : "text-txt2")} />
-          <span className="text-[12px] font-medium uppercase tracking-[0.22em] text-txt2">{t("voiceTitle")}</span>
-          <span aria-hidden className={cn("size-1.5 rotate-45", healthy ? "bg-[var(--green)]" : on ? "bg-brand-strong" : "bg-txt3")} />
-        </div>
-        <p className="relative -mt-2.5 max-w-[440px] text-center text-[12px] leading-snug text-txt3">{t("voiceTagline")}</p>
-
-        {/* the control sits inside a diamond that carries the state */}
-        <div className="relative mt-1 grid size-[272px] shrink-0 place-items-center">
+      {/* the frame is the same chamfer one pixel wider, so the cut keeps an edge */}
+      <div className="relative flex min-h-0 flex-1 flex-col" style={{ clipPath: PANEL, background: "var(--line-strong)" }}>
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--panel)]" style={{ clipPath: PANEL }}>
+          <span aria-hidden className="pointer-events-none absolute -left-[12%] top-0 h-[58%] w-[124%] -skew-y-[7deg] bg-white/[0.022]" />
           <span
             aria-hidden
             className={cn(
-              "absolute inset-0 rotate-45 rounded-[30px] border transition-colors duration-300",
-              on ? "border-[var(--green-line)]" : "border-[var(--brand-line)]",
+              "pointer-events-none absolute -left-[12%] top-[58%] h-px w-[124%] -skew-y-[7deg] transition-colors duration-300",
+              on ? "bg-[var(--green-line)]" : "bg-[var(--brand-line)]/55",
             )}
           />
-          <span
-            aria-hidden
-            className={cn(
-              "absolute inset-[26px] rotate-45 rounded-[22px] border transition-colors duration-300",
-              on ? "border-[var(--green-line)]/60" : "border-white/[0.06]",
-            )}
-          />
-          <button
-            type="button"
-            onClick={() => void setHelper(!on)}
-            disabled={!card || busy}
-            aria-pressed={on}
-            aria-label={t("voiceRowTitle")}
-            className={cn(
-              "press relative grid size-[196px] shrink-0 place-items-center rounded-full border bg-[var(--panel)] transition-colors duration-200 disabled:cursor-wait",
-              on
-                ? "border-[var(--green-line)] text-[var(--green)]"
-                : "border-[rgb(255_255_255/0.16)] text-brand-strong/85 hover:border-[var(--brand-line)] hover:text-brand-strong",
-            )}
-          >
-            {busy ? (
-              <Loader2 className={cn("size-10", calm ? "" : "animate-spin")} aria-hidden />
-            ) : (
-              <Mic className="size-10" aria-hidden />
-            )}
-          </button>
-        </div>
+          <span aria-hidden className="pointer-events-none absolute inset-y-6 left-4 flex w-3 flex-col justify-center gap-3">
+            {Array.from({ length: 13 }).map((_, i) => (
+              <span key={i} className={cn("block h-px bg-white/10", i % 3 === 0 ? "w-3" : "w-1.5")} />
+            ))}
+          </span>
+          <span aria-hidden className="pointer-events-none absolute inset-y-6 right-4 flex w-3 flex-col justify-center gap-3">
+            {Array.from({ length: 13 }).map((_, i) => (
+              <span key={i} className={cn("ml-auto block h-px bg-white/10", i % 3 === 0 ? "w-3" : "w-1.5")} />
+            ))}
+          </span>
 
-        <div className="relative flex min-w-0 flex-col items-center gap-1 text-center">
-          <motion.span
-            key={on ? (healthy ? "healthy" : "armed") : "off"}
-            initial={calm ? { opacity: 0 } : { opacity: 0, y: 2 }}
-            animate={calm ? { opacity: 1 } : { opacity: 1, y: 0 }}
-            transition={{ duration: calm ? 0.12 : 0.18, ease: [0.23, 1, 0.32, 1] }}
-            className={cn(
-              "truncate font-display text-[26px] font-semibold leading-tight tracking-[-0.02em]",
-              healthy ? "text-[var(--green)]" : "text-txt",
-            )}
-          >
-            {on ? t("voiceActive") : t("voiceOffTitle")}
-          </motion.span>
-          <span className="max-w-[420px] text-[12.5px] leading-snug text-txt2">{stateWord}</span>
-          {msg ? (
-            <span className="max-w-[440px] text-[12px] leading-snug text-txt3" role="status">{msg}</span>
-          ) : null}
-        </div>
+          <div className="relative flex min-h-0 flex-1 flex-col px-12 py-8">
+            {/* the name sits where a HUD puts it, and the state answers it across the field */}
+            <div className="flex items-start justify-between gap-6">
+              <div className="min-w-0">
+                <div className="flex items-center gap-3">
+                  <ValorantMark className={cn("size-[22px] shrink-0", healthy ? "text-[var(--green)]" : "text-txt")} />
+                  <span className="text-[15px] font-semibold uppercase leading-none tracking-[0.62em] text-txt">VALORANT</span>
+                </div>
+                <p className="mt-2.5 max-w-[360px] text-[11px] uppercase leading-relaxed tracking-[0.2em] text-txt2">
+                  {t("voiceTagline")}
+                </p>
+              </div>
+            </div>
 
-        <div className="relative mt-1 flex items-center gap-3">
-          <Toggle on={launch} busy={busy} onFlip={() => void flipLaunch()} label={t("voiceLaunchTitle")} />
-          <span className="text-[13px] text-txt2">{t("voiceLaunchTitle")}</span>
-        </div>
+            <div className="flex min-h-0 flex-1 items-center justify-between gap-10 py-4">
+              {/* the state, left aligned, with a rule under it */}
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <motion.span
+                  key={on ? (healthy ? "healthy" : "armed") : "off"}
+                  initial={calm ? { opacity: 0 } : { opacity: 0, y: 2 }}
+                  animate={calm ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                  transition={{ duration: calm ? 0.12 : 0.18, ease: [0.23, 1, 0.32, 1] }}
+                  className={cn(
+                    "font-display text-[38px] font-semibold uppercase leading-none tracking-[0.01em]",
+                    healthy ? "text-[var(--green)]" : "text-txt",
+                  )}
+                >
+                  {on ? t("voiceActive") : t("voiceOffTitle")}
+                </motion.span>
+                <span className="max-w-[430px] text-[13px] leading-snug text-txt2">{stateWord}</span>
+                {msg ? (
+                  <span className="max-w-[440px] text-[12px] leading-snug text-txt3" role="status">{msg}</span>
+                ) : null}
+                <span aria-hidden className={cn("mt-3 h-px w-16", healthy ? "bg-[var(--green-line)]" : "bg-[var(--brand-line)]")} />
+                <p className="max-w-[430px] text-[12px] leading-relaxed text-txt3">{t("launchPanelBody")}</p>
+              </div>
 
-        <p className="relative max-w-[460px] text-center text-[12px] leading-relaxed text-txt3">{t("launchPanelBody")}</p>
-      </section>
+              {/* the control: the game's shape, not a disc */}
+              <button
+                type="button"
+                onClick={() => void setHelper(!on)}
+                disabled={!card || busy}
+                aria-pressed={on}
+                aria-label={t("voiceRowTitle")}
+                className="press group relative grid size-[252px] shrink-0 place-items-center disabled:cursor-wait"
+                style={{ clipPath: PLATE }}
+              >
+                <span aria-hidden className={cn("absolute inset-0 transition-colors duration-300", on ? "bg-[var(--green-line)]" : "bg-[var(--brand-line)]")} />
+                <span aria-hidden className="absolute inset-[2px] bg-[var(--panel)] transition-colors duration-200 group-hover:bg-[#14171a]" style={{ clipPath: PLATE }} />
+                <span className="relative flex flex-col items-center gap-3">
+                  {busy ? (
+                    <Loader2 className={cn("size-12", on ? "text-[var(--green)]" : "text-brand-strong", calm ? "" : "animate-spin")} aria-hidden />
+                  ) : (
+                    <Mic className={cn("size-12", on ? "text-[var(--green)]" : "text-txt2")} aria-hidden />
+                  )}
+                </span>
+              </button>
+            </div>
+
+            {/* the switch sits on the floor, where a HUD keeps its settings */}
+            <div className="flex items-end justify-between gap-6">
+              <div className="flex items-center gap-5 bg-white/[0.045] px-6 py-3" style={{ clipPath: CHIP }}>
+                <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-txt2">{t("voiceLaunchTitle")}</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={launch}
+                  aria-label={t("voiceLaunchTitle")}
+                  disabled={busy}
+                  onClick={() => void flipLaunch()}
+                  className="press relative h-8 w-[62px] shrink-0 transition-colors duration-200"
+                  style={{ clipPath: SWITCH }}
+                >
+                  <span aria-hidden className={cn("absolute inset-0 transition-colors duration-200", launch ? "bg-[var(--brand)]/85" : "bg-white/[0.12]")} />
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "absolute bottom-1 top-1 w-6 bg-[var(--txt)] transition-[left] duration-200 ease-out",
+                      launch ? "left-[calc(100%-28px)]" : "left-1",
+                    )}
+                    style={{ clipPath: KNOB }}
+                  />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
