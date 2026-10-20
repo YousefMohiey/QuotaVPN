@@ -285,7 +285,7 @@
   left: 46%;
   margin-left: -160px;
   top: -140px;
-  background: rgb(140 170 220 / 0.3);
+  background: rgb(255 255 255 / 0.045);
   filter: blur(75px);
 }
 .orb-b {
@@ -293,7 +293,7 @@
   height: 460px;
   right: -130px;
   top: 18%;
-  background: rgb(90 115 165 / 0.26);
+  background: rgb(255 255 255 / 0.035);
   filter: blur(85px);
 }
 .orb-c {
@@ -301,7 +301,7 @@
   height: 520px;
   left: -150px;
   bottom: -140px;
-  background: rgb(60 95 170 / 0.26);
+  background: rgb(255 255 255 / 0.03);
   filter: blur(90px);
 }
 .orb-d {
@@ -309,7 +309,7 @@
   height: 340px;
   right: 4%;
   bottom: -80px;
-  background: rgb(185 150 110 / 0.16);
+  background: rgb(255 255 255 / 0.025);
   filter: blur(75px);
 }
 .scene::after {

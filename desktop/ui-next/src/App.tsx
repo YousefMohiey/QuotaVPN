@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { isTauri } from "@/lib/ipc"
 import { AnimatePresence, motion } from "motion/react"
-import omenUrl from "./assets/omen.png"
 import { Sidebar, type Tab } from "@/components/Sidebar"
 import { WindowControls } from "@/components/WindowControls"
 import { QuotaToast } from "@/components/QuotaToast"
@@ -157,15 +156,6 @@ export default function App() {
               with its own real transparency: no cover cropping, no mask
               ramp, no filter, no overlay. Nothing left that can band, seam,
               or edge. Fully transparent anywhere else. */}
-          {tab === "voice" ? (
-            <img
-              aria-hidden
-              src={omenUrl}
-              alt=""
-              draggable={false}
-              className="pointer-events-none fixed top-[48%] right-[-40px] z-0 h-[132%] w-auto -translate-y-1/2 select-none object-contain object-right opacity-80 transition-opacity duration-300 [mask-image:linear-gradient(to_left,black_0%,black_16%,rgba(0,0,0,0.55)_34%,rgba(0,0,0,0.12)_52%,transparent_70%)] [-webkit-mask-image:linear-gradient(to_left,black_0%,black_16%,rgba(0,0,0,0.55)_34%,rgba(0,0,0,0.12)_52%,transparent_70%)]"
-            />
-          ) : null}
           {/* the caption strip: pt-14 below keeps the window buttons in clear
               space, and this soft fade hides content that scrolls up behind
               them, so they are never in the way of a page */}
