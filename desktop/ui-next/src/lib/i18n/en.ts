@@ -267,6 +267,7 @@ export const en = {
   "histOpen": "View all",
   "today": "Today",
   "yesterday": "Yesterday",
+  "allTime": "All time",
   "bestDown": "Best down",
   "bestUp": "Best up",
   "bestPing": "Best ping",

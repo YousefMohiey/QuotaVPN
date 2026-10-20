@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Languages, Power, RefreshCw } from "lucide-react"
 import { Toggle } from "@/components/Toggle"
 import { WeMark } from "@/components/WeMark"
@@ -16,79 +16,57 @@ import { cn } from "@/lib/utils"
 
 /** One setting as a hairline row: a quiet icon, the name and one line, the
     control at the right edge. The panel around the rows owns the frame. */
-function SettingRow({
-  icon,
-  title,
-  sub,
-  control,
-}: {
-  icon: ReactNode
-  title: string
-  sub: ReactNode
-  control: ReactNode
-}) {
-  return (
-    <div className="flex items-center gap-4 px-5 py-3.5">
-      <span className="shrink-0 text-txt3">{icon}</span>
-      <div className="min-w-0 flex-1">
-        <h2 className="text-[12.5px] font-medium text-txt">{title}</h2>
-        <div className="mt-0.5 text-[12px] leading-relaxed text-txt2">{sub}</div>
-      </div>
-      <div className="shrink-0">{control}</div>
-    </div>
-  )
-}
-
 const AUTOSTART_CACHE = "qc-autostart"
 
-/** The WE line, as a manage row: link it once, then refresh or unlink. */
 function WeQuotaRow() {
   const { t } = useI18n()
   const q = useQuota()
   const [quotaOpen, setQuotaOpen] = useState(false)
   const busy = q.phase === "busy"
 
+  const controls = q.linked ? (
+    <div className="flex shrink-0 items-center gap-2">
+      <button
+        type="button"
+        onClick={() => void quotaRefresh(true)}
+        disabled={busy}
+        className="flex h-8 items-center gap-1.5 rounded-[7px] border border-line bg-white/[0.02] px-2.5 text-[12px] text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
+      >
+        <RefreshCw className={cn("size-3", busy && "animate-spin")} aria-hidden />
+        {t("weRefresh")}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          void quotaLogout()
+        }}
+        className="flex h-8 items-center rounded-[7px] border border-line bg-white/[0.02] px-2.5 text-[12px] text-txt2 transition-colors hover:text-txt"
+      >
+        {t("weUnlink")}
+      </button>
+    </div>
+  ) : (
+    <button
+      type="button"
+      onClick={() => setQuotaOpen(true)}
+      className="press flex h-8 shrink-0 items-center rounded-[7px] bg-[var(--brand)] px-3 text-[12px] font-medium text-white transition-[filter] hover:brightness-110"
+    >
+      {t("weLink")}
+    </button>
+  )
+
   return (
     <>
-      <div className="flex items-center gap-4 px-5 py-3.5">
-        <span className="shrink-0 text-txt3">
-          <WeMark className="w-[18px]" />
+      <div className="flex items-start gap-4 px-5 py-4">
+        <span className="mt-0.5 shrink-0 text-txt3">
+          <WeMark className="w-[17px]" />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-[12.5px] font-medium text-txt">{t("weQuota")}</h2>
-          <p className="mt-0.5 text-[12px] leading-relaxed text-txt2">{t("weQuotaSub")}</p>
+          <h2 className="text-[13px] font-medium text-txt">{t("weQuota")}</h2>
+          <p className="mt-0.5 text-[12.5px] leading-relaxed text-txt2">{t("weQuotaSub")}</p>
           {!q.linked && <p className="mt-1 text-[12px] leading-snug text-txt3">{t("weLinkHint")}</p>}
         </div>
-        {q.linked ? (
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={() => void quotaRefresh(true)}
-              disabled={busy}
-              className="flex h-8 items-center gap-1.5 rounded-[7px] border border-line bg-white/[0.02] px-2.5 text-[12px] text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
-            >
-              <RefreshCw className={cn("size-3", busy && "animate-spin")} aria-hidden />
-              {t("weRefresh")}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                void quotaLogout()
-              }}
-              className="flex h-8 items-center rounded-[7px] border border-line bg-white/[0.02] px-2.5 text-[12px] text-txt2 transition-colors hover:text-txt"
-            >
-              {t("weUnlink")}
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setQuotaOpen(true)}
-            className="flex h-8 shrink-0 items-center rounded-[7px] bg-[var(--brand)] px-3 text-[12px] font-medium text-white transition-[filter] hover:brightness-110"
-          >
-            {t("weLink")}
-          </button>
-        )}
+        {controls}
       </div>
       <WeQuotaDialog open={quotaOpen} onOpenChange={setQuotaOpen} />
     </>
@@ -154,7 +132,7 @@ export function Settings() {
     }
   }
 
-  const cur = update?.current ?? version
+  const cur = version || update?.current
   const updateText =
     updateState === "checking"
       ? t("upChecking")
@@ -180,120 +158,118 @@ export function Settings() {
           : "bg-[var(--brand-vivid)]"
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1120px] flex-col gap-3">
-      <div className="min-w-0">
-        <h1 className="font-display text-[22px] font-semibold leading-tight tracking-[-0.02em] text-txt">{t("tabSettings")}</h1>
-        <p className="mt-1 text-[12.5px] text-txt2">{t("settingsSub")}</p>
-      </div>
-
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        {/* left: the preferences, hairline rows in one slab */}
-        <section className="flex flex-col self-start divide-y divide-line overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
-          <SettingRow
-            icon={<Languages className="size-4" strokeWidth={1.7} aria-hidden />}
-            title={t("language")}
-            sub={t("languageBody")}
-            control={
-              <Segmented
-                id="lang"
-                value={lang}
-                onChange={(l) => setLang(l)}
-                options={[
-                  { value: "en", label: "EN" },
-                  { value: "ar", label: "عربي" },
-                ]}
-              />
-            }
+    <div className="mx-auto w-full max-w-[1000px]">
+      {/* settings are four facts long, so the page is content height: rows in
+          one slab, the release given the most room because it is the only one
+          that moves on its own */}
+      <section className="divide-y divide-line overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+        <div className="flex items-start gap-4 px-5 py-4">
+          <Languages className="mt-0.5 size-4 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
+          <div className="min-w-0 flex-1">
+            <h2 className="text-[13px] font-medium text-txt">{t("language")}</h2>
+            <p className="mt-0.5 text-[12.5px] leading-relaxed text-txt2">{t("languageBody")}</p>
+          </div>
+          <Segmented
+            id="lang"
+            value={lang}
+            onChange={(l) => setLang(l)}
+            options={[
+              { value: "en", label: "EN" },
+              { value: "ar", label: "عربي" },
+            ]}
           />
+        </div>
 
-          <SettingRow
-            icon={<Power className="size-4" strokeWidth={1.7} aria-hidden />}
-            title={t("startupTitle")}
-            sub={
-              <>
-                {t("startupBody")}
-                {startupMsg ? <p className="mt-1 text-[12px] text-[var(--red)]">{startupMsg}</p> : null}
-              </>
-            }
-            control={<Toggle on={startup} busy={false} onFlip={() => void flipStartup(!startup)} label={t("startupTitle")} />}
-          />
+        <div className="flex items-start gap-4 px-5 py-4">
+          <Power className="mt-0.5 size-4 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
+          <div className="min-w-0 flex-1">
+            <h2 className="text-[13px] font-medium text-txt">{t("startupTitle")}</h2>
+            <p className="mt-0.5 text-[12.5px] leading-relaxed text-txt2">{t("startupBody")}</p>
+            {startupMsg ? <p className="mt-1 text-[12px] text-[var(--red)]">{startupMsg}</p> : null}
+          </div>
+          <div className="flex shrink-0 items-center gap-2.5">
+            <span className="text-[12.5px] text-txt2">{startup ? t("wordOn") : t("wordOff")}</span>
+            <Toggle on={startup} busy={false} onFlip={() => void flipStartup(!startup)} label={t("startupTitle")} />
+          </div>
+        </div>
 
-          <WeQuotaRow />
-        </section>
+        <WeQuotaRow />
 
-        {/* right: the release panel, the version at scale */}
-        <section className="flex min-h-0 flex-col self-start overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
-          <div className="flex items-center gap-2.5 border-b border-line px-5 py-3">
-            <RefreshCw className="size-3.5 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
-            <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-txt">{t("updRow")}</span>
+        <div className="px-5 py-4">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <RefreshCw className="size-4 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
+            <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-txt">{t("updRow")}</span>
             {updateChannel === "experimental" ? (
               <span className="shrink-0 rounded-full border border-[var(--brand-line)] bg-[var(--brand-bg)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.07em] text-brand-strong">
                 {t("chBadge")}
               </span>
             ) : null}
-            {updateText ? (
-              <span aria-live="polite" className="flex min-w-0 max-w-[180px] items-center gap-2 text-[12px] text-txt2">
-                <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", upTone)} />
-                <span className="truncate" title={updateText}>
-                  {updateText}
-                </span>
-              </span>
-            ) : null}
           </div>
 
-          <div className="flex flex-col items-center gap-4 px-5 py-7 text-center">
-            <div className="flex flex-col items-center gap-1.5">
+          <div className="mt-3 flex flex-wrap items-center gap-x-8 gap-y-4">
+            <div className="flex min-w-[150px] flex-col gap-1">
               <span className="font-display text-[30px] font-semibold leading-none tabular-nums text-txt">{cur || "-"}</span>
               <span className="text-[11px] font-medium uppercase tracking-[0.09em] text-txt3">{t("chCur")}</span>
+              {updateText ? (
+                <span aria-live="polite" className="mt-1 flex min-w-0 items-center gap-2 text-[12px] text-txt2">
+                  <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", upTone)} />
+                  <span className="truncate" title={updateText}>
+                    {updateText}
+                  </span>
+                </span>
+              ) : null}
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={() => void checkUpdates()}
-                disabled={updateState === "checking"}
-                className="flex h-8 items-center gap-1.5 rounded-[7px] border border-line bg-white/[0.02] px-3 text-[12px] text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
-              >
-                <RefreshCw className={cn("size-3", updateState === "checking" && "animate-spin")} aria-hidden />
-                {updateState === "checking" ? t("upChecking") : t("upCheck")}
-              </button>
-              {(updateState === "available" || updateState === "installing") && (
+
+            <div className="flex min-w-[190px] flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => void applyUpdate()}
-                  disabled={updateState === "installing"}
-                  className="flex h-8 items-center rounded-[7px] bg-[var(--brand)] px-3 text-[12px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
+                  onClick={() => void checkUpdates()}
+                  disabled={updateState === "checking"}
+                  className="flex h-8 items-center gap-1.5 rounded-[7px] border border-line bg-white/[0.02] px-3 text-[12px] text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
                 >
-                  {updateState === "installing"
-                    ? updatePct !== null
-                      ? `${updatePct}%`
-                      : t("upInstalling")
-                    : t("upGet")}
+                  <RefreshCw className={cn("size-3", updateState === "checking" && "animate-spin")} aria-hidden />
+                  {updateState === "checking" ? t("upChecking") : t("upCheck")}
                 </button>
-              )}
+                {(updateState === "available" || updateState === "installing") && (
+                  <button
+                    type="button"
+                    onClick={() => void applyUpdate()}
+                    disabled={updateState === "installing"}
+                    className="flex h-8 items-center rounded-[7px] bg-[var(--brand)] px-3 text-[12px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
+                  >
+                    {updateState === "installing"
+                      ? updatePct !== null
+                        ? `${updatePct}%`
+                        : t("upInstalling")
+                      : t("upGet")}
+                  </button>
+                )}
+              </div>
+              <p className="text-[12px] leading-snug text-txt3">{t("upRowBody")}</p>
             </div>
-            <p className="max-w-[300px] text-[12px] leading-relaxed text-txt3">{t("upRowBody")}</p>
-          </div>
 
-          <div className="mt-auto border-t border-line px-5 py-3.5">
-            <p className="text-[11px] font-medium uppercase tracking-[0.09em] text-txt3">{t("chTitle")}</p>
-            <p className="mt-1 text-[12px] leading-snug text-txt2">
-              {updateChannel === "experimental" ? t("chExpBody") : t("chStableBody")}
-            </p>
-            <Segmented
-              id="chan"
-              value={updateChannel}
-              options={[
-                { value: "normal", label: t("chStable") },
-                { value: "experimental", label: t("chExp") },
-              ]}
-              onChange={(v) => {
-                if (v !== updateChannel) void setUpdateChannel(v)
-              }}
-              className="mt-3 border-0 bg-transparent p-0"
-            />
+            <div className="flex min-w-[200px] flex-1 flex-col gap-2">
+              <p className="text-[11px] font-medium uppercase tracking-[0.09em] text-txt3">{t("chTitle")}</p>
+              <Segmented
+                id="chan"
+                value={updateChannel}
+                options={[
+                  { value: "normal", label: t("chStable") },
+                  { value: "experimental", label: t("chExp") },
+                ]}
+                onChange={(v) => {
+                  if (v !== updateChannel) void setUpdateChannel(v)
+                }}
+                className="border-0 bg-transparent p-0"
+              />
+              <p className="text-[12px] leading-snug text-txt3">
+                {updateChannel === "experimental" ? t("chExpBody") : t("chStableBody")}
+              </p>
+            </div>
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
     </div>
   )
 }

@@ -270,6 +270,7 @@ export const ar = {
   "histOpen": "عرض الكل",
   "today": "اليوم",
   "yesterday": "أمس",
+  "allTime": "كل الوقت",
   "bestDown": "أفضل تنزيل",
   "bestUp": "أفضل رفع",
   "bestPing": "أفضل استجابة",

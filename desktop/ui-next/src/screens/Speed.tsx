@@ -636,7 +636,9 @@ export function Speed() {
             <span className={cn("truncate font-display text-[23px] font-semibold leading-tight tracking-[-0.02em]", running ? "text-brand-strong" : "text-txt")}>
               {phase === "done" ? t("doneLabel") : running ? t("measuring") : t("idle")}
             </span>
-            <span className="max-w-[380px] text-[12px] leading-snug text-txt2">{hint || t("speedTag")}</span>
+            <span className="max-w-[380px] text-[12px] leading-snug text-txt2">
+              {phase === "done" ? t("startAgain") : hint || t("speedTag")}
+            </span>
           </div>
 
           <div className="grid w-full max-w-[440px] shrink-0 grid-cols-2 overflow-hidden rounded-[10px] bg-white/[0.03]">

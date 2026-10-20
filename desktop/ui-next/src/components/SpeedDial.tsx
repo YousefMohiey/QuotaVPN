@@ -76,6 +76,9 @@ export function SpeedDial({
   const { t } = useI18n()
   const idle = phase === "idle"
   const running = phase === "ping" || phase === "download" || phase === "upload"
+  // the face is at rest whenever there is nothing being measured: before a run
+  // and again once one lands, so the way back to a second run is the same GO
+  const atRest = idle || phase === "done"
 
   const frac = fracFor(value)
   const needleDeg = angleFor(frac)
@@ -100,12 +103,7 @@ export function SpeedDial({
 
   return (
     <div
-      className={cn(
-        "relative h-[300px] w-[300px] [@media(max-height:660px)]:h-[172px] [@media(max-height:660px)]:w-[172px]",
-        phase === "done" && "cursor-pointer",
-      )}
-      onClick={phase === "done" ? onStart : undefined}
-      title={phase === "done" ? t("startAgain") : undefined}
+      className="relative h-[300px] w-[300px] [@media(max-height:660px)]:h-[172px] [@media(max-height:660px)]:w-[172px]"
     >
       <svg viewBox={`0 0 ${VIEW} ${VIEW}`} className="h-full w-full" aria-hidden focusable="false">
         <defs>
@@ -189,13 +187,14 @@ export function SpeedDial({
         <button
           type="button"
           onClick={onStart}
-          disabled={!idle}
-          aria-label={t("startTest")}
+          disabled={running}
+          aria-label={phase === "done" ? t("startAgain") : t("startTest")}
+          title={phase === "done" ? t("startAgain") : undefined}
           className={cn(
             "absolute left-1/2 top-1/2 grid size-[216px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border transition-[opacity,border-color,transform] duration-300 [@media(max-height:660px)]:size-[150px]",
             "border-[rgb(255_255_255/0.14)] bg-black/35 shadow-[inset_0_1px_0_rgb(255_255_255/0.10)] backdrop-blur-[14px] backdrop-saturate-150",
             "hover:border-[rgb(255_255_255/0.26)] active:scale-[0.985] [-webkit-tap-highlight-color:transparent]",
-            idle ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
+            atRest ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
           )}
         >
           <span className="text-[26px] font-bold tracking-[0.06em] text-txt">GO</span>
@@ -205,8 +204,10 @@ export function SpeedDial({
           <button
             type="button"
             onClick={onStop}
-            className="pointer-events-auto absolute left-1/2 top-[calc(50%+32px)] -translate-x-1/2 -translate-y-1/2 rounded-full px-3 py-1 text-[11.5px] font-medium text-txt3 transition-[color,background-color] duration-200 [@media(max-height:660px)]:top-[calc(50%+26px)] hover:bg-white/[0.04] hover:text-txt"
+            aria-label={t("stop")}
+            className="press pointer-events-auto absolute left-1/2 top-1/2 flex h-12 w-[124px] -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-2 rounded-full border border-[rgb(255_255_255/0.20)] bg-black/45 text-[13.5px] font-medium text-txt shadow-[inset_0_1px_0_rgb(255_255_255/0.10)] backdrop-blur-[14px] transition-colors duration-200 hover:border-[rgb(255_255_255/0.32)] hover:bg-black/60 [@media(max-height:660px)]:h-9 [@media(max-height:660px)]:w-[96px] [@media(max-height:660px)]:text-[12px]"
           >
+            <span aria-hidden className="size-2.5 rounded-[2px] bg-[var(--red)]" />
             {t("stop")}
           </button>
         )}
@@ -215,7 +216,7 @@ export function SpeedDial({
           <div
             className={cn(
               "flex flex-col items-center transition-[opacity,transform] duration-300",
-              idle ? "translate-y-2 opacity-0" : "translate-y-0 opacity-100",
+              idle || phase === "done" ? "translate-y-2 opacity-0" : "translate-y-0 opacity-100",
             )}
           >
             <span
