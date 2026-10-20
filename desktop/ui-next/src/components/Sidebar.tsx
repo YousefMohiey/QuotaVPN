@@ -21,7 +21,7 @@ const PRIMARY: Array<{ id: Tab; icon: ComponentType<{ className?: string; stroke
     step above the page, one hairline to the right, nothing else. */
 export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
   const { t } = useI18n()
-  const { version, update, updateState, updateChannel } = useApp()
+  const { version, update, updateState } = useApp()
 
   const rows = [
     ...PRIMARY.map((p) => ({ ...p, active: tab === p.id || (p.id === "home" && tab === "apps") || (p.id === "history" && tab === "result") })),
@@ -39,11 +39,6 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
               <span className="truncate font-display text-[17px] font-semibold tracking-[-0.01em] text-txt">QuotaVPN</span>
               {version && <span className="shrink-0 font-mono text-[11px] text-txt3">v{version}</span>}
             </div>
-            {updateChannel === "experimental" && (
-              <span className="mt-1 inline-flex rounded-[4px] border border-[var(--brand-line)] px-1.5 py-px text-[9px] font-semibold uppercase tracking-[0.08em] text-brand-strong">
-                {t("chBadge")}
-              </span>
-            )}
           </div>
         </div>
 
