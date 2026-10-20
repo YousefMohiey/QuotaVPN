@@ -227,6 +227,8 @@ export const en = {
   "updRow": "Update check",
   "upRowBody": "Manually check for the latest version",
   "chTitle": "Release channel",
+  "upManual": "Manual check",
+  "runs": "runs",
   "chCur": "Current version",
   "chStable": "Normal updates",
   "chStableBody": "Tested builds only, the ones everyone runs",

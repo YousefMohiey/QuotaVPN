@@ -297,7 +297,7 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
         <div className="flex min-w-0 flex-col justify-center gap-1.5 border-e border-line px-5 py-4">
           <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">{t("allTime")}</span>
           <span className="truncate text-[12px] text-txt3">
-            {history.length} · {t("history")}
+            {history.length} {t("runs")}
           </span>
         </div>
         {bestCells.map((c, i) => (

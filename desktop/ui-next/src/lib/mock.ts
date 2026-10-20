@@ -99,7 +99,7 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
       // The "update ready" reminder appears only when asked for (?upd=1);
       // the real check reports available only when GitHub says so.
       const wantUpd = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("upd") === "1"
-      return { current: "0.4.3", latest: wantUpd ? "0.4.4" : "0.4.3", available: wantUpd, url: "#", notes: "" } as UpdateInfo as T
+      return { current: "0.4.6", latest: wantUpd ? "0.4.7" : "0.4.6", available: wantUpd, url: "#", notes: "" } as UpdateInfo as T
     }
     case "apply_update":
       return "Up to date." as T

@@ -121,7 +121,7 @@ export function SpeedDial({
 
         {/* the working face: track, lit stretch, scale and needle. Only
             present while a run or a result exists. */}
-        <g style={{ opacity: idle ? 0 : 1, transition: "opacity 400ms ease" }}>
+        <g style={{ opacity: atRest ? 0 : 1, transition: "opacity 400ms ease" }}>
           {/* the track */}
           <path d={arcPath} fill="none" stroke="#2c3050" strokeWidth={STROKE} strokeLinecap="butt" />
 
@@ -168,7 +168,7 @@ export function SpeedDial({
               transformBox: "view-box",
               transformOrigin: `${C}px ${C}px`,
               transition: "transform 170ms cubic-bezier(0.22, 1, 0.36, 1), opacity 350ms ease",
-              opacity: idle ? 0 : 1,
+              opacity: atRest ? 0 : 1,
             }}
           >
             <path

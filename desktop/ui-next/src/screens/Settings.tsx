@@ -137,7 +137,7 @@ export function Settings() {
     updateState === "checking"
       ? t("upChecking")
       : updateState === "latest" && update
-        ? t("upLatest").replace("{v}", update.latest)
+        ? t("upLatest").replace("{v}", cur || update.latest)
         : updateState === "available" && update
           ? t("upOut").replace("{v}", update.latest)
           : updateState === "installing"
@@ -206,10 +206,11 @@ export function Settings() {
             ) : null}
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-x-8 gap-y-4">
-            <div className="flex min-w-[150px] flex-col gap-1">
-              <span className="font-display text-[30px] font-semibold leading-none tabular-nums text-txt">{cur || "-"}</span>
+          {/* three columns that start on the same line: label, then content */}
+          <div className="mt-3.5 grid grid-cols-[minmax(140px,0.8fr)_minmax(180px,1fr)_minmax(200px,1.4fr)] items-start gap-x-8 gap-y-4 ps-8">
+            <div className="flex min-w-0 flex-col gap-1">
               <span className="text-[11px] font-medium uppercase tracking-[0.09em] text-txt3">{t("chCur")}</span>
+              <span className="font-display text-[30px] font-semibold leading-none tabular-nums text-txt">{cur || "-"}</span>
               {updateText ? (
                 <span aria-live="polite" className="mt-1 flex min-w-0 items-center gap-2 text-[12px] text-txt2">
                   <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", upTone)} />
@@ -220,8 +221,9 @@ export function Settings() {
               ) : null}
             </div>
 
-            <div className="flex min-w-[190px] flex-col gap-2">
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-col gap-1">
+              <span className="text-[11px] font-medium uppercase tracking-[0.09em] text-txt3">{t("upManual")}</span>
+              <div className="mt-0.5 flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => void checkUpdates()}
@@ -249,8 +251,8 @@ export function Settings() {
               <p className="text-[12px] leading-snug text-txt3">{t("upRowBody")}</p>
             </div>
 
-            <div className="flex min-w-[200px] flex-1 flex-col gap-2">
-              <p className="text-[11px] font-medium uppercase tracking-[0.09em] text-txt3">{t("chTitle")}</p>
+            <div className="flex min-w-0 flex-col gap-1">
+              <span className="text-[11px] font-medium uppercase tracking-[0.09em] text-txt3">{t("chTitle")}</span>
               <Segmented
                 id="chan"
                 value={updateChannel}
@@ -261,7 +263,7 @@ export function Settings() {
                 onChange={(v) => {
                   if (v !== updateChannel) void setUpdateChannel(v)
                 }}
-                className="border-0 bg-transparent p-0"
+                className="mt-0.5 self-start"
               />
               <p className="text-[12px] leading-snug text-txt3">
                 {updateChannel === "experimental" ? t("chExpBody") : t("chStableBody")}
