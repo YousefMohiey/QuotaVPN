@@ -64,6 +64,8 @@ export const en = {
   "appsExcept": "All except these",
   "appsHint": "Changes apply next time you connect",
   "appsBody": "Choose which applications use the QuotaVPN connection",
+  "appsBulkLbl": "Bulk",
+  "appsEveryApp": "Every app",
   "appsModeLbl": "Routing mode",
   "appsListTitle": "Applications",
   "appsLoading": "Loading apps",

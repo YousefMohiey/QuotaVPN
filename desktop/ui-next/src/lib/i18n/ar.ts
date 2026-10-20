@@ -67,6 +67,8 @@ export const ar = {
   "appsExcept": "الجميع باستثناء",
   "appsHint": "سيتم تطبيق التغييرات عند الاتصال التالي",
   "appsBody": "اختر التطبيقات التي تستخدم اتصال QuotaVPN",
+  "appsBulkLbl": "تحديد جماعي",
+  "appsEveryApp": "كل التطبيقات",
   "appsModeLbl": "وضع التوجيه",
   "appsListTitle": "التطبيقات",
   "appsLoading": "جارٍ تحميل التطبيقات",

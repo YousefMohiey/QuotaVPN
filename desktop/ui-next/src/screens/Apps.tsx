@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Check, ChevronRight, Info, Search } from "lucide-react"
+import { Check, ChevronRight, Search } from "lucide-react"
 import { Segmented } from "@/components/Segmented"
 import { useApp, type AppsMode } from "@/state/app"
 import { useI18n } from "@/lib/i18n"
@@ -23,6 +23,7 @@ export function Apps({ onBack }: { onBack: () => void }) {
   // from the keyboard; typing in search resets the index without stealing it.
   const [focusIdx, setFocusIdx] = useState(0)
   const [listActive, setListActive] = useState(false)
+  const [atEnd, setAtEnd] = useState(false)
   const rowRefs = useRef<Array<HTMLButtonElement | null>>([])
   const pendingFocus = useRef<number | null>(null)
 
@@ -106,66 +107,174 @@ export function Apps({ onBack }: { onBack: () => void }) {
   const bulkOff = appsMode === "all"
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1120px] flex-col gap-3">
-      <div className="px-1">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-0.5 text-[12px]">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1180px] flex-col gap-3">
+      {/* the list owns the height and scrolls itself, the rules sit in the band */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+        <div className="flex shrink-0 items-center gap-2.5 border-b border-line px-5 py-3.5">
           <button
             type="button"
             onClick={onBack}
-            className="rounded-[8px] px-1.5 py-0.5 text-txt3 transition-colors hover:bg-white/[0.04] hover:text-txt2"
+            aria-label={t("tabHome")}
+            title={t("tabHome")}
+            className="press -ms-1 grid size-7 shrink-0 place-items-center rounded-full text-txt3 transition-colors hover:bg-white/[0.05] hover:text-txt2"
           >
-            {t("tabHome")}
+            <ChevronRight className="size-4 rotate-180" aria-hidden />
           </button>
-          <ChevronRight className="size-3.5 shrink-0 text-txt3" aria-hidden />
-          <span className="px-1.5 py-0.5 text-txt2">{t("routing")}</span>
-        </nav>
-        <h1 className="mt-2 font-display text-[22px] font-semibold leading-tight tracking-[-0.02em] text-txt">{t("routing")}</h1>
-        <p className="mt-1 text-[12.5px] text-txt2">{t("appsBody")}</p>
-        <p className="mt-0.5 text-[12px] text-txt3">{t("appsHint")}</p>
+          <span className="min-w-0 flex-1 truncate text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
+            {t("routing")}
+          </span>
+          <span className="shrink-0 text-[11.5px] tabular-nums text-txt3" dir="auto">
+            {appsMode === "all" ? t("appsEveryApp") : `${apps.length} / ${list.length} ${t("selOf")}`}
+          </span>
+        </div>
+
+        <div className="relative min-h-0 flex-1">
+        <div
+          className="app-scroll h-full overflow-y-auto overscroll-contain"
+          onScroll={(e) => {
+            const el = e.currentTarget
+            setAtEnd(el.scrollTop + el.clientHeight >= el.scrollHeight - 4)
+          }}
+          role="listbox"
+          aria-multiselectable="true"
+          onFocus={() => setListActive(true)}
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) setListActive(false)
+          }}
+        >
+          {filtered.length === 0 ? (
+            <p className="px-5 py-8 text-[12.5px] text-txt3">{loading ? t("appsLoading") : t("appsEmpty")}</p>
+          ) : (
+            <div className="flex flex-col">
+              {filtered.map((row, i) => {
+                const on = appsMode === "all" || apps.includes(row.pkg)
+                const focused = i === activeIdx && listActive
+                const icon = iconOf(row.pkg)
+                return (
+                  <button
+                    key={row.pkg}
+                    ref={(el) => {
+                      rowRefs.current[i] = el
+                    }}
+                    type="button"
+                    role="checkbox"
+                    aria-checked={on}
+                    tabIndex={i === activeIdx ? 0 : -1}
+                    onClick={() => toggle(row.pkg)}
+                    onFocus={() => setFocusIdx(i)}
+                    onKeyDown={(e) => {
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault()
+                        moveFocus(i + 1)
+                      } else if (e.key === "ArrowUp") {
+                        e.preventDefault()
+                        moveFocus(i - 1)
+                      } else if (e.key === "Home") {
+                        e.preventDefault()
+                        moveFocus(0)
+                      } else if (e.key === "End") {
+                        e.preventDefault()
+                        moveFocus(filtered.length - 1)
+                      } else if (e.key === " ") {
+                        e.preventDefault()
+                        toggle(row.pkg)
+                      }
+                    }}
+                    className={cn(
+                      "flex w-full scroll-mt-2 items-center gap-3 border-b border-line px-5 py-2 text-start transition-colors last:border-b-0 hover:bg-white/[0.03] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-line)]",
+                      on ? "bg-[var(--brand-bg)]" : focused && "bg-white/[0.04]",
+                    )}
+                  >
+                    <span
+                      aria-hidden
+                      className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-[7px] bg-white/[0.03]"
+                    >
+                      {icon ? (
+                        <img src={icon} alt="" draggable={false} className="size-4 select-none" />
+                      ) : (
+                        <span className="text-[12px] font-semibold uppercase text-txt3">{row.label.slice(0, 1)}</span>
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className={cn("block truncate text-[12.5px]", on ? "text-txt" : "text-txt2")} dir="auto">
+                        {row.label}
+                      </span>
+                      <span className="block truncate text-[11.5px] text-txt3" dir="auto">
+                        {row.pkg}
+                      </span>
+                    </span>
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "grid size-4 shrink-0 place-items-center rounded-[5px] border transition-colors",
+                        on ? "border-[var(--brand-line)] bg-[var(--brand-bg)]" : "border-line-strong",
+                      )}
+                    >
+                      {on && <Check className="size-3 text-brand-strong" strokeWidth={3} aria-hidden />}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+        {!atEnd && filtered.length > 0 ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-7 bg-gradient-to-t from-[var(--panel)] to-transparent"
+          />
+        ) : null}
+        </div>
       </div>
 
-      {/* the controls stay up while the list scrolls beneath them */}
-      <div className="sticky top-0 z-10 bg-[var(--bg)] pb-3">
-        <div className="overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
-          <div className="flex flex-wrap items-center gap-2 p-3">
-            <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-txt">
-              {t("appsModeLbl")}
-              <Info className="size-3.5 text-txt3" aria-hidden />
-            </span>
-            <Segmented
-              id="apps-mode"
-              value={appsMode}
-              onChange={(m: AppsMode) => setAppsMode(m)}
-              className="border-0 bg-transparent p-0"
-              options={[
-                { value: "all", label: t("appsAll") },
-                { value: "allow", label: t("appsOnly") },
-                { value: "block", label: t("appsExcept") },
-              ]}
+      {/* the rules the list answers to: what counts, which ones, and the ways
+          to set them without walking the list */}
+      <section className="grid shrink-0 grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_auto] items-start gap-6 rounded-[var(--r-card)] border border-line bg-[var(--panel)] px-5 py-4">
+        <div className="flex min-w-0 flex-col gap-2">
+          <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">{t("appsModeLbl")}</span>
+          <Segmented
+            id="apps-mode"
+            value={appsMode}
+            onChange={(m: AppsMode) => setAppsMode(m)}
+            fill
+            options={[
+              { value: "all", label: t("appsAll") },
+              { value: "allow", label: t("appsOnly") },
+              { value: "block", label: t("appsExcept") },
+            ]}
+          />
+          <p className="text-[12px] leading-relaxed text-txt3">{t("appsBody")}</p>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-2">
+          <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">{t("appsSearch")}</span>
+          <div className="relative">
+            <Search className="absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-txt3" aria-hidden />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setQuery("")
+                else if (e.key === "ArrowDown") {
+                  e.preventDefault()
+                  moveFocus(0)
+                }
+              }}
+              placeholder={t("appsSearch")}
+              aria-label={t("appsSearch")}
+              className="h-9 w-full rounded-[7px] border border-line bg-white/[0.02] ps-8 pe-2 text-[12.5px] text-txt outline-none transition-colors placeholder:text-txt3 focus:border-[var(--brand-line)]"
             />
-            <span aria-hidden className="hidden h-6 w-px shrink-0 bg-white/[0.08] lg:block" />
-            <div className="relative min-w-[120px] flex-1">
-              <Search className="absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-txt3" aria-hidden />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") setQuery("")
-                  else if (e.key === "ArrowDown") {
-                    e.preventDefault()
-                    moveFocus(0)
-                  }
-                }}
-                placeholder={t("appsSearch")}
-                aria-label={t("appsSearch")}
-                className="h-8 w-full rounded-[7px] border border-line bg-white/[0.02] ps-8 text-[12px] text-txt outline-none transition-colors placeholder:text-txt3 focus:border-[var(--brand-line)]"
-              />
-            </div>
+          </div>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-2">
+          <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">{t("appsBulkLbl")}</span>
+          <div className="flex items-center gap-2">
             <button
               type="button"
               disabled={bulkOff || filtered.length === 0}
               onClick={selectMatches}
-              className="h-8 shrink-0 rounded-[7px] border border-[var(--brand-line)] px-2.5 text-[12px] text-brand-strong transition-colors hover:bg-[var(--brand-bg)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+              className="h-9 whitespace-nowrap rounded-[7px] border border-[var(--brand-line)] px-3 text-[12.5px] text-brand-strong transition-colors hover:bg-[var(--brand-bg)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
             >
               {q
                 ? t("appsSelectMatches").replace("{m}", String(filtered.length))
@@ -175,113 +284,17 @@ export function Apps({ onBack }: { onBack: () => void }) {
               type="button"
               disabled={bulkOff || apps.length === 0}
               onClick={() => setApps([])}
-              className="h-8 shrink-0 rounded-[7px] border border-line px-2.5 text-[12px] text-[rgb(207_112_120/0.8)] transition-colors hover:border-[var(--red-line)] hover:bg-[var(--red-bg)] hover:text-[var(--red)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line disabled:hover:bg-transparent disabled:hover:text-[rgb(207_112_120/0.8)]"
+              className="h-9 whitespace-nowrap rounded-[7px] border border-line px-3 text-[12.5px] text-[rgb(207_112_120/0.8)] transition-colors hover:border-[var(--red-line)] hover:bg-[var(--red-bg)] hover:text-[var(--red)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line disabled:hover:bg-transparent disabled:hover:text-[rgb(207_112_120/0.8)]"
             >
               {t("appsClearSel")}
             </button>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
-        <div className="flex flex-wrap items-start justify-between gap-3 px-4 pb-3 pt-3.5">
-          <div className="min-w-0">
-            <h2 className="text-[15px] font-semibold text-txt">{t("appsListTitle")}</h2>
-            <p aria-live="polite" className="mt-0.5 text-[12px] text-txt3" dir="auto">
-              {summary}
-            </p>
-          </div>
-          <span className="shrink-0 text-[12px] tabular-nums text-txt3" dir="auto">
-            {apps.length} / {list.length} {t("selOf")}
-          </span>
-        </div>
-
-        <div
-          className="flex flex-col divide-y divide-line border-t border-line"
-          role="listbox"
-          aria-multiselectable="true"
-          onFocus={() => setListActive(true)}
-          onBlur={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node)) setListActive(false)
-          }}
-        >
-          {filtered.length === 0 ? (
-            <p className="px-1 py-6 text-[12.5px] text-txt3">{loading ? t("appsLoading") : t("appsEmpty")}</p>
-          ) : (
-            filtered.map((row, i) => {
-              const on = apps.includes(row.pkg)
-              const focused = i === activeIdx && listActive
-              const icon = iconOf(row.pkg)
-              return (
-                <button
-                  key={row.pkg}
-                  ref={(el) => {
-                    rowRefs.current[i] = el
-                  }}
-                  type="button"
-                  role="checkbox"
-                  aria-checked={on}
-                  tabIndex={i === activeIdx ? 0 : -1}
-                  onClick={() => toggle(row.pkg)}
-                  onFocus={() => setFocusIdx(i)}
-                  onKeyDown={(e) => {
-                    if (e.key === "ArrowDown") {
-                      e.preventDefault()
-                      moveFocus(i + 1)
-                    } else if (e.key === "ArrowUp") {
-                      e.preventDefault()
-                      moveFocus(i - 1)
-                    } else if (e.key === "Home") {
-                      e.preventDefault()
-                      moveFocus(0)
-                    } else if (e.key === "End") {
-                      e.preventDefault()
-                      moveFocus(filtered.length - 1)
-                    } else if (e.key === " ") {
-                      e.preventDefault()
-                      toggle(row.pkg)
-                    }
-                  }}
-                  className={cn(
-                    "flex w-full scroll-mt-36 items-center gap-3 px-4 py-2 text-start transition-colors hover:bg-white/[0.03] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-line)]",
-                    on ? "bg-[var(--brand-bg)]" : focused && "bg-white/[0.04]",
-                  )}
-                >
-                  <span
-                    aria-hidden
-                    className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-[7px] bg-white/[0.03]"
-                  >
-                    {icon ? (
-                      <img src={icon} alt="" draggable={false} className="size-4 select-none" />
-                    ) : (
-                      <span className="text-[12px] font-semibold uppercase text-txt3">
-                        {row.label.slice(0, 1)}
-                      </span>
-                    )}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className={cn("block truncate text-[12.5px]", on ? "text-txt" : "text-txt2")} dir="auto">
-                      {row.label}
-                    </span>
-                    <span className="block truncate text-[11px] text-txt3" dir="auto">
-                      {row.pkg}
-                    </span>
-                  </span>
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "grid size-4 shrink-0 place-items-center rounded-[5px] border transition-colors",
-                      on ? "border-[var(--brand-line)] bg-[var(--brand-bg)]" : "border-line-strong",
-                    )}
-                  >
-                    {on && <Check className="size-3 text-brand-strong" strokeWidth={3} aria-hidden />}
-                  </span>
-                </button>
-              )
-            })
-          )}
-        </div>
-      </div>
+      <p aria-live="polite" className="sr-only" dir="auto">
+        {summary}
+      </p>
     </div>
   )
 }
