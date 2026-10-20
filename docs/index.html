@@ -232,8 +232,9 @@
   .vpath b{color:var(--txt); font-weight:600}
 
   /* --------------------------------------------------------------- transports */
-  .trans{display:flex; align-items:center; gap:clamp(16px, 2vw, 28px); flex-wrap:wrap;
-    padding:clamp(18px, 2vw, 24px); background:var(--panel); border:1px solid var(--line); border-radius:var(--r-card)}
+  .trans{display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center;
+    padding:clamp(20px, 2.4vw, 28px); background:var(--panel); border:1px solid var(--line); border-radius:var(--r-card);
+    max-width:640px; margin:0 auto}
   .trans .k{font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--txt3)}
   .seg{position:relative; display:inline-flex; align-items:center; height:48px; padding:4px;
     border-radius:10px; background:rgb(255 255 255 / 0.05)}
@@ -245,10 +246,9 @@
     border-radius:8px; transition:color .2s var(--ease)}
   .seg button[aria-pressed="true"]{color:var(--txt)}
   .seg button:hover{color:var(--txt2)}
-  .tnote{display:flex; align-items:flex-start; gap:8px; font-size:13px; color:var(--txt2); flex:1 1 280px; min-width:0}
-  .tnote svg{flex:none; margin-top:2px; width:15px; height:15px; fill:none; stroke:var(--brand-soft);
-    stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round}
-  .tnote.warn svg{stroke:var(--txt2)}
+  .tnote{display:flex; align-items:center; justify-content:center; gap:8px; text-align:center;
+    font-size:13px; color:var(--txt2); max-width:66ch; min-width:0; text-wrap:balance; line-height:1.5}
+  #transports .head{justify-content:center; text-align:center; margin-bottom:clamp(18px, 2vw, 26px)}
 
   /* -------------------------------------------------------------------- close */
   .close{text-align:center; padding:clamp(56px, 8vw, 108px) 0 clamp(44px, 6vw, 74px)}
@@ -569,7 +569,6 @@
         <button type="button" data-t="hy2" aria-pressed="false">Hysteria2</button>
       </div>
       <p class="tnote" id="tNote" aria-live="polite">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></svg>
         <span>Default traffic. This is the mode that keeps your package quota.</span>
       </p>
     </div>
@@ -768,7 +767,7 @@
   function move(el){
     if(!el) return;
     pill.style.width = el.offsetWidth + 'px';
-    pill.style.transform = 'translateX(' + (el.offsetLeft - 3) + 'px)';
+    pill.style.transform = 'translateX(' + (el.offsetLeft - 4) + 'px)';
   }
   function pick(mode, el){
     for(var i = 0; i < btns.length; i++){
