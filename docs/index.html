@@ -48,12 +48,12 @@
      field split into a stage and its readings, the way the app does.
      ========================================================================== */
   :root{
-    --bg:#08090a; --side:#0b0c0e; --panel:#0f1113; --raise:#14171a;
-    --line:rgb(255 255 255 / .07); --line-strong:rgb(255 255 255 / .13);
-    --txt:#eef1f6; --txt2:#a7b0bf; --txt3:#8b95a6;
+    --bg:#08090a; --side:#0b0c0e; --panel:#0f1113; --raise:#14171a; --field:#14171a;
+    --line:rgb(255 255 255 / 0.07); --line-strong:rgb(255 255 255 / 0.13);
+    --txt:#f3f5f7; --txt2:#a3aab3; --txt3:#858c97;
     --brand:#2c5fd8; --brand-hi:#3d7bff; --brand-soft:#7fa6ff;
-    --brand-bg:rgb(61 123 255 / .11); --brand-line:rgb(61 123 255 / .34);
-    --r-card:16px; --r-btn:10px;
+    --brand-bg:rgb(44 95 216 / 0.13); --brand-line:rgb(44 95 216 / 0.38);
+    --r-card:14px; --r-ctl:9px;
     --ease:cubic-bezier(.16,1,.3,1);
     --shell:1240px;
   }
@@ -100,21 +100,22 @@
   .hdr .cta .ico-droid{display:none}
 
   /* ----------------------------------------------------------------- buttons */
-  .btn{display:inline-flex; align-items:center; justify-content:center; gap:9px;
-    height:42px; padding:0 17px; border-radius:var(--r-btn); font:inherit; font-size:13.5px; font-weight:600;
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    height:40px; padding:0 16px; border-radius:10px; font:inherit; font-size:13px; font-weight:500;
     border:1px solid transparent; cursor:pointer; white-space:nowrap; letter-spacing:-.005em;
-    transition:transform .16s var(--ease), background .2s var(--ease), border-color .2s var(--ease)}
-  .btn:active{transform:scale(.975)}
+    transition:transform 160ms var(--ease), background 160ms var(--ease), border-color 160ms var(--ease), filter 160ms var(--ease)}
+  .btn:active{transform:scale(.97)}
   .btn.fill{background:var(--brand); color:#fff}
-  .btn.fill:hover{background:var(--brand-hi)}
-  .btn.line{border-color:var(--line-strong); background:rgb(255 255 255 / .025); color:var(--txt)}
-  .btn.line:hover{background:rgb(255 255 255 / .06); border-color:rgb(255 255 255 / .22)}
-  .btn.sm{height:34px; padding:0 13px; font-size:12.5px}
-  .btn.lg{height:48px; padding:0 20px; font-size:14.5px}
+  .btn.fill:hover{filter:brightness(1.1)}
+  .btn.line{border-color:var(--line-strong); background:rgb(255 255 255 / 0.025); color:var(--txt)}
+  .btn.line:hover{background:rgb(255 255 255 / 0.06); border-color:var(--line-strong)}
+  .btn.sm{height:32px; padding:0 12px; font-size:12px; border-radius:8px}
+  .btn.lg{height:44px; padding:0 20px; font-size:14px}
   .btn svg{flex:none}
+  @media (prefers-reduced-motion: reduce){ .btn:active{transform:none} }
 
   /* -------------------------------------------------------------------- hero */
-  .hero{display:grid; grid-template-columns:1.12fr .88fr; gap:clamp(32px, 5vw, 72px);
+  .hero{display:grid; grid-template-columns:1fr 1.05fr; gap:clamp(32px, 5vw, 72px);
     align-items:center; padding:clamp(48px, 7vw, 92px) 0 clamp(36px, 4vw, 60px)}
   .hero h1{font-size:clamp(34px, 4.2vw, 58px); line-height:1.03; letter-spacing:-.035em;
     font-weight:600; max-width:15ch; margin-top:16px; text-wrap:balance}
@@ -123,32 +124,8 @@
   .hero .meta{margin-top:14px; color:var(--txt3); font-size:12.5px}
   .hero .meta b{color:var(--txt2); font-weight:500}
 
-  /* the session, drawn in the app's own language rather than described */
-  .stage-session{background:var(--panel); border:1px solid var(--line); border-radius:var(--r-card);
-    padding:clamp(18px, 2vw, 26px); display:flex; flex-direction:column; align-items:center; gap:16px;
-    position:relative; overflow:hidden}
-  .stage-session::before{content:""; position:absolute; inset:0 0 auto 0; height:1px;
-    background:linear-gradient(90deg, transparent, rgb(61 123 255 / .5), transparent); opacity:.55}
-  .stage-session .cap{position:absolute; top:12px; left:16px; font-size:11px; letter-spacing:.12em;
-    text-transform:uppercase; color:var(--txt3)}
-  .dial{width:clamp(168px, 17vw, 204px); aspect-ratio:1; position:relative; display:grid; place-items:center; margin-top:10px}
-  .dial > svg{position:absolute; inset:0; width:100%; height:100%; transform:rotate(-90deg)}
-  .dial .track{fill:none; stroke:rgb(255 255 255 / .075); stroke-width:3}
-  .dial .lit{fill:none; stroke:var(--brand-hi); stroke-width:3; stroke-linecap:round;
-    stroke-dasharray:392 628; stroke-dashoffset:392;
-    transition:stroke-dashoffset 1.5s var(--ease) .2s}
-  .stage-session.lit .dial .lit{stroke-dashoffset:0}
-  .dial .plate{width:76px; height:76px; border-radius:50%; background:var(--brand);
-    display:grid; place-items:center; position:relative; z-index:1;
-    box-shadow:0 0 0 1px rgb(255 255 255 / .08)}
-  .dial .plate svg{width:27px; height:27px; stroke:#fff; stroke-width:2.2; fill:none}
-  .state{text-align:center; font-size:18px; font-weight:600; letter-spacing:-.02em}
-  .state small{display:block; margin-top:3px; font-size:12px; font-weight:400; letter-spacing:0; color:var(--txt3)}
-  .cells{width:100%; display:grid; grid-template-columns:repeat(3, 1fr); gap:1px;
-    background:var(--line); border-radius:9px; overflow:hidden}
-  .cell{background:var(--side); padding:10px 12px; min-width:0}
-  .cell .k{font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--txt3)}
-  .cell .v{font-size:12.5px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  /* the product shot sits in the same chrome the live demos use */
+  .frame.shot > img{display:block; width:100%; height:auto}
 
   /* ------------------------------------------------------------------- bands */
   .band{border-top:1px solid var(--line); border-bottom:1px solid var(--line); background:var(--side);
@@ -157,11 +134,10 @@
   .band .in > div{background:var(--side); padding:clamp(22px, 2.4vw, 30px) clamp(18px, 2vw, 28px)}
   .band .head{padding:8px 4px; margin-bottom:clamp(20px, 2.2vw, 30px)}
   .band .top{display:flex; align-items:center; gap:10px; margin-bottom:8px}
-  .band .ic{width:26px; height:26px; border-radius:8px; display:grid; place-items:center; flex:none;
-    background:var(--brand-bg); color:var(--brand-soft)}
-  .band .ic svg{width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round}
+  .band .ic{width:18px; height:18px; display:grid; place-items:center; flex:none; color:var(--txt3)}
+  .band .ic svg{width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round}
   .band h3{font-size:15px; font-weight:600; letter-spacing:-.01em}
-  .band p{font-size:13.5px; line-height:1.55; color:var(--txt2); max-width:34ch; padding-left:36px}
+  .band p{font-size:13.5px; line-height:1.55; color:var(--txt2); max-width:34ch; padding-left:28px}
 
   /* --------------------------------------------------------------- sections */
   .sec{padding:clamp(46px, 6vw, 84px) 0}
@@ -176,14 +152,21 @@
   .under-row{display:grid; grid-template-columns:.34fr 1fr; gap:clamp(20px, 3vw, 48px);
     padding:clamp(26px, 3vw, 36px) 0 clamp(4px, .6vw, 10px); border-top:1px solid var(--line); margin-top:clamp(26px, 3vw, 36px)}
   .under-row .k{font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--txt3); padding-top:2px}
-  .under-row p{color:var(--txt2); font-size:14px; line-height:1.65; max-width:78ch}
+  .under-row p{color:var(--txt2); font-size:14px; line-height:1.65; max-width:68ch}
 
   /* -------------------------------------------------------------- demo frame */
   .frame{border:1px solid var(--line); border-radius:var(--r-card); overflow:hidden; background:var(--panel)}
-  .frame .chrome{height:38px; display:flex; align-items:center; gap:7px; padding:0 14px;
+  .frame .chrome{height:34px; display:flex; align-items:center; gap:7px; padding:0 0 0 10px;
     border-bottom:1px solid var(--line); background:var(--side)}
   .frame .chrome .dot{width:9px; height:9px; border-radius:50%; background:rgb(255 255 255 / .13)}
   .frame .chrome .url{margin-left:10px; font-size:11.5px; color:var(--txt3)}
+  .frame .chrome.win{gap:8px; padding-right:0}
+  .frame .chrome .cap-ico{border-radius:4px}
+  .frame .chrome .cap-btns{margin-left:auto; display:flex; align-items:stretch; align-self:stretch; color:var(--txt3)}
+  .frame .chrome .cap-btns button{width:44px; display:grid; place-items:center; background:transparent; border:0; color:inherit; cursor:default}
+  .frame .chrome .cap-btns button:hover{background:rgb(255 255 255 / .06)}
+  .frame .chrome .cap-btns button:last-child:hover{background:#c42b1c; color:#fff}
+  .frame .chrome .cap-btns svg{display:block; opacity:.75}
   .stage-win{position:relative; width:100%; aspect-ratio:1280 / 800; background:var(--bg); overflow:hidden}
   .stage-win iframe{position:absolute; top:0; left:0; width:1280px; height:800px; border:0;
     transform-origin:top left; transform:scale(var(--s, 1)); opacity:0; transition:opacity .5s var(--ease)}
@@ -217,13 +200,12 @@
   .feat li{background:var(--panel); padding:clamp(20px, 2.2vw, 26px); transition:background .25s var(--ease)}
   .feat li:hover{background:var(--raise)}
   .feat .top{display:flex; align-items:center; gap:10px; margin-bottom:8px}
-  .feat .ic{width:28px; height:28px; border-radius:8px; display:grid; place-items:center; flex:none;
-    background:var(--brand-bg); color:var(--brand-soft);
-    transition:transform .25s var(--ease), background .25s var(--ease)}
-  .feat li:hover .ic{transform:translateY(-2px); background:rgb(61 123 255 / .17)}
-  .feat .ic svg{width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round}
+  .feat .ic{width:18px; height:18px; display:grid; place-items:center; flex:none;
+    color:var(--txt2); transition:color .25s var(--ease)}
+  .feat li:hover .ic{color:var(--brand-soft)}
+  .feat .ic svg{width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
   .feat h3{font-size:14px; font-weight:600; letter-spacing:-.01em}
-  .feat p{font-size:13px; line-height:1.55; color:var(--txt2); padding-left:38px}
+  .feat p{font-size:13px; line-height:1.55; color:var(--txt2); padding-left:28px}
 
   /* ---------------------------------------------------------------- valorant */
   .valo{position:relative; padding:clamp(26px, 3vw, 38px);
@@ -253,13 +235,14 @@
   .trans{display:flex; align-items:center; gap:clamp(16px, 2vw, 28px); flex-wrap:wrap;
     padding:clamp(18px, 2vw, 24px); background:var(--panel); border:1px solid var(--line); border-radius:var(--r-card)}
   .trans .k{font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--txt3)}
-  .seg{position:relative; display:inline-flex; padding:3px; border-radius:9px; background:rgb(255 255 255 / .045)}
-  .seg .pill{position:absolute; top:3px; left:3px; height:calc(100% - 6px); border-radius:6px;
+  .seg{position:relative; display:inline-flex; align-items:center; height:48px; padding:4px;
+    border-radius:10px; background:rgb(255 255 255 / 0.05)}
+  .seg .pill{position:absolute; top:4px; left:4px; height:calc(100% - 8px); border-radius:8px;
     background:var(--brand-bg); border:1px solid var(--brand-line);
     transition:transform .34s var(--ease), width .34s var(--ease)}
-  .seg button{position:relative; z-index:1; height:34px; padding:0 14px; border:0; background:transparent;
-    color:var(--txt3); font:inherit; font-size:13px; font-weight:500; cursor:pointer;
-    border-radius:6px; transition:color .2s var(--ease)}
+  .seg button{position:relative; z-index:1; height:100%; padding:0 16px; border:0; background:transparent;
+    color:var(--txt3); font:inherit; font-size:14px; font-weight:500; cursor:pointer;
+    border-radius:8px; transition:color .2s var(--ease)}
   .seg button[aria-pressed="true"]{color:var(--txt)}
   .seg button:hover{color:var(--txt2)}
   .tnote{display:flex; align-items:flex-start; gap:8px; font-size:13px; color:var(--txt2); flex:1 1 280px; min-width:0}
@@ -309,7 +292,6 @@
   @keyframes nudge{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
   @media (prefers-reduced-motion: reduce){
     .rv,.rv .st,.hero .rise{opacity:1; transform:none; transition:none}
-    .stage-session .dial .lit{transition:none}
     .seg .pill{transition:none}
     .nudge{animation:none}
     .btn:hover,.feat li:hover .ic{transform:none}
@@ -319,7 +301,7 @@
   @media (max-width:980px){
     .hero{grid-template-columns:1fr; gap:34px; padding-top:clamp(30px, 6vw, 52px)}
     .hero h1{max-width:none}
-    .stage-session{max-width:500px; width:100%; justify-self:start}
+    .frame.shot{max-width:520px; width:100%; justify-self:start}
     .band .in{grid-template-columns:1fr}
     .feat{grid-template-columns:1fr 1fr}
     .phone-row{grid-template-columns:1fr; gap:28px}
@@ -401,24 +383,18 @@
       <p class="meta rise" id="dlMeta"><b>Free and open source.</b> Windows 10 and 11, and Android. 17 MB.</p>
     </div>
 
-    <div class="stage-session" id="stage" role="img" aria-label="The session view: connected on the Gamerz package, 62.5 of 100 GB left, which the blue arc shows, in Standard mode">
-      <span class="cap">Session</span>
-      <div class="dial">
-        <svg viewBox="0 0 220 220" aria-hidden="true">
-          <circle class="track" cx="110" cy="110" r="100"/>
-          <circle class="lit" cx="110" cy="110" r="100"/>
-        </svg>
-        <span class="plate">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg>
+    <figure class="frame shot rise">
+      <div class="chrome win">
+        <img class="cap-ico" src="assets/icon.png" alt="" width="14" height="14">
+        <span class="url">QuotaVPN</span>
+        <span class="cap-btns" aria-hidden="true">
+          <button type="button" tabindex="-1"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 5h10" stroke="currentColor" stroke-width="1"/></svg></button>
+          <button type="button" tabindex="-1"><svg width="10" height="10" viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1"/></svg></button>
+          <button type="button" tabindex="-1"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10" stroke="currentColor" stroke-width="1"/></svg></button>
         </span>
       </div>
-      <div class="state">Connected<small>Gamerz, 42 minutes</small></div>
-      <div class="cells">
-        <div class="cell"><div class="k">Package</div><div class="v">Gamerz</div></div>
-        <div class="cell"><div class="k">Mode</div><div class="v">Standard</div></div>
-        <div class="cell"><div class="k">Left</div><div class="v">62.5 GB</div></div>
-      </div>
-    </div>
+      <img src="assets/app-home.png" alt="The QuotaVPN home screen: the power control, the Gamerz and Streamerz profiles, and the WE quota beside them" width="1582" height="991">
+    </figure>
   </section>
 
   <!-- three steps, then the honest sentence underneath -->
@@ -696,9 +672,9 @@
   }
 })();
 
-/* Motion in three parts: the hero arrives once, sections rise once as they
-   come into view, and the session draws its arc when it is actually on
-   screen. Nothing loops and nothing runs on a timer. */
+/* The hero arrives once and sections rise once as they come into view. The
+   demos below load and lift themselves; nothing loops and nothing runs on a
+   timer. */
 (function(){
   var reduce = false;
   try{ reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
@@ -721,21 +697,6 @@
       });
     }, { rootMargin:'0px 0px -10% 0px', threshold:0.06 });
     blocks.forEach(function(b){ io.observe(b); });
-  }
-
-  var stage = document.getElementById('stage');
-  if(stage){
-    if(reduce || !('IntersectionObserver' in window)){ stage.classList.add('lit'); }
-    else {
-      var si = new IntersectionObserver(function(list){
-        list.forEach(function(e){
-          if(!e.isIntersecting) return;
-          setTimeout(function(){ stage.classList.add('lit'); }, 160);
-          si.unobserve(e.target);
-        });
-      }, { threshold:0.4 });
-      si.observe(stage);
-    }
   }
 })();
 
