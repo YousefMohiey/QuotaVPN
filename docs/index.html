@@ -115,12 +115,13 @@
 
   /* -------------------------------------------------------------------- hero */
   .hero{display:grid; grid-template-columns:1fr 1.05fr; gap:clamp(32px, 5vw, 72px);
-    align-items:center; padding:clamp(48px, 7vw, 92px) 0 clamp(36px, 4vw, 60px)}
+    align-items:center; padding-block:clamp(48px, 7vw, 92px) clamp(36px, 4vw, 60px)}
   .hero h1{font-size:clamp(34px, 4.2vw, 58px); line-height:1.03; letter-spacing:-.035em;
     font-weight:600; max-width:15ch; margin-top:16px; text-wrap:balance}
   .hero .lead{margin-top:20px; max-width:46ch; color:var(--txt2); font-size:clamp(15px, 1.1vw, 16.5px); text-wrap:pretty}
   .hero .act{display:flex; align-items:center; gap:10px; margin-top:28px; flex-wrap:wrap}
-  .hero .meta{margin-top:14px; color:var(--txt3); font-size:12.5px}
+  .hero .meta{margin-top:14px; color:var(--txt3); font-size:12.5px; text-wrap:pretty}
+  .hero .meta b{color:var(--txt2); font-weight:500}
   .hero .meta b{color:var(--txt2); font-weight:500}
 
   /* the product shot sits in the same chrome the live demos use */
@@ -128,7 +129,7 @@
 
   /* ------------------------------------------------------------------- bands */
   .band{border-top:1px solid var(--line); border-bottom:1px solid var(--line); background:var(--side);
-    padding:clamp(30px, 3.6vw, 46px) 0}
+    padding-block:clamp(30px, 3.6vw, 46px)}
   .band .in{display:grid; grid-template-columns:repeat(3, 1fr); gap:1px; background:var(--line)}
   .band .in > div{background:var(--side); padding:clamp(22px, 2.4vw, 30px) clamp(18px, 2vw, 28px)}
   .band .head{padding:8px 4px; margin-bottom:clamp(20px, 2.2vw, 30px)}
@@ -139,7 +140,7 @@
   .band p{font-size:13.5px; line-height:1.55; color:var(--txt2); max-width:34ch; padding-left:28px}
 
   /* --------------------------------------------------------------- sections */
-  .sec{padding:clamp(46px, 6vw, 84px) 0}
+  .sec{padding-block:clamp(46px, 6vw, 84px)}
   .sec + .sec{border-top:1px solid var(--line)}
   .head{display:flex; align-items:baseline; gap:16px; flex-wrap:wrap; margin-bottom:clamp(20px, 2.2vw, 30px)}
   .head h2{font-size:clamp(22px, 2.4vw, 30px); line-height:1.15; letter-spacing:-.025em; font-weight:600}
@@ -250,7 +251,7 @@
   #transports .head{justify-content:center; text-align:center; margin-bottom:clamp(18px, 2vw, 26px)}
 
   /* -------------------------------------------------------------------- close */
-  .close{text-align:center; padding:clamp(56px, 8vw, 108px) 0 clamp(44px, 6vw, 74px)}
+  .close{text-align:center; padding-block:clamp(56px, 8vw, 108px) clamp(44px, 6vw, 74px)}
   .close .ready{font-size:clamp(24px, 3vw, 40px); font-weight:600; letter-spacing:-.03em; line-height:1.1}
   .close .magnet{margin-top:26px; height:52px; padding:0 24px; border-radius:12px; border:1px solid transparent;
     background:var(--brand); color:#fff; font:inherit; font-size:15px; font-weight:600; cursor:pointer;
@@ -262,7 +263,7 @@
 
   /* ------------------------------------------------------------------- footer */
   footer{border-top:1px solid var(--line); background:var(--side)}
-  footer .in{display:flex; align-items:center; gap:22px; padding:22px 0; flex-wrap:wrap; font-size:12.5px; color:var(--txt3)}
+  footer .in{display:flex; align-items:center; gap:22px; padding-block:22px; flex-wrap:wrap; font-size:12.5px; color:var(--txt3)}
   footer .brand{display:flex; align-items:center; gap:9px; color:var(--txt2)}
   footer .brand img{width:20px; height:20px; border-radius:6px}
   footer .sp{flex:1}
@@ -301,6 +302,8 @@
     .hero{grid-template-columns:1fr; gap:34px; padding-top:clamp(30px, 6vw, 52px)}
     .hero h1{max-width:none}
     .frame.shot{max-width:520px; width:100%; justify-self:start}
+    .frame.shot picture{display:block}
+    .frame.shot > img, .frame.shot picture img{display:block; width:100%; height:auto}
     .band .in{grid-template-columns:1fr}
     .feat{grid-template-columns:1fr 1fr}
     .phone-row{grid-template-columns:1fr; gap:28px}
@@ -310,6 +313,7 @@
     .hdr nav{display:none}
     .hdr .cta{margin-left:auto}
     .hdr .cta .ico-win{display:none}
+    .hdr .cta{height:40px; padding:0 14px; font-size:13px}
     .hdr .cta .ico-droid{display:block}
     .feat{grid-template-columns:1fr}
     .vpaths{grid-template-columns:1fr}
@@ -319,13 +323,16 @@
     .hero .act .dl-apk{background:var(--brand); border-color:transparent; color:#fff}
     .stage-win{aspect-ratio:auto; height:auto}
     .stage-win iframe{display:none}
-    .stage-win .still{position:static; width:100%; height:auto}
+    .stage-win .still, .stage-win.ready .still, .stage-win.solid .still{display:block; position:static; width:100%; height:auto}
     .touch-note{display:block}
     .trans{gap:14px}
     .seg{width:100%}
     .seg button{flex:1; padding:0 8px}
     .phone{max-width:236px}
+    .hero .frame.shot{max-width:300px; justify-self:start}
+    .hero .frame.shot .chrome{display:none}
     .phone-copy .dl-apk{display:none}
+    .hero .meta{font-size:13px; line-height:1.5}
   }
 
   /* --------------------------------------------------------------- a11y bits */
@@ -377,7 +384,7 @@
           Get the Android APK
         </a>
       </div>
-      <p class="meta rise" id="dlMeta"><b>Free and open source.</b> Windows 10 and 11, and Android. 17 MB.</p>
+      <p class="meta rise" id="dlMeta"><b>Free and open source.</b> Windows 10 and 11, and Android.&nbsp;17&nbsp;MB.</p>
     </div>
 
     <figure class="frame shot rise">
@@ -390,7 +397,10 @@
           <button type="button" tabindex="-1"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10" stroke="currentColor" stroke-width="1"/></svg></button>
         </span>
       </div>
-      <img src="assets/app-home.png" alt="The QuotaVPN home screen: the power control, the Gamerz and Streamerz profiles, and the WE quota beside them" width="1582" height="991">
+      <picture>
+        <source media="(max-width:760px)" srcset="assets/app-phone.png?v=3">
+        <img src="assets/app-home.png?v=2" alt="The QuotaVPN home screen: the power control, the Gamerz and Streamerz profiles, and the WE quota beside them" width="1582" height="991">
+      </picture>
     </figure>
   </section>
 
@@ -435,12 +445,12 @@
     <div class="head rv">
       <h2>Try the builds. <span>Interactive demo, no traffic is routed.</span></h2>
     </div>
-    <p class="sub rv">The Windows build, live. Press the circle, pick a package, open the speed page. It is the app itself, not a video of it.</p>
+    <p class="sub rv">Press the circle, pick a package, open the speed page. It is the app itself, not a video of it.</p>
     <div class="frame rv">
       <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">QuotaVPN, Windows</span></div>
       <div class="stage-win" id="winBody">
         <iframe id="appFrame" data-src="demo-frame.html?src=app/index.html&amp;n=win" title="QuotaVPN for Windows, live interactive demo"></iframe>
-        <img class="still" src="assets/app-home.png" alt="QuotaVPN for Windows" width="2644" height="1744" loading="lazy">
+        <img class="still" src="assets/app-home.png?v=2" alt="QuotaVPN for Windows" width="1582" height="991" decoding="async">
       </div>
     </div>
     <p class="touch-note">Static preview on touch screens. The Android demo below is live.</p>
@@ -573,8 +583,8 @@
 
   <section class="shell close">
     <p class="ready rv">Ready when you are.</p>
-    <button class="magnet rv" id="goDl" type="button" aria-label="Take me up to the download">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>
+    <button class="magnet rv" id="goDl" type="button" aria-label="Scroll to the download">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
       <span class="face">Get QuotaVPN</span>
     </button>
     <p class="under2 rv">Free and open source, MIT licensed, no account.</p>
@@ -617,7 +627,7 @@
     if(exe){
       document.querySelectorAll('.dl-win').forEach(function(el){ el.setAttribute('href', exe.browser_download_url); });
       var meta = document.getElementById('dlMeta');
-      if(meta) meta.innerHTML = '<b>Free and open source.</b> Windows 10 and 11, and Android. ' + mb(exe.size) + '.';
+      if(meta) meta.innerHTML = '<b>Free and open source.</b> Windows 10 and 11, and Android. ' + mb(exe.size).replace(' ', ' ') + '.';
     }
     if(apk){
       document.querySelectorAll('.dl-apk').forEach(function(el){ el.setAttribute('href', apk.browser_download_url); });
