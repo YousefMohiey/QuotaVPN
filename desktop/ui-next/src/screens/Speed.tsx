@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Activity, ArrowDown, ArrowUp, ChevronDown, Cloud, Gauge, Gamepad2, Globe, RefreshCw, Server, Tv, Video, Wifi } from "lucide-react"
+import { Activity, ArrowDown, ArrowUp, ChevronDown, Cloud, Gauge, Gamepad2, RefreshCw, Server, Tv, Video, Wifi } from "lucide-react"
 import { PickerDialog } from "@/components/PickerDialog"
 import { SpeedDial } from "@/components/SpeedDial"
 import { useApp } from "@/state/app"
@@ -616,44 +616,11 @@ export function Speed() {
   ]
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1120px] flex-col gap-3">
-      <div className="flex items-end justify-between gap-6">
-        <div className="min-w-0 flex-1">
-          <h1 className="font-display text-[22px] font-semibold leading-tight tracking-[-0.02em] text-txt">{t("tabSpeed")}</h1>
-          <p className="mt-1 text-[12.5px] text-txt2">{t("speedTag")}</p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => setPickOpen(true)}
-            disabled={running}
-            aria-label={t("pickServer")}
-            title={t("pickServer")}
-            className="flex h-8 min-w-[140px] max-w-[220px] items-center gap-2 rounded-[7px] border border-line bg-white/[0.02] px-2.5 text-[12px] text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-not-allowed"
-          >
-            <Globe className="size-3.5 shrink-0 text-txt3" aria-hidden />
-            <span className="min-w-0 flex-1 truncate" dir="auto">
-              {picking ? t("findingServer") : srv.label}
-            </span>
-            <ChevronDown className="size-3.5 shrink-0 text-txt3" aria-hidden />
-          </button>
-          <button
-            type="button"
-            onClick={() => void refreshAll()}
-            disabled={refreshing}
-            aria-label={t("refresh")}
-            title={t("refresh")}
-            className="grid size-8 shrink-0 place-items-center rounded-[7px] border border-line bg-white/[0.02] text-txt2 transition-colors duration-200 hover:border-[var(--brand-line)] hover:text-brand-strong disabled:cursor-wait"
-          >
-            <RefreshCw className={cn("size-3.5", refreshing && "animate-spin")} aria-hidden />
-          </button>
-        </div>
-      </div>
-
-      {/* The test, in the Home language: the dial holds the left half, the
-          four readings stack down the right half, one hairline between. */}
-      <section className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.16fr)_minmax(0,1fr)] overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
-        <div className="flex min-h-0 flex-col items-center justify-center gap-2 p-6">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1180px] flex-col gap-3">
+      {/* one surface, the Home language: the dial holds the stage, the four
+          readings stand in the rail beside it, and the facts sit in the band */}
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+        <section className="flex min-h-0 flex-col items-center justify-center gap-4 px-6 py-5">
           <SpeedDial
             display={fmt(value, unit)}
             value={dialValue}
@@ -664,85 +631,137 @@ export function Speed() {
             onStart={() => void run("all")}
             onStop={stop}
           />
-          {shown.length > 0 && !(phase === "done" && fmt(peak, unit) === fmt(value, unit)) && (
-            <div className="text-[12px] tabular-nums text-txt3">
-              {t("peak")} {fmt(peak, unit)} {unit}
-            </div>
-          )}
-        </div>
 
-        <div className="flex min-h-0 flex-col border-s border-line">
-          <div className="flex items-center gap-2.5 border-b border-line px-5 py-3">
-            <Gauge className="size-4 shrink-0 text-txt2" strokeWidth={1.7} aria-hidden />
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-[12.5px] font-medium text-txt">{t("speedTest")}</div>
-            </div>
-            <div className="max-w-[45%] truncate text-end text-[12px] text-txt3">
-              {phase === "done" ? t("doneLabel") : running ? t("measuring") : hint || t("idle")}
-            </div>
+          <div className="flex min-w-0 flex-col items-center gap-1 text-center">
+            <span className={cn("truncate font-display text-[23px] font-semibold leading-tight tracking-[-0.02em]", running ? "text-brand-strong" : "text-txt")}>
+              {phase === "done" ? t("doneLabel") : running ? t("measuring") : t("idle")}
+            </span>
+            <span className="max-w-[380px] text-[12px] leading-snug text-txt2">{hint || t("speedTag")}</span>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col divide-y divide-line">
-            <ReadingCell
+          <div className="grid w-full max-w-[440px] shrink-0 grid-cols-2 overflow-hidden rounded-[10px] bg-white/[0.03]">
+            <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-2.5">
+              <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("selServer")}</span>
+              <span className="w-full truncate text-center text-[13px] text-txt" dir="auto">
+                {picking ? t("findingServer") : srv.label}
+              </span>
+            </span>
+            <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-2.5">
+              <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("peak")}</span>
+              <span className="truncate text-[13px] tabular-nums text-txt">
+                {shown.length > 0 ? `${fmt(peak, unit)} ${unit}` : "-"}
+              </span>
+            </span>
+          </div>
+        </section>
+
+        <aside className="flex min-h-0 flex-col border-s border-line bg-[var(--side)] px-4 py-4">
+          <div className="flex shrink-0 items-center gap-2.5 pb-3">
+            <Gauge className="size-4 shrink-0 text-txt2" strokeWidth={1.7} aria-hidden />
+            <span className="min-w-0 flex-1 truncate text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
+              {t("speedTest")}
+            </span>
+          </div>
+
+          <div className="flex min-h-0 flex-1 flex-col gap-2">
+            <ReadingCard
               icon={Gauge}
               label={t("pingTitle")}
               value={phase === "ping" ? value : result.ping}
               unit={t("ms")}
+              wide
               onClick={() => void run("ping")}
               disabled={running}
               live={phase === "ping"}
             />
-            <ReadingCell icon={Activity} label={t("jitter")} value={result.jitter} unit={t("ms")} onClick={() => void run("ping")} disabled={running} />
-            <ReadingCell
+            <ReadingCard
+              icon={Activity}
+              label={t("jitter")}
+              value={result.jitter}
+              unit={t("ms")}
+              onClick={() => void run("ping")}
+              disabled={running}
+            />
+            <ReadingCard
               icon={ArrowDown}
               label={t("chDown")}
               value={phase === "download" ? value : result.down}
               unit={t("mbps")}
+              wide
               onClick={() => void run("down")}
               disabled={running}
               live={phase === "download"}
             />
-            <ReadingCell
+            <ReadingCard
               icon={ArrowUp}
               label={t("chUp")}
               value={phase === "upload" ? value : result.up}
               unit={t("mbps")}
+              wide
               onClick={() => void run("up")}
               disabled={running}
               live={phase === "upload"}
             />
           </div>
-        </div>
-      </section>
+        </aside>
+      </div>
 
-      {/* Where the test ran: measured against, hosted by, you. */}
-      <section className="rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
-        <div
-          className={cn(
-            "grid",
-            netInfo ? "grid-cols-3" : "grid-cols-2",
-          )}
-        >
-          <FactRow
-            icon={Server}
-            title={t("selServer")}
-            main={srv.label}
-            lines={picking ? [t("findingServer")] : [srv.detail || srv.host]}
-          />
-          <FactRow
-            icon={Cloud}
-            title={t("hostedBy")}
-            main={sponsor}
-            lines={srv.id === "cloudflare" ? ["speed.cloudflare.com", "Cloudflare, Inc."] : [srv.host]}
-          />
-          {netInfo && (
-            <FactRow
-              icon={Wifi}
-              title={t("yourConn")}
-              main={netInfo.isp || netInfo.ip}
-              lines={[netInfo.isp ? netInfo.ip : "", netInfo.place]}
-            />
-          )}
+      {/* where the run is pointed, who hosts it, what you are on */}
+      <section className="grid shrink-0 grid-cols-3 overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+        <div className="flex min-w-0 flex-col justify-center gap-2 px-5 py-4">
+          <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
+            <Server className="size-3.5 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
+            <span className="truncate">{t("selServer")}</span>
+          </span>
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPickOpen(true)}
+              disabled={running}
+              aria-label={t("pickServer")}
+              className="press group flex min-w-0 flex-1 items-center gap-2 text-start text-txt transition-colors disabled:cursor-not-allowed"
+            >
+              <span className="min-w-0 flex-1 truncate text-[13px]" dir="auto">
+                {picking ? t("findingServer") : srv.label}
+              </span>
+              <ChevronDown className="size-3.5 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
+            </button>
+            <button
+              type="button"
+              onClick={() => void refreshAll()}
+              disabled={refreshing}
+              aria-label={t("refresh")}
+              title={t("refresh")}
+              className="press grid size-7 shrink-0 place-items-center rounded-full text-txt3 transition-colors hover:text-brand-strong disabled:cursor-wait"
+            >
+              <RefreshCw className={cn("size-3.5", refreshing && "animate-spin")} aria-hidden />
+            </button>
+          </div>
+          <span className="truncate text-[12px] text-txt3" dir="auto">{srv.detail || srv.host}</span>
+        </div>
+
+        <div className="flex min-w-0 flex-col justify-center gap-2 border-s border-line px-5 py-4">
+          <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
+            <Cloud className="size-3.5 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
+            <span className="truncate">{t("hostedBy")}</span>
+          </span>
+          <span className="truncate text-[13px] font-medium text-txt" dir="auto">{sponsor}</span>
+          <span className="truncate text-[12px] text-txt3" dir="auto">
+            {srv.id === "cloudflare" ? "speed.cloudflare.com" : srv.host}
+          </span>
+        </div>
+
+        <div className="flex min-w-0 flex-col justify-center gap-2 border-s border-line px-5 py-4">
+          <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
+            <Wifi className="size-3.5 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
+            <span className="truncate">{t("yourConn")}</span>
+          </span>
+          <span className="truncate text-[13px] font-medium text-txt" dir="auto">
+            {netInfo ? netInfo.isp || netInfo.ip : "-"}
+          </span>
+          <span className="truncate text-[12px] text-txt3" dir="auto">
+            {netInfo ? [netInfo.isp ? netInfo.ip : "", netInfo.place].filter(Boolean).join(" · ") : ""}
+          </span>
         </div>
       </section>
 
@@ -795,13 +814,13 @@ export function buildVerdicts(r: Result, t: (k: StrKey) => string): Verdict[] {
   return out
 }
 
-/** One reading, as a row: quiet icon and label, the number right-aligned.
-    The whole row is the button, so any single metric can be measured alone. */
-function ReadingCell({
+/** One reading as a small card: the whole card measures that metric alone. */
+function ReadingCard({
   icon: Icon,
   label,
   value,
   unit,
+  wide,
   onClick,
   disabled,
   live,
@@ -810,6 +829,7 @@ function ReadingCell({
   label: string
   value: number | null
   unit: string
+  wide?: boolean
   onClick: () => void
   disabled?: boolean
   live?: boolean
@@ -821,60 +841,28 @@ function ReadingCell({
       disabled={disabled}
       title={label}
       className={cn(
-        "flex min-h-0 min-w-0 flex-1 items-center gap-3 px-5 text-start transition-colors",
-        !disabled && "hover:bg-white/[0.03]",
+        "press flex min-h-0 min-w-0 flex-1 flex-col justify-center gap-2.5 rounded-[10px] px-3.5 py-3.5 text-start transition-colors",
+        live ? "bg-[var(--brand-bg)]" : "bg-white/[0.035]",
+        !disabled && !live && "hover:bg-white/[0.055]",
+        disabled && "cursor-default",
       )}
     >
-      <Icon className={cn("size-3.5 shrink-0", live ? "text-brand-strong" : "text-txt3")} strokeWidth={1.7} aria-hidden />
-      <span className="min-w-0 flex-1 truncate text-[12px] text-txt2">{label}</span>
-      <span className="flex shrink-0 items-baseline gap-1.5">
+      <span className="flex min-w-0 items-center gap-2">
+        <Icon className={cn("size-3.5 shrink-0", live ? "text-brand-strong" : "text-txt3")} strokeWidth={1.7} aria-hidden />
+        <span className="truncate text-[11px] font-medium uppercase tracking-[0.09em] text-txt2">{label}</span>
+      </span>
+      <span className="flex min-w-0 items-baseline gap-1.5">
         <span
           className={cn(
-            "font-display text-[16px] font-semibold leading-none tabular-nums",
+            "font-display font-semibold leading-none tabular-nums",
+            wide ? "text-[34px]" : "text-[26px]",
             value === null ? "text-txt3" : live ? "text-brand-strong" : "text-txt",
           )}
         >
           {value === null ? "-" : fmt(value, unit === "ms" ? "ms" : "Mbps")}
         </span>
-        <span className="text-[11px] text-txt3">{unit}</span>
+        <span className="text-[11.5px] text-txt3">{unit}</span>
       </span>
     </button>
   )
-}
-
-function FactRow({
-  icon: Icon,
-  title,
-  main,
-  lines,
-}: {
-  icon: typeof Gauge
-  title: string
-  main: string
-  lines: string[]
-}) {
-  return (
-    <div className="flex min-w-0 items-center gap-3.5 px-5 py-3">
-      <Icon className="size-4 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
-      <div className="min-w-0">
-        <div className="text-[11px] font-medium tracking-[0.08em] text-txt3 uppercase">{title}</div>
-        <div className={cn("mt-0.5 leading-snug font-semibold break-words text-txt", fitSize(main, true))} dir="auto">
-          {main}
-        </div>
-        {lines.filter(Boolean).map((l, i) => (
-          <div key={i} className={cn("[overflow-wrap:anywhere] text-txt3", fitSize(l, false))} dir="auto">
-            {l}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/** Long server names must fit their column: the value steps down a size as
- *  it grows, and anything still too long wraps instead of clipping. */
-function fitSize(s: string, main: boolean): string {
-  const n = s.length
-  if (main) return n > 30 ? "text-[12px]" : n > 20 ? "text-[13px]" : "text-[14px]"
-  return n > 30 ? "text-[12px]" : n > 24 ? "text-[12px]" : "text-[12.5px]"
 }
