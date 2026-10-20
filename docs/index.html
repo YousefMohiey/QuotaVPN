@@ -89,7 +89,6 @@
   .brand{display:flex; align-items:center; gap:10px; flex:none}
   .brand img{width:28px; height:28px; border-radius:8px}
   .brand .name{font-size:15px; font-weight:600; letter-spacing:-.01em}
-  .chip{font-size:11.5px; color:var(--txt3); border:1px solid var(--line); border-radius:999px; padding:2px 8px}
   .hdr nav{display:flex; align-items:center; gap:clamp(14px, 1.7vw, 26px); font-size:13px; color:var(--txt2); margin-left:auto}
   .hdr nav a{position:relative; padding:5px 0; transition:color .18s var(--ease)}
   .hdr nav a::after{content:""; position:absolute; left:0; right:0; bottom:0; height:1px;
@@ -312,7 +311,6 @@
     .hdr .cta{margin-left:auto}
     .hdr .cta .ico-win{display:none}
     .hdr .cta .ico-droid{display:block}
-    .brand .chip{display:none}
     .feat{grid-template-columns:1fr}
     .vpaths{grid-template-columns:1fr}
     .hero .act{flex-direction:column-reverse; align-items:stretch}
@@ -347,7 +345,6 @@
     <a class="brand" href="#top">
       <img src="assets/icon.png" alt="" width="28" height="28">
       <span class="name">QuotaVPN</span>
-      <span class="chip" id="ver">v0.4.7</span>
     </a>
     <nav>
       <a href="#how">How it works</a>
@@ -596,7 +593,7 @@
 </footer>
 
 <script>
-/* One call drives the whole page: the version chip, the structured data and
+/* One call drives the whole page: the structured data and
    every Windows button. The installer asset carries the version in its name,
    so the buttons point at the URL the API handed us instead of sending anyone
    through the releases page. Cached for ten minutes. */
@@ -607,7 +604,6 @@
   function apply(d){
     var tag = d && d.tag_name ? 'v' + String(d.tag_name).replace(/^v/i, '') : null;
     if(tag){
-      var chip = document.getElementById('ver'); if(chip) chip.textContent = tag;
       var sc = document.getElementById('app-schema');
       if(sc && sc.textContent){
         sc.textContent = sc.textContent.replace(/"softwareVersion":\s*"[^"]*"/, '"softwareVersion": "' + tag.replace(/^v/i, '') + '"');
