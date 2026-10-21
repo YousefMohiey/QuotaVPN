@@ -329,8 +329,8 @@
     .seg{width:100%}
     .seg button{flex:1; padding:0 8px}
     .phone{max-width:236px}
-    .hero .frame.shot{max-width:300px; justify-self:start}
-    .hero .frame.shot picture img{aspect-ratio:360 / 779}
+    .hero .frame.shot{display:none}
+    .hero{gap:clamp(26px, 5vw, 40px)}
     .hero .frame.shot .chrome{display:none}
     .phone-copy .dl-apk{display:none}
     .hero .meta{font-size:13px; line-height:1.5}
@@ -398,10 +398,7 @@
           <button type="button" tabindex="-1"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10" stroke="currentColor" stroke-width="1"/></svg></button>
         </span>
       </div>
-      <picture>
-        <source media="(max-width:760px)" srcset="assets/app-phone.png?v=4 3x">
-        <img src="assets/app-home.png?v=2" alt="The QuotaVPN home screen: the power control, the Gamerz and Streamerz profiles, and the WE quota beside them" width="1582" height="991">
-      </picture>
+      <img src="assets/app-home.png?v=2" loading="lazy" decoding="async" alt="The QuotaVPN home screen: the power control, the Gamerz and Streamerz profiles, and the WE quota beside them" width="1582" height="991">
     </figure>
   </section>
 
