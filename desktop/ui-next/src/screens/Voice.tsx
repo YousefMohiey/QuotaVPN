@@ -126,26 +126,49 @@ export function Voice() {
                 <p className="max-w-[430px] text-[12px] leading-relaxed text-txt3">{t("launchPanelBody")}</p>
               </div>
 
-              {/* the control: the game's shape, not a disc */}
-              <button
+              {/* the control: the game's shape, not a disc. It answers the
+                  press the way the Home dial does, and a second press turns
+                  the helper off again. */}
+              <motion.button
                 type="button"
                 onClick={() => void setHelper(!on)}
                 disabled={!card || busy}
                 aria-pressed={on}
-                aria-label={t("voiceRowTitle")}
-                className="press group relative grid size-[252px] shrink-0 place-items-center disabled:cursor-wait"
+                aria-label={on ? t("voiceDisconnect") : t("voiceRowTitle")}
+                whileTap={busy ? undefined : { scale: calm ? 1 : 0.955 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 520, damping: 26, mass: 0.7 }}
+                className="group relative grid size-[252px] shrink-0 place-items-center outline-none disabled:cursor-wait focus-visible:ring-2 focus-visible:ring-[var(--brand)]/50"
                 style={{ clipPath: PLATE }}
               >
                 <span aria-hidden className={cn("absolute inset-0 transition-colors duration-300", on ? "bg-[var(--green-line)]" : "bg-[var(--brand-line)]")} />
                 <span aria-hidden className="absolute inset-[2px] bg-[var(--panel)] transition-colors duration-200 group-hover:bg-[#14171a]" style={{ clipPath: PLATE }} />
-                <span className="relative flex flex-col items-center gap-3">
+                <motion.span
+                  aria-hidden
+                  className="absolute inset-[2px]"
+                  initial={false}
+                  animate={{ boxShadow: on ? "inset 0 0 64px rgb(40 160 110 / 0.18)" : "inset 0 0 0 rgb(0 0 0 / 0)" }}
+                  transition={{ duration: 0.45 }}
+                  style={{ clipPath: PLATE }}
+                />
+                <span className="relative flex flex-col items-center gap-2.5">
                   {busy ? (
                     <Loader2 className={cn("size-12", on ? "text-[var(--green)]" : "text-brand-strong", calm ? "" : "animate-spin")} aria-hidden />
                   ) : (
                     <Mic className={cn("size-12", on ? "text-[var(--green)]" : "text-txt2")} aria-hidden />
                   )}
+                  {/* the plate says what a press will do, so the second press
+                      is not a guess */}
+                  <span
+                    className={cn(
+                      "text-[10.5px] font-semibold uppercase tracking-[0.22em]",
+                      on ? "text-[var(--green)]/90" : "text-txt3",
+                    )}
+                  >
+                    {busy ? t("working") : on ? t("stop") : t("connect")}
+                  </span>
                 </span>
-              </button>
+              </motion.button>
             </div>
 
             {/* the switch sits on the floor, where a HUD keeps its settings */}

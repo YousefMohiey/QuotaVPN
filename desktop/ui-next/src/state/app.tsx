@@ -682,31 +682,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     // slide-back lands; clearing it early is what made data vanish mid-move.
     setVpnOn(false)
     try {
-      // The voice helper is its own tunnel: disconnecting drops the normal
-      // VPN and leaves the helper running on its own when it is on.
-      let voiceOn = false
+      // Off means off. The voice helper rides inside the same tunnel, so a
+      // press here ends the whole session. It used to restart the tunnel for
+      // the helper instead, which made the dial look dead: the user pressed
+      // disconnect and the VPN stayed up.
+      let voiceWasOn = false
       try {
-        voiceOn = localStorage.getItem("qc-voice-active") === "1"
+        voiceWasOn = localStorage.getItem("qc-voice-active") === "1"
       } catch {
         /* file:// */
-      }
-      const helperCard = voiceOn ? cards.find((c) => c.uuid === cardUuid) : undefined
-      if (helperCard) {
-        const rv = await api.start(helperCard.uuid, "allow", [], transport, true)
-        if (rv.ok) {
-          try {
-            localStorage.setItem("qc-voice-merged", "0")
-          } catch {
-            /* file:// */
-          }
-          setStatus("")
-          setSessionStart(null)
-          setRx(0)
-          setTx(0)
-          setConnected(false)
-          setPhase("idle")
-          return
-        }
       }
       const r = await api.stop()
       if (!r.ok) {
@@ -716,6 +700,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         setConnected(true)
         setPhase("on")
         return
+      }
+      if (voiceWasOn) {
+        try {
+          localStorage.removeItem("qc-voice-active")
+          localStorage.removeItem("qc-voice-merged")
+          localStorage.removeItem("qc-voice-auto")
+        } catch {
+          /* file:// */
+        }
+        setVoiceRunning(false)
+        setVoiceMsg("")
       }
       // A clean stop says nothing: the dial and the panel already show the
       // state, and the backend's "VPN off." line read as noise under the name.

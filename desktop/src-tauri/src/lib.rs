@@ -8,7 +8,7 @@
 
 use quotacards::{
     config::{AppConfig, Card, EMBED_KEY, DEFAULT_HOST, DEFAULT_PORT, DEFAULT_USER},
-    server, updater, vpn,
+    server, vpn,
 };
 use std::sync::Mutex;
 use tauri::Manager;
@@ -1575,7 +1575,10 @@ fn newer(latest: &str, current: &str) -> bool {
 }
 
 /// Short git hash of the build this binary came from (stamped in by
-/// build.rs), or "dev" when git was not available at build time.
+/// build.rs), or "dev" when git was not available at build time. The feed
+/// carries the same stamp, which is how a build identifies itself; the
+/// updater no longer offers a build of the version it is already running.
+#[allow(dead_code)]
 const BUILD_STAMP: &str = env!("QC_BUILD");
 
 /// Everything up to date: the shape the UI already renders as "latest".
@@ -1724,30 +1727,16 @@ async fn check_update(app: tauri::AppHandle, state: tauri::State<'_, State>) -> 
         .map_err(check_failed)?;
     match found {
         Some(u) => {
-            // An equal version number is a re-release: it is only real
-            // when the feed carries a build stamp other than this one.
-            let equal = u.version == current;
-            let available = if equal {
-                updater::offer_equal_version(
-                    u.raw_json.get("build").and_then(|v| v.as_str()),
-                    BUILD_STAMP,
-                )
-            } else {
-                newer(&u.version, &current)
-            };
-            if !available {
+            // Only a higher version is an update. Every build of a version
+            // line carries the same number, so accepting equals here turned
+            // the test channel into a permanent "update ready" notice for a
+            // build the user was already running.
+            if !newer(&u.version, &current) {
                 return Ok(up_to_date(&current));
             }
             Ok(UpdateInfo {
                 available: true,
-                // A same-version re-release carries a different build stamp,
-                // so its tag cannot be derived from the version: send the
-                // user to the release list instead of a tag URL.
-                url: if equal {
-                    format!("https://github.com/{REPO}/releases")
-                } else {
-                    format!("https://github.com/{REPO}/releases/tag/v{}", u.version)
-                },
+                url: format!("https://github.com/{REPO}/releases/tag/v{}", u.version),
                 latest: u.version,
                 // First line of the release notes, so the update notice can say
                 // what the build actually is (a hotfix reads as one) instead of
@@ -1796,15 +1785,10 @@ async fn apply_update(app: tauri::AppHandle, state: tauri::State<'_, State>) -> 
         .await
         .map_err(check_failed)?
         .ok_or_else(|| "Already on the latest build".to_string())?;
-    // Same guard as the check: an equal version number with a feed build
-    // stamp that is missing, empty or identical to this build is not an
-    // update, so refuse before the installer touches anything.
-    if update.version == current
-        && !updater::offer_equal_version(
-            update.raw_json.get("build").and_then(|v| v.as_str()),
-            BUILD_STAMP,
-        )
-    {
+    // Same guard as the check: only a higher version is an update, so refuse a
+    // feed that repeats the version this build already carries before the
+    // installer touches anything.
+    if !newer(&update.version, &current) {
         return Err("This build is already current".to_string());
     }
     if UPDATE_BUSY.swap(true, std::sync::atomic::Ordering::SeqCst) {

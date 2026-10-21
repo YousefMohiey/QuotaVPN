@@ -629,17 +629,40 @@ export function Speed() {
             phase={phase}
             runId={runId}
             onStart={() => void run("all")}
-            onStop={stop}
           />
 
-          <div className="flex min-w-0 flex-col items-center gap-1 text-center">
-            <span className={cn("truncate font-display text-[23px] font-semibold leading-tight tracking-[-0.02em]", running ? "text-brand-strong" : "text-txt")}>
-              {phase === "done" ? t("doneLabel") : running ? t("measuring") : t("idle")}
-            </span>
-            <span className="max-w-[380px] text-[12px] leading-snug text-txt2">
-              {phase === "done" ? t("startAgain") : hint || t("speedTag")}
-            </span>
-          </div>
+          {/* the run's own control strip: the dial stays a gauge, and the
+              stop sits beside the line that says what is being measured */}
+          {running ? (
+            <div className="flex w-full max-w-[372px] items-center gap-2.5 rounded-[10px] border border-line bg-white/[0.03] py-1.5 pe-1.5 ps-3">
+              <span className="relative grid size-2 shrink-0 place-items-center">
+                <span className="absolute size-2 rounded-full bg-brand-strong opacity-50 motion-safe:animate-ping" aria-hidden />
+                <span className="size-1.5 rounded-full bg-brand-strong" aria-hidden />
+              </span>
+              <span className="min-w-0 flex-1 truncate text-[12px] text-txt2">
+                <span className="font-medium text-brand-strong">{t("measuring")}</span>
+                <span className="text-txt3"> · </span>
+                {hint || t("speedTag")}
+              </span>
+              <button
+                type="button"
+                onClick={stop}
+                className="press flex h-8 shrink-0 items-center gap-2 rounded-[7px] border border-[var(--red-line)] bg-[rgb(207_112_120_/_0.12)] px-2.5 text-[12px] font-medium text-[var(--red)] transition-colors hover:bg-[rgb(207_112_120_/_0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/50"
+              >
+                <span className="size-2 rounded-[2px] bg-[var(--red)]" aria-hidden />
+                {t("stop")}
+              </button>
+            </div>
+          ) : (
+            <div className="flex min-w-0 flex-col items-center gap-1 text-center">
+              <span className={cn("truncate font-display text-[23px] font-semibold leading-tight tracking-[-0.02em]", "text-txt")}>
+                {phase === "done" ? t("doneLabel") : t("idle")}
+              </span>
+              <span className="max-w-[380px] text-[12px] leading-snug text-txt2">
+                {phase === "done" ? t("startAgain") : hint || t("speedTag")}
+              </span>
+            </div>
+          )}
 
           <div className="grid w-full max-w-[440px] shrink-0 grid-cols-2 overflow-hidden rounded-[10px] bg-white/[0.03]">
             <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-2.5">

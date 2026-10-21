@@ -246,6 +246,7 @@ export const en = {
   "voiceTitle": "Valorant",
   "voiceHelperLbl": "Helper",
   "voiceRowTitle": "Voice Chat for Valorant",
+  "voiceDisconnect": "Turn voice chat off",
   "voiceRowBody": "Use Valorant voice chat in your region through QuotaVPN without affecting your game connection or ping",
   "voiceActive": "Voice Chat Active",
   "voiceAutoOn": "Valorant opened: voice chat connected",

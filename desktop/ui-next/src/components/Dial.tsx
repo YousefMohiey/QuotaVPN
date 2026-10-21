@@ -1,4 +1,4 @@
-import { motion } from "motion/react"
+import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { Power } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/lib/i18n"
@@ -23,17 +23,35 @@ export function Dial({
   compact?: boolean
 }) {
   const { t } = useI18n()
+  const calm = useReducedMotion()
   const label = state === "connecting" ? t("working") : state === "on" ? t("disconnect") : t("connect")
 
   return (
-    <motion.button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={label}
-      whileTap={disabled ? undefined : { scale: 0.985 }}
-      transition={{ type: "spring", stiffness: 460, damping: 32 }}
-      style={{ width: size, height: size }}
+    <div className="relative grid shrink-0 place-items-center" style={{ width: size, height: size }}>
+      {/* one ring leaves the rim when a session comes up */}
+      <AnimatePresence>
+        {state === "on" && !calm && (
+          <motion.span
+            key="rim"
+            aria-hidden
+            className="pointer-events-none absolute inset-0 rounded-full border border-[var(--green-line)]"
+            initial={{ opacity: 0.85, scale: 0.94 }}
+            animate={{ opacity: 0, scale: 1.2 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          />
+        )}
+      </AnimatePresence>
+
+      <motion.button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        aria-label={label}
+        whileTap={disabled ? undefined : { scale: calm ? 1 : 0.955 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 520, damping: 26, mass: 0.7 }}
+        style={{ width: size, height: size }}
       className={cn(
         "relative grid shrink-0 place-items-center rounded-full border bg-[#13161a] shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_22px_48px_rgb(0_0_0/0.5),0_2px_6px_rgb(0_0_0/0.4)] transition-[background-color,border-color,color,box-shadow] duration-300 disabled:opacity-70",
         state === "on"
@@ -43,6 +61,16 @@ export function Dial({
             : "border-[rgb(255_255_255/0.14)] text-txt hover:border-[var(--brand-line)] hover:bg-[#151a20] [&_svg]:text-brand-strong/80 hover:[&_svg]:text-brand-strong",
       )}
     >
+      <motion.span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-full"
+        initial={false}
+        animate={{
+          boxShadow: state === "on" ? "inset 0 0 48px rgb(40 160 110 / 0.16)" : "inset 0 0 0 rgb(0 0 0 / 0)",
+        }}
+        transition={{ duration: 0.5 }}
+      />
+
       {state === "connecting" && (
         <span
           aria-hidden
@@ -50,10 +78,11 @@ export function Dial({
         />
       )}
       {/* the power over the word, sized to the circle it lives in */}
-      <span className={cn("flex flex-col items-center", compact ? "gap-1.5" : "gap-3.5")}>
+      <span className={cn("relative flex flex-col items-center", compact ? "gap-1.5" : "gap-3.5")}>
         <Power className={compact ? "size-6" : "size-10"} strokeWidth={1.6} aria-hidden />
         {compact ? null : <span className="font-display text-[15px] font-semibold tracking-[0.01em]">{label}</span>}
       </span>
-    </motion.button>
+      </motion.button>
+    </div>
   )
 }

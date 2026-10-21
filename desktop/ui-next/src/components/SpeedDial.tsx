@@ -62,7 +62,6 @@ export function SpeedDial({
   phase,
   runId,
   onStart,
-  onStop,
 }: {
   display: string
   value: number
@@ -71,7 +70,6 @@ export function SpeedDial({
   phase: DialPhase
   runId: number
   onStart: () => void
-  onStop: () => void
 }) {
   const { t } = useI18n()
   const idle = phase === "idle"
@@ -199,18 +197,6 @@ export function SpeedDial({
         >
           <span className="text-[26px] font-bold tracking-[0.06em] text-txt">GO</span>
         </button>
-
-        {running && (
-          <button
-            type="button"
-            onClick={onStop}
-            aria-label={t("stop")}
-            className="press pointer-events-auto absolute left-1/2 top-1/2 flex h-12 w-[124px] -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-2 rounded-full border border-[rgb(255_255_255/0.20)] bg-black/45 text-[13.5px] font-medium text-txt shadow-[inset_0_1px_0_rgb(255_255_255/0.10)] backdrop-blur-[14px] transition-colors duration-200 hover:border-[rgb(255_255_255/0.32)] hover:bg-black/60 [@media(max-height:660px)]:h-9 [@media(max-height:660px)]:w-[96px] [@media(max-height:660px)]:text-[12px]"
-          >
-            <span aria-hidden className="size-2.5 rounded-[2px] bg-[var(--red)]" />
-            {t("stop")}
-          </button>
-        )}
 
         <div className="absolute left-1/2 top-[calc(50%+78px)] -translate-x-1/2 -translate-y-1/2 [@media(max-height:660px)]:top-[calc(50%+51px)]">
           <div

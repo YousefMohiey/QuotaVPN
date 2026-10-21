@@ -249,6 +249,7 @@ export const ar = {
   "voiceTitle": "فالورانت",
   "voiceHelperLbl": "المساعد",
   "voiceRowTitle": "الدردشة الصوتية لـValorant",
+  "voiceDisconnect": "إيقاف الدردشة الصوتية",
   "voiceRowBody": "استخدم الدردشة الصوتية في منطقتك عبر QuotaVPN دون التأثير على اتصال لعبتك أو البينج",
   "voiceActive": "الدردشة الصوتية نشطة",
   "voiceAutoOn": "فتح فالورانت: تم توصيل الدردشة الصوتية",
