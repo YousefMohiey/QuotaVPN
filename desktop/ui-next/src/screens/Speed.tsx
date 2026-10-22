@@ -132,6 +132,9 @@ export function Speed() {
   const [phase, setPhase] = useState<Phase>("idle")
   const [value, setValue] = useState(0)
   const [unit, setUnit] = useState<"Mbps" | "ms">("Mbps")
+  // The peak is state, not a ref: a ref written after the render that ends
+  // the run never redraws, which left the finished panel showing "-".
+  const [peakSnap, setPeakSnap] = useState<{ v: number; u: "Mbps" | "ms" } | null>(null)
   const [samples, setSamples] = useState<number[]>([])
   const [result, setResult] = useState<Result>(EMPTY)
   const [hint, setHint] = useState("")
@@ -265,6 +268,7 @@ export function Speed() {
         push(ping, true)
         setValue(ping)
         pingSnap.current = samplesRef.current.slice()
+        setPeakSnap({ v: Math.max(0, ...samplesRef.current), u: "ms" })
         return { ping, jitter }
       }
       const r = await measurePing("net", PING_PROBES, {
@@ -276,6 +280,7 @@ export function Speed() {
       push(r.ping)
       setValue(r.ping)
       pingSnap.current = samplesRef.current.slice()
+      setPeakSnap({ v: Math.max(0, ...samplesRef.current), u: "ms" })
       return r
     } catch {
       if (!signal.aborted) setHint(t("noReply"))
@@ -333,6 +338,7 @@ export function Speed() {
       setValue(mbps)
       if (direction === "down") downSnap.current = samplesRef.current.slice()
       else upSnap.current = samplesRef.current.slice()
+      setPeakSnap({ v: Math.max(0, ...samplesRef.current), u: "Mbps" })
       return mbps
     } catch (e) {
       if (!signal.aborted) {
@@ -674,7 +680,7 @@ export function Speed() {
             <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-2.5">
               <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("peak")}</span>
               <span className="truncate text-[13px] tabular-nums text-txt">
-                {shown.length > 0 ? `${fmt(peak, unit)} ${unit}` : "-"}
+                {peakSnap ? `${fmt(peakSnap.v, peakSnap.u)} ${peakSnap.u}` : shown.length > 0 ? `${fmt(peak, unit)} ${unit}` : "-"}
               </span>
             </span>
           </div>

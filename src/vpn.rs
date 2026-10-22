@@ -880,7 +880,21 @@ pub fn install_task(owner: &str) -> Result<(), String> {
 }
 
 pub fn remove_task() {
-    let _ = run_hidden("schtasks", &["/Delete", "/TN", &task_name(), "/F"]);
+    if run_hidden("schtasks", &["/Delete", "/TN", &task_name(), "/F"])
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+    {
+        return;
+    }
+    // A task registered with highest rights by an administrator cannot be
+    // deleted by an ordinary account, so uninstalling used to leave it behind
+    // for ever. Ask Windows once; a refusal leaves it where it was.
+    let ps = format!(
+        "Start-Process -FilePath 'schtasks.exe' -ArgumentList '/Delete','/TN','{}','/F' -Verb RunAs -WindowStyle Hidden",
+        task_name()
+    );
+    let _ = run_hidden("powershell", &["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps]);
+    std::thread::sleep(std::time::Duration::from_secs(4));
 }
 
 fn start_task() -> Result<(), String> {

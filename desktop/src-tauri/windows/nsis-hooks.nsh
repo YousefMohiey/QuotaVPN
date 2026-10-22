@@ -93,11 +93,13 @@
   Delete /REBOOTOK "$SMPROGRAMS\QuotaCards.lnk"
   Delete /REBOOTOK "$SMPROGRAMS\Quota.lnk"
   SetShellVarContext current
+  ; The helper task belongs to this install: take it with the app. This runs
+  ; before the files go, because afterwards the exe is gone and the task
+  ; survives an uninstall for ever.
+  nsExec::ExecToLog '"$INSTDIR\${MAINBINARYNAME}.exe" --remove-helper'
 !macroend
 
 !macro NSIS_HOOK_POSTUNINSTALL
-  ; The helper task belongs to this install: take it with the app.
-  nsExec::ExecToLog '"$INSTDIR\${MAINBINARYNAME}.exe" --remove-helper'
   ; Same refresh after uninstall, so the removed shortcuts leave the shell
   ; cleanly instead of showing broken icons until the next rebuild.
   nsExec::ExecToLog '"$SYSDIR\ie4uinit.exe" -ClearIconCache'
