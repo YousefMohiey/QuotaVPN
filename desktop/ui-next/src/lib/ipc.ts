@@ -134,6 +134,7 @@ export const api = {
   start: (uuid: string, appsMode: string, apps: string[], transport: string, voice?: boolean) =>
     call<CmdResult>("tunnel_start", { uuid, appsMode, apps, transport, voice }),
   stop: () => call<CmdResult>("tunnel_stop"),
+  setupHelper: () => call<CmdResult>("setup_helper"),
   status: () => call<TunnelState>("tunnel_status"),
   tunnelHealth: () => call<number>("tunnel_health"),
   processRunning: (name: string) => call<boolean>("process_running", { name }),

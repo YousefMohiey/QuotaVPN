@@ -40,6 +40,8 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
     busy,
     phase,
     toggle,
+    needsSetup,
+    setupHelper,
     serverIp,
     status,
     setStatus,
@@ -153,7 +155,22 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
             <span className="max-w-[260px] truncate font-mono text-[11.5px] text-txt2" dir="auto">
               {displayHost(card?.sni) || "-"}
             </span>
-            {status ? (
+            {needsSetup ? (
+              <span className="mt-1 flex max-w-[300px] flex-col items-center gap-2 text-center">
+                <span className="text-[11.5px] leading-snug text-txt2">{t("tunnelSetupBody")}</span>
+                <Button
+                  size="sm"
+                  className="h-8 rounded-[7px] bg-[var(--brand)] px-3 text-[12px] font-medium text-white"
+                  onClick={() => {
+                    void (async () => {
+                      if (await setupHelper()) toggle()
+                    })()
+                  }}
+                >
+                  {t("tunnelSetupBtn")}
+                </Button>
+              </span>
+            ) : status ? (
               <span className="mt-0.5 line-clamp-2 max-w-[280px] text-[11.5px] leading-snug text-txt2" role="status">{status}</span>
             ) : null}
           </div>

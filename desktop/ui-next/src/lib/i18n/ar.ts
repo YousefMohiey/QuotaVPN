@@ -240,6 +240,8 @@ export const ar = {
   "chExp": "تحديثات تجريبية",
   "chExpBody": "أحدث الإصدارات التجريبية فور جهوزيتها",
   "chBadge": "تجريبي",
+  "tunnelSetupBody": "هذا الجهاز يحتاج إعدادًا واحدًا للنفق",
+  "tunnelSetupBtn": "إعداد النفق",
   "setAppGroup": "التطبيق",
   "setConnGroup": "الاتصال",
   "setUpdGroup": "التحديثات",

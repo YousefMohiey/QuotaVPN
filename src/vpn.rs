@@ -759,6 +759,199 @@ pub fn app_log(line: &str) {
     }
 }
 
+/// ---------------------------------------------------------------------
+/// The privileged half of the tunnel.
+///
+/// Creating a WinTun adapter is a privileged operation, so an ordinary user
+/// process cannot do it. Instead of asking people to launch the whole app as
+/// administrator (and to reboot when an adapter is left behind), setup
+/// registers ONE scheduled task that runs the engine with full rights. The app
+/// then starts and stops that task, which an ordinary user may do.
+pub const TASK: &str = "QuotaVPN Tunnel";
+
+/// True when the helper task is registered. Setup is needed until it is.
+pub fn task_installed() -> bool {
+    run_hidden("schtasks", &["/Query", "/TN", TASK])
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+/// The script the helper task runs. It exists so the privileged side can clear
+/// what a crashed run leaves behind *before* the engine starts: every dead
+/// session leaves a phantom "sing-tun Tunnel" device, Windows keeps the adapter
+/// name reserved, and the next start dies with
+/// "create adapter: Cannot create a file when that file already exists".
+/// Clearing phantoms needs administrator rights, which the task has.
+pub fn engine_ps_path() -> PathBuf {
+    engine_dir().join("run-engine.ps1")
+}
+
+/// The script the helper task runs. It exists so the privileged side can do
+/// what the app may not: clear the phantom wintun devices a dead session
+/// leaves behind (Windows keeps the adapter name reserved, and the next start
+/// died with "create adapter: Cannot create a file when that file already
+/// exists" until the machine was restarted), and report the engine pid, which
+/// an ordinary user cannot read from a SYSTEM process.
+pub fn write_engine_cmd() {
+    let sb = singbox_path();
+    let cfg = tun_config_path();
+    let log = engine_log_path();
+    let pid = engine_dir().join("engine.pid");
+    let stop = engine_dir().join("engine.stop");
+    // Phantoms first: a dead session reserves the adapter name, and the next
+    // start dies with "create adapter: Cannot create a file when that file
+    // already exists" until the machine restarts. Only this side can clear
+    // them. It also reports the pid, which an ordinary user cannot read from
+    // a SYSTEM process, and watches for the stop file so stopping needs no
+    // elevation either.
+    let body = format!(
+        "$ErrorActionPreference = 'SilentlyContinue'\n\
+         Get-PnpDevice -Class Net | Where-Object {{ $_.Status -eq 'Unknown' -and $_.FriendlyName -eq 'sing-tun Tunnel' }} | ForEach-Object {{ pnputil /remove-device $_.InstanceId | Out-Null }}\n\
+         Remove-Item -LiteralPath '{pid}' -Force -ErrorAction SilentlyContinue\n\
+         Remove-Item -LiteralPath '{stop}' -Force -ErrorAction SilentlyContinue\n\
+         $p = Start-Process -FilePath '{sb}' -ArgumentList 'run','-c','{cfg}' -RedirectStandardOutput '{log}' -RedirectStandardError '{err}' -PassThru -WindowStyle Hidden\n\
+         Set-Content -LiteralPath '{pid}' -Value $p.Id -Encoding ascii\n\
+         while (-not $p.HasExited) {{\n\
+         \x20 if (Test-Path -LiteralPath '{stop}') {{ Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; break }}\n\
+         \x20 Start-Sleep -Milliseconds 350\n\
+         }}\n",
+        pid = pid.display(),
+        stop = stop.display(),
+        sb = sb.display(),
+        cfg = cfg.display(),
+        log = log.display(),
+        err = engine_dir().join("engine.err").display(),
+    );
+    let _ = std::fs::create_dir_all(engine_dir());
+    let _ = std::fs::write(engine_ps_path(), body);
+}
+
+/// Register the task. Runs in the elevated pass (`QuotaVPN.exe --setup-helper`),
+/// so this is the only moment the product asks Windows for administrator.
+pub fn install_task() -> Result<(), String> {
+    write_engine_cmd();
+    let tr = format!(
+        "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{}\"",
+        engine_ps_path().display()
+    );
+    let out = run_hidden(
+        "schtasks",
+        &[
+            "/Create", "/TN", TASK, "/TR", &tr, "/SC", "ONCE", "/ST", "00:00", "/RU", "SYSTEM",
+            "/RL", "HIGHEST", "/F",
+        ],
+    )
+    .map_err(|e| format!("task: {e}"))?;
+    if out.status.success() {
+        Ok(())
+    } else {
+        Err(String::from_utf8_lossy(&out.stderr).trim().to_string())
+    }
+}
+
+pub fn remove_task() {
+    let _ = run_hidden("schtasks", &["/Delete", "/TN", TASK, "/F"]);
+}
+
+fn start_task() -> Result<(), String> {
+    let out = run_hidden("schtasks", &["/Run", "/TN", TASK]).map_err(|e| format!("task: {e}"))?;
+    if out.status.success() {
+        Ok(())
+    } else {
+        Err(String::from_utf8_lossy(&out.stderr).trim().to_string())
+    }
+}
+
+pub fn stop_task() {
+    let _ = run_hidden("schtasks", &["/End", "/TN", TASK]);
+}
+
+/// The pid of the engine our task started: the sing-box whose command line
+/// names our own config path. Anything else called sing-box is not ours.
+pub fn task_engine_pid() -> Option<u32> {
+    // The helper runs as SYSTEM, and an ordinary user cannot read the command
+    // line of a SYSTEM process, so the pid comes from the file the helper
+    // writes. Verify it really is our engine before trusting it.
+    let pid_file = engine_dir().join("engine.pid");
+    if let Ok(text) = std::fs::read_to_string(&pid_file) {
+        if let Ok(pid) = text.trim().parse::<u32>() {
+            if engine_alive(pid) {
+                return Some(pid);
+            }
+        }
+    }
+    // Fallback for a session started before that file existed: the only
+    // sing-box on this machine is ours.
+    let out = run_hidden("tasklist", &["/FI", "Imagename eq sing-box.exe", "/FO", "CSV", "/NH"]).ok()?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    let line = text.lines().find(|l| l.to_lowercase().contains("sing-box.exe"))?;
+    line.split("\",\"").nth(1)?.trim().parse::<u32>().ok()
+}
+
+/// True when that pid is a live sing-box: the image name is readable even for
+/// a SYSTEM process, unlike its command line.
+pub fn engine_alive(pid: u32) -> bool {
+    run_hidden("tasklist", &["/FI", &format!("PID eq {pid}"), "/FO", "CSV", "/NH"])
+        .map(|o| String::from_utf8_lossy(&o.stdout).to_lowercase().contains("sing-box.exe"))
+        .unwrap_or(false)
+}
+
+/// Bring the engine up through the task and return its pid (0 while the task
+/// is still starting; the caller waits on the routes anyway).
+pub fn start_engine() -> Result<u32, String> {
+    if !task_installed() {
+        return Err("setup-needed".to_string());
+    }
+    // One engine at a time: a task left running from last session owns the
+    // adapter, and a second one cannot create it.
+    if let Some(old) = task_engine_pid() {
+        let _ = run_hidden("taskkill", &["/F", "/PID", &old.to_string()]);
+        // Wait for it to actually go: wintun releases the adapter name when
+        // the process exits, and starting a new engine before that made the
+        // new one die with "create adapter: Cannot create a file when that
+        // file already exists" - the failure that used to cost people a reboot.
+        for _ in 0..25 {
+            if task_engine_pid().is_none() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(200));
+        }
+        std::thread::sleep(std::time::Duration::from_millis(600));
+    }
+    write_engine_cmd();
+    stop_task();
+    start_task()?;
+    for _ in 0..80 {
+        if let Some(pid) = task_engine_pid() {
+            let _ = std::fs::write(engine_dir().join("engine.pid"), pid.to_string());
+            return Ok(pid);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(250));
+    }
+    Ok(0)
+}
+
+/// Stop whatever the task is running, then clean routes and adapter.
+pub fn stop_engine() {
+    // An ordinary user may end the task but cannot kill the SYSTEM process it
+    // started, so the script watches for this file and stops the engine
+    // itself. Ending the task is the backstop.
+    let stop = engine_dir().join("engine.stop");
+    let _ = std::fs::write(&stop, "1");
+    if let Some(pid) = task_engine_pid() {
+        for _ in 0..30 {
+            if !engine_alive(pid) {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(200));
+        }
+    }
+    stop_task();
+    let _ = std::fs::remove_file(&stop);
+    let _ = std::fs::remove_file(engine_dir().join("engine.pid"));
+    engine_cleanup();
+}
+
 /// Reset a wedged wintun driver (ghost adapter names). Harmless otherwise.
 pub fn bounce_wintun() {
     let _ = run_hidden("sc", &["stop", "wintun"]);

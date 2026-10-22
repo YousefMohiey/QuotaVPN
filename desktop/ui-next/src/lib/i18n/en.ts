@@ -237,6 +237,8 @@ export const en = {
   "chExp": "Experimental updates",
   "chExpBody": "The newest experimental builds the moment they are ready",
   "chBadge": "Experimental",
+  "tunnelSetupBody": "This PC needs a one-time tunnel setup",
+  "tunnelSetupBtn": "Set up the tunnel",
   "setAppGroup": "App",
   "setConnGroup": "Connection",
   "setUpdGroup": "Updates",

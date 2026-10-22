@@ -43,6 +43,18 @@
 !macroend
 
 !macro NSIS_HOOK_POSTINSTALL
+  ; The tunnel needs a privileged helper: creating a WinTun adapter is
+  ; something Windows only allows an administrator to do. Registering that
+  ; helper here is the ONE time this product asks for administrator, and the
+  ; app itself then runs as an ordinary user forever. On an update the task is
+  ; already registered, so nothing is asked and no prompt appears.
+  nsExec::ExecToLog 'schtasks /Query /TN "QuotaVPN Tunnel"'
+  Pop $0
+  ${If} $0 != 0
+    DetailPrint "Setting up the tunnel helper (one time)"
+    ExecShell "runas" "$INSTDIR\${MAINBINARYNAME}.exe" "--setup-helper" SW_HIDE
+  ${EndIf}
+
   !insertmacro QCVPN_PURGE_LEGACY_SHORTCUTS
 
   ; Exactly one shortcut, named after the app, always refreshed here. The
@@ -84,6 +96,8 @@
 !macroend
 
 !macro NSIS_HOOK_POSTUNINSTALL
+  ; The helper task belongs to this install: take it with the app.
+  nsExec::ExecToLog 'schtasks /Delete /TN "QuotaVPN Tunnel" /F'
   ; Same refresh after uninstall, so the removed shortcuts leave the shell
   ; cleanly instead of showing broken icons until the next rebuild.
   nsExec::ExecToLog '"$SYSDIR\ie4uinit.exe" -ClearIconCache'

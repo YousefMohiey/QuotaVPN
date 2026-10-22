@@ -61,6 +61,9 @@ type Value = {
   setTransport: (t: Transport) => void
   toggle: () => void
   checkUpdates: () => void
+  /** True when this PC has not registered the tunnel helper yet. */
+  needsSetup: boolean
+  setupHelper: () => Promise<boolean>
   applyUpdate: () => void
   updateChannel: "normal" | "experimental"
   setUpdateChannel: (c: "normal" | "experimental") => void
@@ -109,6 +112,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [vpnOn, setVpnOn] = useState(false)
   const [connected, setConnected] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [needsSetup, setNeedsSetup] = useState(false)
   const [phase, setPhase] = useState<Phase>("idle")
   const [status, setStatus] = useState("")
   const [rx, setRx] = useState(0)
@@ -611,6 +615,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           setStatus("")
           return
         }
+        if (r.msg === "setup-needed") {
+          setNeedsSetup(true)
+          setStatus("")
+          setPhase("idle")
+          return
+        }
         setStatus(r.msg)
         setPhase("idle")
         return
@@ -635,10 +645,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }
         if (i < 7) await new Promise((res) => setTimeout(res, 900))
       }
+      // The start command already proved the engine is up and the adapter is
+      // carrying routes. Waiting on a probe before leaving "working" is what
+      // left the dial spinning for a minute on a transport the probe cannot
+      // speak (Hysteria2 is UDP). Go on, then confirm quietly.
+      setConnected(true)
+      setNeedsSetup(false)
+      setPhase("on")
       const probe = await api.probeTunnel().catch(() => null)
       if (stale()) return
-      setConnected(!!probe?.ok)
-      setPhase("on")
+      if (probe) setConnected(!!probe.ok)
       // Success messages (like the reachable line) stay out of the UI;
       // only a failed probe gets to speak.
       if (probe && !probe.ok && probe.msg) {
@@ -753,6 +769,23 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     void (vpnRef.current ? disconnect() : connect())
   }, [cancelConnect, connect, disconnect])
 
+
+  /** Register the privileged helper: the one time Windows asks for admin. */
+  const setupHelper = useCallback(async (): Promise<boolean> => {
+    try {
+      const r = await api.setupHelper()
+      if (r.ok) {
+        setNeedsSetup(false)
+        setStatus("")
+        return true
+      }
+      setStatus(r.msg)
+      return false
+    } catch (e) {
+      setStatus(typeof e === "string" ? e : String(e))
+      return false
+    }
+  }, [])
 
   const checkUpdates = useCallback(async () => {
     setUpdateState("checking")
@@ -1049,6 +1082,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     connected,
     busy,
     phase,
+    needsSetup,
+    setupHelper,
     status,
     setStatus,
     rx,

@@ -420,9 +420,11 @@ fn stop_engine(engine: &tauri::State<Engine>) {
     let pid = engine.0.lock().unwrap().take();
     if let Some(p) = pid {
         vpn::request_graceful_stop(p);
-        std::thread::sleep(std::time::Duration::from_millis(800));
+        std::thread::sleep(std::time::Duration::from_millis(500));
     }
-    vpn::engine_cleanup_keep(None);
+    // The task is the tunnel's owner now: end it, then sweep what a killed
+    // engine leaves behind (routes, adapter).
+    vpn::stop_engine();
 }
 
 fn read_log_tail(n: usize) -> String {
@@ -736,8 +738,11 @@ async fn tunnel_start(
             wg_tuple = Some((card.wg_private.clone(), card.wg_addr.clone(), srvpub, awg_json.clone()));
         }
     }
-    if !vpn::is_elevated() {
-        return Ok(CmdResult { ok: false, msg: "Run QuotaVPN as administrator, then connect".into() });
+    // The tunnel runs through a helper task registered once at setup, so this
+    // process never needs to be elevated. Without that task the UI offers the
+    // one-time setup instead of telling people to run the app as admin.
+    if !vpn::task_installed() {
+        return Ok(CmdResult { ok: false, msg: "setup-needed".into() });
     }
     let voice_on = voice.unwrap_or(false);
     // The session keeps whatever normal configuration the app was using and
@@ -774,11 +779,7 @@ async fn tunnel_start(
         vpn::app_log("leftover tun adapter, clearing it first");
         vpn::reset_tun_adapter();
     }
-    let child = vpn::spawn_engine().map_err(|e| e)?;
-    let mut pid = child.id();
-    // The handle must outlive this command (dropping kills the engine);
-    // the PID file + tracked pid own the lifecycle from here.
-    std::mem::forget(child);
+    let mut pid = vpn::start_engine().map_err(|e| e)?;
     *engine.0.lock().unwrap() = Some(pid);
     // Wait for the tun to actually carry traffic. A cold wintun adapter can
     // take several seconds to publish its routes, and a fixed short sleep
@@ -792,7 +793,7 @@ async fn tunnel_start(
                 vpn::request_graceful_stop(pid);
                 return Ok(CmdResult { ok: false, msg: "Stopped".into() });
             }
-            if !pid_alive(pid) {
+            if pid != 0 && !pid_alive(pid) {
                 break;
             }
             if vpn::tun_routes_present() {
@@ -801,18 +802,16 @@ async fn tunnel_start(
             }
             tokio::time::sleep(std::time::Duration::from_millis(300)).await;
         }
-        if up || pid_alive(pid) || attempt == 1 {
+        if up || (pid != 0 && pid_alive(pid)) || attempt == 1 {
             break;
         }
         // It died before its routes landed: the usual cause is the adapter
         // the previous run left. Clean that up and give it one more go, so a
         // wedged handover never costs the user a reboot.
         vpn::app_log("engine died on start: clearing the adapter and retrying once");
-        vpn::engine_cleanup();
+        vpn::stop_engine();
         vpn::reset_tun_adapter();
-        let again = vpn::spawn_engine().map_err(|e| e)?;
-        pid = again.id();
-        std::mem::forget(again);
+        pid = vpn::start_engine().map_err(|e| e)?;
         *engine.0.lock().unwrap() = Some(pid);
     }
     if up {
@@ -828,10 +827,57 @@ async fn tunnel_start(
             msg: "The tunnel is still starting - give it a few seconds or connect again".into(),
         })
     } else {
+        // A task start can show up a moment after our wait window: adopt what
+        // is actually running instead of reporting a failure over a tunnel
+        // that is already carrying traffic. Never kill a live engine here -
+        // the poll will bring the UI in line either way.
+        if let Some(live) = vpn::task_engine_pid() {
+            *engine.0.lock().unwrap() = Some(live);
+            if vpn::tun_routes_present() {
+                flush_dns_cache();
+                return Ok(CmdResult {
+                    ok: true,
+                    msg: format!("VPN on - {} carries the traffic", card.name),
+                });
+            }
+            return Ok(CmdResult {
+                ok: false,
+                msg: "The tunnel is still starting - give it a few seconds or connect again".into(),
+            });
+        }
         *engine.0.lock().unwrap() = None;
         vpn::engine_cleanup();
-        Ok(CmdResult { ok: false, msg: format!("Engine died: {}", vpn::engine_log_tail()) })
+        Ok(CmdResult {
+            ok: false,
+            msg: format!("The tunnel did not come up: {}", vpn::engine_log_tail()),
+        })
     }
+}
+
+/// The one-time, privileged setup. Windows asks for administrator here and
+/// only here: the elevated pass registers the helper task, and every later
+/// connect runs through it without any prompt at all.
+#[tauri::command]
+async fn setup_helper() -> Result<CmdResult, String> {
+    if vpn::task_installed() {
+        return Ok(CmdResult { ok: true, msg: "ready".into() });
+    }
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let ps = format!(
+        "Start-Process -FilePath '{}' -ArgumentList '--setup-helper' -Verb RunAs -WindowStyle Hidden",
+        exe.display()
+    );
+    let _ = std::process::Command::new("powershell")
+        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps])
+        .creation_flags(0x08000000)
+        .output();
+    for _ in 0..120 {
+        if vpn::task_installed() {
+            return Ok(CmdResult { ok: true, msg: "ready".into() });
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    }
+    Ok(CmdResult { ok: false, msg: "The tunnel setup was cancelled".into() })
 }
 
 #[tauri::command]
@@ -863,8 +909,12 @@ async fn tunnel_status(engine: tauri::State<'_, Engine>) -> Result<TunnelState, 
             Ok(TunnelState { running: false, error: vpn::engine_log_tail() })
         }
         None => {
-            // Adopt a live engine we lost track of (e.g. after an app
-            // restart with the tunnel still up from the pid file).
+            // Adopt a live engine we lost track of: the task owns it now, and
+            // after an app restart the pid file points at it.
+            if let Some(p) = vpn::task_engine_pid() {
+                *engine.0.lock().unwrap() = Some(p);
+                return Ok(TunnelState { running: vpn::tun_routes_present(), error: String::new() });
+            }
             if vpn::tun_routes_present() {
                 if let Ok(s) = std::fs::read_to_string(vpn::engine_dir().join("engine.pid")) {
                     if let Ok(p) = s.trim().parse::<u32>() {
@@ -1080,6 +1130,13 @@ async fn resolve_host(host: String) -> Result<String, String> {
 /// traffic flows through the tunnel.
 #[tauri::command]
 async fn tunnel_probe(app: tauri::AppHandle) -> Result<CmdResult, String> {
+    // The engine is the honest signal. A TCP connect to the server is only
+    // meaningful for TCP transports: Hysteria2 rides UDP, so probing port 443
+    // over TCP reported a healthy tunnel as blocked and left the dial on
+    // "working" for a full minute of timeouts.
+    if vpn::task_engine_pid().is_some() || vpn::tun_routes_present() {
+        return Ok(CmdResult { ok: true, msg: "Tunnel up".into() });
+    }
     let host = {
         let state = app.state::<State>();
         let guard = state.0.lock().unwrap();
@@ -1090,7 +1147,7 @@ async fn tunnel_probe(app: tauri::AppHandle) -> Result<CmdResult, String> {
     }
     let target = format!("{host}:443");
     let conn = tokio::time::timeout(
-        std::time::Duration::from_secs(10),
+        std::time::Duration::from_secs(3),
         tokio::net::TcpStream::connect(&target),
     )
     .await;
@@ -1919,6 +1976,17 @@ pub fn run() {
         we_quota::probe_main();
         return;
     }
+    // The elevated pass: fetch the engine and wintun if this machine has never
+    // run them, then register the helper task and leave. This is the only
+    // moment the product asks Windows for administrator, once per machine.
+    if std::env::args().any(|a| a == "--setup-helper") {
+        let _ = vpn::ensure_engine();
+        match vpn::install_task() {
+            Ok(()) => println!("helper installed"),
+            Err(e) => eprintln!("helper failed: {e}"),
+        }
+        return;
+    }
     tauri::Builder::default()
         // Single instance: a second launch brings the running app forward
         // instead of starting a twin. Must be the first plugin registered.
@@ -2062,6 +2130,7 @@ pub fn run() {
             _ => {}
         })
         .invoke_handler(tauri::generate_handler![
+            setup_helper,
             get_state,
             probe_server,
             generate_card,
