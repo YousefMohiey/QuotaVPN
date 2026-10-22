@@ -188,13 +188,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         // that is only carrying the voice helper leaves the Home dial off.
         const tunnel = await api.status().catch(() => null)
         if (alive && tunnel?.running) {
-          let merged = true
+          // Adopt the live session unless it exists only for the voice helper.
+          // The old test required qc-voice-merged to be "1", which is only
+          // written when voice joined a VPN session - so a plain VPN session
+          // that outlived the window reopened as "Not connected" over a live
+          // tunnel, and pressing Connect restarted it.
+          let voiceOnly = false
           try {
-            merged = localStorage.getItem("qc-voice-merged") === "1"
+            voiceOnly =
+              localStorage.getItem("qc-voice-active") === "1" &&
+              localStorage.getItem("qc-voice-merged") === "0"
           } catch {
             /* file:// */
           }
-          if (merged) {
+          if (!voiceOnly) {
             setVpnOn(true)
             setPhase("on")
             setSessionStart(Date.now())
