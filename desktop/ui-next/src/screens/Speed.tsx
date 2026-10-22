@@ -465,6 +465,10 @@ export function Speed() {
           up: cli.up_mbps ?? null,
         }
         setResult(next)
+        // The provider CLI reports averages and no samples, so this run never
+        // passes through the snapshot path above; without this the finished
+        // panel showed a dash where the peak belongs.
+        setPeakSnap({ v: Math.max(next.down ?? 0, next.up ?? 0), u: "Mbps" })
         remember(next, cliLabel(cli) || label)
         if (cli.server_name) {
           setPicked({
