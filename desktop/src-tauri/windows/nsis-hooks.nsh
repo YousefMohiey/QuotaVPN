@@ -48,7 +48,7 @@
   ; helper here is the ONE time this product asks for administrator, and the
   ; app itself then runs as an ordinary user forever. On an update the task is
   ; already registered, so nothing is asked and no prompt appears.
-  nsExec::ExecToLog 'schtasks /Query /TN "QuotaVPN Tunnel"'
+  nsExec::ExecToLog '"$INSTDIR\${MAINBINARYNAME}.exe" --check-helper'
   Pop $0
   ${If} $0 != 0
     DetailPrint "Setting up the tunnel helper (one time)"
@@ -97,7 +97,7 @@
 
 !macro NSIS_HOOK_POSTUNINSTALL
   ; The helper task belongs to this install: take it with the app.
-  nsExec::ExecToLog 'schtasks /Delete /TN "QuotaVPN Tunnel" /F'
+  nsExec::ExecToLog '"$INSTDIR\${MAINBINARYNAME}.exe" --remove-helper'
   ; Same refresh after uninstall, so the removed shortcuts leave the shell
   ; cleanly instead of showing broken icons until the next rebuild.
   nsExec::ExecToLog '"$SYSDIR\ie4uinit.exe" -ClearIconCache'

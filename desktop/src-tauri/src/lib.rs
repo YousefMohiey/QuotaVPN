@@ -865,8 +865,9 @@ async fn setup_helper() -> Result<CmdResult, String> {
     }
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     let ps = format!(
-        "Start-Process -FilePath '{}' -ArgumentList '--setup-helper' -Verb RunAs -WindowStyle Hidden",
-        exe.display()
+        "Start-Process -FilePath '{}' -ArgumentList '--setup-helper','--as','{}' -Verb RunAs -WindowStyle Hidden",
+        exe.display(),
+        vpn::account_name()
     );
     let launched = std::process::Command::new("powershell")
         .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps])
@@ -1716,10 +1717,16 @@ async fn updater(app: &tauri::AppHandle, channel: &str) -> Result<tauri_plugin_u
     if let Ok(raw) = std::env::var("QC_FEED_URL") {
         let raw = raw.trim();
         if !raw.is_empty() {
-            let url = reqwest::Url::parse(raw).map_err(|e| format!("bad QC_FEED_URL: {e}"))?;
-            builder = builder
-                .endpoints(vec![url])
-                .map_err(|e| format!("bad QC_FEED_URL: {e}"))?;
+            // A rejected feed is a developer problem, not something to show a
+            // user verbatim: keep the detail in the log and answer plainly.
+            let url = reqwest::Url::parse(raw).map_err(|e| {
+                vpn::app_log(&format!("updater: bad QC_FEED_URL: {e}"));
+                "Could not check for updates".to_string()
+            })?;
+            builder = builder.endpoints(vec![url]).map_err(|e| {
+                vpn::app_log(&format!("updater: feed rejected: {e}"));
+                "Could not check for updates".to_string()
+            })?;
         }
     } else if channel == "experimental" {
         if let Some(raw) = experimental_feed_url().await {
@@ -2006,9 +2013,30 @@ pub fn run() {
     // The elevated pass: fetch the engine and wintun if this machine has never
     // run them, then register the helper task and leave. This is the only
     // moment the product asks Windows for administrator, once per machine.
+    // Answers "does this account already have its helper task", so the
+    // installer only asks Windows for administrator when it actually has to.
+    if std::env::args().any(|a| a == "--check-helper") {
+        std::process::exit(if vpn::task_installed() { 0 } else { 3 });
+    }
+    // Remove this account's helper task (called by the uninstaller while the
+    // exe still exists, because the task needs the name this account owns).
+    if std::env::args().any(|a| a == "--remove-helper") {
+        vpn::remove_task();
+        return;
+    }
     if std::env::args().any(|a| a == "--setup-helper") {
+        // A standard user elevating with an administrator's credentials runs
+        // this pass as the ADMIN, so the account that asked is passed in
+        // explicitly; guessing would register the helper for the wrong person.
+        let args: Vec<String> = std::env::args().collect();
+        let owner = args
+            .iter()
+            .position(|a| a == "--as")
+            .and_then(|i| args.get(i + 1))
+            .cloned()
+            .unwrap_or_else(vpn::account_name);
         let _ = vpn::ensure_engine();
-        match vpn::install_task() {
+        match vpn::install_task(&owner) {
             Ok(()) => println!("helper installed"),
             Err(e) => eprintln!("helper failed: {e}"),
         }

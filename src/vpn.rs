@@ -767,11 +767,40 @@ pub fn app_log(line: &str) {
 /// administrator (and to reboot when an adapter is left behind), setup
 /// registers ONE scheduled task that runs the engine with full rights. The app
 /// then starts and stops that task, which an ordinary user may do.
-pub const TASK: &str = "QuotaVPN Tunnel";
+/// The helper task's name, one per Windows account.
+///
+/// The app installs per user and its engine folder lives in that user's
+/// profile, so a single machine-wide task name would make a second account on
+/// the same PC drive the first account's engine and config. The name carries
+/// the account so each user gets their own helper.
+pub fn task_name() -> String {
+    // The environment's USERNAME is inherited from whatever launched us, so a
+    // second account started through runas or CreateProcessWithLogonW still saw
+    // the first account's name and concluded it was already set up. Ask Windows
+    // who we actually are instead.
+    let who = run_hidden("whoami", &[])
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .unwrap_or_default();
+    format!("QuotaVPN Tunnel {}", account_name())
+}
+
+/// This process's Windows account, asked from Windows rather than inherited
+/// from the environment.
+pub fn account_name() -> String {
+    let who = run_hidden("whoami", &[])
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .unwrap_or_default();
+    let short = who.rsplitn(2, char::from(92)).next().unwrap_or("").trim().to_string();
+    if short.is_empty() {
+        std::env::var("USERNAME").unwrap_or_else(|_| "user".to_string())
+    } else {
+        short
+    }
+}
 
 /// True when the helper task is registered. Setup is needed until it is.
 pub fn task_installed() -> bool {
-    run_hidden("schtasks", &["/Query", "/TN", TASK])
+    run_hidden("schtasks", &["/Query", "/TN", &task_name()])
         .map(|o| o.status.success())
         .unwrap_or(false)
 }
@@ -806,6 +835,7 @@ pub fn write_engine_cmd() {
     // elevation either.
     let body = format!(
         "$ErrorActionPreference = 'SilentlyContinue'\n\
+         if (-not (Test-Path -LiteralPath '{cfg}')) {{ exit 0 }}\n\
          Get-PnpDevice -Class Net | Where-Object {{ $_.Status -eq 'Unknown' -and $_.FriendlyName -eq 'sing-tun Tunnel' }} | ForEach-Object {{ pnputil /remove-device $_.InstanceId | Out-Null }}\n\
          Remove-Item -LiteralPath '{pid}' -Force -ErrorAction SilentlyContinue\n\
          Remove-Item -LiteralPath '{stop}' -Force -ErrorAction SilentlyContinue\n\
@@ -828,7 +858,7 @@ pub fn write_engine_cmd() {
 
 /// Register the task. Runs in the elevated pass (`QuotaVPN.exe --setup-helper`),
 /// so this is the only moment the product asks Windows for administrator.
-pub fn install_task() -> Result<(), String> {
+pub fn install_task(owner: &str) -> Result<(), String> {
     write_engine_cmd();
     let tr = format!(
         "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{}\"",
@@ -837,8 +867,8 @@ pub fn install_task() -> Result<(), String> {
     let out = run_hidden(
         "schtasks",
         &[
-            "/Create", "/TN", TASK, "/TR", &tr, "/SC", "ONCE", "/ST", "00:00", "/RU", "SYSTEM",
-            "/RL", "HIGHEST", "/F",
+            "/Create", "/TN", &format!("QuotaVPN Tunnel {owner}"), "/TR", &tr, "/SC", "ONCE",
+            "/ST", "00:00", "/RU", owner, "/RL", "HIGHEST", "/F",
         ],
     )
     .map_err(|e| format!("task: {e}"))?;
@@ -850,11 +880,11 @@ pub fn install_task() -> Result<(), String> {
 }
 
 pub fn remove_task() {
-    let _ = run_hidden("schtasks", &["/Delete", "/TN", TASK, "/F"]);
+    let _ = run_hidden("schtasks", &["/Delete", "/TN", &task_name(), "/F"]);
 }
 
 fn start_task() -> Result<(), String> {
-    let out = run_hidden("schtasks", &["/Run", "/TN", TASK]).map_err(|e| format!("task: {e}"))?;
+    let out = run_hidden("schtasks", &["/Run", "/TN", &task_name()]).map_err(|e| format!("task: {e}"))?;
     if out.status.success() {
         Ok(())
     } else {
@@ -863,7 +893,7 @@ fn start_task() -> Result<(), String> {
 }
 
 pub fn stop_task() {
-    let _ = run_hidden("schtasks", &["/End", "/TN", TASK]);
+    let _ = run_hidden("schtasks", &["/End", "/TN", &task_name()]);
 }
 
 /// The pid of the engine our task started: the sing-box whose command line
