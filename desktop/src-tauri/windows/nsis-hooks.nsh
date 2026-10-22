@@ -77,6 +77,18 @@
   FindClose $0
   nsExec::ExecToLog '"$SYSDIR\ie4uinit.exe" -ClearIconCache'
   nsExec::ExecToLog '"$SYSDIR\ie4uinit.exe" -show'
+  ; An in-app update ends the running app before the files are replaced and the
+  ; app never gets to start itself again. It leaves a marker saying this
+  ; install came from inside it, so the window comes back on the new build
+  ; instead of the user having to hunt for the shortcut. A fresh install
+  ; writes no marker and starts nothing.
+  ; IfFileExists jumps to its second argument when the file EXISTS, so the
+  ; label has to sit on the not-exists branch: 0 means fall through and do
+  ; the relaunch, anything else skips it.
+  IfFileExists "$LOCALAPPDATA\quotacards\updating" 0 qvp_no_relaunch
+    Delete "$LOCALAPPDATA\quotacards\updating"
+    ExecShell "" "$INSTDIR\${MAINBINARYNAME}.exe"
+  qvp_no_relaunch:
 !macroend
 
 !macro NSIS_HOOK_PREUNINSTALL

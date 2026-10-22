@@ -774,18 +774,13 @@ pub fn app_log(line: &str) {
 /// the same PC drive the first account's engine and config. The name carries
 /// the account so each user gets their own helper.
 pub fn task_name() -> String {
-    // The environment's USERNAME is inherited from whatever launched us, so a
-    // second account started through runas or CreateProcessWithLogonW still saw
-    // the first account's name and concluded it was already set up. Ask Windows
-    // who we actually are instead.
-    let who = run_hidden("whoami", &[])
-        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-        .unwrap_or_default();
     format!("QuotaVPN Tunnel {}", account_name())
 }
 
 /// This process's Windows account, asked from Windows rather than inherited
-/// from the environment.
+/// from the environment: a process started through runas or
+/// CreateProcessWithLogonW carries the launcher's USERNAME, which made a
+/// second user believe it was already set up.
 pub fn account_name() -> String {
     let who = run_hidden("whoami", &[])
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())

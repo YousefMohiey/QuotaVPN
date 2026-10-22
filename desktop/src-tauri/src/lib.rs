@@ -1911,6 +1911,11 @@ async fn apply_update(app: tauri::AppHandle, state: tauri::State<'_, State>) -> 
         let eng = app.state::<Engine>();
         stop_engine(&eng);
     }
+    // The installer ends this process before it replaces the binary, so the
+    // restart below never runs and the window does not come back. The marker
+    // tells the install hook this was an in-app update and that the app it
+    // just replaced should be started again; a fresh install writes nothing.
+    mark_update_started();
     let prog = app.clone();
     let res = update
         .download_and_install(
@@ -1934,8 +1939,29 @@ async fn apply_update(app: tauri::AppHandle, state: tauri::State<'_, State>) -> 
         Ok(()) => app.restart(),
         Err(e) => {
             UPDATE_BUSY.store(false, std::sync::atomic::Ordering::SeqCst);
+            clear_update_marker();
             Err(format!("install failed: {e}"))
         }
+    }
+}
+
+/// Records that an in-app update is installing, so the install hook knows to
+/// start the app again. Cleared when the install fails.
+fn update_marker() -> Option<std::path::PathBuf> {
+    let base = std::env::var("LOCALAPPDATA").ok()?;
+    Some(std::path::PathBuf::from(base).join("quotacards").join("updating"))
+}
+
+fn mark_update_started() {
+    if let Some(p) = update_marker() {
+        let _ = std::fs::create_dir_all(p.parent().unwrap_or(&p));
+        let _ = std::fs::write(&p, b"1");
+    }
+}
+
+fn clear_update_marker() {
+    if let Some(p) = update_marker() {
+        let _ = std::fs::remove_file(p);
     }
 }
 
