@@ -169,6 +169,9 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 >
                   {t("tunnelSetupBtn")}
                 </Button>
+                {status ? (
+                  <span className="mt-0.5 max-w-[280px] text-[11px] leading-snug text-[var(--red)]">{status}</span>
+                ) : null}
               </span>
             ) : status ? (
               <span className="mt-0.5 line-clamp-2 max-w-[280px] text-[11.5px] leading-snug text-txt2" role="status">{status}</span>

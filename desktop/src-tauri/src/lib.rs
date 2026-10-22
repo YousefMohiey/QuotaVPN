@@ -859,6 +859,7 @@ async fn tunnel_start(
 /// connect runs through it without any prompt at all.
 #[tauri::command]
 async fn setup_helper() -> Result<CmdResult, String> {
+    vpn::app_log("setup: asked for the one-time setup");
     if vpn::task_installed() {
         return Ok(CmdResult { ok: true, msg: "ready".into() });
     }
@@ -867,17 +868,43 @@ async fn setup_helper() -> Result<CmdResult, String> {
         "Start-Process -FilePath '{}' -ArgumentList '--setup-helper' -Verb RunAs -WindowStyle Hidden",
         exe.display()
     );
-    let _ = std::process::Command::new("powershell")
+    let launched = std::process::Command::new("powershell")
         .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps])
         .creation_flags(0x08000000)
         .output();
-    for _ in 0..120 {
+    // Keep what Windows said: "cancelled by the user", "no permission" and a
+    // silent failure all look identical from here otherwise.
+    let refusal = match &launched {
+        Ok(o) => String::from_utf8_lossy(&o.stderr).trim().to_string(),
+        Err(e) => e.to_string(),
+    };
+    vpn::app_log(&format!("setup: elevation requested, refused={refusal}"));
+    // A refused prompt comes back here as a raw PowerShell exception. The user
+    // needs to know what to do, not what .NET called it, so keep the detail in
+    // the log and answer in plain words.
+    let cancelled = refusal.contains("canceled")
+        || refusal.contains("cancelled")
+        || refusal.contains("Incorrect function")
+        || refusal.contains("The operation was canceled");
+    if !refusal.is_empty() && !cancelled {
+        return Ok(CmdResult { ok: false, msg: "The tunnel setup did not run".into() });
+    }
+    if cancelled {
+        return Ok(CmdResult {
+            ok: false,
+            msg: "Windows did not allow the setup. Approve the prompt to finish it".into(),
+        });
+    }
+    for _ in 0..40 {
         if vpn::task_installed() {
             return Ok(CmdResult { ok: true, msg: "ready".into() });
         }
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     }
-    Ok(CmdResult { ok: false, msg: "The tunnel setup was cancelled".into() })
+    Ok(CmdResult {
+        ok: false,
+        msg: "Windows did not allow the setup. Approve the prompt to finish it".into(),
+    })
 }
 
 #[tauri::command]
