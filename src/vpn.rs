@@ -765,6 +765,50 @@ pub fn bounce_wintun() {
     std::thread::sleep(std::time::Duration::from_millis(2500));
 }
 
+/// True when our own TUN adapter is still registered. A dead engine can leave
+/// it behind, and Windows then refuses to make a new one ("Cannot create a
+/// file when that file already exists") until the machine is restarted. That
+/// restart is the one users were told to do.
+pub fn tun_adapter_present() -> bool {
+    #[cfg(windows)]
+    {
+        let out = run_hidden(
+            "powershell",
+            &[
+                "-NoProfile",
+                "-WindowStyle",
+                "Hidden",
+                "-Command",
+                "@(Get-NetAdapter -IncludeHidden -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'QuotaVPN*' }).Count",
+            ],
+        );
+        if let Ok(o) = out {
+            let n = String::from_utf8_lossy(&o.stdout);
+            return n.trim() != "0" && !n.trim().is_empty();
+        }
+        false
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
+}
+
+/// Remove our leftover adapter so the next engine can create a fresh one.
+/// Only names this app owns are touched: another product's wintun adapter is
+/// not ours to delete.
+pub fn reset_tun_adapter() {
+    #[cfg(windows)]
+    {
+        let ps = "Get-NetAdapter -IncludeHidden -ErrorAction SilentlyContinue | \
+                  Where-Object { $_.Name -like 'QuotaVPN*' } | ForEach-Object { \
+                    Disable-NetAdapter -InputObject $_ -Confirm:$false -ErrorAction SilentlyContinue; \
+                    Remove-NetAdapter -InputObject $_ -Confirm:$false -ErrorAction SilentlyContinue }";
+        let _ = run_hidden("powershell", &["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps]);
+        std::thread::sleep(std::time::Duration::from_millis(900));
+    }
+}
+
 /// Single-instance lock. Returns Some(other_pid) when a LIVE other copy
 /// is running (caller must stand down - two copies fight over one tunnel);
 /// otherwise claims the lock and returns None. A stale lock (dead PID)

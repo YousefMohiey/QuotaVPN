@@ -129,18 +129,31 @@ export function Voice() {
               {/* the control: the game's shape, not a disc. It answers the
                   press the way the Home dial does, and a second press turns
                   the helper off again. */}
-              <motion.button
-                type="button"
-                onClick={() => void setHelper(!on)}
-                disabled={!card || busy}
-                aria-pressed={on}
-                aria-label={on ? t("voiceDisconnect") : t("voiceRowTitle")}
-                whileTap={busy ? undefined : { scale: calm ? 1 : 0.955 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 520, damping: 26, mass: 0.7 }}
-                className="group relative grid size-[252px] shrink-0 place-items-center outline-none disabled:cursor-wait focus-visible:ring-2 focus-visible:ring-[var(--brand)]/50"
-                style={{ clipPath: PLATE }}
-              >
+              <div className="relative grid size-[252px] shrink-0 place-items-center">
+                {on && !calm &&
+                  [0, 1].map((i) => (
+                    <motion.span
+                      key={"cham" + i}
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0"
+                      style={{ clipPath: PLATE, border: "1px solid var(--green-line)" }}
+                      initial={{ opacity: 0.75, scale: 0.94 }}
+                      animate={{ opacity: 0, scale: 1.2 }}
+                      transition={{ duration: 0.85, delay: i * 0.13, ease: [0.22, 1, 0.36, 1] }}
+                    />
+                  ))}
+                <motion.button
+                  type="button"
+                  onClick={() => void setHelper(!on)}
+                  disabled={!card || busy}
+                  aria-pressed={on}
+                  aria-label={on ? t("voiceDisconnect") : t("voiceRowTitle")}
+                  whileTap={busy ? undefined : { scale: calm ? 1 : 0.94 }}
+                  animate={on && !calm ? { scale: [1, 1.04, 1] } : { scale: 1 }}
+                  transition={{ type: "spring", stiffness: 520, damping: 24, mass: 0.7 }}
+                  className="group relative grid size-[252px] place-items-center outline-none disabled:cursor-wait focus-visible:ring-2 focus-visible:ring-[var(--brand)]/50"
+                  style={{ clipPath: PLATE }}
+                >
                 <span aria-hidden className={cn("absolute inset-0 transition-colors duration-300", on ? "bg-[var(--green-line)]" : "bg-[var(--brand-line)]")} />
                 <span aria-hidden className="absolute inset-[2px] bg-[var(--panel)] transition-colors duration-200 group-hover:bg-[#14171a]" style={{ clipPath: PLATE }} />
                 <motion.span
@@ -168,7 +181,8 @@ export function Voice() {
                     {busy ? t("working") : on ? t("stop") : t("connect")}
                   </span>
                 </span>
-              </motion.button>
+                </motion.button>
+              </div>
             </div>
 
             {/* the switch sits on the floor, where a HUD keeps its settings */}

@@ -767,8 +767,15 @@ async fn tunnel_start(
     // Fresh DNS for the new session: entries from before the tunnel existed
     // are what make the first lookups after connect hang.
     flush_dns_cache();
+    // A dead engine leaves its adapter behind, and Windows then refuses to
+    // give the next one out until the machine restarts. Anything still there
+    // while nothing of ours is running is a ghost: remove it first.
+    if vpn::tun_adapter_present() {
+        vpn::app_log("leftover tun adapter, clearing it first");
+        vpn::reset_tun_adapter();
+    }
     let child = vpn::spawn_engine().map_err(|e| e)?;
-    let pid = child.id();
+    let mut pid = child.id();
     // The handle must outlive this command (dropping kills the engine);
     // the PID file + tracked pid own the lifecycle from here.
     std::mem::forget(child);
@@ -778,20 +785,35 @@ async fn tunnel_start(
     // made the first connect of a session fail while the engine was healthy;
     // pressing again only worked because the driver was warm by then.
     let mut up = false;
-    for _ in 0..40 {
-        if *engine.0.lock().unwrap() != Some(pid) {
-            // A stop during settle clears the pid: drop our engine, report stopped.
-            vpn::request_graceful_stop(pid);
-            return Ok(CmdResult { ok: false, msg: "Stopped".into() });
+    for attempt in 0..2 {
+        for _ in 0..40 {
+            if *engine.0.lock().unwrap() != Some(pid) {
+                // A stop during settle clears the pid: drop our engine, report stopped.
+                vpn::request_graceful_stop(pid);
+                return Ok(CmdResult { ok: false, msg: "Stopped".into() });
+            }
+            if !pid_alive(pid) {
+                break;
+            }
+            if vpn::tun_routes_present() {
+                up = true;
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
         }
-        if !pid_alive(pid) {
+        if up || pid_alive(pid) || attempt == 1 {
             break;
         }
-        if vpn::tun_routes_present() {
-            up = true;
-            break;
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        // It died before its routes landed: the usual cause is the adapter
+        // the previous run left. Clean that up and give it one more go, so a
+        // wedged handover never costs the user a reboot.
+        vpn::app_log("engine died on start: clearing the adapter and retrying once");
+        vpn::engine_cleanup();
+        vpn::reset_tun_adapter();
+        let again = vpn::spawn_engine().map_err(|e| e)?;
+        pid = again.id();
+        std::mem::forget(again);
+        *engine.0.lock().unwrap() = Some(pid);
     }
     if up {
         // Clear whatever the warmup window cached, failed lookups included,

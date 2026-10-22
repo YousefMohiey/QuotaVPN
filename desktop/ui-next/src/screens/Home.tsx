@@ -6,7 +6,6 @@ import { Dial, type DialState } from "@/components/Dial"
 import { WeQuotaCard } from "@/components/WeQuotaCard"
 import { PickerDialog, type PickerItem } from "@/components/PickerDialog"
 import { Segmented } from "@/components/Segmented"
-import { Tip } from "@/components/Tip"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { copyText } from "@/lib/clipboard"
@@ -113,19 +112,17 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
       { value: "wg", label: t("trWg"), hint: t("trNoteWg") },
     ]} /> },
     { id: "ip", label: t("yourIp"), icon: MapPin, cls: "col-span-2 border-e border-line", body: (
-      <Tip text={t("copy")}>
-        <button
-          type="button"
-          onClick={() => void take()}
-          aria-label={`${t("copy")} ${ipText}`}
-          className="press group inline-flex min-w-0 items-center gap-1.5 text-[12.5px] tabular-nums transition-colors"
-        >
-          <span className={cn("truncate", copied ? "text-[var(--green)]" : "text-txt")} dir="auto">
-            {copied ? t("copied") : ipText}
-          </span>
-          <Copy className="size-3 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
-        </button>
-      </Tip>
+      <button
+        type="button"
+        onClick={() => void take()}
+        aria-label={`${t("copy")} ${ipText}`}
+        className="press group inline-flex min-w-0 items-center gap-1.5 text-[12.5px] tabular-nums transition-colors"
+      >
+        <span className={cn("truncate", copied ? "text-[var(--green)]" : "text-txt")} dir="auto">
+          {copied ? t("copied") : ipText}
+        </span>
+        <Copy className="size-3 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
+      </button>
     ) },
     { id: "location", label: t("yourLocation"), icon: MapPin, cls: "col-span-2 border-e border-line", body: <span className="truncate text-[12.5px] text-txt" dir="auto">{geo?.place || "-"}</span> },
     { id: "isp", label: t("ispLbl"), icon: Building2, cls: "col-span-2", body: <span className="truncate text-[12.5px] text-txt" dir="auto">{geo?.isp || "-"}</span> },
@@ -216,19 +213,18 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
           <div className="grid w-full max-w-[440px] shrink-0 grid-cols-3 overflow-hidden rounded-[10px] bg-white/[0.03]">
             <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-2.5">
               <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("yourIp")}</span>
-              <Tip text={t("copy")}>
-                <button
-                  type="button"
-                  onClick={() => void take()}
-                  aria-label={`${t("copy")} ${ipText}`}
-                  className="press group flex min-w-0 items-center gap-1.5 text-[13px] tabular-nums transition-colors"
-                >
-                  <span className={cn("truncate", copied ? "text-[var(--green)]" : "text-txt")} dir="auto">
-                    {copied ? t("copied") : ipText}
-                  </span>
-                  <Copy className="size-3 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
-                </button>
-              </Tip>
+
+             <button
+               type="button"
+               onClick={() => void take()}
+               aria-label={`${t("copy")} ${ipText}`}
+               className="press group flex min-w-0 items-center gap-1.5 text-[13px] tabular-nums transition-colors"
+             >
+               <span className={cn("truncate", copied ? "text-[var(--green)]" : "text-txt")} dir="auto">
+                 {copied ? t("copied") : ipText}
+               </span>
+               <Copy className="size-3 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
+             </button>
             </span>
             <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-2.5">
               <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("yourLocation")}</span>

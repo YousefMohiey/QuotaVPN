@@ -28,19 +28,20 @@ export function Dial({
 
   return (
     <div className="relative grid shrink-0 place-items-center" style={{ width: size, height: size }}>
-      {/* one ring leaves the rim when a session comes up */}
+      {/* two rings leave the rim when a session comes up, one behind the other */}
       <AnimatePresence>
-        {state === "on" && !calm && (
-          <motion.span
-            key="rim"
-            aria-hidden
-            className="pointer-events-none absolute inset-0 rounded-full border border-[var(--green-line)]"
-            initial={{ opacity: 0.85, scale: 0.94 }}
-            animate={{ opacity: 0, scale: 1.2 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          />
-        )}
+        {state === "on" && !calm &&
+          [0, 1].map((i) => (
+            <motion.span
+              key={"rim" + i}
+              aria-hidden
+              className="pointer-events-none absolute inset-0 rounded-full border border-[var(--green-line)]"
+              initial={{ opacity: 0.8, scale: 0.93 }}
+              animate={{ opacity: 0, scale: 1.28 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.9, delay: i * 0.14, ease: [0.22, 1, 0.36, 1] }}
+            />
+          ))}
       </AnimatePresence>
 
       <motion.button
@@ -48,9 +49,9 @@ export function Dial({
         onClick={onClick}
         disabled={disabled}
         aria-label={label}
-        whileTap={disabled ? undefined : { scale: calm ? 1 : 0.955 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", stiffness: 520, damping: 26, mass: 0.7 }}
+        whileTap={disabled ? undefined : { scale: calm ? 1 : 0.94 }}
+        animate={state === "on" && !calm ? { scale: [1, 1.045, 1] } : { scale: 1 }}
+        transition={{ type: "spring", stiffness: 520, damping: 24, mass: 0.7 }}
         style={{ width: size, height: size }}
       className={cn(
         "relative grid shrink-0 place-items-center rounded-full border bg-[#13161a] shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_22px_48px_rgb(0_0_0/0.5),0_2px_6px_rgb(0_0_0/0.4)] transition-[background-color,border-color,color,box-shadow] duration-300 disabled:opacity-70",
