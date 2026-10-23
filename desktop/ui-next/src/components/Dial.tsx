@@ -49,9 +49,11 @@ export function Dial({
         onClick={onClick}
         disabled={disabled}
         aria-label={label}
-        whileTap={disabled ? undefined : { scale: calm ? 1 : 0.94 }}
+        // The press answer is feedback, not decoration: it stays even when
+        // Windows asks for reduced motion, where the looping rings below drop.
+        whileTap={disabled ? undefined : { scale: 0.93 }}
         animate={state === "on" && !calm ? { scale: [1, 1.045, 1] } : { scale: 1 }}
-        transition={{ type: "spring", stiffness: 520, damping: 24, mass: 0.7 }}
+        transition={{ type: "spring", stiffness: 460, damping: 26, mass: 0.7 }}
         style={{ width: size, height: size }}
       className={cn(
         "relative grid shrink-0 place-items-center rounded-full border bg-[#13161a] shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_22px_48px_rgb(0_0_0/0.5),0_2px_6px_rgb(0_0_0/0.4)] transition-[background-color,border-color,color,box-shadow] duration-300 disabled:opacity-70",

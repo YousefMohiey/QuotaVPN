@@ -148,9 +148,9 @@ export function Voice() {
                   disabled={!card || busy}
                   aria-pressed={on}
                   aria-label={on ? t("voiceDisconnect") : t("voiceRowTitle")}
-                  whileTap={busy ? undefined : { scale: calm ? 1 : 0.94 }}
+                  whileTap={busy ? undefined : { scale: 0.93 }}
                   animate={on && !calm ? { scale: [1, 1.04, 1] } : { scale: 1 }}
-                  transition={{ type: "spring", stiffness: 520, damping: 24, mass: 0.7 }}
+                  transition={{ type: "spring", stiffness: 460, damping: 26, mass: 0.7 }}
                   className="group relative grid size-[252px] place-items-center outline-none disabled:cursor-wait focus-visible:ring-2 focus-visible:ring-[var(--brand)]/50"
                   style={{ clipPath: PLATE }}
                 >

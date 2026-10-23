@@ -2050,6 +2050,12 @@ pub fn run() {
         vpn::remove_task();
         return;
     }
+    // The helper task's own body: start the engine hidden and stay alive until
+    // it is stopped. Runs as a GUI binary, so Windows draws no console window.
+    if std::env::args().any(|a| a == "--run-engine") {
+        vpn::run_engine_headless();
+        return;
+    }
     if std::env::args().any(|a| a == "--setup-helper") {
         // A standard user elevating with an administrator's credentials runs
         // this pass as the ADMIN, so the account that asked is passed in

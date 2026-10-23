@@ -794,10 +794,16 @@ pub fn account_name() -> String {
 }
 
 /// True when the helper task is registered. Setup is needed until it is.
+///
+/// The action is checked too: a task left over from the PowerShell-script
+/// version still starts the engine, but opens a console window on every
+/// connect, so it counts as not installed and the setup pass replaces it.
 pub fn task_installed() -> bool {
-    run_hidden("schtasks", &["/Query", "/TN", &task_name()])
-        .map(|o| o.status.success())
-        .unwrap_or(false)
+    let out = match run_hidden("schtasks", &["/Query", "/TN", &task_name(), "/XML"]) {
+        Ok(o) if o.status.success() => o,
+        _ => return false,
+    };
+    String::from_utf8_lossy(&out.stdout).contains("--run-engine")
 }
 
 /// The script the helper task runs. It exists so the privileged side can clear
@@ -851,14 +857,67 @@ pub fn write_engine_cmd() {
     let _ = std::fs::write(engine_ps_path(), body);
 }
 
+/// The task runs the app itself with this flag. A PowerShell script as the
+/// task action opened a console window on every connect, which read as the app
+/// shelling out; the app is a GUI binary, so Windows never gives it one.
+pub fn run_engine_headless() {
+    let cfg = tun_config_path();
+    // No tunnel config means this PC has never connected: nothing to run.
+    if !cfg.exists() {
+        return;
+    }
+    // Phantoms first. A dead session reserves the adapter name and the next
+    // start dies with "create adapter: Cannot create a file when that file
+    // already exists". Only this side can clear them.
+    let _ = run_hidden(
+        "powershell",
+        &[
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            "Get-PnpDevice -Class Net | Where-Object { $_.Status -eq 'Unknown' -and $_.FriendlyName -eq 'sing-tun Tunnel' } | ForEach-Object { pnputil /remove-device $_.InstanceId | Out-Null }",
+        ],
+    );
+    let pid_path = engine_dir().join("engine.pid");
+    let stop_path = engine_dir().join("engine.stop");
+    let _ = std::fs::remove_file(&pid_path);
+    let _ = std::fs::remove_file(&stop_path);
+
+    let mut cmd = cmd_hidden(&singbox_path().to_string_lossy());
+    cmd.args(["run", "-c", &cfg.to_string_lossy()]);
+    if let Ok(f) = std::fs::File::create(engine_log_path()) {
+        cmd.stdout(std::process::Stdio::from(f));
+    }
+    if let Ok(f) = std::fs::File::create(engine_dir().join("engine.err")) {
+        cmd.stderr(std::process::Stdio::from(f));
+    }
+    let Ok(mut child) = cmd.spawn() else {
+        return;
+    };
+    let _ = std::fs::write(&pid_path, child.id().to_string());
+    loop {
+        // The app drops this file to stop the engine without elevation.
+        if stop_path.exists() {
+            let _ = child.kill();
+            let _ = child.wait();
+            break;
+        }
+        match child.try_wait() {
+            Ok(Some(_)) => break,
+            Ok(None) => std::thread::sleep(std::time::Duration::from_millis(350)),
+            Err(_) => break,
+        }
+    }
+    let _ = std::fs::remove_file(&pid_path);
+}
+
 /// Register the task. Runs in the elevated pass (`QuotaVPN.exe --setup-helper`),
 /// so this is the only moment the product asks Windows for administrator.
 pub fn install_task(owner: &str) -> Result<(), String> {
-    write_engine_cmd();
-    let tr = format!(
-        "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{}\"",
-        engine_ps_path().display()
-    );
+    let _ = std::fs::remove_file(engine_ps_path());
+    let exe = std::env::current_exe().map_err(|e| format!("exe: {e}"))?;
+    let tr = format!("\"{}\" --run-engine", exe.display());
     let out = run_hidden(
         "schtasks",
         &[
