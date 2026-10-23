@@ -1,5 +1,6 @@
 /target
-Cargo.lock
+# Cargo.lock is committed on purpose: the app ships as a binary, and a signing
+# pipeline has to rebuild the same dependency set that was tested.
 dist/
 *.exe
 # device private key: baked into local builds only, never committed
