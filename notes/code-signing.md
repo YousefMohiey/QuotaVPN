@@ -39,6 +39,17 @@ What it costs besides money:
    the updater manifest over the signed bytes, verifies with `signtool`, and
    attaches both files to the release.
 
+### The application text
+
+Short and true beats long. This is the whole thing:
+
+> QuotaVPN is a free, open source VPN client for Windows and Android, MIT
+> licensed, at https://github.com/YousefMohiey/QuotaVPN. It routes a chosen
+> app's traffic through a data package the user already pays for, so a gaming or
+> streaming plan can be used from a desktop. Python and Rust client, no
+> telemetry, configurable servers. The Windows installer is built by the
+> workflow in this repository and is the artifact that needs signing.
+
 ### The updater signature is rebuilt after signing
 
 This is the detail that quietly breaks things. Tauri signs the installer with
