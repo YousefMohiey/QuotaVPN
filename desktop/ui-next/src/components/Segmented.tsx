@@ -1,5 +1,6 @@
 import { motion } from "motion/react"
 import { cn } from "@/lib/utils"
+import { Tip } from "@/components/Tip"
 
 /** Small segmented control with one shared indicator that slides.
     `boxed` gives it the same frame as the dropdown controls on Home. */
@@ -32,9 +33,12 @@ export function Segmented<T extends string>({
         className,
       )}
     >
-      {options.map((o) => {
+      {options.map((o, i) => {
         const on = o.value === value
-        return (
+        // A hint on the first or last segment runs off the frame, so the
+        // bubble leans inwards from that edge instead of centring on itself.
+        const lean = i === 0 ? "start" : i === options.length - 1 ? "end" : "center"
+        const btn = (
           <button
             key={o.value}
             type="button"
@@ -61,15 +65,14 @@ export function Segmented<T extends string>({
               />
             )}
             <span className="relative truncate" dir="auto">{o.label}</span>
-            {o.hint ? (
-              <span
-                role="tooltip"
-                className="pointer-events-none absolute bottom-[calc(100%+7px)] end-0 z-40 translate-y-1 whitespace-nowrap rounded-[7px] border border-line bg-[rgb(26_27_33/0.98)] px-2.5 py-1 text-[11.5px] font-medium leading-[1.25] text-txt2 opacity-0 shadow-[0_10px_26px_rgb(0_0_0/0.55)] transition-[opacity,transform] duration-150 group-hover/seg:translate-y-0 group-hover/seg:opacity-100 group-focus-visible/seg:translate-y-0 group-focus-visible/seg:opacity-100"
-              >
-                {o.hint}
-              </span>
-            ) : null}
           </button>
+        )
+        return o.hint ? (
+          <Tip key={o.value} text={o.hint} align={lean} className={cn("min-w-0", boxed ? "flex-1" : fill ? "flex-1" : "")}>
+            {btn}
+          </Tip>
+        ) : (
+          btn
         )
       })}
     </div>

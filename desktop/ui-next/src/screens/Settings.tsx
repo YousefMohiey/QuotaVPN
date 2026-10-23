@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react"
-import { Languages, Power, RefreshCw } from "lucide-react"
+import { Languages, Loader2, Power, RefreshCw } from "lucide-react"
 import { Toggle } from "@/components/Toggle"
 import { WeMark } from "@/components/WeMark"
 import { Segmented } from "@/components/Segmented"
+import { Tip } from "@/components/Tip"
 import { useApp } from "@/state/app"
 import {
+  fmtQuota,
   quotaLogout,
   quotaRefresh,
   useQuota,
@@ -41,23 +43,34 @@ function WeQuotaRow() {
   const [quotaOpen, setQuotaOpen] = useState(false)
   const busy = q.phase === "busy"
 
+  // The row used to hold two buttons and no number, which is the one thing
+  // this setting is about. The figure sits with them.
+  const main = q.units.find((u) => u.total > 0)
   const controls = q.linked ? (
-    <div className="flex shrink-0 items-center gap-2">
-      <button
-        type="button"
-        onClick={() => void quotaRefresh(true)}
-        disabled={busy}
-        className="flex h-8 items-center gap-1.5 rounded-[7px] border border-line bg-white/[0.02] px-2.5 text-[12px] text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
-      >
-        <RefreshCw className={cn("size-3", busy && "animate-spin")} aria-hidden />
-        {t("weRefresh")}
-      </button>
+    <div className="flex shrink-0 items-center gap-2.5">
+      {main ? (
+        <span className="flex items-baseline gap-1 text-[12.5px] tabular-nums text-txt2">
+          <span className="font-display text-[15px] font-semibold text-txt">{fmtQuota(main.remain)}</span>
+          {t("weLeftShort")}
+        </span>
+      ) : null}
+      <Tip text={t("weRefresh")} align="end">
+        <button
+          type="button"
+          onClick={() => void quotaRefresh(true)}
+          disabled={busy}
+          className="flex h-8 items-center gap-1.5 rounded-[7px] border border-line bg-white/[0.02] px-2.5 text-[12px] text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
+        >
+          {busy ? <Loader2 className="size-3 animate-spin" aria-hidden /> : <RefreshCw className="size-3" aria-hidden />}
+          {t("weRefresh")}
+        </button>
+      </Tip>
       <button
         type="button"
         onClick={() => {
           void quotaLogout()
         }}
-        className="flex h-8 items-center rounded-[7px] border border-line bg-white/[0.02] px-2.5 text-[12px] text-txt2 transition-colors hover:text-txt"
+        className="flex h-8 items-center rounded-[7px] px-2 text-[12px] text-txt3 transition-colors hover:bg-white/[0.04] hover:text-txt"
       >
         {t("weUnlink")}
       </button>
@@ -226,7 +239,7 @@ export function Settings() {
           {/* three columns on one rail: the label, a fixed height line that
               holds whatever the column's control is, then one caption. The
               rail is why the number, the button and the switch sit level. */}
-          <div className="mt-4 grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1.25fr)]">
+          <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1.25fr)]">
             <div className="flex min-w-0 flex-col">
               <span className="text-[11px] font-medium uppercase tracking-[0.09em] text-txt3">{t("chCur")}</span>
               <div className="mt-1.5 flex h-9 items-center">
@@ -249,7 +262,11 @@ export function Settings() {
                   disabled={updateState === "checking"}
                   className="flex h-8 items-center gap-1.5 rounded-[7px] border border-line bg-white/[0.02] px-3 text-[12px] text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
                 >
-                  <RefreshCw className={cn("size-3", updateState === "checking" && "animate-spin")} aria-hidden />
+                  {updateState === "checking" ? (
+                    <Loader2 className="size-3 animate-spin" aria-hidden />
+                  ) : (
+                    <RefreshCw className="size-3" aria-hidden />
+                  )}
                   {updateState === "checking" ? t("upChecking") : t("upCheck")}
                 </button>
                 {(updateState === "available" || updateState === "installing") && (

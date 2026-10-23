@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Gamepad2, Layers, Play, RefreshCw } from "lucide-react"
+import { Gamepad2, Layers, Loader2, Play, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { WeMark } from "./WeMark"
 import { useI18n } from "@/lib/i18n"
@@ -53,7 +53,7 @@ export function WeQuotaCard() {
               <span className="max-w-[120px] truncate rounded-full bg-white/[0.04] px-2 py-0.5 text-[11px] text-txt2" title={mainUnit.offer || "WE"} dir="auto">
                 {mainUnit.offer || "WE"}
               </span>
-              <Tip text={t("weRefresh")}>
+              <Tip text={t("weRefresh")} align="end">
                 <button
                   type="button"
                   onClick={() => void quotaRefresh(true)}
@@ -61,7 +61,11 @@ export function WeQuotaCard() {
                   disabled={quota.phase === "busy"}
                   className="press grid size-7 shrink-0 place-items-center rounded-full text-txt3 transition-colors hover:text-brand-strong disabled:cursor-wait"
                 >
-                  <RefreshCw className={cn("size-3.5", quota.phase === "busy" && "animate-spin")} aria-hidden />
+                  {quota.phase === "busy" ? (
+                    <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                  ) : (
+                    <RefreshCw className="size-3.5" aria-hidden />
+                  )}
                 </button>
               </Tip>
             </span>

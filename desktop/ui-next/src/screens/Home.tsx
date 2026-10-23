@@ -6,6 +6,7 @@ import { Dial, type DialState } from "@/components/Dial"
 import { WeQuotaCard } from "@/components/WeQuotaCard"
 import { PickerDialog, type PickerItem } from "@/components/PickerDialog"
 import { Segmented } from "@/components/Segmented"
+import { Tip } from "@/components/Tip"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { copyText } from "@/lib/clipboard"
@@ -109,22 +110,24 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
     { id: "domain", label: t("domainSni"), icon: Globe, cls: "col-span-3 border-e border-b border-line", body: <span className="truncate text-[12.5px] text-txt" dir="auto">{domText}</span>, chevron: "down", onClick: () => setDomainOpen(true) },
     { id: "routing", label: t("routing"), icon: LayoutGrid, cls: "col-span-3 border-b border-line", body: <span className="truncate text-[12.5px] text-txt" dir="auto">{routing}{routingCount}</span>, chevron: "right", onClick: onOpenApps },
     { id: "transport", label: t("transport"), icon: Link2, cls: "col-span-6 border-b border-line", body: <Segmented id="transport" value={transport} onChange={setTransport} boxed options={[
-      { value: "vless", label: t("trStandard") },
+      { value: "vless", label: t("trStandard"), hint: t("trNoteVless") },
       { value: "hy2", label: "Hysteria2", hint: t("trNoteHy2") },
       { value: "wg", label: t("trWg"), hint: t("trNoteWg") },
     ]} /> },
     { id: "ip", label: t("yourIp"), icon: MapPin, cls: "col-span-2 border-e border-line", body: (
-      <button
-        type="button"
-        onClick={() => void take()}
-        aria-label={`${t("copy")} ${ipText}`}
-        className="press group inline-flex min-w-0 items-center gap-1.5 text-[12.5px] tabular-nums transition-colors"
-      >
-        <span className={cn("truncate", copied ? "text-[var(--green)]" : "text-txt")} dir="auto">
-          {copied ? t("copied") : ipText}
-        </span>
-        <Copy className="size-3 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
-      </button>
+      <Tip text={copied ? t("copied") : t("copy")} align="start">
+        <button
+          type="button"
+          onClick={() => void take()}
+          aria-label={`${t("copy")} ${ipText}`}
+          className="press group inline-flex min-w-0 items-center gap-1.5 text-[12.5px] tabular-nums transition-colors"
+        >
+          <span className={cn("truncate", copied ? "text-[var(--green)]" : "text-txt")} dir="auto">
+            {copied ? t("copied") : ipText}
+          </span>
+          <Copy className="size-3 shrink-0 text-txt2 transition-colors group-hover:text-brand-strong" aria-hidden />
+        </button>
+      </Tip>
     ) },
     { id: "location", label: t("yourLocation"), icon: MapPin, cls: "col-span-2 border-e border-line", body: <span className="truncate text-[12.5px] text-txt" dir="auto">{geo?.place || "-"}</span> },
     { id: "isp", label: t("ispLbl"), icon: Building2, cls: "col-span-2", body: <span className="truncate text-[12.5px] text-txt" dir="auto">{geo?.isp || "-"}</span> },
@@ -234,17 +237,19 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
             <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-2.5">
               <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("yourIp")}</span>
 
-             <button
-               type="button"
-               onClick={() => void take()}
-               aria-label={`${t("copy")} ${ipText}`}
-               className="press group flex min-w-0 items-center gap-1.5 text-[13px] tabular-nums transition-colors"
-             >
-               <span className={cn("truncate", copied ? "text-[var(--green)]" : "text-txt")} dir="auto">
-                 {copied ? t("copied") : ipText}
-               </span>
-               <Copy className="size-3 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
-             </button>
+             <Tip text={copied ? t("copied") : t("copy")}>
+               <button
+                 type="button"
+                 onClick={() => void take()}
+                 aria-label={`${t("copy")} ${ipText}`}
+                 className="press group flex min-w-0 items-center gap-1.5 text-[13px] tabular-nums transition-colors"
+               >
+                 <span className={cn("truncate", copied ? "text-[var(--green)]" : "text-txt")} dir="auto">
+                   {copied ? t("copied") : ipText}
+                 </span>
+                 <Copy className="size-3 shrink-0 text-txt2 transition-colors group-hover:text-brand-strong" aria-hidden />
+               </button>
+             </Tip>
             </span>
             <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-2.5">
               <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("yourLocation")}</span>

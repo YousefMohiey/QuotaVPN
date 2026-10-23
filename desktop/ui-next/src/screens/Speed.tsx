@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Activity, ArrowDown, ArrowUp, ChevronDown, Cloud, Gauge, Gamepad2, RefreshCw, Server, Tv, Video, Wifi } from "lucide-react"
+import { Activity, ArrowDown, ArrowUp, ChevronDown, Cloud, Gauge, Gamepad2, Loader2, RefreshCw, Server, Tv, Video, Wifi } from "lucide-react"
 import { PickerDialog } from "@/components/PickerDialog"
 import { SpeedDial } from "@/components/SpeedDial"
 import { useApp } from "@/state/app"
@@ -769,7 +769,7 @@ export function Speed() {
               title={t("refresh")}
               className="press grid size-7 shrink-0 place-items-center rounded-full text-txt3 transition-colors hover:text-brand-strong disabled:cursor-wait"
             >
-              <RefreshCw className={cn("size-3.5", refreshing && "animate-spin")} aria-hidden />
+              {refreshing ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : <RefreshCw className="size-3.5" aria-hidden />}
             </button>
           </div>
           <span className="truncate text-[12px] text-txt3" dir="auto">{srv.detail || srv.host}</span>
