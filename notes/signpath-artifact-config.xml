@@ -1,0 +1,16 @@
+<!--
+  SignPath artifact configuration for the QuotaVPN installer.
+
+  The workflow uploads the installer with archive: false, so the artifact handed
+  to SignPath is the single .exe itself and the root element is a <pe-file>.
+  Paste this into the SignPath project as a custom artifact configuration, or
+  upload a sample installer and let SignPath generate it, then compare.
+
+  If the upload ever switches back to a zip, wrap the <pe-file> in a <zip-file>
+  and give it the file name inside the archive.
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <pe-file>
+    <authenticode-sign />
+  </pe-file>
+</artifact-configuration>

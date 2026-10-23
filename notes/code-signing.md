@@ -3,6 +3,50 @@
 What the unsigned build looks like today, what each option actually costs, and
 exactly what to change once a certificate exists.
 
+## The free route: SignPath Foundation
+
+SignPath Foundation issues the certificate, holds the private key in their HSM,
+and signs binaries that were provably built from this repository. For open
+source projects it costs nothing, and the repository qualifies: public, MIT
+licensed, released, maintained.
+
+What it gives users: a real Authenticode signature from a publicly trusted
+certificate, so the installer no longer says Unknown publisher.
+
+What it costs besides money:
+
+- The publisher reads **SignPath Foundation**, not your name. That is the deal,
+  they vouch for the build because they cannot vouch for a stranger.
+- The build has to run on GitHub Actions, on a GitHub-hosted runner. They check
+  that the artifact came from a workflow on this repository and refuse
+  anything built on a laptop. Public repositories get those minutes free.
+- They review the application by hand, so it is not instant.
+
+### Steps
+
+1. Apply at https://signpath.org/apply with the repository URL, the MIT licence,
+   and a line on what the app does.
+2. They create an organisation, a project, a signing policy and an artifact
+   configuration. Copy the organization id, project slug and policy slug.
+3. Add `notes/signpath-artifact-config.xml` as the artifact configuration, or
+   upload one installer and let them generate it.
+4. In the GitHub repository settings:
+   - secret `SIGNPATH_API_TOKEN`
+   - secret `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
+   - variables `SIGNPATH_ORG_ID`, `SIGNPATH_PROJECT_SLUG`,
+     `SIGNPATH_POLICY_SLUG`, `SIGNPATH_ARTIFACT_CONFIGURATION`
+5. Push a tag. `.github/workflows/signed-release.yml` builds, signs, re-signs
+   the updater manifest over the signed bytes, verifies with `signtool`, and
+   attaches both files to the release.
+
+### The updater signature is rebuilt after signing
+
+This is the detail that quietly breaks things. Tauri signs the installer with
+the updater key while bundling, then SignPath rewrites the file to add the
+Authenticode signature, and the old `.sig` no longer matches. The workflow runs
+`tauri signer sign` again over the signed installer and publishes that one.
+
+
 ## What users see now
 
 - The installer raises a UAC prompt that says **Publisher: Unknown**, which
@@ -38,6 +82,10 @@ There is nothing wrong with the code, and no amount of build hygiene fixes it.
 
 The repository is already public and MIT licensed, so both of the cheap routes
 are open to it. Certum is the one that puts **your name** on the prompt.
+
+`cognitedata/code-sign-action` does not belong on this list as a free option. It
+is a wrapper that drives SimplySign, so it still needs a certificate you bought;
+it only removes the manual step of connecting the signing service.
 
 ## Once a certificate exists
 

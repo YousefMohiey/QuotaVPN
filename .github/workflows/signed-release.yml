@@ -1,0 +1,118 @@
+name: Signed release
+
+# Builds the Windows installer on a GitHub-hosted runner and has it signed by
+# SignPath Foundation, which is the one route that costs nothing and still puts
+# a real, publicly trusted certificate on the file.
+#
+# Setup, once the application is approved (see notes/code-signing.md):
+#   secret  TAURI_SIGNING_PRIVATE_KEY            the updater key
+#   secret  TAURI_SIGNING_PRIVATE_KEY_PASSWORD   its password
+#   secret  SIGNPATH_API_TOKEN                   from the SignPath project
+#   vars    SIGNPATH_ORG_ID                      SignPath organization id
+#   vars    SIGNPATH_PROJECT_SLUG                project slug
+#   vars    SIGNPATH_POLICY_SLUG                 signing policy slug
+#
+# Without the SignPath secrets the workflow still builds, and leaves the
+# installer as a downloadable artifact, unsigned and plainly labelled.
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: desktop/ui-next/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
+      - name: Frontend dependencies
+        working-directory: desktop/ui-next
+        run: npm ci
+
+      - name: Build
+        working-directory: desktop
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npx --yes @tauri-apps/cli@2 build
+
+      - name: Upload the unsigned installer
+        id: upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-installer
+          path: desktop/src-tauri/target/release/bundle/nsis/*.exe
+          archive: false
+          if-no-files-found: error
+
+      - name: Sign with SignPath
+        id: signpath
+        if: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORG_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION }}
+          github-artifact-id: ${{ steps.upload.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed
+
+      # The updater signature has to cover the bytes people actually receive.
+      # It is made here, over the signed file, because signing changes the hash
+      # and the .sig that the bundler produced belongs to the unsigned build.
+      - name: Sign the updater manifest
+        if: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
+        shell: bash
+        working-directory: signed
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -e
+          FILE="$(ls *.exe | head -1)"
+          npx --yes @tauri-apps/cli@2 signer sign "$FILE"
+          ls -la
+
+      - name: Check the signature really verifies
+        if: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
+        shell: pwsh
+        run: |
+          $file = Get-ChildItem signed/*.exe | Select-Object -First 1
+          $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter signtool.exe |
+            Where-Object { $_.FullName -like "*x64*" } |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+          & $signtool.FullName verify /pa /v $file.FullName
+          if ($LASTEXITCODE -ne 0) { throw "the installer is not validly signed" }
+
+      - name: Attach to the release
+        if: ${{ startsWith(github.ref, 'refs/tags/') && secrets.SIGNPATH_API_TOKEN != '' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${GITHUB_REF_NAME}" signed/*.exe signed/*.sig --clobber
+
+      - name: Keep the unsigned build when signing is not set up
+        if: ${{ secrets.SIGNPATH_API_TOKEN == '' }}
+        run: |
+          echo "::warning::SignPath secrets are not configured, so this installer is unsigned."
