@@ -875,25 +875,46 @@ pub fn install_task(owner: &str) -> Result<(), String> {
 }
 
 pub fn remove_task() {
-    if run_hidden("schtasks", &["/Delete", "/TN", &task_name(), "/F"])
+    let deleted = run_hidden("schtasks", &["/Delete", "/TN", &task_name(), "/F"])
         .map(|o| o.status.success())
-        .unwrap_or(false)
-    {
+        .unwrap_or(false);
+    let adapter = tun_adapter_present();
+    // Nothing left to clean and nothing to ask for.
+    if deleted && !adapter {
         return;
     }
-    // A task registered with highest rights by an administrator cannot be
-    // deleted by an ordinary account, so uninstalling used to leave it behind
-    // for ever. Ask Windows once; a refusal leaves it where it was.
-    // Start-Process joins an argument array with spaces and does NOT quote the
-    // pieces, so a task name with a space in it arrived as three separate
-    // arguments and the elevated delete answered "Invalid argument/option".
-    // The whole switch list goes as one string with the name quoted.
-    let ps = format!(
-        "Start-Process -FilePath 'schtasks.exe' -ArgumentList '/Delete /TN \"{}\" /F' -Verb RunAs -WindowStyle Hidden",
+    // Two things need administrator and neither can be done by an ordinary
+    // account: deleting a task registered with highest rights, and removing a
+    // virtual network adapter. One prompt covers both, and it is only raised
+    // when one of them is still there. The script lives in the engine folder
+    // so the quoting can be plain prose instead of an escaped one-liner.
+    let script = engine_dir().join("uninstall-clean.ps1");
+    let body = format!(
+        "$ErrorActionPreference = 'SilentlyContinue'
+         schtasks /End /TN \"{0}\" | Out-Null
+         schtasks /Delete /TN \"{0}\" /F | Out-Null
+         taskkill /IM sing-box.exe /F | Out-Null
+         Get-NetAdapter -IncludeHidden | Where-Object {{ $_.Name -like 'QuotaVPN*' }} | ForEach-Object {{
+           Disable-NetAdapter -InputObject $_ -Confirm:$false
+           Remove-NetAdapter -InputObject $_ -Confirm:$false
+         }}
+         Get-PnpDevice -Class Net | Where-Object {{ $_.FriendlyName -eq 'sing-tun Tunnel' }} | ForEach-Object {{
+           pnputil /remove-device $_.InstanceId | Out-Null
+         }}
+",
         task_name()
     );
-    let _ = run_hidden("powershell", &["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps]);
-    std::thread::sleep(std::time::Duration::from_secs(4));
+    if std::fs::write(&script, body).is_ok() {
+        // Start-Process joins an argument array with spaces and quotes
+        // nothing, so the whole switch list goes as one string.
+        let ps = format!(
+            "Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{}\"' -Verb RunAs -Wait -WindowStyle Hidden",
+            script.display()
+        );
+        let _ = run_hidden("powershell", &["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps]);
+        let _ = std::fs::remove_file(&script);
+    }
+    std::thread::sleep(std::time::Duration::from_secs(3));
 }
 
 fn start_task() -> Result<(), String> {
