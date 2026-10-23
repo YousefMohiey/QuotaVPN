@@ -1,5 +1,6 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { Power } from "lucide-react"
+import { WaitingRing } from "@/components/Waiting"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/lib/i18n"
 
@@ -24,7 +25,7 @@ export function Dial({
 }) {
   const { t } = useI18n()
   const calm = useReducedMotion()
-  const label = state === "connecting" ? t("working") : state === "on" ? t("disconnect") : t("connect")
+  const label = state === "connecting" ? t("connecting") : state === "on" ? t("disconnect") : t("connect")
 
   return (
     <div className="relative grid shrink-0 place-items-center" style={{ width: size, height: size }}>
@@ -74,15 +75,14 @@ export function Dial({
         transition={{ duration: 0.5 }}
       />
 
-      {state === "connecting" && (
-        <span
-          aria-hidden
-          className="absolute -inset-px rounded-full border-2 border-transparent border-t-[var(--brand)] [animation:spin_1.15s_linear_infinite] motion-reduce:animate-none motion-reduce:opacity-60"
-        />
-      )}
+      {state === "connecting" && <WaitingRing calm={calm} />}
       {/* the power over the word, sized to the circle it lives in */}
       <span className={cn("relative flex flex-col items-center", compact ? "gap-1.5" : "gap-3.5")}>
-        <Power className={compact ? "size-6" : "size-10"} strokeWidth={1.6} aria-hidden />
+        <Power
+          className={cn(compact ? "size-6" : "size-10", "transition-opacity duration-300", state === "connecting" && "opacity-45")}
+          strokeWidth={1.6}
+          aria-hidden
+        />
         {compact ? null : <span className="font-display text-[15px] font-semibold tracking-[0.01em]">{label}</span>}
       </span>
       </motion.button>

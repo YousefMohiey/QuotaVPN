@@ -22,12 +22,16 @@ const APPS = [
   "Battle.net", "League of Legends", "Minecraft Launcher", "Zoom", "Microsoft Teams", "Notepad++",
 ]
 
+// ?slow=1 stretches every call so the connecting state can be looked at
+// instead of photographed by luck.
+const SLOW = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("slow") === "1"
+
 export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
-  await new Promise((r) => setTimeout(r, 40))
+  await new Promise((r) => setTimeout(r, SLOW ? 2600 : 40))
   const ok = (msg = ""): CmdResult => ({ ok: true, msg })
   switch (cmd) {
     case "get_state":
-      return { server_ip: "qc-speed.example.com", ssh_user: "ubuntu", ssh_port: 22, cards, version: "0.4.12", update_channel: "normal" } as T
+      return { server_ip: "qc-speed.example.com", ssh_user: "ubuntu", ssh_port: 22, cards, version: "0.4.13", update_channel: "normal" } as T
     case "probe_server":
       return ok("Server reachable.") as T
     case "generate_card": {
@@ -99,7 +103,7 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
       // The "update ready" reminder appears only when asked for (?upd=1);
       // the real check reports available only when GitHub says so.
       const wantUpd = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("upd") === "1"
-      return { current: "0.4.12", latest: wantUpd ? "0.5.0" : "0.4.12", available: wantUpd, url: "#", notes: "" } as UpdateInfo as T
+      return { current: "0.4.13", latest: wantUpd ? "0.5.0" : "0.4.13", available: wantUpd, url: "#", notes: "" } as UpdateInfo as T
     }
     case "apply_update":
       return "Up to date." as T

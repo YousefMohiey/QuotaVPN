@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { Loader2, Mic } from "lucide-react"
+import { Mic } from "lucide-react"
+import { WaitingRing, WaitingSweep } from "@/components/Waiting"
 import { motion, useReducedMotion } from "motion/react"
 import { ValorantMark } from "@/components/ValorantMark"
 import { useI18n } from "@/lib/i18n"
@@ -107,7 +108,7 @@ export function Voice() {
               {/* the state, left aligned, with a rule under it */}
               <div className="flex min-w-0 flex-1 flex-col gap-2">
                 <motion.span
-                  key={on ? (healthy ? "healthy" : "armed") : "off"}
+                  key={busy ? "busy" : on ? (healthy ? "healthy" : "armed") : "off"}
                   initial={calm ? { opacity: 0 } : { opacity: 0, y: 2 }}
                   animate={calm ? { opacity: 1 } : { opacity: 1, y: 0 }}
                   transition={{ duration: calm ? 0.12 : 0.18, ease: [0.23, 1, 0.32, 1] }}
@@ -116,7 +117,7 @@ export function Voice() {
                     healthy ? "text-[var(--green)]" : "text-txt",
                   )}
                 >
-                  {on ? t("voiceActive") : t("voiceOffTitle")}
+                  {busy ? t("connecting") : on ? t("voiceActive") : t("voiceOffTitle")}
                 </motion.span>
                 <span className="max-w-[430px] text-[13px] leading-snug text-txt2">{stateWord}</span>
                 {msg ? (
@@ -164,9 +165,13 @@ export function Voice() {
                   transition={{ duration: 0.45 }}
                   style={{ clipPath: PLATE }}
                 />
+                {busy && <WaitingSweep calm={calm} clipPath={PLATE} />}
                 <span className="relative flex flex-col items-center gap-2.5">
                   {busy ? (
-                    <Loader2 className={cn("size-12", on ? "text-[var(--green)]" : "text-brand-strong", calm ? "" : "animate-spin")} aria-hidden />
+                    <span className="relative grid size-14 place-items-center">
+                      <WaitingRing calm={calm} className="inset-[-6px]" />
+                      <Mic className={cn("size-9", on ? "text-[var(--green)]/50" : "text-txt2/50")} aria-hidden />
+                    </span>
                   ) : (
                     <Mic className={cn("size-12", on ? "text-[var(--green)]" : "text-txt2")} aria-hidden />
                   )}
@@ -178,7 +183,7 @@ export function Voice() {
                       on ? "text-[var(--green)]/90" : "text-txt3",
                     )}
                   >
-                    {busy ? t("working") : on ? t("stop") : t("connect")}
+                    {busy ? t("connecting") : on ? t("stop") : t("connect")}
                   </span>
                 </span>
                 </motion.button>
