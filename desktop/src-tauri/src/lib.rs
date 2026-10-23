@@ -1749,10 +1749,27 @@ async fn updater(app: &tauri::AppHandle, channel: &str) -> Result<tauri_plugin_u
 /// without a latest.json asset (like the engine package) are skipped.
 ///
 /// The list GitHub returns is NOT reliably newest-first (observed: older
-/// test builds before newer ones), so the pick is by the release's own
-/// created timestamp, the greatest winning. Taking the first entry that
-/// merely looks valid resolved a stale feed and would have offered an
-/// older build as an update.
+/// test builds before newer ones), so the pick is made here: the highest tag
+/// version wins, published_at breaks a tie. Choosing the first entry that
+/// merely looks valid resolved a stale feed and would have offered an older
+/// build as an update.
+/// "v0.4.11" becomes (0, 4, 11). A tag that carries no version ranks at zero,
+/// so it can never win the experimental pick by accident.
+fn version_rank(tag: &str) -> (u64, u64, u64) {
+    let mut parts = tag.trim_start_matches(['v', 'V']).split('.').map(|p| {
+        p.chars()
+            .take_while(|c| c.is_ascii_digit())
+            .collect::<String>()
+            .parse::<u64>()
+            .unwrap_or(0)
+    });
+    (
+        parts.next().unwrap_or(0),
+        parts.next().unwrap_or(0),
+        parts.next().unwrap_or(0),
+    )
+}
+
 async fn experimental_feed_url() -> Option<String> {
     const REPO: &str = "YousefMohiey/QuotaVPN";
     let client = reqwest::Client::builder()
@@ -1788,11 +1805,18 @@ async fn experimental_feed_url() -> Option<String> {
                     })
         })
         .max_by_key(|r| {
-            // ISO 8601 UTC timestamps compare as strings, so the latest
-            // release wins regardless of the order the API chose.
-            r.get("created_at")
+            // By version, not by time. Two releases published in the same
+            // second share created_at, and the timestamp pick then resolves
+            // whichever one the API happened to list last: 0.4.10 and 0.4.11
+            // were created at 18:20:36Z to the second, and a 0.4.10 install
+            // was told it was up to date. published_at breaks a version tie.
+            let tag = r.get("tag_name").and_then(|v| v.as_str()).unwrap_or("");
+            let stamp = r
+                .get("published_at")
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
+                .to_string();
+            (version_rank(tag), stamp)
         })?;
     let tag = best.get("tag_name")?.as_str()?;
     Some(format!(
