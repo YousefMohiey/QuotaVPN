@@ -55,7 +55,15 @@ jobs:
 
       - name: Build
         working-directory: desktop
-        run: npx --yes @tauri-apps/cli@2 build
+        shell: bash
+        run: |
+          if [ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
+            # No updater key configured yet: build the installer without the
+            # updater manifest instead of failing on an empty key.
+            npx --yes @tauri-apps/cli@2 build --config '{"bundle":{"createUpdaterArtifacts":false}}'
+          else
+            npx --yes @tauri-apps/cli@2 build
+          fi
 
       - name: Upload the unsigned installer
         id: upload
