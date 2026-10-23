@@ -884,8 +884,12 @@ pub fn remove_task() {
     // A task registered with highest rights by an administrator cannot be
     // deleted by an ordinary account, so uninstalling used to leave it behind
     // for ever. Ask Windows once; a refusal leaves it where it was.
+    // Start-Process joins an argument array with spaces and does NOT quote the
+    // pieces, so a task name with a space in it arrived as three separate
+    // arguments and the elevated delete answered "Invalid argument/option".
+    // The whole switch list goes as one string with the name quoted.
     let ps = format!(
-        "Start-Process -FilePath 'schtasks.exe' -ArgumentList '/Delete','/TN','{}','/F' -Verb RunAs -WindowStyle Hidden",
+        "Start-Process -FilePath 'schtasks.exe' -ArgumentList '/Delete /TN \"{}\" /F' -Verb RunAs -WindowStyle Hidden",
         task_name()
     );
     let _ = run_hidden("powershell", &["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps]);
