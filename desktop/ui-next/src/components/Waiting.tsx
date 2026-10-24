@@ -1,4 +1,3 @@
-import { useId } from "react"
 import { motion } from "motion/react"
 import { cn } from "@/lib/utils"
 
@@ -13,7 +12,6 @@ import { cn } from "@/lib/utils"
  */
 export function WaitingRing({ calm, className }: { calm?: boolean | null; className?: string }) {
   const still = calm === true
-  const gid = useId().replace(/:/g, "")
   return (
     <span aria-hidden className={cn("pointer-events-none absolute inset-0 grid place-items-center", className)}>
       <motion.span
@@ -25,7 +23,7 @@ export function WaitingRing({ calm, className }: { calm?: boolean | null; classN
       />
       <svg viewBox="0 0 100 100" className="size-full overflow-visible">
         <defs>
-          <linearGradient id={`wrg-${gid}`} x1="0" y1="0" x2="1" y2="1">
+          <linearGradient id="qc-wait-arc" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stopColor="var(--brand-soft)" stopOpacity="0" />
             <stop offset="55%" stopColor="var(--brand-hi)" stopOpacity="0.75" />
             <stop offset="100%" stopColor="var(--brand-soft)" stopOpacity="1" />
@@ -33,20 +31,18 @@ export function WaitingRing({ calm, className }: { calm?: boolean | null; classN
         </defs>
         {/* the track the arcs travel on */}
         <circle cx="50" cy="50" r="49" fill="none" stroke="rgb(255 255 255 / 0.07)" strokeWidth="1" />
-        <motion.circle
+        <circle
           cx="50"
           cy="50"
           r="49"
           fill="none"
-          stroke={`url(#wrg-${gid})`}
+          stroke="url(#qc-wait-arc)"
           strokeWidth="2.2"
           strokeLinecap="round"
           strokeDasharray="118 190"
-          animate={still ? undefined : { rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 1.15, ease: "linear" }}
-          style={{ transformBox: "fill-box", transformOrigin: "center", willChange: "transform" }}
+          className="origin-center animate-spin [transform-box:fill-box] [animation-duration:1.15s]"
         />
-        <motion.circle
+        <circle
           cx="50"
           cy="50"
           r="45.5"
@@ -56,9 +52,7 @@ export function WaitingRing({ calm, className }: { calm?: boolean | null; classN
           strokeWidth="1.1"
           strokeLinecap="round"
           strokeDasharray="34 245"
-          animate={still ? undefined : { rotate: -360 }}
-          transition={{ repeat: Infinity, duration: 2.3, ease: "linear" }}
-          style={{ transformBox: "fill-box", transformOrigin: "center", willChange: "transform" }}
+          className="origin-center animate-spin [animation-direction:reverse] [animation-duration:2.3s] [transform-box:fill-box]"
         />
       </svg>
     </span>
@@ -71,23 +65,20 @@ export function WaitingRing({ calm, className }: { calm?: boolean | null; classN
  * underneath stays where it is.
  */
 export function WaitingSweep({ calm, clipPath }: { calm?: boolean | null; clipPath: string }) {
-  const still = calm === true
+  // The travel stays even under reduced motion: it is the only sign that the
+  // press did something. Only its brightness settles.
+  const dim = calm === true
   return (
     <span aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden" style={{ clipPath }}>
-      <motion.span
-        className="absolute -inset-[30%]"
+      <span
+        className={cn(
+          "absolute -inset-[30%] animate-spin [animation-duration:1.7s]",
+          dim ? "opacity-70" : "opacity-100",
+        )}
         style={{
           background:
             "conic-gradient(from 0deg, transparent 0deg, rgb(61 123 255 / 0.34) 42deg, rgb(127 166 255 / 0.5) 58deg, transparent 110deg)",
-          transformOrigin: "center",
-          willChange: "transform",
         }}
-        animate={still ? { opacity: [0.35, 0.75, 0.35] } : { rotate: 360 }}
-        transition={
-          still
-            ? { duration: 2.2, repeat: Infinity, ease: "easeInOut" }
-            : { rotate: { repeat: Infinity, duration: 1.7, ease: "linear" } }
-        }
       />
     </span>
   )

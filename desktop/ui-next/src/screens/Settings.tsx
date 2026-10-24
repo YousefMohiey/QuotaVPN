@@ -255,12 +255,12 @@ export function Settings() {
 
             <div className="flex min-w-0 flex-col">
               <span className="text-[11px] font-medium uppercase tracking-[0.09em] text-txt3">{t("upManual")}</span>
-              <div className="mt-1.5 flex h-9 items-center gap-2">
+              <div className="mt-1.5 flex min-h-9 flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => void checkUpdates()}
                   disabled={updateState === "checking"}
-                  className="flex h-8 items-center gap-1.5 rounded-[7px] border border-line bg-white/[0.02] px-3 text-[12px] text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
+                  className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[8px] border border-line bg-white/[0.02] px-3.5 text-[12.5px] text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
                 >
                   {updateState === "checking" ? (
                     <Loader2 className="size-3 animate-spin" aria-hidden />
@@ -274,7 +274,7 @@ export function Settings() {
                     type="button"
                     onClick={() => void applyUpdate()}
                     disabled={updateState === "installing"}
-                    className="flex h-8 items-center rounded-[7px] bg-[var(--brand)] px-3 text-[12px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
+                    className="flex h-9 shrink-0 items-center whitespace-nowrap rounded-[8px] bg-[var(--brand)] px-3.5 text-[12.5px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
                   >
                     {updateState === "installing"
                       ? updatePct !== null

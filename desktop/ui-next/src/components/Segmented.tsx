@@ -68,7 +68,7 @@ export function Segmented<T extends string>({
           </button>
         )
         return o.hint ? (
-          <Tip key={o.value} text={o.hint} align={lean} className={cn("min-w-0", boxed ? "flex-1" : fill ? "flex-1" : "")}>
+          <Tip key={o.value} text={o.hint} align={lean} className={cn("min-w-0", boxed ? "flex-1 self-stretch" : fill ? "flex-1" : "")}>
             {btn}
           </Tip>
         ) : (

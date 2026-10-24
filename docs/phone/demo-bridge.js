@@ -30,7 +30,7 @@
   const ok = (msg) => ({ ok: true, msg });
 
   const handlers = {
-    get_state: () => ({ cards, server_ip: "qc-speed.example.com", version: "0.4.13" }),
+    get_state: () => ({ cards, server_ip: "qc-speed.example.com", version: "0.4.14" }),
     probe_server: () => ok("Server reachable."),
     tunnel_start: () => { running = true; return ok("Engine started."); },
     tunnel_stop: () => { running = false; return ok("Engine stopped."); },
@@ -78,7 +78,7 @@
         { name: "Roma, Italy (GARR)", server: "https://st-be-rm2.infra.garr.it", dlURL: "garbage.php", ulURL: "empty.php", pingURL: "empty.php", sponsorName: "Consortium GARR" },
       ],
     }),
-    check_update: () => ({ current: "0.4.13", latest: "0.4.13", available: false, apk_url: "", url: "#" }),
+    check_update: () => ({ current: "0.4.14", latest: "0.4.14", available: false, apk_url: "", url: "#" }),
     apply_update: () => ({}),
   };
 
