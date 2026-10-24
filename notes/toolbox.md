@@ -31,6 +31,15 @@ it. Anything marked on-demand needs no install: `npx` fetches it.
 ## Python
 
 - `weasyprint` 70.0 — HTML and CSS to paginated PDF.
+- `agent-reach` 1.6.0 — JSON web access: `agent-reach read <url>`, plus
+  channels for YouTube, GitHub, Reddit, X. Verified live.
+- `earshot` 0.4.0 at `C:\Tools\earshot` (own venv) — audio perception:
+  describe, match, rank, compare. CPU only. Verified on a 440 Hz tone.
+
+## Desktop apps
+
+- `VoiceStudio` — local voice cloning, `%LOCALAPPDATA%\Programs\VoiceStudio`.
+- `LocalBG` — offline background removal, `C:\Tools\LocalBG`.
 
 ## On demand, no install
 
@@ -39,11 +48,9 @@ it. Anything marked on-demand needs no install: `npx` fetches it.
 
 ## Not installed, and why
 
-- `earshot` (audio perception), `VoiceStudio` (voice cloning),
-  `LocalBG` (background removal): each pulls a PyTorch or model stack worth
-  gigabytes. Install on request, not by default.
 - `react-bits`, `gluestack-ui`, `lenis`, `sileo`, `motion-anything`,
   `ManimGX`: libraries, not tools. Add to a project only when that project
   needs them; none of them belong in the QuotaVPN bundle, which is size
   sensitive.
-- `Turnitout Humanizer`: academic text tool, unrelated to this repo.
+- `Turnitout Humanizer`: ships no local code, it is a live Streamlit app. The
+  method is captured in the `academic-humanizer` skill instead.
