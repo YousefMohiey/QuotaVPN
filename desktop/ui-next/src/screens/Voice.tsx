@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Mic } from "lucide-react"
 import { motion, useReducedMotion } from "motion/react"
 import { ValorantMark } from "@/components/ValorantMark"
@@ -52,7 +52,20 @@ export function Voice() {
     }
   }
 
-  const healthy = on && health === "ok"
+  const [optimisticOff, setOptimisticOff] = useState(false)
+  useEffect(() => {
+    if (!on) {
+      setOptimisticOff(false)
+      return
+    }
+    // A stop that never lands must not leave the plate lying about the state.
+    if (!optimisticOff) return
+    const id = setTimeout(() => setOptimisticOff(false), 6000)
+    return () => clearTimeout(id)
+  }, [on, optimisticOff])
+  /** What the plate shows: a stop press reads as stopped, not as stopping. */
+  const shownOn = on && !optimisticOff
+  const healthy = shownOn && health === "ok"
   const stateWord = busy
     ? on
       ? t("voiceDisconnecting")
@@ -116,7 +129,7 @@ export function Voice() {
                     healthy ? "text-[var(--green)]" : "text-txt",
                   )}
                 >
-                  {busy ? (on ? t("voiceDisconnecting") : t("voiceConnecting")) : on ? t("voiceActive") : t("voiceOffTitle")}
+                  {optimisticOff ? t("voiceOffTitle") : busy && !shownOn ? t("voiceConnecting") : shownOn ? t("voiceActive") : t("voiceOffTitle")}
                 </motion.span>
                 <span className="max-w-[430px] text-[13px] leading-snug text-txt2">{stateWord}</span>
                 {msg ? (
@@ -130,7 +143,7 @@ export function Voice() {
                   press the way the Home dial does, and a second press turns
                   the helper off again. */}
               <div className="relative grid size-[252px] shrink-0 place-items-center">
-                {on && !calm &&
+                {shownOn && !calm &&
                   [0, 1].map((i) => (
                     <motion.span
                       key={"cham" + i}
@@ -144,14 +157,20 @@ export function Voice() {
                   ))}
                 <motion.button
                   type="button"
-                  onClick={() => void setHelper(!on)}
+                  onClick={() => {
+                    // Off means off the moment the press lands; the helper
+                    // takes a moment to wind down and that wait is not the
+                    // user's state.
+                    if (on) setOptimisticOff(true)
+                    void setHelper(!on)
+                  }}
                   disabled={!card}
-                  aria-pressed={on}
-                  aria-label={on ? t("voiceDisconnect") : t("voiceRowTitle")}
+                  aria-pressed={shownOn}
+                  aria-label={shownOn ? t("voiceDisconnect") : t("voiceRowTitle")}
                   whileTap={busy ? undefined : { scale: 0.93 }}
                   animate={on && !calm ? { scale: [1, 1.04, 1] } : { scale: 1 }}
                   transition={{ type: "spring", stiffness: 460, damping: 26, mass: 0.7 }}
-                  className="group relative grid size-[252px] select-none place-items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/50"
+                  className="group relative grid size-[252px] cursor-default select-none place-items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/50"
                   style={{ clipPath: PLATE }}
                 >
                 {busy && (
@@ -203,7 +222,7 @@ export function Voice() {
                       on ? "text-[var(--green)]/90" : "text-txt3",
                     )}
                   >
-                    {busy ? (on ? t("voiceDisconnecting") : t("connecting")) : on ? t("stop") : t("connect")}
+                    {shownOn ? t("stop") : t("connect")}
                   </span>
                 </span>
                 </motion.button>
