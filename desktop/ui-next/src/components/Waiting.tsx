@@ -1,85 +1,32 @@
-import { motion } from "motion/react"
 import { cn } from "@/lib/utils"
 
 /**
  * The waiting state while the tunnel is negotiated.
  *
- * One long arc sweeps clockwise, a shorter and thinner one counter-rotates
- * under it, and a soft glow breathes from the middle: three speeds, so the
- * shape reads as working rather than as a decoration that happens to spin.
- * Under reduced motion nothing travels; the arc stands still and the glow
- * fades in and out instead.
+ * One arc, one speed, no glow. The button at rest is a quiet disc with a
+ * hairline edge, so the only thing this adds while it works is a single thin
+ * arc travelling along that same edge. Nothing pulses and nothing sweeps. The
+ * turn is CSS keyframes on the element itself, because the animation library
+ * parked the rotation at its end value and the ring stood still while the app
+ * said it was connecting.
  */
-export function WaitingRing({ calm, className }: { calm?: boolean | null; className?: string }) {
-  const still = calm === true
+export function WaitingRing({ className, stroke = 1.6 }: { className?: string; stroke?: number }) {
   return (
-    <span aria-hidden className={cn("pointer-events-none absolute inset-0 grid place-items-center", className)}>
-      <motion.span
-        className="absolute inset-[12%] rounded-full"
-        style={{ background: "radial-gradient(circle, rgb(44 95 216 / 0.22), transparent 68%)" }}
-        initial={false}
-        animate={still ? { opacity: 0.5 } : { opacity: [0.35, 0.85, 0.35] }}
-        transition={still ? { duration: 0.2 } : { duration: 1.9, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <svg viewBox="0 0 100 100" className="size-full overflow-visible">
-        <defs>
-          <linearGradient id="qc-wait-arc" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="var(--brand-soft)" stopOpacity="0" />
-            <stop offset="55%" stopColor="var(--brand-hi)" stopOpacity="0.75" />
-            <stop offset="100%" stopColor="var(--brand-soft)" stopOpacity="1" />
-          </linearGradient>
-        </defs>
-        {/* the track the arcs travel on */}
-        <circle cx="50" cy="50" r="49" fill="none" stroke="rgb(255 255 255 / 0.07)" strokeWidth="1" />
+    <span aria-hidden className={cn("pointer-events-none absolute inset-0", className)}>
+      <svg viewBox="0 0 100 100" className="size-full">
+        <circle cx="50" cy="50" r="49.2" fill="none" stroke="rgb(255 255 255 / 0.06)" strokeWidth="1.4" />
         <circle
           cx="50"
           cy="50"
-          r="49"
+          r="49.2"
           fill="none"
-          stroke="url(#qc-wait-arc)"
-          strokeWidth="2.2"
+          style={{ stroke: "var(--brand-vivid)" }}
+          strokeWidth={stroke}
           strokeLinecap="round"
-          strokeDasharray="118 190"
-          className="origin-center animate-spin [transform-box:fill-box] [animation-duration:1.15s]"
-        />
-        <circle
-          cx="50"
-          cy="50"
-          r="45.5"
-          fill="none"
-          stroke="var(--brand-hi)"
-          strokeOpacity="0.5"
-          strokeWidth="1.1"
-          strokeLinecap="round"
-          strokeDasharray="34 245"
-          className="origin-center animate-spin [animation-direction:reverse] [animation-duration:2.3s] [transform-box:fill-box]"
+          strokeDasharray="72 237"
+          className="origin-center animate-spin [transform-box:fill-box] [animation-duration:1.35s]"
         />
       </svg>
-    </span>
-  )
-}
-
-/**
- * The same idea for the Valorant plate, which is an octagon: a conic highlight
- * travels across the clipped shape instead of a ring around it, and the glyph
- * underneath stays where it is.
- */
-export function WaitingSweep({ calm, clipPath }: { calm?: boolean | null; clipPath: string }) {
-  // The travel stays even under reduced motion: it is the only sign that the
-  // press did something. Only its brightness settles.
-  const dim = calm === true
-  return (
-    <span aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden" style={{ clipPath }}>
-      <span
-        className={cn(
-          "absolute -inset-[30%] animate-spin [animation-duration:1.7s]",
-          dim ? "opacity-70" : "opacity-100",
-        )}
-        style={{
-          background:
-            "conic-gradient(from 0deg, transparent 0deg, rgb(61 123 255 / 0.34) 42deg, rgb(127 166 255 / 0.5) 58deg, transparent 110deg)",
-        }}
-      />
     </span>
   )
 }

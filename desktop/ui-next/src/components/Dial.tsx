@@ -75,7 +75,7 @@ export function Dial({
         transition={{ duration: 0.5 }}
       />
 
-      {state === "connecting" && <WaitingRing calm={calm} />}
+      {state === "connecting" && <WaitingRing />}
       {/* the power over the word, sized to the circle it lives in */}
       <span className={cn("relative flex flex-col items-center", compact ? "gap-1.5" : "gap-3.5")}>
         <Power
