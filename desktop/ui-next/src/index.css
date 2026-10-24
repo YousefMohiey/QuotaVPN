@@ -393,6 +393,14 @@
 /* The speed button: every press answers with a pulse and a flash. Owner
    call: the orbit arc is gone (the blue line around the button), and the
    press motion always runs regardless of prefers-reduced-motion. */
+/* A short light travelling along the plate's own outline: the Valorant
+   control is an octagon, so the waiting state follows its shape. */
+@keyframes qc-trace {
+  to {
+    stroke-dashoffset: -342.6;
+  }
+}
+
 @keyframes qc-pulse {
   from {
     transform: scale(1);

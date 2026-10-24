@@ -372,9 +372,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       )
     })
 
+  const voicePending = useRef<boolean | null>(null)
   const setVoiceHelper = useCallback(
     async (next: boolean): Promise<boolean> => {
-      if (voiceBusyRef.current) return false
+      if (voiceBusyRef.current) {
+        // The press is not lost: the last one wins once the run settles.
+        voicePending.current = next
+        return false
+      }
       voiceBusyRef.current = true
       setVoiceBusy(true)
       setVoiceMsg("")
@@ -431,6 +436,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       } finally {
         voiceBusyRef.current = false
         setVoiceBusy(false)
+        const pending = voicePending.current
+        voicePending.current = null
+        if (pending !== null && pending !== voiceRunningRef.current) {
+          void voiceHelperRef.current?.(pending)
+        }
       }
     },
     [card, appsMode, apps, transport, t],
@@ -770,6 +780,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const toggle = useCallback(() => {
     if (phaseRef.current === "connecting") {
       void cancelConnect()
+      return
+    }
+    // The tail of a stop used to swallow the press for about two seconds,
+    // which read as a dead button. A press here starts the next run at once;
+    // connect bumps the teardown stamp, so the pending cleanup is skipped.
+    if (phaseRef.current === "stopping") {
+      void connect()
       return
     }
     if (busyRef.current) return

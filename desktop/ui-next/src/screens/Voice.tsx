@@ -1,6 +1,5 @@
 import { useState } from "react"
 import { Mic } from "lucide-react"
-import { WaitingRing } from "@/components/Waiting"
 import { motion, useReducedMotion } from "motion/react"
 import { ValorantMark } from "@/components/ValorantMark"
 import { useI18n } from "@/lib/i18n"
@@ -146,15 +145,40 @@ export function Voice() {
                 <motion.button
                   type="button"
                   onClick={() => void setHelper(!on)}
-                  disabled={!card || busy}
+                  disabled={!card}
                   aria-pressed={on}
                   aria-label={on ? t("voiceDisconnect") : t("voiceRowTitle")}
                   whileTap={busy ? undefined : { scale: 0.93 }}
                   animate={on && !calm ? { scale: [1, 1.04, 1] } : { scale: 1 }}
                   transition={{ type: "spring", stiffness: 460, damping: 26, mass: 0.7 }}
-                  className="group relative grid size-[252px] place-items-center outline-none disabled:cursor-wait focus-visible:ring-2 focus-visible:ring-[var(--brand)]/50"
+                  className="group relative grid size-[252px] place-items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/50"
                   style={{ clipPath: PLATE }}
                 >
+                {busy && (
+                  <svg viewBox="0 0 100 100" className="pointer-events-none absolute inset-0 size-full" aria-hidden>
+                    {/* a dim tail behind the bright head, so the light has a
+                        length instead of two hard ends */}
+                    <polygon
+                      points="16,0 84,0 100,16 100,84 84,100 16,100 0,84 0,16"
+                      fill="none"
+                      stroke="var(--brand-vivid)"
+                      strokeOpacity="0.22"
+                      strokeWidth="2.4"
+                      strokeLinecap="round"
+                      strokeDasharray="150 192"
+                      className="[animation:qc-trace_1.9s_linear_infinite]"
+                    />
+                    <polygon
+                      points="16,0 84,0 100,16 100,84 84,100 16,100 0,84 0,16"
+                      fill="none"
+                      stroke="var(--brand-vivid)"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeDasharray="40 302"
+                      className="[animation:qc-trace_1.9s_linear_infinite]"
+                    />
+                  </svg>
+                )}
                 <span aria-hidden className={cn("absolute inset-0 transition-colors duration-300", on ? "bg-[var(--green-line)]" : "bg-[var(--brand-line)]")} />
                 <span aria-hidden className="absolute inset-[2px] bg-[var(--panel)] transition-colors duration-200 group-hover:bg-[#14171a]" style={{ clipPath: PLATE }} />
                 <motion.span
@@ -167,10 +191,7 @@ export function Voice() {
                 />
                 <span className="relative flex flex-col items-center gap-2.5">
                   {busy ? (
-                    <span className="relative grid size-16 place-items-center">
-                      <WaitingRing className="inset-1" stroke={3.2} />
-                      <Mic className={cn("size-9", on ? "text-[var(--green)]/60" : "text-txt2/60")} aria-hidden />
-                    </span>
+                    <Mic className={cn("size-10", on ? "text-[var(--green)]/60" : "text-txt2/60")} aria-hidden />
                   ) : (
                     <Mic className={cn("size-12", on ? "text-[var(--green)]" : "text-txt2")} aria-hidden />
                   )}

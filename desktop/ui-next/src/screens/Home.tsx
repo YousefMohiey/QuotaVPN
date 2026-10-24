@@ -38,7 +38,6 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
     appsMode,
     apps,
     connected,
-    busy,
     phase,
     toggle,
     needsSetup,
@@ -50,6 +49,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
 
   const state: DialState = phase === "on" ? "on" : phase === "connecting" ? "connecting" : "idle"
   const working = phase === "connecting"
+  const settling = phase === "stopping"
 
   const [domainOpen, setDomainOpen] = useState(false)
   const [customOpen, setCustomOpen] = useState(false)
@@ -138,8 +138,8 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
       {/* one field: the control owns the left, the line owns the right, and a
           flat band underneath carries the settings the session runs on */}
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)] shadow-[inset_0_1px_0_rgb(255_255_255/0.045)]">
-        <section className="flex min-h-0 flex-col items-center justify-center gap-4 px-6 py-5">
-          <Dial size={206} state={state} onClick={toggle} disabled={busy && phase !== "connecting"} />
+        <section aria-busy={working || settling} className="flex min-h-0 flex-col items-center justify-center gap-4 px-6 py-5">
+          <Dial size={206} state={state} onClick={toggle} />
           <div className="flex min-w-0 flex-col items-center gap-1 text-center">
             <span className="flex min-w-0 items-center justify-center gap-2">
               <motion.span

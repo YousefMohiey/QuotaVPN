@@ -44,8 +44,8 @@ export function WeQuotaCard() {
         <>
           <div className="flex shrink-0 items-center justify-between gap-2">
             <span className="flex min-w-0 items-center gap-2">
-              <span className="grid size-7 shrink-0 place-items-center rounded-full bg-white/[0.04] text-txt">
-                <WeMark className="w-[15px]" />
+              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/[0.05] text-txt">
+                <WeMark className="w-[23px]" />
               </span>
               <span className="truncate text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">{t("weQuota")}</span>
             </span>
