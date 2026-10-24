@@ -178,7 +178,7 @@ export function Voice() {
                       is not a guess */}
                   <span
                     className={cn(
-                      "text-[10.5px] font-semibold uppercase tracking-[0.22em]",
+                      "text-[11.5px] font-semibold uppercase tracking-[0.2em]",
                       on ? "text-[var(--green)]/90" : "text-txt3",
                     )}
                   >

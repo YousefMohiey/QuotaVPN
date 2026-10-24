@@ -62,7 +62,7 @@ export function Dial({
           ? "border-[var(--green-line)] bg-[#101713] text-[var(--green)]"
           : state === "connecting"
             ? "border-[var(--brand-line)] text-brand-strong"
-            : "border-[rgb(255_255_255/0.14)] text-txt hover:border-[var(--brand-line)] hover:bg-[#151a20] [&_svg]:text-brand-strong/80 hover:[&_svg]:text-brand-strong",
+            : "border-[rgb(255_255_255/0.14)] text-txt hover:border-[var(--brand-line)] hover:bg-[#151a20] [&_svg]:text-brand-strong hover:[&_svg]:text-[var(--brand-strong)]",
       )}
     >
       <motion.span
@@ -77,13 +77,13 @@ export function Dial({
 
       {state === "connecting" && <WaitingRing />}
       {/* the power over the word, sized to the circle it lives in */}
-      <span className={cn("relative flex flex-col items-center", compact ? "gap-1.5" : "gap-3.5")}>
+      <span className={cn("relative flex flex-col items-center", compact ? "gap-1.5" : "gap-2.5")}>
         <Power
-          className={cn(compact ? "size-6" : "size-10", "transition-opacity duration-300", state === "connecting" && "opacity-45")}
+          className={cn(compact ? "size-6" : "size-11", "transition-opacity duration-300", state === "connecting" && "opacity-45")}
           strokeWidth={1.6}
           aria-hidden
         />
-        {compact ? null : <span className="font-display text-[15px] font-semibold tracking-[0.01em]">{label}</span>}
+        {compact ? null : <span className="font-display text-[17px] font-semibold tracking-[-0.005em]">{label}</span>}
       </span>
       </motion.button>
     </div>

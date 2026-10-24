@@ -137,7 +137,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1180px] flex-col gap-3">
       {/* one field: the control owns the left, the line owns the right, and a
           flat band underneath carries the settings the session runs on */}
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)] shadow-[inset_0_1px_0_rgb(255_255_255/0.045)]">
         <section className="flex min-h-0 flex-col items-center justify-center gap-4 px-6 py-5">
           <Dial size={206} state={state} onClick={toggle} disabled={busy && phase !== "connecting"} />
           <div className="flex min-w-0 flex-col items-center gap-1 text-center">
@@ -268,7 +268,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
         <WeQuotaCard />
       </div>
 
-      <section className="grid shrink-0 grid-cols-[1fr_1fr_1.4fr] overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
+      <section className="grid shrink-0 grid-cols-[1fr_1fr_1.4fr] overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)] shadow-[inset_0_1px_0_rgb(255_255_255/0.045)]">
         {cells.slice(0, 3).map((c, i) => (
           <div
             key={c.id}
