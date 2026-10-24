@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Mic } from "lucide-react"
 import { motion, useReducedMotion } from "motion/react"
 import { ValorantMark } from "@/components/ValorantMark"
@@ -52,25 +52,13 @@ export function Voice() {
     }
   }
 
-  const [optimisticOff, setOptimisticOff] = useState(false)
-  useEffect(() => {
-    if (!on) {
-      setOptimisticOff(false)
-      return
-    }
-    // A stop that never lands must not leave the plate lying about the state.
-    if (!optimisticOff) return
-    const id = setTimeout(() => setOptimisticOff(false), 6000)
-    return () => clearTimeout(id)
-  }, [on, optimisticOff])
-  /** What the plate shows: a stop press reads as stopped, not as stopping. */
-  const shownOn = on && !optimisticOff
   /**
-   * Turning the helper off is a wind-down the user does not need to watch: the
-   * plate already says off, so nothing keeps spinning while the engine closes
-   * the session. Only a start earns a progress animation.
+   * Like the Home dial, the plate reads one state that flips on the press, and
+   * only a start shows progress: closing is a wind-down the user should not
+   * have to watch.
    */
-  const working = busy && !optimisticOff
+  const shownOn = on
+  const working = busy && on
   const healthy = shownOn && health === "ok"
   const stateWord = busy
     ? on
@@ -135,7 +123,7 @@ export function Voice() {
                     healthy ? "text-[var(--green)]" : "text-txt",
                   )}
                 >
-                  {optimisticOff ? t("voiceOffTitle") : working && !shownOn ? t("voiceConnecting") : shownOn ? t("voiceActive") : t("voiceOffTitle")}
+                  {working && shownOn ? t("voiceConnecting") : shownOn ? t("voiceActive") : t("voiceOffTitle")}
                 </motion.span>
                 <span className="max-w-[430px] text-[13px] leading-snug text-txt2">{stateWord}</span>
                 {msg ? (
@@ -163,14 +151,7 @@ export function Voice() {
                   ))}
                 <motion.button
                   type="button"
-                  onClick={() => {
-                    // Off means off the moment the press lands; the helper
-                    // takes a moment to wind down and that wait is not the
-                    // user's state. The press acts on what is shown, so a
-                    // second press can never be a no-op.
-                    if (shownOn) setOptimisticOff(true)
-                    void setHelper(!shownOn)
-                  }}
+                  onClick={() => void setHelper(!on)}
                   disabled={!card}
                   aria-pressed={shownOn}
                   aria-label={shownOn ? t("voiceDisconnect") : t("voiceRowTitle")}

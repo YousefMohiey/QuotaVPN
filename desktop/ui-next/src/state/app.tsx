@@ -384,6 +384,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       voiceBusyRef.current = true
       setVoiceBusy(true)
       setVoiceMsg("")
+      // The press is the state. The engine catches up behind it, and a
+      // failure puts the plate back where it was.
+      setVoiceRunning(next)
       // What this run is actually doing, so the queue below never replays it.
       voiceIntent.current = next
       try {
@@ -397,14 +400,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             if (!r.ok) setVoiceMsg(r.msg)
           } else {
             const r = await withTimeout(api.stop(), 45000)
-            setVoiceRunning(false)
-            if (!r.ok) setVoiceMsg(r.msg)
+            if (!r.ok) {
+              setVoiceRunning(true)
+              setVoiceMsg(r.msg)
+            }
           }
           localStorage.removeItem("qc-voice-active")
           localStorage.removeItem("qc-voice-merged")
+          // Pressed off by hand: the watcher treats the current game session
+          // as handled, so it does not turn the helper back on fifteen
+          // seconds later.
+          gameWasUp.current = true
           return true
         }
         if (!card) {
+          setVoiceRunning(false)
           setVoiceMsg(t("needCard"))
           return false
         }
@@ -434,9 +444,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           setVoiceRunning(true)
           return true
         }
+        setVoiceRunning(false)
         setVoiceMsg(r.msg)
         return false
       } catch (e) {
+        setVoiceRunning(false)
         setVoiceMsg(e === "timeout" ? t("voiceSlow") : typeof e === "string" ? e : String(e))
         return false
       } finally {
@@ -455,6 +467,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [card, appsMode, apps, transport, t],
   )
 
+  /** The watcher arms on the game appearing; a press of ours is an edge too. */
+  const gameWasUp = useRef(false)
+
   // "Launch with Valorant": the flag only watches. The game itself drives
   // the helper: appearing arms it, closing disarms it when the watcher armed
   // it (a helper switched on by hand is left alone).
@@ -467,7 +482,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   // is just a fallback for a webview that missed the event.
   const voiceHelperRef = useRef(setVoiceHelper)
   voiceHelperRef.current = setVoiceHelper
-  const gameWasUp = useRef(false)
   const tRef = useRef(t)
   tRef.current = t
   const gameTick = useCallback(async () => {
@@ -557,15 +571,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const voiceOn =
-    voiceRunning &&
-    (() => {
-      try {
-        return localStorage.getItem("qc-voice-active") === "1"
-      } catch {
-        return false
-      }
-    })()
+  // The Home dial reads a single piece of state and flips it on the press.
+  // The helper used to be derived from a localStorage flag that only changed
+  // after the engine finished, so the plate lagged the press and the flag and
+  // the React state could disagree. One source now: voiceRunning.
+  const voiceOn = voiceRunning
 
   const connect = useCallback(async () => {
     teardownRef.current += 1
