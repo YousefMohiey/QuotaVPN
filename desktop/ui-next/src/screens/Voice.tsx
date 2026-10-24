@@ -116,7 +116,7 @@ export function Voice() {
                     healthy ? "text-[var(--green)]" : "text-txt",
                   )}
                 >
-                  {busy ? t("connecting") : on ? t("voiceActive") : t("voiceOffTitle")}
+                  {busy ? (on ? t("voiceDisconnecting") : t("voiceConnecting")) : on ? t("voiceActive") : t("voiceOffTitle")}
                 </motion.span>
                 <span className="max-w-[430px] text-[13px] leading-snug text-txt2">{stateWord}</span>
                 {msg ? (
@@ -151,7 +151,7 @@ export function Voice() {
                   whileTap={busy ? undefined : { scale: 0.93 }}
                   animate={on && !calm ? { scale: [1, 1.04, 1] } : { scale: 1 }}
                   transition={{ type: "spring", stiffness: 460, damping: 26, mass: 0.7 }}
-                  className="group relative grid size-[252px] place-items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/50"
+                  className="group relative grid size-[252px] select-none place-items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/50"
                   style={{ clipPath: PLATE }}
                 >
                 {busy && (
@@ -203,7 +203,7 @@ export function Voice() {
                       on ? "text-[var(--green)]/90" : "text-txt3",
                     )}
                   >
-                    {busy ? t("connecting") : on ? t("stop") : t("connect")}
+                    {busy ? (on ? t("voiceDisconnecting") : t("connecting")) : on ? t("stop") : t("connect")}
                   </span>
                 </span>
                 </motion.button>

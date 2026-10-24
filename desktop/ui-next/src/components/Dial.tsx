@@ -57,7 +57,7 @@ export function Dial({
         transition={{ type: "spring", stiffness: 460, damping: 26, mass: 0.7 }}
         style={{ width: size, height: size }}
       className={cn(
-        "relative grid shrink-0 place-items-center rounded-full border bg-[#13161a] shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_22px_48px_rgb(0_0_0/0.5),0_2px_6px_rgb(0_0_0/0.4)] cursor-pointer transition-[background-color,border-color,color,box-shadow] duration-300",
+        "relative grid shrink-0 place-items-center rounded-full border bg-[#13161a] shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_22px_48px_rgb(0_0_0/0.5),0_2px_6px_rgb(0_0_0/0.4)] cursor-pointer select-none transition-[background-color,border-color,color,box-shadow] duration-300",
         state === "on"
           ? "border-[var(--green-line)] bg-[#101713] text-[var(--green)] hover:border-[rgba(95,176,140,0.62)] hover:bg-[#0f1d16]"
           : state === "connecting"

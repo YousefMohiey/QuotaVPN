@@ -12,29 +12,18 @@ import { api } from "@/lib/ipc"
 import { cn } from "@/lib/utils"
 
 /**
- * Settings is one surface, not a stack of slabs.
+ * Settings as a page, not as boxes.
  *
- * The section name lives in a left rail and the rows sit beside it on
- * hairlines, so the page reads as a list of facts about the app rather than
- * three identical cards competing for attention. Nothing is nested: the rail
- * labels, one panel, dividers only.
+ * No cards and no rail: the section name is a heading on the page itself, the
+ * rows under it are separated by hairlines that run the full width, and every
+ * control sits on the same right edge. It is the quietest possible frame for
+ * six settings, and it matches the way Home already separates its surfaces.
  */
-function Section({
-  label,
-  badge,
-  children,
-}: {
-  label: string
-  badge?: React.ReactNode
-  children: React.ReactNode
-}) {
+function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="grid grid-cols-1 gap-x-8 gap-y-3 border-b border-line px-5 py-5 last:border-b-0 sm:grid-cols-[126px_minmax(0,1fr)]">
-      <h2 className="flex items-start gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-txt3 sm:pt-[3px]">
-        {label}
-        {badge}
-      </h2>
-      <div className="flex min-w-0 flex-col divide-y divide-line">{children}</div>
+    <section className="flex flex-col">
+      <h2 className="text-[17px] font-semibold tracking-[-0.01em] text-txt">{title}</h2>
+      <div className="mt-3.5 divide-y divide-line border-t border-line">{children}</div>
     </section>
   )
 }
@@ -53,8 +42,10 @@ function Row({
   control: React.ReactNode
 }) {
   return (
-    <div className="flex items-start gap-4 py-3.5 first:pt-0 last:pb-0">
-      <Icon className="mt-0.5 size-4 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
+    <div className="flex items-center gap-4 py-4">
+      <span className="grid size-8 shrink-0 place-items-center rounded-[9px] bg-white/[0.045] text-txt2">
+        <Icon className="size-4" strokeWidth={1.7} aria-hidden />
+      </span>
       <div className="min-w-0 flex-1">
         <h3 className="text-[13px] font-medium text-txt">{title}</h3>
         {body ? <p className="mt-0.5 text-[12.5px] leading-relaxed text-txt2">{body}</p> : null}
@@ -76,9 +67,9 @@ function WeQuotaRow() {
 
   return (
     <>
-      <div className="flex items-start gap-4 py-3.5 first:pt-0 last:pb-0">
-        <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-white/[0.05] text-txt">
-          <WeMark className="w-[19px]" />
+      <div className="flex items-center gap-4 py-4">
+        <span className="grid size-8 shrink-0 place-items-center rounded-[9px] bg-white/[0.045] text-txt">
+          <WeMark className="w-[20px]" />
         </span>
         <div className="min-w-0 flex-1">
           <h3 className="text-[13px] font-medium text-txt">{t("weQuota")}</h3>
@@ -107,7 +98,7 @@ function WeQuotaRow() {
             <button
               type="button"
               onClick={() => void quotaLogout()}
-              className="flex h-9 items-center whitespace-nowrap rounded-[8px] px-2 text-[12.5px] text-txt3 transition-colors hover:bg-white/[0.04] hover:text-txt"
+              className="flex h-9 items-center whitespace-nowrap rounded-[8px] px-2.5 text-[12.5px] text-txt2 transition-colors hover:bg-white/[0.05] hover:text-txt"
             >
               {t("weUnlink")}
             </button>
@@ -212,109 +203,96 @@ export function Settings() {
   const offered = updateState === "available" || installing
 
   return (
-    <div className="mx-auto flex w-full max-w-[1000px] flex-col">
-      <div className="overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)] shadow-[inset_0_1px_0_rgb(255_255_255/0.045)]">
-        <Section label={t("setAppGroup")}>
-          <Row
-            icon={Languages}
-            title={t("language")}
-            body={t("languageBody")}
-            control={
-              <Segmented
-                id="lang"
-                value={lang}
-                onChange={(l) => setLang(l)}
-                options={[
-                  { value: "en", label: "EN" },
-                  { value: "ar", label: "عربي" },
-                ]}
-              />
-            }
-          />
-          <Row
-            icon={Power}
-            title={t("startupTitle")}
-            body={t("startupBody")}
-            note={startupMsg ? <span className="text-[var(--red)]">{startupMsg}</span> : null}
-            control={
-              <>
-                <span className="text-[12.5px] text-txt2">{startup ? t("wordOn") : t("wordOff")}</span>
-                <Toggle on={startup} busy={false} onFlip={() => void flipStartup(!startup)} label={t("startupTitle")} />
-              </>
-            }
-          />
-        </Section>
-
-        <Section label={t("setConnGroup")}>
-          <WeQuotaRow />
-        </Section>
-
-        <Section
-          label={t("setUpdGroup")}
-          badge={
-            updateChannel === "experimental" ? (
-              <span className="rounded-full border border-[var(--brand-line)] bg-[var(--brand-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-brand-strong">
-                {t("chBadge")}
-              </span>
-            ) : null
+    <div className="mx-auto flex w-full max-w-[820px] flex-col gap-9 pb-8">
+      <Group title={t("setAppGroup")}>
+        <Row
+          icon={Languages}
+          title={t("language")}
+          control={
+            <Segmented
+              id="lang"
+              value={lang}
+              onChange={(l) => setLang(l)}
+              options={[
+                { value: "en", label: "EN" },
+                { value: "ar", label: "عربي" },
+              ]}
+            />
           }
-        >
-          <Row
-            icon={Download}
-            title={t("chCur")}
-            body={
-              <span className="flex min-w-0 items-baseline gap-2">
-                <span className="font-display text-[16px] font-semibold tabular-nums text-txt">{cur || "-"}</span>
-                <span aria-live="polite" className="flex min-w-0 items-center gap-1.5">
-                  <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", upTone)} />
-                  <span className="truncate">{updateText}</span>
-                </span>
+        />
+        <Row
+          icon={Power}
+          title={t("startupTitle")}
+          body={t("startupBody")}
+          note={startupMsg ? <span className="text-[var(--red)]">{startupMsg}</span> : null}
+          control={
+            <>
+              <Toggle on={startup} busy={false} onFlip={() => void flipStartup(!startup)} label={t("startupTitle")} />
+            </>
+          }
+        />
+      </Group>
+
+      <Group title={t("setConnGroup")}>
+        <WeQuotaRow />
+      </Group>
+
+      <Group title={t("setUpdGroup")}>
+        <Row
+          icon={Download}
+          title={t("chCur")}
+          body={
+            <span className="flex min-w-0 items-baseline gap-2">
+              <span className="font-display text-[16px] font-semibold tabular-nums text-txt">{cur || "-"}</span>
+              <span aria-live="polite" className="flex min-w-0 items-center gap-1.5">
+                <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", upTone)} />
+                <span className="truncate">{updateText}</span>
               </span>
-            }
-            control={
-              <>
+            </span>
+          }
+          control={
+            <>
+              <button
+                type="button"
+                onClick={() => void checkUpdates()}
+                disabled={checking}
+                className="flex h-9 items-center gap-1.5 whitespace-nowrap rounded-[8px] border border-line bg-white/[0.02] px-3.5 text-[12.5px] text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
+              >
+                {checking ? <Loader2 className="size-3 animate-spin" aria-hidden /> : <RefreshCw className="size-3" aria-hidden />}
+                {checking ? t("upChecking") : t("upCheck")}
+              </button>
+              {offered && (
                 <button
                   type="button"
-                  onClick={() => void checkUpdates()}
-                  disabled={checking}
-                  className="flex h-9 items-center gap-1.5 whitespace-nowrap rounded-[8px] border border-line bg-white/[0.02] px-3.5 text-[12.5px] text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
+                  onClick={() => void applyUpdate()}
+                  disabled={installing}
+                  className="flex h-9 items-center whitespace-nowrap rounded-[8px] bg-[var(--brand)] px-3.5 text-[12.5px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
                 >
-                  {checking ? <Loader2 className="size-3 animate-spin" aria-hidden /> : <RefreshCw className="size-3" aria-hidden />}
-                  {checking ? t("upChecking") : t("upCheck")}
+                  {installing ? (updatePct !== null ? `${updatePct}%` : t("upInstalling")) : t("upGet")}
                 </button>
-                {offered && (
-                  <button
-                    type="button"
-                    onClick={() => void applyUpdate()}
-                    disabled={installing}
-                    className="flex h-9 items-center whitespace-nowrap rounded-[8px] bg-[var(--brand)] px-3.5 text-[12.5px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
-                  >
-                    {installing ? (updatePct !== null ? `${updatePct}%` : t("upInstalling")) : t("upGet")}
-                  </button>
-                )}
-              </>
-            }
-          />
-          <Row
-            icon={RefreshCw}
-            title={t("chTitle")}
-            body={updateChannel === "experimental" ? t("chExpBody") : t("chStableBody")}
-            control={
-              <Segmented
-                id="chan"
-                value={updateChannel}
-                options={[
-                  { value: "normal", label: t("chStable") },
-                  { value: "experimental", label: t("chExp") },
-                ]}
-                onChange={(v) => {
-                  if (v !== updateChannel) void setUpdateChannel(v)
-                }}
-              />
-            }
-          />
-        </Section>
-      </div>
+              )}
+            </>
+          }
+        />
+        <Row
+          icon={RefreshCw}
+          title={t("chTitle")}
+          body={updateChannel === "experimental" ? t("chExpBody") : t("chStableBody")}
+          control={
+            <Segmented
+              id="chan"
+              value={updateChannel}
+              options={[
+                { value: "normal", label: t("chStable") },
+                { value: "experimental", label: t("chExp") },
+              ]}
+              onChange={(v) => {
+                if (v !== updateChannel) void setUpdateChannel(v)
+              }}
+            />
+          }
+        />
+      </Group>
     </div>
   )
 }

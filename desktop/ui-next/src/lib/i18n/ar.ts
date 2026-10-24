@@ -313,7 +313,7 @@ export const ar = {
   "working": "جارٍ العمل",
   "yourIp": "عنوان الـIP",
   "weQuota": "باقة WE",
-  "weQuotaSub": "المتبقي المباشر من خط WE",
+  "weQuotaSub": "البيانات المتبقية على خط WE",
   "weNumber": "رقم التليفون الأرضي",
   "wePassword": "كلمة سر MyWE",
   "weCode": "الحروف في الصورة",
