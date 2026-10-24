@@ -157,6 +157,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   // while the server path is dead, and that lie is what this closes.
   const [voiceHealth, setVoiceHealth] = useState<"unknown" | "ok" | "bad">("unknown")
   const voiceBusyRef = useRef(false)
+  const voiceIntent = useRef<boolean | null>(null)
   const voiceRunningRef = useRef(false)
   voiceBusyRef.current = voiceBusy
   voiceRunningRef.current = voiceRunning
@@ -383,6 +384,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       voiceBusyRef.current = true
       setVoiceBusy(true)
       setVoiceMsg("")
+      // What this run is actually doing, so the queue below never replays it.
+      voiceIntent.current = next
       try {
         if (!next) {
           // Turning the helper off must not disturb the rest of the session:
@@ -441,7 +444,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         setVoiceBusy(false)
         const pending = voicePending.current
         voicePending.current = null
-        if (pending !== null && pending !== voiceRunningRef.current) {
+        // Only a press for a different direction is worth a second run: a
+        // press that matches the run that just finished used to restart the
+        // session again, which is what made turning the helper off spin.
+        if (pending !== null && pending !== voiceIntent.current) {
           void voiceHelperRef.current?.(pending)
         }
       }

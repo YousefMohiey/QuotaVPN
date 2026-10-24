@@ -65,6 +65,12 @@ export function Voice() {
   }, [on, optimisticOff])
   /** What the plate shows: a stop press reads as stopped, not as stopping. */
   const shownOn = on && !optimisticOff
+  /**
+   * Turning the helper off is a wind-down the user does not need to watch: the
+   * plate already says off, so nothing keeps spinning while the engine closes
+   * the session. Only a start earns a progress animation.
+   */
+  const working = busy && !optimisticOff
   const healthy = shownOn && health === "ok"
   const stateWord = busy
     ? on
@@ -129,7 +135,7 @@ export function Voice() {
                     healthy ? "text-[var(--green)]" : "text-txt",
                   )}
                 >
-                  {optimisticOff ? t("voiceOffTitle") : busy && !shownOn ? t("voiceConnecting") : shownOn ? t("voiceActive") : t("voiceOffTitle")}
+                  {optimisticOff ? t("voiceOffTitle") : working && !shownOn ? t("voiceConnecting") : shownOn ? t("voiceActive") : t("voiceOffTitle")}
                 </motion.span>
                 <span className="max-w-[430px] text-[13px] leading-snug text-txt2">{stateWord}</span>
                 {msg ? (
@@ -168,13 +174,13 @@ export function Voice() {
                   disabled={!card}
                   aria-pressed={shownOn}
                   aria-label={shownOn ? t("voiceDisconnect") : t("voiceRowTitle")}
-                  whileTap={busy ? undefined : { scale: 0.93 }}
+                  whileTap={working ? undefined : { scale: 0.93 }}
                   animate={on && !calm ? { scale: [1, 1.04, 1] } : { scale: 1 }}
                   transition={{ type: "spring", stiffness: 460, damping: 26, mass: 0.7 }}
                   className="group relative grid size-[252px] cursor-default select-none place-items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/50"
                   style={{ clipPath: PLATE }}
                 >
-                {busy && (
+                {working && (
                   <svg viewBox="0 0 100 100" className="pointer-events-none absolute inset-0 size-full" aria-hidden>
                     {/* a dim tail behind the bright head, so the light has a
                         length instead of two hard ends */}
@@ -210,7 +216,7 @@ export function Voice() {
                   style={{ clipPath: PLATE }}
                 />
                 <span className="relative flex flex-col items-center gap-2.5">
-                  {busy ? (
+                  {working ? (
                     <Mic className={cn("size-10", on ? "text-[var(--green)]/60" : "text-txt2/60")} aria-hidden />
                   ) : (
                     <Mic className={cn("size-12", on ? "text-[var(--green)]" : "text-txt2")} aria-hidden />
@@ -239,7 +245,7 @@ export function Voice() {
                   role="switch"
                   aria-checked={launch}
                   aria-label={t("voiceLaunchTitle")}
-                  disabled={busy}
+                  disabled={working}
                   onClick={() => void flipLaunch()}
                   className="press relative h-8 w-[62px] shrink-0 transition-colors duration-200"
                   style={{ clipPath: SWITCH }}
