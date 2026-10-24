@@ -1325,6 +1325,45 @@ mod tests {
     }
 
     #[test]
+    fn voice_on_top_of_a_session_keeps_the_apps() {
+        let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        // The helper pressed while the VPN is already up: the session keeps
+        // its app list and gains the voice rules. A voice-only config here
+        // would replace the tunnel and leave everything else unrouted while
+        // the dial still said connected.
+        let list = vec!["VALORANT.exe".to_string(), "Discord.exe".to_string()];
+        let p = write_tun_config(
+            "00000000-test",
+            crate::config::DEFAULT_HOST,
+            "example.com",
+            "allow",
+            &list,
+            true,
+            "vless",
+            "",
+            None,
+        )
+        .expect("config");
+        let v: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(p).expect("read")).expect("json");
+        let rules = v["route"]["rules"].as_array().unwrap();
+        // the app rule survived
+        assert!(
+            rules.iter().any(|r| r["process_name"]
+                .as_array()
+                .map_or(false, |a| a.iter().any(|x| x.as_str() == Some("VALORANT.exe")))),
+            "the app list was dropped when the voice helper joined"
+        );
+        // and the voice networks came with it
+        assert!(rules.iter().any(|r| {
+            r["outbound"] == "proxy"
+                && r["ip_cidr"]
+                    .as_array()
+                    .map_or(false, |a| a.iter().any(|x| x.as_str() == Some("74.201.0.0/16")))
+        }));
+    }
+
+    #[test]
     fn voice_config_routes_only_voice() {
         let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner());
         // The voice-only session: no app list, just the helper.

@@ -160,9 +160,10 @@ export function Voice() {
                   onClick={() => {
                     // Off means off the moment the press lands; the helper
                     // takes a moment to wind down and that wait is not the
-                    // user's state.
-                    if (on) setOptimisticOff(true)
-                    void setHelper(!on)
+                    // user's state. The press acts on what is shown, so a
+                    // second press can never be a no-op.
+                    if (shownOn) setOptimisticOff(true)
+                    void setHelper(!shownOn)
                   }}
                   disabled={!card}
                   aria-pressed={shownOn}

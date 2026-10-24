@@ -407,7 +407,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }
         // A running session keeps its configuration and gains the voice
         // rules; with nothing running this starts a voice-only session.
-        const merged = voiceRunningRef.current
+        // The main tunnel counts as a running session: with the VPN on, the
+        // voice helper had been replacing it with a voice-only config, which
+        // left the dial saying connected while nothing else was routed.
+        const merged = voiceRunningRef.current || vpnRef.current
         const r = await withTimeout(
           api.start(card.uuid, merged ? appsMode : "allow", merged ? apps : [], transport, true),
           45000,
