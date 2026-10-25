@@ -21,9 +21,11 @@ import { cn } from "@/lib/utils"
  */
 function Section({ label, gap, children }: { label: string; gap?: boolean; children: React.ReactNode }) {
   return (
-    <section className={cn("flex flex-col", gap && "mt-8")}>
-      <h2 className="mb-2 text-[11.5px] font-semibold uppercase leading-none tracking-[0.13em] text-txt2">{label}</h2>
-      <div className="border-t border-line">{children}</div>
+    <section className={cn("flex flex-col", gap && "mt-9")}>
+      <h2 className="mb-0 border-b border-line pb-2 text-[11.5px] font-semibold uppercase leading-none tracking-[0.14em] text-txt2">
+        {label}
+      </h2>
+      <div>{children}</div>
     </section>
   )
 }
@@ -42,14 +44,14 @@ function Row({
   control: React.ReactNode
 }) {
   return (
-    <div className="flex min-h-[52px] items-center gap-4 border-b border-line py-3 last:border-b-0 max-[760px]:flex-wrap max-[760px]:gap-y-3">
-      <span className="grid size-7 shrink-0 place-items-center text-txt2">
-        <Icon className="size-[22px]" strokeWidth={1.75} aria-hidden />
+    <div className="flex min-h-[64px] items-center gap-4 border-b border-line py-4 last:border-b-0 max-[760px]:flex-wrap max-[760px]:gap-y-3">
+      <span className="grid size-8 shrink-0 place-items-center text-txt2">
+        <Icon className="size-6" strokeWidth={1.7} aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
-        <h3 className="text-[13.5px] font-medium text-txt">{title}</h3>
-        {body ? <p className="mt-0.5 break-words text-[12.5px] leading-relaxed text-txt2">{body}</p> : null}
-        {note ? <div className="mt-1 text-[12px] leading-snug text-txt3">{note}</div> : null}
+        <h3 className="text-[14px] font-medium text-txt">{title}</h3>
+        {body ? <p className="mt-1 break-words text-[13px] leading-relaxed text-txt2">{body}</p> : null}
+        {note ? <div className="mt-1 text-[12.5px] leading-snug text-txt3">{note}</div> : null}
       </div>
       <div className="flex shrink-0 items-center gap-2 max-[760px]:w-full max-[760px]:justify-start">{control}</div>
     </div>
@@ -89,7 +91,7 @@ function WeQuotaRows() {
                   type="button"
                   onClick={() => void quotaRefresh(true)}
                   disabled={busy}
-                  className="flex h-[34px] items-center gap-1.5 whitespace-nowrap rounded-[9px] border border-line bg-white/[0.03] px-3.5 text-[12.5px] text-txt transition-colors hover:border-[var(--brand-line)]"
+                  className="flex h-10 items-center gap-2 whitespace-nowrap rounded-[9px] border border-line bg-white/[0.03] px-4 text-[13px] text-txt transition-colors hover:border-[var(--brand-line)]"
                 >
                   {busy ? <Loader2 className="size-3 animate-spin" aria-hidden /> : <RefreshCw className="size-3" aria-hidden />}
                   {t("weRefresh")}
@@ -98,7 +100,7 @@ function WeQuotaRows() {
               <button
                 type="button"
                 onClick={() => void quotaLogout()}
-                className="flex h-[34px] items-center whitespace-nowrap rounded-[9px] border border-line bg-transparent px-3.5 text-[12.5px] text-txt2 transition-colors hover:border-[var(--red-line)] hover:text-txt"
+                className="flex h-10 items-center whitespace-nowrap rounded-[9px] border border-line bg-transparent px-4 text-[13px] text-txt2 transition-colors hover:border-[var(--red-line)] hover:text-txt"
               >
                 {t("weUnlink")}
               </button>
@@ -107,7 +109,7 @@ function WeQuotaRows() {
             <button
               type="button"
               onClick={() => setQuotaOpen(true)}
-              className="press flex h-[34px] items-center rounded-[9px] bg-[var(--brand)] px-4 text-[12.5px] font-medium text-white transition-[filter] hover:brightness-110"
+              className="press flex h-10 items-center rounded-[9px] bg-[var(--brand)] px-5 text-[13px] font-medium text-white transition-[filter] hover:brightness-110"
             >
               {t("weLink")}
             </button>
@@ -195,7 +197,7 @@ export function Settings() {
   const offered = updateState === "available" || installing
 
   return (
-    <div className="mx-auto flex w-full max-w-[780px] flex-col pb-6">
+    <div className="flex w-full flex-col pb-6">
       <Section label={t("setAppGroup")}>
         <Row
           icon={Languages}
@@ -203,6 +205,8 @@ export function Settings() {
           body={lang === "ar" ? "عربي" : "English"}
           control={
             <Segmented
+              boxed
+              className="w-[150px]"
               id="lang"
               value={lang}
               onChange={(l) => setLang(l)}
@@ -259,7 +263,7 @@ export function Settings() {
                 type="button"
                 onClick={() => void checkUpdates()}
                 disabled={checking}
-                className="flex h-[34px] items-center gap-1.5 whitespace-nowrap rounded-[9px] border border-line bg-white/[0.03] px-3.5 text-[12.5px] text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
+                className="flex h-10 items-center gap-2 whitespace-nowrap rounded-[9px] border border-line bg-white/[0.03] px-4 text-[13px] text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
               >
                 {checking ? <Loader2 className="size-3 animate-spin" aria-hidden /> : <RefreshCw className="size-3" aria-hidden />}
                 {checking ? t("upChecking") : t("upCheck")}
@@ -269,7 +273,7 @@ export function Settings() {
                   type="button"
                   onClick={() => void applyUpdate()}
                   disabled={installing}
-                  className="flex h-[34px] items-center whitespace-nowrap rounded-[9px] bg-[var(--brand)] px-3.5 text-[12.5px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
+                  className="flex h-10 items-center whitespace-nowrap rounded-[9px] bg-[var(--brand)] px-4 text-[13px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
                 >
                   {installing ? (updatePct !== null ? `${updatePct}%` : t("upInstalling")) : t("upGet")}
                 </button>
@@ -287,6 +291,8 @@ export function Settings() {
           }
           control={
             <Segmented
+              boxed
+              className="w-[250px]"
               id="chan"
               value={updateChannel}
               options={[
