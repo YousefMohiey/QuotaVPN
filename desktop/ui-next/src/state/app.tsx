@@ -74,6 +74,7 @@ type Value = {
   voiceBusy: boolean
   voiceMsg: string
   setVoiceHelper: (next: boolean) => Promise<boolean>
+  cancelVoice: () => void
 }
 
 const Ctx = createContext<Value | null>(null)
@@ -374,6 +375,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     })
 
   const voicePending = useRef<boolean | null>(null)
+  /** Abandon a helper that is still coming up: the plate is already off. */
+  const cancelVoice = useCallback(() => {
+    voicePending.current = null
+    setVoiceRunning(false)
+    try {
+      localStorage.removeItem("qc-voice-active")
+      localStorage.removeItem("qc-voice-merged")
+    } catch {
+      /* private mode */
+    }
+    void api.stop().catch(() => undefined)
+  }, [])
+
   const setVoiceHelper = useCallback(
     async (next: boolean): Promise<boolean> => {
       if (voiceBusyRef.current) {
@@ -1165,6 +1179,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     voiceBusy,
     voiceMsg,
     setVoiceHelper,
+    cancelVoice,
   }
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

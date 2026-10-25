@@ -27,6 +27,7 @@ export function Voice() {
     voiceHealth: health,
     voiceMsg: msg,
     setVoiceHelper: setHelper,
+    cancelVoice,
   } = useApp()
   const calm = useReducedMotion()
   const [launch, setLaunch] = useState(() => {
@@ -161,6 +162,13 @@ export function Voice() {
                 <motion.button
                   type="button"
                   onClick={() => {
+                    // Still coming up? A press takes it straight back down
+                    // instead of stacking another engine run behind it.
+                    if (busy && on) {
+                      wanted.current = false
+                      cancelVoice()
+                      return
+                    }
                     wanted.current = !wanted.current
                     void setHelper(wanted.current)
                   }}
