@@ -99,6 +99,7 @@ export const en = {
   "customDomain": "custom domain",
   "customDomainOpt": "Custom domain",
   "disconnect": "Disconnect",
+  "disconnecting": "Disconnecting",
   "domainSni": "Server",
   "domainReconnectHint": "Reconnect to apply the new server",
   "downBtn": "Download",

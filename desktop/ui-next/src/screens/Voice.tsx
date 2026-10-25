@@ -60,17 +60,20 @@ export function Voice() {
   const shownOn = on
   const working = busy && on
   const healthy = shownOn && health === "ok"
-  const stateWord = busy
-    ? on
-      ? t("voiceDisconnecting")
-      : t("voiceConnecting")
-    : on
-      ? health === "ok"
-        ? t("voiceConnected")
-        : health === "bad"
-          ? t("voiceUnhealthy")
-          : t("voiceChecking")
-      : t("voiceOffSub")
+  // One direction, read from the same state the plate shows. Before this the
+  // headline said CONNECTING while the line under it said Disconnecting,
+  // because one used the pressed state and the other the running one.
+  const stateWord = working
+    ? t("voiceConnecting")
+    : busy
+      ? t("voiceOffSub")
+      : on
+        ? health === "ok"
+          ? t("voiceConnected")
+          : health === "bad"
+            ? t("voiceUnhealthy")
+            : t("voiceChecking")
+        : t("voiceOffSub")
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1180px] flex-col">

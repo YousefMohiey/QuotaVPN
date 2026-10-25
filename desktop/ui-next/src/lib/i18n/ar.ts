@@ -102,6 +102,7 @@ export const ar = {
   "customDomain": "نطاق مخصص",
   "customDomainOpt": "نطاق مخصص",
   "disconnect": "قطع الاتصال",
+  "disconnecting": "جارٍ قطع الاتصال",
   "domainSni": "الخادم",
   "domainReconnectHint": "أعد الاتصال لتطبيق الخادم الجديد",
   "downBtn": "تحميل",
