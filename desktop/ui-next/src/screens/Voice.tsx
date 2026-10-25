@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Mic } from "lucide-react"
 import { motion, useReducedMotion } from "motion/react"
 import { ValorantMark } from "@/components/ValorantMark"
@@ -57,6 +57,12 @@ export function Voice() {
    * only a start shows progress: closing is a wind-down the user should not
    * have to watch.
    */
+  const wanted = useRef(on)
+  // Once nothing is running, the intent is whatever actually happened, so a
+  // failed run cannot leave the next press pointing the wrong way.
+  useEffect(() => {
+    if (!busy) wanted.current = on
+  }, [on, busy])
   const shownOn = on
   const working = busy && on
   const healthy = shownOn && health === "ok"
@@ -154,7 +160,10 @@ export function Voice() {
                   ))}
                 <motion.button
                   type="button"
-                  onClick={() => void setHelper(!on)}
+                  onClick={() => {
+                    wanted.current = !wanted.current
+                    void setHelper(wanted.current)
+                  }}
                   disabled={!card}
                   aria-pressed={shownOn}
                   aria-label={shownOn ? t("voiceDisconnect") : t("voiceRowTitle")}
