@@ -1062,11 +1062,20 @@ pub fn stop_engine() {
     let stop = engine_dir().join("engine.stop");
     let _ = std::fs::write(&stop, "1");
     if let Some(pid) = task_engine_pid() {
-        for _ in 0..30 {
+        // A press has to feel like a press. This waited six seconds for the
+        // engine to die before it would let go of the button; three is the
+        // point where a healthy engine is already gone, and anything slower
+        // gets killed rather than waited on.
+        let mut gone = false;
+        for _ in 0..20 {
             if !engine_alive(pid) {
+                gone = true;
                 break;
             }
-            std::thread::sleep(std::time::Duration::from_millis(200));
+            std::thread::sleep(std::time::Duration::from_millis(150));
+        }
+        if !gone {
+            let _ = run_hidden("taskkill", &["/F", "/PID", &pid.to_string()]);
         }
     }
     stop_task();

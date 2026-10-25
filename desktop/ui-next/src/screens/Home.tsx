@@ -152,7 +152,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   connected ? "text-[var(--green)]" : "text-txt",
                 )}
               >
-                {settling ? t("disconnecting") : connected ? t("connected") : working ? t("connecting") : t("notConnected")}
+                {settling ? t("disconnecting") : phase === "on" ? t("connected") : working ? t("connecting") : t("notConnected")}
               </motion.span>
             </span>
             <span className="max-w-[260px] truncate font-mono text-[11.5px] text-txt2" dir="auto">
