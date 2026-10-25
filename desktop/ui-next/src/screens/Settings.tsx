@@ -59,11 +59,10 @@ function Row({
   )
 }
 
-function Rail({ children, label, className }: { children: React.ReactNode; label: string; className?: string }) {
+function Rail({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <section className={cn("flex flex-col rounded-[var(--r-card)] border border-line bg-[var(--panel)] px-5 py-4", className)}>
-      <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-txt3">{label}</h2>
-      <div className="mt-3 flex flex-1 flex-col">{children}</div>
+    <section className={cn("flex flex-col justify-center rounded-[var(--r-card)] border border-line bg-[var(--panel)] px-5 py-4", className)}>
+      {children}
     </section>
   )
 }
@@ -251,24 +250,33 @@ export function Settings() {
 
       {/* what the switches report */}
       <div className="flex min-h-0 flex-col gap-5">
-        <Rail label={t("setConnGroup")} className="flex-1">
+        <Rail className="flex-1">
           <div className="flex flex-1 flex-col justify-center">
-            <div className="flex items-baseline gap-2">
-              <span className="font-display text-[32px] font-semibold leading-none tabular-nums text-txt">
-                {q.linked && remaining ? fmtQuota(remaining.remain) : "--"}
-              </span>
-              <span className="text-[13px] text-txt2">{t("weLeftShort")}</span>
-            </div>
-            <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.07]">
-              <div
-                className="h-full rounded-full bg-[var(--brand-vivid)] transition-[width] duration-500"
-                style={{ width: `${Math.round(share * 100)}%` }}
-              />
-            </div>
-            <div className="mt-2 flex items-center justify-between text-[12px] text-txt3">
-              <span>{q.linked ? t("weLinked") : t("weNotLinked")}</span>
-              {remaining ? <span className="tabular-nums">{Math.round(share * 100)}%</span> : null}
-            </div>
+            {q.linked && remaining ? (
+              <>
+                <div className="flex items-baseline gap-2">
+                  <span className="font-display text-[32px] font-semibold leading-none tabular-nums text-txt">
+                    {fmtQuota(remaining.remain)}
+                  </span>
+                  <span className="text-[13px] text-txt2">{t("weLeftShort")}</span>
+                </div>
+                <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.07]">
+                  <div
+                    className="h-full rounded-full bg-[var(--brand-vivid)] transition-[width] duration-500"
+                    style={{ width: `${Math.round(share * 100)}%` }}
+                  />
+                </div>
+                <div className="mt-2 flex items-center justify-between text-[12px] text-txt3">
+                  <span>{t("weLinked")}</span>
+                  <span className="tabular-nums">{Math.round(share * 100)}%</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <span className="text-[15px] font-medium text-txt">{t("weNotLinked")}</span>
+                <p className="mt-1 text-[12.5px] leading-relaxed text-txt2">{t("weQuotaSub")}</p>
+              </>
+            )}
           </div>
           {!q.linked && (
             <button
@@ -281,7 +289,7 @@ export function Settings() {
           )}
         </Rail>
 
-        <Rail label={t("setUpdGroup")} className="flex-1">
+        <Rail className="flex-1">
           <div className="flex flex-1 flex-col justify-center gap-3">
             <div className="flex items-baseline justify-between">
               <span className="text-[12.5px] text-txt3">{t("chCur")}</span>
