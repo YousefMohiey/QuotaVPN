@@ -30,7 +30,10 @@ it. Anything marked on-demand needs no install: `npx` fetches it.
 
 ## Python
 
-- `weasyprint` 70.0 — HTML and CSS to paginated PDF.
+- `weasyprint` 70.0 — HTML and CSS to paginated PDF. Needs GTK3, installed at
+  `C:\Program Files\GTK3-Runtime Win64` with `WEASYPRINT_DLL_DIRECTORIES` set.
+  Verified with an A4 Arabic page: shaping, bidi digits, table, page numbers.
+- `pypdfium2` — renders a PDF page to PNG so the result can be checked by eye.
 - `agent-reach` 1.6.0 — JSON web access: `agent-reach read <url>`, plus
   channels for YouTube, GitHub, Reddit, X. Verified live.
 - `earshot` 0.4.0 at `C:\Tools\earshot` (own venv) — audio perception:
@@ -41,10 +44,17 @@ it. Anything marked on-demand needs no install: `npx` fetches it.
 - `VoiceStudio` — local voice cloning, `%LOCALAPPDATA%\Programs\VoiceStudio`.
 - `LocalBG` — offline background removal, `C:\Tools\LocalBG`.
 
-## On demand, no install
+## Global CLIs
 
-- `npx designlang <url>` — pull a live site's design tokens into DESIGN.md.
-- `npx @playwright/cli` — browser automation from the command line.
+- `designlang` 13.3.2 — pull a live site's design tokens into DESIGN.md.
+- `playwright-cli` 0.1.22 — browser automation and recording.
+
+## UI library sandbox
+
+`C:\Tools\ui-libs` holds lenis 1.3.27, sileo 0.1.6, gluestack-ui 5.0.3,
+@gluestack-ui/themed 1.1.73, manimgx 0.1.1, react-bits 1.0.5. Imports verified
+for lenis and sileo; manimgx needs a DOM, as expected in a browser. This is a
+sandbox on purpose: the VPN bundle stays 28 MB.
 
 ## Not installed, and why
 
