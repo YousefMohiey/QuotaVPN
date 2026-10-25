@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react"
-import { Download, Languages, Loader2, MonitorPlay, RefreshCw } from "lucide-react"
+import { Loader2, RefreshCw } from "lucide-react"
 import { Toggle } from "@/components/Toggle"
-import { WeMark } from "@/components/WeMark"
 import { Segmented } from "@/components/Segmented"
 import { Tip } from "@/components/Tip"
 import { useApp } from "@/state/app"
@@ -12,42 +11,39 @@ import { api } from "@/lib/ipc"
 import { cn } from "@/lib/utils"
 
 /**
- * Settings is a page you can read without touching anything.
+ * Settings is a ledger, not a stack of cards.
  *
- * Every group carries its own state on the right of its heading, so the answer
- * to "what is this set to" is on screen before a single row is parsed. The rows
- * below are the controls that change it: one column, one card per group, no
- * nesting.
+ * The section names sit in a left gutter, the rows sit beside them on
+ * hairlines that run the full width, and every control lands on the same right
+ * edge. No page title: the rail already says where you are, and a title block
+ * would cost a row for nothing.
  */
-function Group({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ label, gap, children }: { label: string; gap?: boolean; children: React.ReactNode }) {
   return (
-    <section className="flex flex-col">
-      <h2 className="flex h-9 items-center border-b border-line bg-white/[0.02] px-12 text-[11px] font-semibold uppercase tracking-[0.13em] text-txt2">
-        {title}
-      </h2>
-      {children}
+    <section className={cn("grid grid-cols-[128px_minmax(0,1fr)] gap-x-8", gap && "mt-9")}>
+      <div className="pt-[15px] text-[11.5px] font-semibold uppercase leading-none tracking-[0.13em] text-txt2">
+        {label}
+      </div>
+      <div className="border-t border-line">{children}</div>
     </section>
   )
 }
 
 function Row({
-  icon: Icon,
   title,
   body,
   note,
   control,
 }: {
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number; "aria-hidden"?: boolean }>
   title: React.ReactNode
   body?: React.ReactNode
   note?: React.ReactNode
   control: React.ReactNode
 }) {
   return (
-    <div className="flex items-center gap-4 border-b border-line px-4 py-3.5 last:border-b-0">
-      <Icon className="size-4 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
+    <div className="flex items-center gap-6 border-b border-line py-3.5 last:border-b-0">
       <div className="min-w-0 flex-1">
-        <h3 className="text-[13px] font-medium text-txt">{title}</h3>
+        <h3 className="text-[13.5px] font-medium text-txt">{title}</h3>
         {body ? <p className="mt-0.5 text-[12.5px] leading-relaxed text-txt2">{body}</p> : null}
         {note ? <div className="mt-1 text-[12px] leading-snug text-txt3">{note}</div> : null}
       </div>
@@ -58,7 +54,7 @@ function Row({
 
 const AUTOSTART_CACHE = "qc-autostart"
 
-function WeQuotaRow() {
+function WeQuotaRows() {
   const { t } = useI18n()
   const q = useQuota()
   const [quotaOpen, setQuotaOpen] = useState(false)
@@ -67,55 +63,52 @@ function WeQuotaRow() {
 
   return (
     <>
-      <div className="flex items-center gap-4 border-b border-line px-4 py-3.5 last:border-b-0">
-        <span className="grid size-4 shrink-0 place-items-center text-txt3">
-          <WeMark className="w-[16px]" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-[13px] font-medium text-txt">{t("weQuota")}</h3>
-          <p className="mt-0.5 text-[12.5px] leading-relaxed text-txt2">
-            {q.linked && remaining ? (
-              <span className="flex items-baseline gap-1.5">
-                <span className="font-display text-[14px] font-semibold tabular-nums text-txt">{fmtQuota(remaining.remain)}</span>
-                {t("weLeftShort")}
-              </span>
-            ) : (
-              t("weQuotaSub")
-            )}
-          </p>
-          {!q.linked && <p className="mt-1 text-[12px] leading-snug text-txt3">{t("weLinkHint")}</p>}
-        </div>
-        {q.linked ? (
-          <div className="flex shrink-0 items-center gap-2">
-            <Tip text={t("weRefresh")} align="end">
+      <Row
+        title={t("weQuota")}
+        body={
+          q.linked && remaining ? (
+            <span className="flex items-baseline gap-1.5">
+              <span className="font-display text-[16px] font-semibold tabular-nums text-txt">{fmtQuota(remaining.remain)}</span>
+              {t("weLeftShort")}
+            </span>
+          ) : (
+            t("weQuotaSub")
+          )
+        }
+        note={!q.linked ? t("weLinkHint") : null}
+        control={
+          q.linked ? (
+            <>
+              <Tip text={t("weRefresh")} align="end">
+                <button
+                  type="button"
+                  onClick={() => void quotaRefresh(true)}
+                  disabled={busy}
+                  className="flex h-[34px] items-center gap-1.5 whitespace-nowrap rounded-[9px] border border-line bg-white/[0.03] px-3.5 text-[12.5px] text-txt transition-colors hover:border-[var(--brand-line)]"
+                >
+                  {busy ? <Loader2 className="size-3 animate-spin" aria-hidden /> : <RefreshCw className="size-3" aria-hidden />}
+                  {t("weRefresh")}
+                </button>
+              </Tip>
               <button
                 type="button"
-                onClick={() => void quotaRefresh(true)}
-                disabled={busy}
-                className="flex h-8 items-center gap-1.5 whitespace-nowrap rounded-[8px] border border-line bg-white/[0.03] px-3 text-[12px] text-txt transition-colors hover:border-[var(--brand-line)]"
+                onClick={() => void quotaLogout()}
+                className="flex h-[34px] items-center whitespace-nowrap rounded-[9px] border border-line bg-transparent px-3.5 text-[12.5px] text-txt2 transition-colors hover:border-[var(--red-line)] hover:text-txt"
               >
-                {busy ? <Loader2 className="size-3 animate-spin" aria-hidden /> : <RefreshCw className="size-3" aria-hidden />}
-                {t("weRefresh")}
+                {t("weUnlink")}
               </button>
-            </Tip>
+            </>
+          ) : (
             <button
               type="button"
-              onClick={() => void quotaLogout()}
-              className="flex h-8 items-center whitespace-nowrap rounded-[8px] border border-line bg-white/[0.03] px-3 text-[12px] text-txt2 transition-colors hover:border-[var(--red-line)] hover:text-txt"
+              onClick={() => setQuotaOpen(true)}
+              className="press flex h-[34px] items-center rounded-[9px] bg-[var(--brand)] px-4 text-[12.5px] font-medium text-white transition-[filter] hover:brightness-110"
             >
-              {t("weUnlink")}
+              {t("weLink")}
             </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setQuotaOpen(true)}
-            className="press flex h-8 shrink-0 items-center rounded-[8px] bg-[var(--brand)] px-3 text-[12px] font-medium text-white transition-[filter] hover:brightness-110"
-          >
-            {t("weLink")}
-          </button>
-        )}
-      </div>
+          )
+        }
+      />
       <WeQuotaDialog open={quotaOpen} onOpenChange={setQuotaOpen} />
     </>
   )
@@ -192,31 +185,16 @@ export function Settings() {
                 ? t("upCur").replace("{v}", cur)
                 : ""
 
-  const upTone =
-    updateState === "latest"
-      ? "bg-[var(--green)]"
-      : updateState === "error"
-        ? "bg-[var(--red)]"
-        : updateState === "idle"
-          ? "bg-[var(--line-strong)]"
-          : "bg-[var(--brand-vivid)]"
-
   const checking = updateState === "checking"
   const installing = updateState === "installing"
   const offered = updateState === "available" || installing
 
   return (
-    <div className="mx-auto flex w-full max-w-[760px] flex-col pb-8">
-      <header className="mb-5">
-        <h1 className="text-[20px] font-semibold tracking-[-0.015em] text-txt">{t("tabSettings")}</h1>
-        <p className="mt-1 text-[12.5px] leading-snug text-txt3">{t("setLead")}</p>
-      </header>
-
-      <div className="overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)] shadow-[inset_0_1px_0_rgb(255_255_255/0.045)]">
-      <Group title={t("setAppGroup")}>
+    <div className="mx-auto flex w-full max-w-[980px] flex-col pb-6">
+      <Section label={t("setAppGroup")}>
         <Row
-          icon={Languages}
           title={t("language")}
+          body={lang === "ar" ? "عربي" : "English"}
           control={
             <Segmented
               id="lang"
@@ -230,21 +208,19 @@ export function Settings() {
           }
         />
         <Row
-          icon={MonitorPlay}
           title={t("startupTitle")}
           body={t("startupBody")}
           note={startupMsg ? <span className="text-[var(--red)]">{startupMsg}</span> : null}
           control={<Toggle on={startup} busy={false} onFlip={() => void flipStartup(!startup)} label={t("startupTitle")} />}
         />
-      </Group>
+      </Section>
 
-      <Group title={t("setConnGroup")}>
-        <WeQuotaRow />
-      </Group>
+      <Section label={t("setConnGroup")} gap>
+        <WeQuotaRows />
+      </Section>
 
-      <Group title={t("setUpdGroup")}>
+      <Section label={t("setUpdGroup")} gap>
         <Row
-          icon={Download}
           title={
             <span className="flex items-baseline gap-2">
               {t("chCur")}
@@ -253,7 +229,19 @@ export function Settings() {
           }
           body={
             <span aria-live="polite" className="flex min-w-0 items-center gap-1.5">
-              <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", upTone)} />
+              <span
+                aria-hidden
+                className={cn(
+                  "size-1.5 shrink-0 rounded-full",
+                  updateState === "latest"
+                    ? "bg-[var(--green)]"
+                    : updateState === "error"
+                      ? "bg-[var(--red)]"
+                      : updateState === "idle"
+                        ? "bg-[var(--line-strong)]"
+                        : "bg-[var(--brand-vivid)]",
+                )}
+              />
               <span className="truncate">{updateText}</span>
             </span>
           }
@@ -263,7 +251,7 @@ export function Settings() {
                 type="button"
                 onClick={() => void checkUpdates()}
                 disabled={checking}
-                className="flex h-8 items-center gap-1.5 whitespace-nowrap rounded-[8px] border border-line bg-white/[0.03] px-3 text-[12px] text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
+                className="flex h-[34px] items-center gap-1.5 whitespace-nowrap rounded-[9px] border border-line bg-white/[0.03] px-3.5 text-[12.5px] text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
               >
                 {checking ? <Loader2 className="size-3 animate-spin" aria-hidden /> : <RefreshCw className="size-3" aria-hidden />}
                 {checking ? t("upChecking") : t("upCheck")}
@@ -273,7 +261,7 @@ export function Settings() {
                   type="button"
                   onClick={() => void applyUpdate()}
                   disabled={installing}
-                  className="flex h-8 items-center whitespace-nowrap rounded-[8px] bg-[var(--brand)] px-3 text-[12px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
+                  className="flex h-[34px] items-center whitespace-nowrap rounded-[9px] bg-[var(--brand)] px-3.5 text-[12.5px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
                 >
                   {installing ? (updatePct !== null ? `${updatePct}%` : t("upInstalling")) : t("upGet")}
                 </button>
@@ -282,7 +270,6 @@ export function Settings() {
           }
         />
         <Row
-          icon={RefreshCw}
           title={t("chTitle")}
           body={
             <span className={updateChannel === "experimental" ? "text-[var(--amber)]" : undefined}>
@@ -303,8 +290,7 @@ export function Settings() {
             />
           }
         />
-      </Group>
-      </div>
+      </Section>
     </div>
   )
 }
