@@ -42,11 +42,13 @@ function Row({
   control: React.ReactNode
 }) {
   return (
-    <div className="flex min-h-[58px] items-center gap-3.5 border-b border-line py-4 last:border-b-0 max-[760px]:flex-wrap max-[760px]:gap-y-3">
-      <Icon className="size-[18px] shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
+    <div className="flex min-h-[52px] items-center gap-4 border-b border-line py-3 last:border-b-0 max-[760px]:flex-wrap max-[760px]:gap-y-3">
+      <span className="grid size-7 shrink-0 place-items-center text-txt2">
+        <Icon className="size-[22px]" strokeWidth={1.75} aria-hidden />
+      </span>
       <div className="min-w-0 flex-1">
         <h3 className="text-[13.5px] font-medium text-txt">{title}</h3>
-        {body ? <p className="mt-0.5 text-[12.5px] leading-relaxed text-txt2">{body}</p> : null}
+        {body ? <p className="mt-0.5 break-words text-[12.5px] leading-relaxed text-txt2">{body}</p> : null}
         {note ? <div className="mt-1 text-[12px] leading-snug text-txt3">{note}</div> : null}
       </div>
       <div className="flex shrink-0 items-center gap-2 max-[760px]:w-full max-[760px]:justify-start">{control}</div>
