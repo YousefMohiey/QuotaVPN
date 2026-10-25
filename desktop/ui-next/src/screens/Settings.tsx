@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react"
-import { Loader2, RefreshCw } from "lucide-react"
+import { Download, Languages, Loader2, MonitorPlay, RefreshCw } from "lucide-react"
 import { Toggle } from "@/components/Toggle"
 import { Segmented } from "@/components/Segmented"
 import { Tip } from "@/components/Tip"
 import { useApp } from "@/state/app"
 import { fmtQuota, quotaLogout, quotaRefresh, useQuota } from "@/state/quota"
 import { WeQuotaDialog } from "@/components/WeQuotaDialog"
+import { WeMark } from "@/components/WeMark"
 import { useI18n } from "@/lib/i18n"
 import { api } from "@/lib/ipc"
 import { cn } from "@/lib/utils"
@@ -20,34 +21,35 @@ import { cn } from "@/lib/utils"
  */
 function Section({ label, gap, children }: { label: string; gap?: boolean; children: React.ReactNode }) {
   return (
-    <section className={cn("grid grid-cols-[128px_minmax(0,1fr)] gap-x-8", gap && "mt-9")}>
-      <div className="pt-[15px] text-[11.5px] font-semibold uppercase leading-none tracking-[0.13em] text-txt2">
-        {label}
-      </div>
+    <section className={cn("flex flex-col", gap && "mt-8")}>
+      <h2 className="mb-2 text-[11.5px] font-semibold uppercase leading-none tracking-[0.13em] text-txt2">{label}</h2>
       <div className="border-t border-line">{children}</div>
     </section>
   )
 }
 
 function Row({
+  icon: Icon,
   title,
   body,
   note,
   control,
 }: {
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number; "aria-hidden"?: boolean }>
   title: React.ReactNode
   body?: React.ReactNode
   note?: React.ReactNode
   control: React.ReactNode
 }) {
   return (
-    <div className="flex items-center gap-6 border-b border-line py-3.5 last:border-b-0">
+    <div className="flex min-h-[58px] items-center gap-3.5 border-b border-line py-4 last:border-b-0 max-[760px]:flex-wrap max-[760px]:gap-y-3">
+      <Icon className="size-[18px] shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
       <div className="min-w-0 flex-1">
         <h3 className="text-[13.5px] font-medium text-txt">{title}</h3>
         {body ? <p className="mt-0.5 text-[12.5px] leading-relaxed text-txt2">{body}</p> : null}
         {note ? <div className="mt-1 text-[12px] leading-snug text-txt3">{note}</div> : null}
       </div>
-      <div className="flex shrink-0 items-center gap-2">{control}</div>
+      <div className="flex shrink-0 items-center gap-2 max-[760px]:w-full max-[760px]:justify-start">{control}</div>
     </div>
   )
 }
@@ -64,6 +66,7 @@ function WeQuotaRows() {
   return (
     <>
       <Row
+        icon={WeMark}
         title={t("weQuota")}
         body={
           q.linked && remaining ? (
@@ -190,9 +193,10 @@ export function Settings() {
   const offered = updateState === "available" || installing
 
   return (
-    <div className="mx-auto flex w-full max-w-[980px] flex-col pb-6">
+    <div className="mx-auto flex w-full max-w-[780px] flex-col pb-6">
       <Section label={t("setAppGroup")}>
         <Row
+          icon={Languages}
           title={t("language")}
           body={lang === "ar" ? "عربي" : "English"}
           control={
@@ -208,6 +212,7 @@ export function Settings() {
           }
         />
         <Row
+          icon={MonitorPlay}
           title={t("startupTitle")}
           body={t("startupBody")}
           note={startupMsg ? <span className="text-[var(--red)]">{startupMsg}</span> : null}
@@ -221,8 +226,9 @@ export function Settings() {
 
       <Section label={t("setUpdGroup")} gap>
         <Row
+          icon={Download}
           title={
-            <span className="flex items-baseline gap-2">
+            <span className="flex flex-wrap items-baseline gap-x-2">
               {t("chCur")}
               <span className="font-display text-[15px] font-semibold tabular-nums text-txt">{cur || "-"}</span>
             </span>
@@ -270,6 +276,7 @@ export function Settings() {
           }
         />
         <Row
+          icon={RefreshCw}
           title={t("chTitle")}
           body={
             <span className={updateChannel === "experimental" ? "text-[var(--amber)]" : undefined}>
