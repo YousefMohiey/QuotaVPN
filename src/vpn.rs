@@ -1021,6 +1021,50 @@ pub fn engine_alive(pid: u32) -> bool {
 
 /// Bring the engine up through the task and return its pid (0 while the task
 /// is still starting; the caller waits on the routes anyway).
+
+/// Every session gets its own adapter name.
+///
+/// wintun refuses to create an adapter whose name a ghost of a force-killed run
+/// still holds ("create adapter: Cannot create a file when that file already
+/// exists") and cannot open that ghost either ("Element not found"), so the
+/// tunnel never comes up while the app happily reports connected. A fresh name
+/// sidesteps the ghost instead of asking the user to reboot.
+fn refresh_tun_name() -> Option<String> {
+    let p = tun_config_path();
+    let raw = std::fs::read_to_string(&p).ok()?;
+    let mut v: serde_json::Value = serde_json::from_str(&raw).ok()?;
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?
+        .as_nanos() as u64;
+    let name = format!(
+        "QuotaVPN{:06x}",
+        (nanos ^ (std::process::id() as u64).wrapping_mul(2654435761)) & 0xffffff
+    );
+    v["inbounds"][0]["interface_name"] = serde_json::json!(name);
+    std::fs::write(&p, serde_json::to_string_pretty(&v).ok()?).ok()?;
+    let _ = std::fs::write(p.with_file_name("tun-ifname.txt"), &name);
+    Some(name)
+}
+
+/// Is the session's adapter actually standing? A name that exists but never
+/// comes up is the difference between connected and pretending.
+fn tun_adapter_up() -> bool {
+    let name = std::fs::read_to_string(engine_dir().join("tun-ifname.txt"))
+        .unwrap_or_default();
+    let name = name.trim();
+    if name.is_empty() {
+        return false;
+    }
+    match run_hidden("netsh", &["interface", "show", "interface", &format!("name={name}")]) {
+        Ok(o) => {
+            let text = String::from_utf8_lossy(&o.stdout).to_lowercase();
+            text.contains("connected") || text.contains("up")
+        }
+        Err(_) => false,
+    }
+}
+
 pub fn start_engine() -> Result<u32, String> {
     if !task_installed() {
         return Err("setup-needed".to_string());
@@ -1041,12 +1085,33 @@ pub fn start_engine() -> Result<u32, String> {
         }
         std::thread::sleep(std::time::Duration::from_millis(600));
     }
+    // Fresh adapter name for this session, so a ghost from a killed run cannot
+    // block the tunnel.
+    let if_name = refresh_tun_name();
     write_engine_cmd();
     stop_task();
     start_task()?;
     for _ in 0..80 {
         if let Some(pid) = task_engine_pid() {
             let _ = std::fs::write(engine_dir().join("engine.pid"), pid.to_string());
+            // The engine process alone is not a tunnel: wait for the adapter to
+            // stand, and say so plainly when it never does.
+            if let Some(name) = if_name.as_deref() {
+                let mut up = false;
+                for _ in 0..24 {
+                    if tun_adapter_up() {
+                        up = true;
+                        break;
+                    }
+                    if task_engine_pid().is_none() {
+                        break;
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(250));
+                }
+                if !up && task_engine_pid().is_none() {
+                    return Err(format!("tunnel-failed: {name}"));
+                }
+            }
             return Ok(pid);
         }
         std::thread::sleep(std::time::Duration::from_millis(250));
