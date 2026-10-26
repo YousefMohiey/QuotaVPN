@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils"
  */
 function Section({ label, gap, children }: { label: string; gap?: boolean; children: React.ReactNode }) {
   return (
-    <section className={cn("flex flex-col", gap && "mt-9")}>
+    <section className={cn("flex flex-col", gap && "mt-8")}>
       <h2 className="mb-0 border-b border-line pb-2 text-[11.5px] font-semibold uppercase leading-none tracking-[0.14em] text-txt2">
         {label}
       </h2>
@@ -31,8 +31,8 @@ function Section({ label, gap, children }: { label: string; gap?: boolean; child
 /** The WE mark in a ring, the way the quota card on Home wears it. */
 function WeIcon() {
   return (
-    <span className="grid size-8 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)]">
-      <WeMark className="w-[15px]" />
+    <span className="grid size-10 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)]">
+      <WeMark className="w-[21px]" />
     </span>
   )
 }
@@ -51,8 +51,8 @@ function Row({
   control: React.ReactNode
 }) {
   return (
-    <div className="flex min-h-[64px] items-center gap-4 border-b border-line py-4 last:border-b-0 max-[760px]:flex-wrap max-[760px]:gap-y-3">
-      <span className="grid size-8 shrink-0 place-items-center text-txt2">
+    <div className="flex h-[76px] items-center gap-4 border-b border-line last:border-b-0 max-[760px]:h-auto max-[760px]:flex-wrap max-[760px]:gap-y-3 max-[760px]:py-4">
+      <span className="grid size-10 shrink-0 place-items-center text-txt2">
         <Icon className="size-6" strokeWidth={1.7} aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
@@ -213,7 +213,7 @@ export function Settings() {
           control={
             <Segmented
               boxed
-              className="w-[150px]"
+              className="h-10 w-[150px]"
               id="lang"
               value={lang}
               onChange={(l) => setLang(l)}
@@ -299,7 +299,7 @@ export function Settings() {
           control={
             <Segmented
               boxed
-              className="w-[250px]"
+              className="h-10 w-[250px]"
               id="chan"
               value={updateChannel}
               options={[
