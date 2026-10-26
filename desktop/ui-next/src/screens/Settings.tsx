@@ -27,6 +27,16 @@ function Section({ label, gap, children }: { label: string; gap?: boolean; child
   )
 }
 
+
+/** The WE mark in a ring, the way the quota card on Home wears it. */
+function WeIcon() {
+  return (
+    <span className="grid size-8 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)]">
+      <WeMark className="w-[15px]" />
+    </span>
+  )
+}
+
 function Row({
   icon: Icon,
   title,
@@ -67,7 +77,7 @@ function WeQuotaRows() {
   return (
     <>
       <Row
-        icon={WeMark}
+        icon={WeIcon}
         title={t("weQuota")}
         body={
           q.linked && remaining ? (

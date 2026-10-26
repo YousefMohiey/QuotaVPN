@@ -108,7 +108,14 @@
   ; The helper task belongs to this install: take it with the app. This runs
   ; before the files go, because afterwards the exe is gone and the task
   ; survives an uninstall for ever.
-  nsExec::ExecToLog '"$INSTDIR\${MAINBINARYNAME}.exe" --remove-helper'
+  ; An in-app update runs this uninstaller too, and the helper has to survive
+  ; that: the task is per account and re-registering it means another Windows
+  ; prompt. The app drops a marker before it hands over to the updater, so that
+  ; marker is the test. A real uninstall has no marker and takes the task.
+  IfFileExists "$LOCALAPPDATA\quotacards\updating" qvp_keep_helper qvp_drop_helper
+  qvp_drop_helper:
+    nsExec::ExecToLog '"$INSTDIR\${MAINBINARYNAME}.exe" --remove-helper'
+  qvp_keep_helper:
 !macroend
 
 !macro NSIS_HOOK_POSTUNINSTALL
