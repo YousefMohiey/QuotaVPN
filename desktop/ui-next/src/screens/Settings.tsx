@@ -51,7 +51,7 @@ function Row({
   control: React.ReactNode
 }) {
   return (
-    <div className="flex h-[76px] items-center gap-4 border-b border-line last:border-b-0 max-[760px]:h-auto max-[760px]:flex-wrap max-[760px]:gap-y-3 max-[760px]:py-4">
+    <div className="group flex h-[76px] items-center gap-4 border-b border-line transition-colors duration-150 last:border-b-0 hover:bg-white/[0.018] max-[760px]:h-auto max-[760px]:flex-wrap max-[760px]:gap-y-3 max-[760px]:py-4">
       <span className="grid size-10 shrink-0 place-items-center text-txt2">
         <Icon className="size-6" strokeWidth={1.7} aria-hidden />
       </span>
@@ -86,10 +86,9 @@ function WeQuotaRows() {
               {t("weLeftShort")}
             </span>
           ) : (
-            t("weQuotaSub")
+            t("weNotLinked")
           )
         }
-        note={!q.linked ? t("weLinkHint") : null}
         control={
           q.linked ? (
             <>
