@@ -31,8 +31,8 @@ function Section({ label, gap, children }: { label: string; gap?: boolean; child
 /** The WE mark in a ring, the way the quota card on Home wears it. */
 function WeIcon() {
   return (
-    <span className="grid size-10 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)]">
-      <WeMark className="w-[21px]" />
+    <span className="grid size-10 place-items-center rounded-full border border-white/[0.11] bg-[rgb(255_255_255/0.03)] text-txt">
+      <WeMark className="w-[23px]" />
     </span>
   )
 }
