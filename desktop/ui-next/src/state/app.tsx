@@ -158,6 +158,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   // while the server path is dead, and that lie is what this closes.
   const [voiceHealth, setVoiceHealth] = useState<"unknown" | "ok" | "bad">("unknown")
   const voiceBusyRef = useRef(false)
+  // Bumped by every press. A run that outlived its press must not set the
+  // state: that is what flipped the plate back on after a cancel.
+  const voiceEpoch = useRef(0)
   const voiceIntent = useRef<boolean | null>(null)
   const voiceRunningRef = useRef(false)
   voiceBusyRef.current = voiceBusy
@@ -377,6 +380,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const voicePending = useRef<boolean | null>(null)
   /** Abandon a helper that is still coming up: the plate is already off. */
   const cancelVoice = useCallback(() => {
+    voiceEpoch.current += 1
     voicePending.current = null
     setVoiceRunning(false)
     try {
@@ -390,6 +394,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const setVoiceHelper = useCallback(
     async (next: boolean): Promise<boolean> => {
+      const ep = (voiceEpoch.current += 1)
       if (voiceBusyRef.current) {
         // The press is not lost: the last one wins once the run settles.
         voicePending.current = next
@@ -414,7 +419,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             if (!r.ok) setVoiceMsg(r.msg)
           } else {
             const r = await withTimeout(api.stop(), 45000)
-            if (!r.ok) {
+            if (!r.ok && voiceEpoch.current === ep) {
               setVoiceRunning(true)
               setVoiceMsg(r.msg)
             }
@@ -443,9 +448,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           45000,
         )
         if (r.ok) {
-          localStorage.setItem("qc-voice-active", "1")
-          localStorage.setItem("qc-voice-merged", merged ? "1" : "0")
-          setVoiceRunning(true)
+          if (voiceEpoch.current === ep) {
+            localStorage.setItem("qc-voice-active", "1")
+            localStorage.setItem("qc-voice-merged", merged ? "1" : "0")
+            setVoiceRunning(true)
+          }
           return true
         }
         // A cold start can report failure a moment before the engine is
@@ -453,17 +460,23 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         await new Promise((res) => window.setTimeout(res, 2500))
         const st = await api.status().catch(() => null)
         if (st?.running) {
-          localStorage.setItem("qc-voice-active", "1")
-          localStorage.setItem("qc-voice-merged", merged ? "1" : "0")
-          setVoiceRunning(true)
+          if (voiceEpoch.current === ep) {
+            localStorage.setItem("qc-voice-active", "1")
+            localStorage.setItem("qc-voice-merged", merged ? "1" : "0")
+            setVoiceRunning(true)
+          }
           return true
         }
-        setVoiceRunning(false)
-        setVoiceMsg(r.msg)
+        if (voiceEpoch.current === ep) {
+          setVoiceRunning(false)
+          setVoiceMsg(r.msg)
+        }
         return false
       } catch (e) {
-        setVoiceRunning(false)
-        setVoiceMsg(e === "timeout" ? t("voiceSlow") : typeof e === "string" ? e : String(e))
+        if (voiceEpoch.current === ep) {
+          setVoiceRunning(false)
+          setVoiceMsg(e === "timeout" ? t("voiceSlow") : typeof e === "string" ? e : String(e))
+        }
         return false
       } finally {
         voiceBusyRef.current = false

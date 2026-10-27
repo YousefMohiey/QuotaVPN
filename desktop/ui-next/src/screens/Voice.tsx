@@ -123,18 +123,14 @@ export function Voice() {
             <div className="flex min-h-0 flex-1 items-center justify-between gap-10 py-4">
               {/* the state, left aligned, with a rule under it */}
               <div className="flex min-w-0 flex-1 flex-col gap-2">
-                <motion.span
-                  key={busy ? "busy" : on ? (healthy ? "healthy" : "armed") : "off"}
-                  initial={calm ? { opacity: 0 } : { opacity: 0, y: 2 }}
-                  animate={calm ? { opacity: 1 } : { opacity: 1, y: 0 }}
-                  transition={{ duration: calm ? 0.12 : 0.18, ease: [0.23, 1, 0.32, 1] }}
+                <span
                   className={cn(
-                    "font-display text-[38px] font-semibold uppercase leading-none tracking-[0.01em]",
+                    "font-display text-[38px] font-semibold uppercase leading-none tracking-[0.01em] transition-colors duration-200",
                     healthy ? "text-[var(--green)]" : "text-txt",
                   )}
                 >
                   {working && shownOn ? t("voiceConnecting") : shownOn ? t("voiceActive") : t("voiceOffTitle")}
-                </motion.span>
+                </span>
                 <span className="max-w-[430px] text-[13px] leading-snug text-txt2">{stateWord}</span>
                 {msg ? (
                   <span className="max-w-[440px] text-[12px] leading-snug text-txt3" role="status">{msg}</span>
@@ -176,7 +172,6 @@ export function Voice() {
                   aria-pressed={shownOn}
                   aria-label={shownOn ? t("voiceDisconnect") : t("voiceRowTitle")}
                   whileTap={working ? undefined : { scale: 0.93 }}
-                  animate={on && !calm ? { scale: [1, 1.04, 1] } : { scale: 1 }}
                   transition={{ type: "spring", stiffness: 460, damping: 26, mass: 0.7 }}
                   className="group relative grid size-[252px] cursor-default select-none place-items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/50"
                   style={{ clipPath: PLATE }}
