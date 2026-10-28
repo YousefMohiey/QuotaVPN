@@ -59,13 +59,20 @@ export function Voice() {
    * have to watch.
    */
   const wanted = useRef(on)
+  // The press is the state, at once. The engine run that follows is slower than
+  // a finger, and reading a state that only changed when the run reported back
+  // made every press feel dead for a second.
+  const [shown, setShown] = useState(on)
   // Once nothing is running, the intent is whatever actually happened, so a
   // failed run cannot leave the next press pointing the wrong way.
   useEffect(() => {
-    if (!busy) wanted.current = on
+    if (!busy) {
+      wanted.current = on
+      setShown(on)
+    }
   }, [on, busy])
-  const shownOn = on
-  const working = busy && on
+  const shownOn = shown
+  const working = busy && shown
   const healthy = shownOn && health === "ok"
   // One direction, read from the same state the plate shows. Before this the
   // headline said CONNECTING while the line under it said Disconnecting,
@@ -160,13 +167,16 @@ export function Voice() {
                   onClick={() => {
                     // Still coming up? A press takes it straight back down
                     // instead of stacking another engine run behind it.
-                    if (busy && on) {
+                    if (busy && shownOn) {
                       wanted.current = false
+                      setShown(false)
                       cancelVoice()
                       return
                     }
-                    wanted.current = !wanted.current
-                    void setHelper(wanted.current)
+                    const next = !shownOn
+                    wanted.current = next
+                    setShown(next)
+                    void setHelper(next)
                   }}
                   disabled={!card}
                   aria-pressed={shownOn}
