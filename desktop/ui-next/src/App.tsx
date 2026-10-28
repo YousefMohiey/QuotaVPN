@@ -33,6 +33,9 @@ export default function App() {
   // forward (mouse buttons, keyboard) walk the app instead of doing nothing.
   const go = (t: Tab) => {
     if (t === tabRef.current) return
+    const steps = trail.current
+    steps.push(t)
+    if (steps.length > 40) steps.splice(0, steps.length - 40)
     setTab(t)
     try {
       history.pushState(null, "", "#" + t)
@@ -41,15 +44,29 @@ export default function App() {
     }
   }
 
-  // Back means the screen you came from, not a guess: the buttons used to
-  // hard-code a destination and push a new entry, so the trail grew rightwards
-  // and the shell's own back landed somewhere else again.
+  // Back means the screen you came from, and exactly one step of it. Walking
+  // webview history landed two screens away because the shell keeps its own
+  // entries alongside the browser's; this stack is the truth the buttons read.
+  const trail = useRef<Tab[]>([tabRef.current])
   const back = useCallback(() => {
-    if (window.history.length > 1) {
-      window.history.back()
+    const steps = trail.current
+    if (steps.length > 1) {
+      steps.pop()
+      const prev = steps[steps.length - 1]
+      setTab(prev)
+      try {
+        history.replaceState(null, "", "#" + prev)
+      } catch {
+        /* file:// */
+      }
       return
     }
-    go("home")
+    setTab("home")
+    try {
+      history.replaceState(null, "", "#home")
+    } catch {
+      /* file:// */
+    }
   }, [])
 
   const openResult = (at: number) => {
@@ -111,7 +128,9 @@ export default function App() {
     const onPop = () => {
       lastPop.current = Date.now()
       const h = location.hash.slice(1) as Tab
-      setTab(TABS.includes(h) ? h : "home")
+      const next = TABS.includes(h) ? h : "home"
+      trail.current = [next]
+      setTab(next)
     }
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return
