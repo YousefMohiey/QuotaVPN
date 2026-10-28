@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { isTauri } from "@/lib/ipc"
 import { AnimatePresence, motion } from "motion/react"
@@ -40,6 +40,17 @@ export default function App() {
       /* file:// */
     }
   }
+
+  // Back means the screen you came from, not a guess: the buttons used to
+  // hard-code a destination and push a new entry, so the trail grew rightwards
+  // and the shell's own back landed somewhere else again.
+  const back = useCallback(() => {
+    if (window.history.length > 1) {
+      window.history.back()
+      return
+    }
+    go("home")
+  }, [])
 
   const openResult = (at: number) => {
     setResultAt(at)
@@ -177,9 +188,9 @@ export default function App() {
                 {tab === "speed" && <Speed />}
                 {tab === "voice" && <Voice />}
                 {tab === "history" && <SpeedHistory onOpenResult={openResult} />}
-                {tab === "result" && <SpeedResult runAt={resultAt} onBack={() => go("history")} />}
+                {tab === "result" && <SpeedResult runAt={resultAt} onBack={back} />}
                 {tab === "settings" && <Settings />}
-                {tab === "apps" && <Apps onBack={() => go("home")} />}
+                {tab === "apps" && <Apps onBack={back} />}
               </motion.div>
             </AnimatePresence>
           </div>

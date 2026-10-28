@@ -307,6 +307,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     write("qc-preset", p)
   }, [])
 
+  // A session that outlived the window: the flag says the helper was on, the
+  // engine says something is running. Both must agree before the plate claims
+  // it, otherwise a restart shows a helper that is not there.
+  useEffect(() => {
+    let alive = true
+    void (async () => {
+      const st = await api.status().catch(() => null)
+      if (!alive || !st) return
+      if (st.running && localStorage.getItem("qc-voice-active") === "1") setVoiceRunning(true)
+    })()
+    return () => {
+      alive = false
+    }
+  }, [])
+
   // Engine status for the helper: polled app-wide, independent of the main
   // switch (a voice-only session runs the engine with the switch off).
   useEffect(() => {
@@ -314,7 +329,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     const poll = async () => {
       try {
         const st = await api.status()
-        if (alive) setVoiceRunning(st.running)
+        // Running means an engine exists, not that the voice helper is on: the
+        // main tunnel runs the same engine. Adopting it here flipped the plate
+        // back to STOP after a press of stop that deliberately left the tunnel
+        // up. A dead engine still clears the plate.
+        if (alive && !st.running) setVoiceRunning(false)
       } catch {
         /* engine not reachable yet */
       }
