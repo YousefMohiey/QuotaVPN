@@ -391,6 +391,9 @@ export function Speed() {
     // A fresh full test starts from nothing: the last run's figures hanging
     // under a spinner is what made a stopped run look like a wrong reading.
     if (which === "all") setResult(EMPTY)
+    // The peak belongs to the run that produced it: leaving the last one up
+    // made a fresh test look like it had already measured something.
+    setPeakSnap(null)
     const acc: Result = { ...result }
     // What the headline will be: ping runs show ms, upload-only runs show
     // up, everything else lands on download. The finished graph follows it.
@@ -585,6 +588,7 @@ export function Speed() {
     abort.current?.abort()
     setPhase("idle")
     setValue(0)
+    setPeakSnap(null)
     setHint(t("stopped"))
   }
 
