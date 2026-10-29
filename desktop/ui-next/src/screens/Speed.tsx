@@ -276,7 +276,7 @@ export function Speed() {
         push(ping, true)
         setValue(ping)
         pingSnap.current = samplesRef.current.slice()
-        setPeakSnap({ v: Math.max(0, ...samplesRef.current), u: "ms" })
+        if (liveRef.current) setPeakSnap({ v: Math.max(0, ...samplesRef.current), u: "ms" })
         return { ping, jitter }
       }
       const r = await measurePing("net", PING_PROBES, {
@@ -288,7 +288,7 @@ export function Speed() {
       push(r.ping)
       setValue(r.ping)
       pingSnap.current = samplesRef.current.slice()
-      setPeakSnap({ v: Math.max(0, ...samplesRef.current), u: "ms" })
+      if (liveRef.current) setPeakSnap({ v: Math.max(0, ...samplesRef.current), u: "ms" })
       return r
     } catch {
       if (!signal.aborted) setHint(t("noReply"))
@@ -346,7 +346,7 @@ export function Speed() {
       setValue(mbps)
       if (direction === "down") downSnap.current = samplesRef.current.slice()
       else upSnap.current = samplesRef.current.slice()
-      setPeakSnap({ v: Math.max(0, ...samplesRef.current), u: "Mbps" })
+      if (liveRef.current) setPeakSnap({ v: Math.max(0, ...samplesRef.current), u: "Mbps" })
       return mbps
     } catch (e) {
       if (!signal.aborted) {
@@ -486,7 +486,7 @@ export function Speed() {
         // The provider CLI reports averages and no samples, so this run never
         // passes through the snapshot path above; without this the finished
         // panel showed a dash where the peak belongs.
-        setPeakSnap({ v: Math.max(next.down ?? 0, next.up ?? 0), u: "Mbps" })
+        if (liveRef.current) setPeakSnap({ v: Math.max(next.down ?? 0, next.up ?? 0), u: "Mbps" })
         remember(next, cliLabel(cli) || label)
         if (cli.server_name) {
           setPicked({
@@ -589,6 +589,8 @@ export function Speed() {
     setPhase("idle")
     setValue(0)
     setPeakSnap(null)
+    setResult(EMPTY)
+    clearSamples()
     setHint(t("stopped"))
   }
 
