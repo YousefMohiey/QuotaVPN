@@ -157,6 +157,13 @@ export function Speed() {
   const [lastKind, setLastKind] = useState<"ping" | "down" | "up">("down")
 
   const abort = useRef<AbortController | null>(null)
+  // Which run owns this screen. A run that a stop or a newer run replaced must
+  // not write a reading, otherwise the next test shows the previous one's
+  // numbers, which is what "wrong speeds" looked like.
+  const runSeq = useRef(0)
+  // The one gate every write passes through. Set false by a stop, by a newer
+  // run, and when the screen unmounts.
+  const liveRef = useRef(false)
   const gate = useRef(0)
   const failNote = useRef("")
   // The samples array mirrored in a ref, so a phase can snapshot its own
@@ -242,6 +249,7 @@ export function Speed() {
   useEffect(() => () => abort.current?.abort(), [])
 
   const push = (v: number, force = false) => {
+    if (!liveRef.current) return
     const now = performance.now()
     if (!force && now - gate.current < 90) return
     gate.current = now
@@ -264,7 +272,7 @@ export function Speed() {
         for (const v of ms) push(v)
         const ping = Math.min(...ms)
         const jitter = meanAbsDelta(ms)
-        setResult((prev) => ({ ...prev, ping, jitter }))
+        if (liveRef.current) setResult((prev) => ({ ...prev, ping, jitter }))
         push(ping, true)
         setValue(ping)
         pingSnap.current = samplesRef.current.slice()
@@ -276,7 +284,7 @@ export function Speed() {
         pingUrl: srv.ping,
         onPing: (ms) => push(ms),
       })
-      setResult((prev) => ({ ...prev, ping: r.ping, jitter: r.jitter }))
+      if (liveRef.current) setResult((prev) => ({ ...prev, ping: r.ping, jitter: r.jitter }))
       push(r.ping)
       setValue(r.ping)
       pingSnap.current = samplesRef.current.slice()
@@ -333,7 +341,7 @@ export function Speed() {
             : await measureUpload("net", { ...opts, upUrl: srv.up })
       }
       if (mbps === null) throw new Error(reason || "no throughput")
-      setResult((prev) => (direction === "down" ? { ...prev, down: mbps } : { ...prev, up: mbps }))
+      if (liveRef.current) setResult((prev) => (direction === "down" ? { ...prev, down: mbps } : { ...prev, up: mbps }))
       push(mbps, true)
       setValue(mbps)
       if (direction === "down") downSnap.current = samplesRef.current.slice()
@@ -373,9 +381,16 @@ export function Speed() {
     if (running) return
     setRunId((n) => n + 1)
     abort.current?.abort()
+    const gen = ++runSeq.current
     const ctl = new AbortController()
     abort.current = ctl
     const s = ctl.signal
+    /** Still the run the screen is waiting for? */
+    const live = () => gen === runSeq.current && !s.aborted
+    liveRef.current = true
+    // A fresh full test starts from nothing: the last run's figures hanging
+    // under a spinner is what made a stopped run look like a wrong reading.
+    if (which === "all") setResult(EMPTY)
     const acc: Result = { ...result }
     // What the headline will be: ping runs show ms, upload-only runs show
     // up, everything else lands on download. The finished graph follows it.
@@ -414,7 +429,7 @@ export function Speed() {
         clearSamples()
         setHint(t("pingHint"))
         const offPhase = await onSpeedPhase((p) => {
-          if (s.aborted) return
+          if (!live()) return
           if (p === "select") {
             // The client is picking its server: show that instead of a dead
             // screen for the several seconds it takes.
@@ -435,7 +450,7 @@ export function Speed() {
           }
         }).catch(() => () => {})
         const offTick = await onSpeedTick((v) => {
-          if (!s.aborted) {
+          if (live()) {
             push(v)
             setValue(v)
           }
@@ -444,7 +459,7 @@ export function Speed() {
         // the download the moment its phase ends. Nothing waits for the whole
         // run to finish to become visible.
         const offResult = await onSpeedResult((part) => {
-          if (!s.aborted) setResult((prev) => ({ ...prev, ...part }))
+          if (live()) setResult((prev) => ({ ...prev, ...part }))
         }).catch(() => () => {})
         try {
           cli = await speedtestCli()
@@ -456,7 +471,7 @@ export function Speed() {
       } catch {
         cli = null
       }
-      if (s.aborted) return
+      if (!live()) return
       if (cli && (cli.down_mbps !== null || cli.up_mbps !== null)) {
         const next: Result = {
           ping: cli.ping_ms ?? null,
@@ -464,7 +479,7 @@ export function Speed() {
           down: cli.down_mbps ?? null,
           up: cli.up_mbps ?? null,
         }
-        setResult(next)
+        if (liveRef.current) setResult(next)
         // The provider CLI reports averages and no samples, so this run never
         // passes through the snapshot path above; without this the finished
         // panel showed a dash where the peak belongs.
@@ -481,7 +496,7 @@ export function Speed() {
             up: "",
           })
         }
-        setPhase("done")
+        if (liveRef.current) setPhase("done")
         setValue(next.down ?? next.up ?? 0)
         clearSamples()
         return
@@ -563,8 +578,13 @@ export function Speed() {
   }
 
   const stop = () => {
+    // Invalidate first, then abort: anything the dead run writes from here on
+    // belongs to a test the user already cancelled.
+    runSeq.current += 1
+    liveRef.current = false
     abort.current?.abort()
     setPhase("idle")
+    setValue(0)
     setHint(t("stopped"))
   }
 
