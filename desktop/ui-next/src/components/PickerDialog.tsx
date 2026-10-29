@@ -1,8 +1,9 @@
-import { useMemo, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { Check, Search } from "lucide-react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { pushCloser } from "@/lib/navStack"
 
 export type PickerItem = { value: string; label: string; sub?: string }
 
@@ -23,6 +24,7 @@ export function PickerDialog({
 }: {
   open: boolean
   onOpenChange: (o: boolean) => void
+
   title: string
   search: string
   items: PickerItem[]
@@ -30,6 +32,12 @@ export function PickerDialog({
   onPick: (v: string) => void
   children?: ReactNode
 }) {
+  // Back closes this before it touches the page under it.
+  useEffect(() => {
+    if (!open) return
+    return pushCloser(() => onOpenChange(false))
+  }, [open, onOpenChange])
+
   const [q, setQ] = useState("")
 
   const filtered = useMemo(() => {

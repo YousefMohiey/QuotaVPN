@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react"
 import { Sidebar, type Tab } from "@/components/Sidebar"
 import { WindowControls } from "@/components/WindowControls"
 import { QuotaToast } from "@/components/QuotaToast"
+import { closeTopOverlay } from "@/lib/navStack"
 import { Home } from "@/screens/Home"
 import { Speed } from "@/screens/Speed"
 import { Voice } from "@/screens/Voice"
@@ -34,11 +35,12 @@ export default function App() {
   const go = (t: Tab) => {
     if (t === tabRef.current) return
     const steps = trail.current
+    ahead.current = []
     steps.push(t)
     if (steps.length > 40) steps.splice(0, steps.length - 40)
     setTab(t)
     try {
-      history.pushState(null, "", "#" + t)
+      history.replaceState(null, "", "#" + t)
     } catch {
       /* file:// */
     }
@@ -48,9 +50,13 @@ export default function App() {
   // webview history landed two screens away because the shell keeps its own
   // entries alongside the browser's; this stack is the truth the buttons read.
   const trail = useRef<Tab[]>([tabRef.current])
+  const ahead = useRef<Tab[]>([])
+  /** Back unwinds one thing: an open overlay first, then one page. */
   const back = useCallback(() => {
+    if (closeTopOverlay()) return
     const steps = trail.current
     if (steps.length > 1) {
+      ahead.current.push(tabRef.current)
       steps.pop()
       const prev = steps[steps.length - 1]
       setTab(prev)
@@ -61,13 +67,33 @@ export default function App() {
       }
       return
     }
-    setTab("home")
+    if (tabRef.current !== "home") {
+      setTab("home")
+      try {
+        history.replaceState(null, "", "#home")
+      } catch {
+        /* file:// */
+      }
+    }
+  }, [])
+
+  /** Forward walks back up the trail that back walked down. */
+  const forward = useCallback(() => {
+    const next = ahead.current.pop()
+    if (!next) return
+    trail.current.push(next)
+    setTab(next)
     try {
-      history.replaceState(null, "", "#home")
+      history.replaceState(null, "", "#" + next)
     } catch {
       /* file:// */
     }
   }, [])
+
+  const backRef = useRef(back)
+  backRef.current = back
+  const forwardRef = useRef(forward)
+  forwardRef.current = forward
 
   const openResult = (at: number) => {
     setResultAt(at)
@@ -129,10 +155,14 @@ export default function App() {
       lastPop.current = Date.now()
       const h = location.hash.slice(1) as Tab
       const next = TABS.includes(h) ? h : "home"
-      trail.current = [next]
       setTab(next)
     }
     const onKey = (e: KeyboardEvent) => {
+      // Back keys walk the same stack as the back controls.
+      const typing = (e.target instanceof HTMLElement) && !!e.target.closest('input, textarea, select, [contenteditable="true"]')
+      if (e.altKey && e.key === "ArrowLeft") { e.preventDefault(); backRef.current(); return }
+      if (e.altKey && e.key === "ArrowRight") { e.preventDefault(); forwardRef.current(); return }
+      if (!typing && e.key === "Escape") { if (closeTopOverlay()) e.preventDefault(); return }
       if (e.ctrlKey || e.metaKey || e.altKey) return
       const el = e.target instanceof HTMLElement ? e.target : null
       if (el && el.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return
@@ -151,8 +181,8 @@ export default function App() {
       window.setTimeout(() => {
         if (lastPop.current !== seen) return
         try {
-          if (back) history.back()
-          else history.forward()
+          if (back) backRef.current()
+          else forwardRef.current()
         } catch {
           /* file:// */
         }

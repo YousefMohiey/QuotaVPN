@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { useI18n } from "@/lib/i18n"
 import { quotaLink, savedQuotaPass, useQuota } from "@/state/quota"
+import { pushCloser } from "@/lib/navStack"
 
 /** The WE login lives here and only here: a popup over whatever screen
     calls it. Home and Settings open it, neither embeds the form. */
@@ -16,6 +17,12 @@ export function WeQuotaDialog({
 }) {
   const { t } = useI18n()
   const q = useQuota()
+
+  // Back closes the quota sheet before it leaves the page.
+  useEffect(() => {
+    if (!open) return
+    return pushCloser(() => onOpenChange(false))
+  }, [open, onOpenChange])
   const [number, setNumber] = useState(q.number)
   const [password, setPassword] = useState("")
   const [code, setCode] = useState("")
