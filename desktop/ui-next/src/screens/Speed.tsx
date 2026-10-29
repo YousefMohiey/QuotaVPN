@@ -164,6 +164,9 @@ export function Speed() {
   // The one gate every write passes through. Set false by a stop, by a newer
   // run, and when the screen unmounts.
   const liveRef = useRef(false)
+  // The figure the dial shows. Raw samples swing by tens of Mbps between
+  // reads, which read as the number going crazy; this eases toward each one.
+  const smooth = useRef<number | null>(null)
   const gate = useRef(0)
   const failNote = useRef("")
   // The samples array mirrored in a ref, so a phase can snapshot its own
@@ -175,6 +178,7 @@ export function Speed() {
   const upSnap = useRef<number[]>([])
   const clearSamples = () => {
     samplesRef.current = []
+    smooth.current = null
     setSamples([])
   }
 
@@ -253,7 +257,9 @@ export function Speed() {
     const now = performance.now()
     if (!force && now - gate.current < 90) return
     gate.current = now
-    setValue(v)
+    smooth.current =
+      force || smooth.current === null ? v : smooth.current * 0.6 + v * 0.4
+    setValue(smooth.current)
     const next = [...samplesRef.current.slice(-(BARS_MEMORY - 1)), v]
     samplesRef.current = next
     setSamples(next)
@@ -453,10 +459,7 @@ export function Speed() {
           }
         }).catch(() => () => {})
         const offTick = await onSpeedTick((v) => {
-          if (live()) {
-            push(v)
-            setValue(v)
-          }
+          if (live()) push(v)
         }).catch(() => () => {})
         // Values as each phase finalizes: the ping the moment it is measured,
         // the download the moment its phase ends. Nothing waits for the whole
