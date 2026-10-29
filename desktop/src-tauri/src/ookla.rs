@@ -302,6 +302,25 @@ impl Parsed {
 /// Runs the CLI once. Live progress is reported through the callbacks: the
 /// phase ("download"/"upload") and the current Mbps, so the UI animates
 /// exactly as it does for the built-in measurement.
+/// The pid of the cli that is measuring right now, so a cancel can end it.
+static RUNNING: std::sync::Mutex<Option<u32>> = std::sync::Mutex::new(None);
+
+/// Kill the cli measuring now. The next test otherwise fights it for the line
+/// and both report a fraction of the real speed.
+pub fn cancel() {
+    let pid = RUNNING.lock().ok().and_then(|g| *g);
+    if let Some(pid) = pid {
+        let _ = std::process::Command::new("taskkill")
+            .args(["/F", "/T", "/PID", &pid.to_string()])
+            .creation_flags(CREATE_NO_WINDOW)
+            .status();
+    }
+    if let Ok(mut g) = RUNNING.lock() {
+        *g = None;
+    }
+}
+
+/// Millisecond runs of the cli are serialised: one at a time, by design.
 pub fn run(
     exe: &Path,
     on_phase: Arc<dyn Fn(&str) + Send + Sync>,
@@ -324,6 +343,9 @@ pub fn run(
         cmd.creation_flags(CREATE_NO_WINDOW);
     }
     let mut child = cmd.spawn().ok()?;
+    if let Ok(mut g) = RUNNING.lock() {
+        *g = Some(child.id());
+    }
 
     let parsed = Arc::new(Mutex::new(Parsed::default()));
     let mut readers = Vec::new();

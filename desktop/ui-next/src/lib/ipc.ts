@@ -62,6 +62,9 @@ export const speedReach = (url: string): Promise<boolean> => call<boolean>("spee
 /** Result of one throughput measurement: Mbps, or why it measured nothing. */
 export type SpeedOut = { mbps: number | null; note: string }
 
+/** Really stop a measurement: kills the cli and ends the built-in loops. */
+export const speedCancel = (): Promise<boolean> => call<boolean>("speed_cancel")
+
 export const speedDown = (urls: string[], seconds: number): Promise<SpeedOut> =>
   call<SpeedOut>("speed_down", { urls, seconds })
 

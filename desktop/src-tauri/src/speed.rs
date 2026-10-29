@@ -7,6 +7,7 @@
 //! upload as a much faster one. Here every request is real, every byte is
 //! counted after it arrives, and an upload chunk is timed to the server's ack.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use reqwest::Client;
@@ -102,6 +103,21 @@ pub async fn latency(client: &Client, url: &str, probes: u32) -> Vec<f64> {
     out
 }
 
+/// Set by the UI when a test is cancelled. A measurement that keeps running
+/// after a stop competes with the next one for the line and reports half the
+/// real speed, which is what "wrong speeds" looked like.
+pub static CANCELLED: AtomicBool = AtomicBool::new(false);
+
+/// Is a cancelled measurement still supposed to keep going?
+pub fn cancelled() -> bool {
+    CANCELLED.load(Ordering::Relaxed)
+}
+
+/// Arm the flag for a fresh measurement.
+pub fn uncancel() {
+    CANCELLED.store(false, Ordering::Relaxed);
+}
+
 /// Sequential downloads from `urls` (cycled, cache-busted) until the window
 /// closes. Returns the average over the whole window: cumulative bytes against
 /// elapsed time, which cannot over-read the way a per-interval window does.
@@ -121,7 +137,7 @@ pub async fn download(
     let mut i = 0usize;
     let mut empties = 0usize;
     let mut last_note = String::from("down: nothing arrived");
-    while start.elapsed().as_secs_f64() < window {
+    while start.elapsed().as_secs_f64() < window && !cancelled() {
         let url = bust(&urls[i % urls.len()]);
         i += 1;
         let mut resp = match client.get(&url).send().await {

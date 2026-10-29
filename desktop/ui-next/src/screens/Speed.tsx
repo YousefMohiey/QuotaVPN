@@ -6,7 +6,7 @@ import { useApp } from "@/state/app"
 import { useI18n, type StrKey } from "@/lib/i18n"
 import { measureDownload, measurePing, measureUpload } from "@/lib/speedtest"
 import { CLOUDFLARE, loadPool, pickFastest, type SpeedServer } from "@/lib/speedservers"
-import { isTauri, netInfo, onSpeedPhase, onSpeedResult, onSpeedTick, speedDown, speedLatency, speedUp, speedtestCli, speedtestCliReady, type CliSpeed } from "@/lib/ipc"
+import { isTauri, netInfo, onSpeedPhase, onSpeedResult, onSpeedTick, speedDown, speedLatency, speedUp, speedtestCli, speedtestCliReady, type CliSpeed, speedCancel } from "@/lib/ipc"
 import { cn } from "@/lib/utils"
 
 const PING_PROBES = 8
@@ -387,6 +387,7 @@ export function Speed() {
     if (running) return
     setRunId((n) => n + 1)
     abort.current?.abort()
+    if (isTauri()) void speedCancel()
     const gen = ++runSeq.current
     const ctl = new AbortController()
     abort.current = ctl
@@ -589,6 +590,7 @@ export function Speed() {
     runSeq.current += 1
     liveRef.current = false
     abort.current?.abort()
+    if (isTauri()) void speedCancel()
     setPhase("idle")
     setValue(0)
     setPeakSnap(null)

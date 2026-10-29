@@ -1618,6 +1618,7 @@ async fn speed_reach(url: String) -> bool {
 
 #[tauri::command]
 async fn speed_down(app: tauri::AppHandle, urls: Vec<String>, seconds: f64) -> speed::SpeedOut {
+    speed::uncancel();
     speed::download(&speed_client(true), &urls, seconds.clamp(1.0, 30.0), |v| {
         let _ = app.emit("speed-tick", v);
     })
@@ -1640,6 +1641,14 @@ async fn speed_up(
 
 /// Whether the bundled official client is fetched and runnable. The first
 /// call downloads it once and caches it under the app data dir.
+/// Stop whatever is measuring: the cli process and the built-in loops.
+#[tauri::command]
+async fn speed_cancel() -> bool {
+    speed::CANCELLED.store(true, std::sync::atomic::Ordering::Relaxed);
+    ookla::cancel();
+    true
+}
+
 #[tauri::command]
 async fn speedtest_cli_ready() -> bool {
     ookla::ensure_binary().await.is_some()
@@ -1649,6 +1658,7 @@ async fn speedtest_cli_ready() -> bool {
 /// `speed-phase` and `speed-tick` events.
 #[tauri::command]
 async fn speedtest_cli(app: tauri::AppHandle) -> Option<ookla::CliResult> {
+    speed::uncancel();
     let exe = ookla::ensure_binary().await?;
     let a1 = app.clone();
     let on_phase: std::sync::Arc<dyn Fn(&str) + Send + Sync> =
@@ -2265,6 +2275,7 @@ pub fn run() {
             net_info,
             app_icons,
             speed_servers,
+            speed_cancel,
             speed_latency,
             speed_reach,
             speed_down,
