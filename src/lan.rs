@@ -228,6 +228,10 @@ pub fn scan() -> Vec<Device> {
     for ip in alive {
         let sink = Arc::clone(&names);
         name_handles.push(thread::spawn(move || {
+            let mut found = String::new();
+            // Reverse DNS first, because a domain name is the most useful thing
+            // to show. Most home routers answer nothing, so the device itself is
+            // asked next: NetBIOS for Windows, mDNS for phones and printers.
             if let Ok(o) = hidden("ping").args(["-a", "-n", "1", "-w", "600", &ip]).output() {
                 let text = String::from_utf8_lossy(&o.stdout).to_string();
                 for raw in text.lines() {
@@ -236,12 +240,25 @@ pub fn scan() -> Vec<Device> {
                         let head = rest.split(" with ").next().unwrap_or("");
                         let head = head.split(" [").next().unwrap_or("").trim();
                         if !head.is_empty() && head != ip && head.split('.').count() != 4 {
-                            if let Ok(mut g) = sink.lock() {
-                                g.insert(ip.clone(), head.to_string());
-                            }
+                            found = head.to_string();
                         }
                         break;
                     }
+                }
+            }
+            if found.is_empty() {
+                if let Ok(v4) = ip.parse::<std::net::Ipv4Addr>() {
+                    let wait = std::time::Duration::from_millis(700);
+                    if let Some(n) = crate::lan_names::netbios(v4, wait) {
+                        found = n;
+                    } else if let Some(n) = crate::lan_names::mdns(v4, wait) {
+                        found = n;
+                    }
+                }
+            }
+            if !found.is_empty() {
+                if let Ok(mut g) = sink.lock() {
+                    g.insert(ip.clone(), found);
                 }
             }
         }));
@@ -272,4 +289,21 @@ pub fn scan() -> Vec<Device> {
     sort_devices(&mut out);
     out.dedup_by(|a, b| a.ip == b.ip);
     out
+}
+
+
+/// Is the packet driver present? The control layer needs it; the listing does
+/// not, so the app can show who is on the line before asking for anything.
+pub fn npcap_installed() -> bool {
+    let sys = std::env::var("SystemRoot").unwrap_or_else(|_| String::from("C:\Windows"));
+    for candidate in [
+        format!("{sys}\System32\Npcap\wpcap.dll"),
+        format!("{sys}\System32\wpcap.dll"),
+        format!("{sys}\SysWOW64\Npcap\wpcap.dll"),
+    ] {
+        if std::path::Path::new(&candidate).is_file() {
+            return true;
+        }
+    }
+    false
 }
