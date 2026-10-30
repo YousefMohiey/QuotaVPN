@@ -227,7 +227,17 @@ pub fn start(target_ip: &str, blocked: bool) -> Result<Session, String> {
         return Err("driver".into());
     }
     let w = wire().ok_or("no wire")?;
-    let target_mac = mac_for(target_ip).ok_or("target mac unknown")?;
+    // A device that has not spoken recently is not in the ARP table yet. One
+    // ping is enough to make it answer.
+    let mut target_mac = mac_for(target_ip).unwrap_or_default();
+    if target_mac.is_empty() {
+        let _ = run("ping", &["-n", "1", "-w", "700", target_ip]);
+        std::thread::sleep(Duration::from_millis(150));
+        target_mac = mac_for(target_ip).unwrap_or_default();
+    }
+    if target_mac.is_empty() {
+        return Err("target mac unknown".into());
+    }
     let stop = Arc::new(AtomicBool::new(false));
     let blocked_flag = Arc::new(AtomicBool::new(blocked));
     let down = Arc::new(std::sync::atomic::AtomicU32::new(0));
