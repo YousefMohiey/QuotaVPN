@@ -71,6 +71,7 @@ pub async fn login(host: &str, user: &str, pass: &str) -> Result<Session, String
         .await
         .map_err(|e| e.to_string())?;
     let pre = pre.trim().to_string();
+    log(&format!("pre-token len={} html={}", pre.len(), pre.contains('<')));
     if pre.len() < 8 || pre.contains('<') {
         return Err("no token".into());
     }
@@ -88,6 +89,7 @@ pub async fn login(host: &str, user: &str, pass: &str) -> Result<Session, String
         .send()
         .await
         .map_err(|e| e.to_string())?;
+    let login_status = login.status().as_u16();
     let cookie = cookie_from(&login);
 
     let token = client
@@ -100,6 +102,13 @@ pub async fn login(host: &str, user: &str, pass: &str) -> Result<Session, String
         .await
         .map_err(|e| e.to_string())?;
     let token = token.trim().trim_start_matches('\u{feff}').to_string();
+    log(&format!(
+        "login status={} cookie_len={} token_len={} html={}",
+        login_status,
+        cookie.len(),
+        token.len(),
+        token.contains('<')
+    ));
     if token.is_empty() || token.contains('<') {
         return Err("login rejected".into());
     }
@@ -143,20 +152,60 @@ fn fields(line: &str) -> Vec<String> {
     out
 }
 
+/// A small log of what the router said, so a failed sign in can be diagnosed
+/// without asking anyone for their password. Never contains credentials.
+fn log(line: &str) {
+    let base = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| String::from("."));
+    let dir = std::path::Path::new(&base).join("quotavpn");
+    let _ = std::fs::create_dir_all(&dir);
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let _ = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(dir.join("router.log"))
+        .and_then(|mut f| {
+            use std::io::Write;
+            writeln!(f, "{stamp} {line}")
+        });
+}
+
 impl Session {
     /// The router's own list: every device it handed an address to.
     pub async fn clients(&self) -> Result<Vec<RouterClient>, String> {
-        let body = self
-            .client
-            .post(format!("{}/html/bbsp/common/GetLanUserDhcpInfo.asp", self.host))
-            .header(reqwest::header::COOKIE, self.cookie.clone())
-            .form(&[("x.X_HW_Token", self.token.clone())])
-            .send()
-            .await
-            .map_err(|e| e.to_string())?
-            .text()
-            .await
-            .map_err(|e| e.to_string())?;
+        // Routers in this family do not agree on the page name, so ask the
+        // likely ones and keep the first that answers with a device list.
+        const PAGES: [&str; 5] = [
+            "/html/bbsp/common/GetLanUserDhcpInfo.asp",
+            "/html/bbsp/lanhostinfo/lanhostinfo.asp",
+            "/html/bbsp/common/lanuserinfo.asp",
+            "/html/bbsp/common/GetHostInfo.asp",
+            "/html/amp/ethinfo/ethinfo.asp",
+        ];
+        let mut body = String::new();
+        for page in PAGES {
+            match self
+                .client
+                .post(format!("{}{page}", self.host))
+                .header(reqwest::header::COOKIE, self.cookie.clone())
+                .form(&[("x.X_HW_Token", self.token.clone())])
+                .send()
+                .await
+            {
+                Ok(r) => {
+                    let status = r.status().as_u16();
+                    let text = r.text().await.unwrap_or_default();
+                    log(&format!("page {page} status={status} len={}", text.len()));
+                    if text.contains("DHCPInfo") || text.contains("HostInfo") {
+                        body = text;
+                        break;
+                    }
+                }
+                Err(e) => log(&format!("page {page} error={e}")),
+            }
+        }
 
         let mut out = Vec::new();
         for piece in body.split("new DHCPInfo(").skip(1) {
@@ -173,6 +222,7 @@ impl Session {
             }
             out.push(RouterClient { name, ip, mac });
         }
+        log(&format!("clients parsed={} body_len={}", out.len(), body.len()));
         Ok(out)
     }
 }
