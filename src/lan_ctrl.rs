@@ -220,6 +220,21 @@ fn arp_reply(dst_mac: [u8; 6], src_mac: [u8; 6], sender_ip: [u8; 4], target_mac:
     f
 }
 
+/// How long this frame has to wait before it may leave, given the cap.
+/// `None` means the queue is already too far behind, so the frame is dropped
+/// instead of delayed: a capped link should feel slow, not unresponsive.
+fn pace(len: usize, rate_bps: u64, slot: &mut Instant, now: Instant) -> Option<Duration> {
+    if rate_bps == 0 {
+        return Some(Duration::ZERO);
+    }
+    let at = (*slot).max(now) + Duration::from_secs_f64(len as f64 / rate_bps as f64);
+    if at > now + Duration::from_millis(300) {
+        return None;
+    }
+    *slot = at;
+    Some(at.saturating_duration_since(now))
+}
+
 fn ip4(s: &str) -> Option<[u8; 4]> {
     let p: Vec<u8> = s.split('.').filter_map(|x| x.parse().ok()).collect();
     if p.len() == 4 {
@@ -378,13 +393,13 @@ pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> 
             if rate > 0 {
                 let now = Instant::now();
                 let slot = if src_is_target { &mut next_up } else { &mut next_down };
-                let at = (*slot).max(now) + Duration::from_secs_f64(out.len() as f64 / rate as f64);
-                if at > now + Duration::from_millis(300) {
-                    continue;
-                }
-                *slot = at;
-                if at > now {
-                    std::thread::sleep(at - now);
+                match pace(out.len(), rate, slot, now) {
+                    Some(wait) => {
+                        if !wait.is_zero() {
+                            std::thread::sleep(wait);
+                        }
+                    }
+                    None => continue,
                 }
             }
             if src_is_target {
@@ -460,4 +475,56 @@ pub fn repair() -> bool {
     }
     clear_journal();
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A cap has to pace frames evenly: a 1000 kbit/s link moving 1500 byte
+    /// frames is 12 ms per frame, no matter how fast they arrive.
+    #[test]
+    fn a_cap_spaces_frames_by_the_rate() {
+        let rate = 125_000u64; // bytes per second, 1000 kbit/s
+        let mut now = Instant::now();
+        let mut slot = now;
+        let mut total = Duration::ZERO;
+        for _ in 0..10 {
+            let wait = pace(1500, rate, &mut slot, now).expect("first frames are never dropped");
+            total += wait;
+            // In the real loop the clock moves on by the time we slept.
+            now += wait;
+        }
+        let expected = Duration::from_millis(120);
+        assert!(
+            total >= expected - Duration::from_millis(2) && total <= expected + Duration::from_millis(2),
+            "ten frames at 1000 kbit/s should take about 120 ms, took {total:?}"
+        );
+    }
+
+    /// Anything more than a third of a second behind is dropped, so the queue
+    /// cannot grow without bound and turn the link into a lag spike.
+    #[test]
+    fn a_hopeless_queue_drops_instead_of_waiting() {
+        let rate = 1_000u64; // 8 kbit/s, deliberately tiny
+        let now = Instant::now();
+        let mut slot = now;
+        let mut dropped = 0;
+        for _ in 0..50 {
+            if pace(1500, rate, &mut slot, now).is_none() {
+                dropped += 1;
+            }
+        }
+        assert!(dropped > 0, "a slow cap must start dropping, dropped {dropped}");
+    }
+
+    /// Zero means no cap at all: no waiting, no dropping.
+    #[test]
+    fn zero_means_no_cap() {
+        let now = Instant::now();
+        let mut slot = now;
+        for _ in 0..100 {
+            assert_eq!(pace(1500, 0, &mut slot, now), Some(Duration::ZERO));
+        }
+    }
 }
