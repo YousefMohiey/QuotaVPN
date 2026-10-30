@@ -23,6 +23,25 @@ pub struct Wire {
     pub gateway_mac: String,
 }
 
+/// A block that outlives the moment it was set is a network outage, so every
+/// session has a deadline and a written note of what it changed.
+fn journal_path() -> std::path::PathBuf {
+    let base = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| String::from("."));
+    std::path::Path::new(&base).join("quotavpn").join("lan_journal.txt")
+}
+
+fn write_journal(line: &str) {
+    let path = journal_path();
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let _ = std::fs::write(&path, line);
+}
+
+fn clear_journal() {
+    let _ = std::fs::remove_file(journal_path());
+}
+
 fn run(cmd: &str, args: &[&str]) -> String {
     #[cfg(windows)]
     {
@@ -227,6 +246,14 @@ pub fn start(target_ip: &str, blocked: bool) -> Result<Session, String> {
         return Err("driver".into());
     }
     let w = wire().ok_or("no wire")?;
+    // Blocking the router, this machine, or a device wearing our own address
+    // would take the whole network down instead of one device.
+    if target_ip == w.gateway_ip {
+        return Err("refuse: gateway".into());
+    }
+    if target_ip == w.ip {
+        return Err("refuse: self".into());
+    }
     // A device that has not spoken recently is not in the ARP table yet. One
     // ping is enough to make it answer.
     let mut target_mac = mac_for(target_ip).unwrap_or_default();
@@ -244,6 +271,11 @@ pub fn start(target_ip: &str, blocked: bool) -> Result<Session, String> {
     let up = Arc::new(std::sync::atomic::AtomicU32::new(0));
     let seen = Arc::new(std::sync::atomic::AtomicU64::new(0));
     let forwarded = Arc::new(std::sync::atomic::AtomicU64::new(0));
+
+    write_journal(&format!(
+        "{}|{}|{}|{}",
+        target_ip, target_mac, w.gateway_ip, w.gateway_mac
+    ));
 
     let w2 = w.clone();
     let stop2 = Arc::clone(&stop);
@@ -265,7 +297,15 @@ pub fn start(target_ip: &str, blocked: bool) -> Result<Session, String> {
         let Some(gip) = ip4(&w2.gateway_ip) else { return };
 
         let mut last_poison = Instant::now() - Duration::from_secs(5);
+        let began = Instant::now();
+        let limit = std::env::var("QC_LAN_LIMIT_SECS")
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(15 * 60);
         while !stop2.load(Ordering::Relaxed) {
+            if began.elapsed() > Duration::from_secs(limit) {
+                break;
+            }
             // Keep both sides convinced. Every second is enough to survive a
             // router that refreshes, and cheap enough to run all day.
             if last_poison.elapsed() > Duration::from_millis(900) {
@@ -318,6 +358,7 @@ pub fn start(target_ip: &str, blocked: bool) -> Result<Session, String> {
             let _ = cap.send(&restore_gateway);
             std::thread::sleep(Duration::from_millis(120));
         }
+        clear_journal();
     });
 
     Ok(Session {
@@ -332,4 +373,41 @@ pub fn start(target_ip: &str, blocked: bool) -> Result<Session, String> {
         forwarded,
         handle: Some(handle),
     })
+}
+
+/// Undo anything a previous run left behind. Called once at startup: if the
+/// app was killed mid-block, the router still believes this machine is the
+/// device, and that device has no internet until the entry expires.
+pub fn repair() -> bool {
+    let Ok(text) = std::fs::read_to_string(journal_path()) else {
+        return false;
+    };
+    let parts: Vec<&str> = text.trim().split('|').collect();
+    if parts.len() != 4 {
+        clear_journal();
+        return false;
+    }
+    let (target_ip, target_mac, gateway_ip, gateway_mac) = (parts[0], parts[1], parts[2], parts[3]);
+    let Some(w) = wire() else { return false };
+    let (Some(tm), Some(gw), Some(tip), Some(gip)) = (
+        mac_bytes(target_mac),
+        mac_bytes(gateway_mac),
+        ip4(target_ip),
+        ip4(gateway_ip),
+    ) else {
+        clear_journal();
+        return false;
+    };
+    let Some(Some(cap)) = wpcap::with(|wp| wp.open(&w.device)) else {
+        return false;
+    };
+    for _ in 0..4 {
+        let to_target = arp_reply(tm, gw, gip, tm, tip);
+        let to_gateway = arp_reply(gw, tm, tip, gw, gip);
+        let _ = cap.send(&to_target);
+        let _ = cap.send(&to_gateway);
+        std::thread::sleep(Duration::from_millis(150));
+    }
+    clear_journal();
+    true
 }

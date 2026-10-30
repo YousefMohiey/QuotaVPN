@@ -2121,6 +2121,12 @@ fn set_webview_memory_low(app: &tauri::AppHandle, low: bool) {
 pub struct LanState(pub std::sync::Mutex<Option<quotacards::lan_ctrl::Session>>);
 
 pub fn run() {
+    // Undo any redirection a previous run failed to clean up: a killed app
+    // leaves the router believing this machine is the device it blocked.
+    std::thread::spawn(|| {
+        quotacards::lan_ctrl::repair();
+    });
+
     // Headless self-test for the WE quota flow, and a diagnostic the owner
     // can run on any PC: QC_WE_NUMBER and QC_WE_PASS in the environment,
     // QuotaVPN.exe --we-probe. Prints units and PROBE_GREEN, exits nonzero
@@ -2407,8 +2413,21 @@ pub fn run() {
             we_quota::we_quota_usage,
             we_quota::we_quota_logout
         ])
-        .run(tauri::generate_context!())
-        .expect("QuotaVPN failed to start");
+        .build(tauri::generate_context!())
+        .expect("QuotaVPN failed to start")
+        .run(|app, event| {
+            // Closing the app must hand the network back. Without this, a
+            // blocked device stays cut off until its router entry expires.
+            if let tauri::RunEvent::Exit = event {
+                if let Some(state) = app.try_state::<LanState>() {
+                    if let Ok(mut guard) = state.0.lock() {
+                        if let Some(session) = guard.take() {
+                            session.stop();
+                        }
+                    }
+                }
+            }
+        });
 }
 
 #[cfg(all(test, windows))]
