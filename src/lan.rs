@@ -352,8 +352,16 @@ pub fn enrich_names(list: Vec<Device>) {
             continue;
         }
         let ip = d.ip.clone();
+        let mac = d.mac.clone();
         handles.push(thread::spawn(move || {
             let mut found = String::new();
+            // Ask on the wire first: a socket has to get past the firewall,
+            // a frame addressed to the device does not.
+            if !mac.is_empty() {
+                if let Some(n) = crate::lan_ask::mdns_ask(&ip, &mac, std::time::Duration::from_millis(900)) {
+                    found = n;
+                }
+            }
             if let Ok(o) = hidden("ping").args(["-a", "-n", "1", "-w", "600", &ip]).output() {
                 let text = String::from_utf8_lossy(&o.stdout).to_string();
                 for raw in text.lines() {

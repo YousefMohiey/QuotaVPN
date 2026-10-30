@@ -2209,6 +2209,14 @@ pub fn run() {
         }
         return;
     }
+    // Ask one device its name, on the wire.
+    if let Some(i) = std::env::args().position(|a| a == "--lan-ask") {
+        let ip = std::env::args().nth(i + 1).unwrap_or_default();
+        let mac = std::env::args().nth(i + 2).unwrap_or_default();
+        let name = quotacards::lan_ask::mdns_ask(&ip, &mac, std::time::Duration::from_millis(1500));
+        println!("{ip} {mac} -> {:?}", name);
+        return;
+    }
     // Listen for devices announcing their names.
     if let Some(i) = std::env::args().position(|a| a == "--lan-listen") {
         let secs: u64 = std::env::args()

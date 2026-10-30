@@ -234,3 +234,57 @@ pub fn start_background() {
         std::thread::sleep(Duration::from_secs(5));
     });
 }
+
+/// Read the name out of a DNS answer: a PTR target if there is one, otherwise
+/// the owner of an address record. Used for questions this app asked itself.
+pub fn answer_name(frame: &[u8], _port: u16) -> Option<String> {
+    if frame.len() < 14 || frame[12] != 0x08 || frame[13] != 0x00 {
+        return None;
+    }
+    let ihl = (frame[14] & 0x0f) as usize * 4;
+    if frame.len() < 14 + ihl + 8 || frame[14 + 9] != 17 {
+        return None;
+    }
+    let dns = 14 + ihl + 8;
+    if frame.len() < dns + 12 {
+        return None;
+    }
+    let qdcount = u16::from_be_bytes([frame[dns + 4], frame[dns + 5]]) as usize;
+    let ancount = u16::from_be_bytes([frame[dns + 6], frame[dns + 7]]) as usize;
+    let mut i = dns + 12;
+    for _ in 0..qdcount {
+        i = skip_name(frame, i)?;
+        i += 4;
+    }
+    let mut fallback = String::new();
+    for _ in 0..ancount {
+        let owner = read_name(frame, i)?;
+        i = skip_name(frame, i)?;
+        if i + 10 > frame.len() {
+            return None;
+        }
+        let rtype = u16::from_be_bytes([frame[i], frame[i + 1]]);
+        let rdlen = u16::from_be_bytes([frame[i + 8], frame[i + 9]]) as usize;
+        i += 10;
+        if i + rdlen > frame.len() {
+            return None;
+        }
+        if rtype == 12 {
+            if let Some(target) = read_name(frame, i) {
+                let clean = target.trim_end_matches('.').trim_end_matches(".local").to_string();
+                if !clean.is_empty() && clean.split('.').count() <= 3 {
+                    return Some(clean);
+                }
+            }
+        }
+        if rtype == 1 && fallback.is_empty() {
+            fallback = owner.trim_end_matches('.').trim_end_matches(".local").to_string();
+        }
+        i += rdlen;
+    }
+    if fallback.is_empty() {
+        None
+    } else {
+        Some(fallback)
+    }
+}
