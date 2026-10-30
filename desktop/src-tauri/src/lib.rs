@@ -2136,6 +2136,8 @@ pub fn run() {
     std::thread::spawn(|| {
         quotacards::lan_ctrl::repair();
     });
+    // Names arrive when devices join, so listen for them in the background.
+    quotacards::dhcp_names::start_background();
 
     // Headless self-test for the WE quota flow, and a diagnostic the owner
     // can run on any PC: QC_WE_NUMBER and QC_WE_PASS in the environment,
@@ -2168,6 +2170,20 @@ pub fn run() {
             }
             Err(e) => println!("start failed: {e}"),
         }
+        return;
+    }
+    // Listen for devices announcing their names.
+    if let Some(i) = std::env::args().position(|a| a == "--lan-listen") {
+        let secs: u64 = std::env::args()
+            .nth(i + 1)
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(20);
+        println!("listening {secs}s");
+        let found = quotacards::dhcp_names::listen(secs);
+        for (mac, name) in &found {
+            println!("{mac} -> {name}");
+        }
+        println!("found {}", found.len());
         return;
     }
     // Does the packet driver load, and what does it see?

@@ -270,6 +270,9 @@ pub fn scan() -> Vec<Device> {
     let name_map = names.lock().map(|g| g.clone()).unwrap_or_default();
 
     let table = arp_table();
+    // Names a device announced to the router when it joined, remembered across
+    // sessions because a phone only announces itself once in a while.
+    let announced_by_mac = crate::dhcp_names::cached();
     let mut out: Vec<Device> = Vec::new();
     let results = found.lock().map(|g| g.clone()).unwrap_or_default();
     for (ip, alive, name) in results {
@@ -280,7 +283,12 @@ pub fn scan() -> Vec<Device> {
         if !alive && mac.is_empty() {
             continue;
         }
-        let resolved = name_map.get(&ip).cloned().unwrap_or(name);
+        let resolved = name_map
+            .get(&ip)
+            .cloned()
+            .filter(|n| !n.is_empty())
+            .or_else(|| announced_by_mac.get(&mac).cloned())
+            .unwrap_or(name);
         out.push(Device {
             ip,
             mac,
