@@ -223,6 +223,16 @@ impl Session {
             out.push(RouterClient { name, ip, mac });
         }
         log(&format!("clients parsed={} body_len={}", out.len(), body.len()));
+        // The raw list, so a field that moves between firmware versions can be
+        // seen instead of guessed. It holds names, addresses and nothing else.
+        let base = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| String::from("."));
+        let _ = std::fs::write(
+            std::path::Path::new(&base).join("quotavpn").join("router_dhcp.txt"),
+            &body,
+        );
+        for c in &out {
+            log(&format!("client name={:?} ip={} mac={}", c.name, c.ip, c.mac));
+        }
         Ok(out)
     }
 }
