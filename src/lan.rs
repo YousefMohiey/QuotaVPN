@@ -201,12 +201,17 @@ pub fn scan() -> Vec<Device> {
     let results = found.lock().map(|g| g.clone()).unwrap_or_default();
     for (ip, alive, name) in results {
         let mac = table.get(&ip).cloned().unwrap_or_default();
-        // A device that answered ping, or one the neighbour table knows, is on
-        // the network. Broadcast and incomplete entries are not devices.
-        if !alive && mac.is_empty() {
+        if mac.is_empty() {
             continue;
         }
-        if mac.is_empty() {
+        // The neighbour table also holds multicast groups, the broadcast
+        // address and incomplete entries. None of those is a device.
+        let first: u32 = ip.split('.').next().and_then(|p| p.parse().ok()).unwrap_or(0);
+        let last: u32 = ip.split('.').last().and_then(|p| p.parse().ok()).unwrap_or(0);
+        if first == 0 || first >= 224 || ip == "255.255.255.255" || last == 255 || last == 0 {
+            continue;
+        }
+        if !alive && mac.starts_with("00:00:00") {
             continue;
         }
         out.push(Device {
