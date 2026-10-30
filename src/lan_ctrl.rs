@@ -26,8 +26,18 @@ pub struct Wire {
 /// A block that outlives the moment it was set is a network outage, so every
 /// session has a deadline and a written note of what it changed.
 fn journal_path() -> std::path::PathBuf {
-    let base = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| String::from("."));
-    std::path::Path::new(&base).join("quotavpn").join("lan_journal.txt")
+    // The app's own data directory is the one place that is always writable,
+    // whatever the working directory or the environment happens to be.
+    let base = std::env::var("LOCALAPPDATA")
+        .map(std::path::PathBuf::from)
+        .or_else(|_| {
+            std::env::current_exe()
+                .ok()
+                .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+                .ok_or(())
+        })
+        .unwrap_or_else(|_| std::path::PathBuf::from("."));
+    base.join("quotavpn").join("lan_journal.txt")
 }
 
 fn write_journal(line: &str) {
@@ -35,7 +45,10 @@ fn write_journal(line: &str) {
     if let Some(dir) = path.parent() {
         let _ = std::fs::create_dir_all(dir);
     }
-    let _ = std::fs::write(&path, line);
+    match std::fs::write(&path, line) {
+        Ok(()) => eprintln!("journal written: {}", path.display()),
+        Err(e) => eprintln!("journal failed: {} ({e})", path.display()),
+    }
 }
 
 fn clear_journal() {
@@ -242,6 +255,13 @@ impl Session {
 
 /// Start redirecting one device. Blocked sessions drop instead of forward.
 pub fn start(target_ip: &str, blocked: bool) -> Result<Session, String> {
+    start_with(target_ip, blocked, None)
+}
+
+/// Same, but the caller already knows the device's address from its own scan.
+/// Asking the ARP table again is the unreliable part: a device that has been
+/// quiet is not in it, and a phone that ignores pings never fills it.
+pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> Result<Session, String> {
     if !wpcap::ready() {
         return Err("driver".into());
     }
@@ -256,7 +276,13 @@ pub fn start(target_ip: &str, blocked: bool) -> Result<Session, String> {
     }
     // A device that has not spoken recently is not in the ARP table yet. One
     // ping is enough to make it answer.
-    let mut target_mac = mac_for(target_ip).unwrap_or_default();
+    let mut target_mac = known_mac
+        .map(|m| m.replace('-', ":").to_lowercase())
+        .filter(|m| m.split(':').count() == 6 && !m.is_empty())
+        .unwrap_or_default();
+    if target_mac.is_empty() {
+        target_mac = mac_for(target_ip).unwrap_or_default();
+    }
     if target_mac.is_empty() {
         let _ = run("ping", &["-n", "1", "-w", "700", target_ip]);
         std::thread::sleep(Duration::from_millis(150));

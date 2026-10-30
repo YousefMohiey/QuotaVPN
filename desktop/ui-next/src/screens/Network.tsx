@@ -30,7 +30,7 @@ export function Network() {
   // behind it, so the screen is never a spinner with nothing to read.
   // One device at a time is redirected; the app keeps that state here so the
   // row can show which one is currently cut off.
-  const toggleBlock = async (ip: string) => {
+  const toggleBlock = async (ip: string, mac: string) => {
     setErr("")
     try {
       if (blockedIp === ip) {
@@ -38,7 +38,7 @@ export function Network() {
         setBlockedIp(null)
         return
       }
-      await api.lanStart(ip, true)
+      await api.lanStart(ip, mac, true)
       setBlockedIp(ip)
     } catch (e) {
       setErr(String(e))
@@ -118,7 +118,7 @@ export function Network() {
                   </span>
                   <button
                     type="button"
-                    onClick={() => void toggleBlock(d.ip)}
+                    onClick={() => void toggleBlock(d.ip, d.mac)}
                     className={cn(
                       "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors",
                       blockedIp === d.ip

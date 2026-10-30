@@ -72,8 +72,8 @@ export const lanKnown = (): Promise<LanDevice[]> => call<LanDevice[]>("lan_known
 export type LanWire = { device: string; adapter: string; mac: string; ip: string; gateway_ip: string; gateway_mac: string }
 export const lanWire = (): Promise<LanWire | null> => call<LanWire | null>("lan_wire")
 
-export const lanStart = (ip: string, blocked: boolean): Promise<boolean> =>
-  call<boolean>("lan_start", { ip, blocked })
+export const lanStart = (ip: string, mac: string, blocked: boolean): Promise<boolean> =>
+  call<boolean>("lan_start", { ip, mac, blocked })
 
 export const lanStop = (): Promise<boolean> => call<boolean>("lan_stop")
 
@@ -145,7 +145,8 @@ export const api = {
   state: () => call<UiState>("get_state"),
   lanKnown: (): Promise<LanDevice[]> => call<LanDevice[]>("lan_known"),
   lanWire: (): Promise<LanWire | null> => call<LanWire | null>("lan_wire"),
-  lanStart: (ip: string, blocked: boolean): Promise<boolean> => call<boolean>("lan_start", { ip, blocked }),
+  lanStart: (ip: string, mac: string, blocked: boolean): Promise<boolean> =>
+    call<boolean>("lan_start", { ip, mac, blocked }),
   lanStop: (): Promise<boolean> => call<boolean>("lan_stop"),
   lanDevices: (): Promise<LanDevice[]> => call<LanDevice[]>("lan_devices"),
   probeServer: () => call<CmdResult>("probe_server"),

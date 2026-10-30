@@ -1651,7 +1651,7 @@ async fn lan_wire() -> Option<quotacards::lan_ctrl::Wire> {
 /// Start standing between one device and the router. One at a time: two
 /// poisoned devices on the same wire would fight over one forwarding loop.
 #[tauri::command]
-fn lan_start(state: tauri::State<'_, LanState>, ip: String, blocked: bool) -> Result<bool, String> {
+fn lan_start(state: tauri::State<'_, LanState>, ip: String, mac: Option<String>, blocked: bool) -> Result<bool, String> {
     let previous = {
         let mut guard = state.0.lock().map_err(|_| "state".to_string())?;
         guard.take()
@@ -1659,7 +1659,7 @@ fn lan_start(state: tauri::State<'_, LanState>, ip: String, blocked: bool) -> Re
     if let Some(s) = previous {
         s.stop();
     }
-    let session = quotacards::lan_ctrl::start(&ip, blocked)?;
+    let session = quotacards::lan_ctrl::start_with(&ip, blocked, mac)?;
     let mut guard = state.0.lock().map_err(|_| "state".to_string())?;
     *guard = Some(session);
     Ok(true)
@@ -2146,7 +2146,8 @@ pub fn run() {
             None => println!("wire: none"),
         }
         let block = std::env::args().nth(i + 3).map(|v| v != "0").unwrap_or(true);
-        match quotacards::lan_ctrl::start(&ip, block) {
+        let mac = std::env::args().nth(i + 4);
+        match quotacards::lan_ctrl::start_with(&ip, block, mac) {
             Ok(s) => {
                 println!("started on {} (blocked={block})", s.target_ip);
                 std::thread::sleep(std::time::Duration::from_secs(secs));
