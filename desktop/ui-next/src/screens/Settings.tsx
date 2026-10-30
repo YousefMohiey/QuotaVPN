@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Download, Languages, Loader2, MonitorPlay, RefreshCw, ShieldCheck } from "lucide-react"
+import { Download, Languages, Loader2, MonitorPlay, RefreshCw } from "lucide-react"
 import { Toggle } from "@/components/Toggle"
 import { Segmented } from "@/components/Segmented"
 import { Tip } from "@/components/Tip"
@@ -129,7 +129,7 @@ function WeQuotaRows() {
 
 export function Settings() {
   const { t, lang, setLang } = useI18n()
-  const { update, updateState, updateError, checkUpdates, applyUpdate, updatePct, version, updateChannel, setUpdateChannel, bypass, setBypass } =
+  const { update, updateState, updateError, checkUpdates, applyUpdate, updatePct, version, updateChannel, setUpdateChannel } =
     useApp()
   const [startup, setStartup] = useState(() => {
     try {
@@ -233,19 +233,6 @@ export function Settings() {
       </Section>
 
       <Section label={t("setConnGroup")} gap>
-        <Row
-          icon={ShieldCheck}
-          title={t("bypassTitle")}
-          body={bypass ? t("bypassOn") : t("bypassBody")}
-          control={
-            <Toggle
-              on={bypass}
-              busy={false}
-              onFlip={() => setBypass(!bypass)}
-              label={t("bypassTitle")}
-            />
-          }
-        />
         <WeQuotaRows />
       </Section>
 

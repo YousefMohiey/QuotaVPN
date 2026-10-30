@@ -37,7 +37,6 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
     setTransport,
     appsMode,
     apps,
-    bypass,
     connected,
     phase,
     toggle,
@@ -84,15 +83,13 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
   }
 
   const [creating, setCreating] = useState<PresetKind | null>(null)
-  // While bypass is on the tunnel really does carry everything, so the footer
-  // says that instead of a list the switch has overridden.
   const routing =
-    bypass || appsMode === "all"
+    appsMode === "all"
       ? `${t("vpnFor")} ${t("wholeDevice")}`
       : appsMode === "allow"
         ? t("appsOnly")
         : t("appsExcept")
-  const routingCount = !bypass && appsMode !== "all" && apps.length ? ` · ${apps.length}` : ""
+  const routingCount = appsMode !== "all" && apps.length ? ` · ${apps.length}` : ""
 
   // The readings: where this machine sits and appears from right now.
   const geo = useGeo(connected)
