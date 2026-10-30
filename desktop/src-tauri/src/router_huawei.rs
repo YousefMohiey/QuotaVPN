@@ -144,7 +144,7 @@ fn fields(line: &str) -> Vec<String> {
             continue;
         }
         match ch {
-            '\' => {
+            '\\' => {
                 // \xHH, or a plain escaped character.
                 if i + 3 < chars.len() && chars[i + 1] == 'x' {
                     let hex: String = chars[i + 2..i + 4].iter().collect();
