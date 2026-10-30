@@ -25,6 +25,9 @@ type Value = {
   card: Card | undefined
   cardUuid: string
   appsMode: AppsMode
+  /** Send everything through the tunnel, for networks that block sites. */
+  bypass: boolean
+  setBypass: (on: boolean) => void
   apps: string[]
   transport: Transport
   vpnOn: boolean
@@ -108,6 +111,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     presetRef.current = preset
   }, [preset])
   const [appsMode, setAppsModeState] = useState<AppsMode>(() => read<AppsMode>("qc-apps-mode", "all"))
+  // Networks that filter sites by name, like a campus line, are beaten by
+  // sending everything through the tunnel: their resolver and their filter
+  // never see the destination. One switch for it, because the person hitting
+  // the block is not going to go hunting through routing settings.
+  const [bypass, setBypassState] = useState<boolean>(() => read<boolean>("qc-bypass", false))
   const [apps, setAppsState] = useState<string[]>(() => read<string[]>("qc-apps", []))
   const [transport, setTransportState] = useState<Transport>(() => read<Transport>("qc-transport", "vless"))
   const [vpnOn, setVpnOn] = useState(false)
@@ -302,6 +310,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     write("qc-transport", t)
   }, [])
 
+  const setBypass = useCallback((on: boolean) => {
+    setBypassState(on)
+    write("qc-bypass", on)
+  }, [])
+
   const setPreset = useCallback((p: PresetKind) => {
     setPresetState(p)
     write("qc-preset", p)
@@ -434,7 +447,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           // rules, a voice-only session just stops.
           const merged = localStorage.getItem("qc-voice-merged") === "1"
           if (merged && card) {
-            const r = await withTimeout(api.start(card.uuid, appsMode, apps, transport, false), 45000)
+            const r = await withTimeout(api.start(card.uuid, bypass ? "all" : appsMode, bypass ? [] : apps, bypass ? "standard" : transport, false), 45000)
             if (!r.ok) setVoiceMsg(r.msg)
           } else {
             const r = await withTimeout(api.stop(), 45000)
@@ -463,7 +476,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         // left the dial saying connected while nothing else was routed.
         const merged = voiceRunningRef.current || vpnRef.current
         const r = await withTimeout(
-          api.start(card.uuid, merged ? appsMode : "allow", merged ? apps : [], transport, true),
+          api.start(
+            card.uuid,
+            bypass ? "all" : merged ? appsMode : "allow",
+            bypass ? [] : merged ? apps : [],
+            bypass ? "standard" : transport,
+            true,
+          ),
           45000,
         )
         if (r.ok) {
@@ -510,7 +529,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [card, appsMode, apps, transport, t],
+    [card, appsMode, apps, bypass, transport, t],
   )
 
   /** The watcher arms on the game appearing; a press of ours is an edge too. */
@@ -629,8 +648,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     const stale = () => connectGenRef.current !== gen
     // A routing mode with nothing behind it can never match: fall back to
     // the whole device instead of silently doing nothing.
-    let mode = appsMode
-    if (appsMode !== "all" && apps.length === 0) {
+    let mode: AppsMode = bypass ? "all" : appsMode
+    if (!bypass && appsMode !== "all" && apps.length === 0) {
       mode = "all"
       setAppsMode("all")
       setStatus(t("appsEmptyFallback"))
@@ -769,7 +788,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       // A cancelled run leaves busy alone: the cancel path owns it now.
       if (!stale()) setBusy(false)
     }
-  }, [apps, appsMode, cards, cardUuid, preset, t, transport])
+  }, [apps, appsMode, bypass, cards, cardUuid, preset, t, transport])
 
   const disconnect = useCallback(async () => {
     setBusy(true)
@@ -1165,6 +1184,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     card,
     cardUuid,
     appsMode,
+    bypass,
+    setBypass,
     apps,
     transport,
     vpnOn,

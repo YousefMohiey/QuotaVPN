@@ -4376,7 +4376,7 @@ dependencies = [
 
 [[package]]
 name = "quotacards-desktop"
-version = "0.3.3"
+version = "0.5.0"
 dependencies = [
  "base64 0.22.1",
  "image",
