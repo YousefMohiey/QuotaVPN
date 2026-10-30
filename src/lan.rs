@@ -121,24 +121,12 @@ fn arp_table() -> HashMap<String, String> {
 /// the name, and "Pinging ip with 32 bytes" when it does not.
 #[cfg(windows)]
 fn wake(ip: String) -> (String, bool, String) {
-    let out = match hidden("ping").args(["-n", "1", "-w", "350", "-a", &ip]).output() {
+    let out = match hidden("ping").args(["-n", "1", "-w", "260", &ip]).output() {
         Ok(o) => String::from_utf8_lossy(&o.stdout).to_string(),
         Err(_) => return (ip, false, String::new()),
     };
     let alive = out.contains("TTL=") || out.contains("TTL =");
-    let mut name = String::new();
-    for raw in out.lines() {
-        let line = raw.trim();
-        if let Some(rest) = line.strip_prefix("Pinging ") {
-            let head = rest.split(" with ").next().unwrap_or("");
-            let head = head.split(" [").next().unwrap_or("").trim();
-            if !head.is_empty() && head != ip && head.split('.').count() != 4 {
-                name = head.to_string();
-            }
-            break;
-        }
-    }
-    (ip, alive, name)
+    (ip, alive, String::new())
 }
 
 #[cfg(not(windows))]
@@ -196,6 +184,40 @@ pub fn scan() -> Vec<Device> {
         let _ = h.join();
     }
 
+    // Names for the hosts that answered, in parallel, and never for the silent
+    // ones: a reverse lookup against a missing DNS server can hang for seconds.
+    let alive: Vec<String> = found
+        .lock()
+        .map(|g| g.iter().filter(|(_, a, _)| *a).map(|(ip, _, _)| ip.clone()).collect())
+        .unwrap_or_default();
+    let names: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(HashMap::new()));
+    let mut name_handles = Vec::new();
+    for ip in alive {
+        let sink = Arc::clone(&names);
+        name_handles.push(thread::spawn(move || {
+            if let Ok(o) = hidden("ping").args(["-a", "-n", "1", "-w", "600", &ip]).output() {
+                let text = String::from_utf8_lossy(&o.stdout).to_string();
+                for raw in text.lines() {
+                    let line = raw.trim();
+                    if let Some(rest) = line.strip_prefix("Pinging ") {
+                        let head = rest.split(" with ").next().unwrap_or("");
+                        let head = head.split(" [").next().unwrap_or("").trim();
+                        if !head.is_empty() && head != ip && head.split('.').count() != 4 {
+                            if let Ok(mut g) = sink.lock() {
+                                g.insert(ip.clone(), head.to_string());
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        }));
+    }
+    for h in name_handles {
+        let _ = h.join();
+    }
+    let name_map = names.lock().map(|g| g.clone()).unwrap_or_default();
+
     let table = arp_table();
     let mut out: Vec<Device> = Vec::new();
     let results = found.lock().map(|g| g.clone()).unwrap_or_default();
@@ -214,10 +236,11 @@ pub fn scan() -> Vec<Device> {
         if !alive && mac.starts_with("00:00:00") {
             continue;
         }
+        let resolved = name_map.get(&ip).cloned().unwrap_or(name);
         out.push(Device {
             ip,
             mac,
-            name: if name.is_empty() { String::from("-") } else { name },
+            name: if resolved.is_empty() { String::from("-") } else { resolved },
         });
     }
     // The router itself is the gateway, and it answers as an ordinary host.
