@@ -2125,6 +2125,33 @@ pub fn run() {
     // can run on any PC: QC_WE_NUMBER and QC_WE_PASS in the environment,
     // QuotaVPN.exe --we-probe. Prints units and PROBE_GREEN, exits nonzero
     // on any failure. Runs before the single-instance plugin on purpose.
+    // Headless redirect, for proving the engine works without the UI.
+    if let Some(i) = std::env::args().position(|a| a == "--lan-test") {
+        let ip = std::env::args().nth(i + 1).unwrap_or_default();
+        let secs: u64 = std::env::args()
+            .nth(i + 2)
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(8);
+        match quotacards::lan_ctrl::wire() {
+            Some(w) => println!(
+                "wire: {} | our {} {} | gateway {} {}",
+                w.adapter, w.ip, w.mac, w.gateway_ip, w.gateway_mac
+            ),
+            None => println!("wire: none"),
+        }
+        match quotacards::lan_ctrl::start(&ip, true) {
+            Ok(s) => {
+                println!("started on {} (blocked)", s.target_ip);
+                std::thread::sleep(std::time::Duration::from_secs(secs));
+                let seen = s.seen.load(std::sync::atomic::Ordering::Relaxed);
+                let fwd = s.forwarded.load(std::sync::atomic::Ordering::Relaxed);
+                s.stop();
+                println!("frames for target: {seen}, forwarded: {fwd}");
+            }
+            Err(e) => println!("start failed: {e}"),
+        }
+        return;
+    }
     // Does the packet driver load, and what does it see?
     if std::env::args().any(|a| a == "--lan-driver") {
         let ok = quotacards::wpcap::ready();

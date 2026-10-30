@@ -206,6 +206,9 @@ pub struct Session {
     pub blocked: Arc<AtomicBool>,
     pub down_kbps: Arc<std::sync::atomic::AtomicU32>,
     pub up_kbps: Arc<std::sync::atomic::AtomicU32>,
+    /// Frames that arrived for the target and frames we put back on the wire.
+    pub seen: Arc<std::sync::atomic::AtomicU64>,
+    pub forwarded: Arc<std::sync::atomic::AtomicU64>,
     handle: Option<std::thread::JoinHandle<()>>,
 }
 
@@ -229,12 +232,16 @@ pub fn start(target_ip: &str, blocked: bool) -> Result<Session, String> {
     let blocked_flag = Arc::new(AtomicBool::new(blocked));
     let down = Arc::new(std::sync::atomic::AtomicU32::new(0));
     let up = Arc::new(std::sync::atomic::AtomicU32::new(0));
+    let seen = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let forwarded = Arc::new(std::sync::atomic::AtomicU64::new(0));
 
     let w2 = w.clone();
     let stop2 = Arc::clone(&stop);
     let blocked2 = Arc::clone(&blocked_flag);
     let target = target_ip.to_string();
     let tmac = target_mac.clone();
+    let seen2 = Arc::clone(&seen);
+    let fwd2 = Arc::clone(&forwarded);
 
     let handle = std::thread::spawn(move || {
         let Some(Some(cap)) = wpcap::with(|wp| wp.open(&w2.device)) else {
@@ -271,6 +278,7 @@ pub fn start(target_ip: &str, blocked: bool) -> Result<Session, String> {
             if frame[12] != 0x08 || frame[13] != 0x00 {
                 continue;
             }
+            seen2.fetch_add(1, Ordering::Relaxed);
             if blocked2.load(Ordering::Relaxed) {
                 // Dropping is the block: the device's packets never reach the
                 // gateway, so its connection simply stops.
@@ -286,7 +294,9 @@ pub fn start(target_ip: &str, blocked: bool) -> Result<Session, String> {
                 out[0..6].copy_from_slice(&tm);
                 out[6..12].copy_from_slice(&our);
             }
-            let _ = cap.send(&out);
+            if cap.send(&out) {
+                fwd2.fetch_add(1, Ordering::Relaxed);
+            }
             let _ = (sip, gip);
         }
 
@@ -308,6 +318,8 @@ pub fn start(target_ip: &str, blocked: bool) -> Result<Session, String> {
         blocked: blocked_flag,
         down_kbps: down,
         up_kbps: up,
+        seen,
+        forwarded,
         handle: Some(handle),
     })
 }
