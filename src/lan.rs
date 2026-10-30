@@ -223,7 +223,8 @@ pub fn scan() -> Vec<Device> {
         .lock()
         .map(|g| g.iter().filter(|(_, a, _)| *a).map(|(ip, _, _)| ip.clone()).collect())
         .unwrap_or_default();
-    let names: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(HashMap::new()));
+    let announced = crate::lan_names::harvest(std::time::Duration::from_millis(2600));
+    let names: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(announced));
     let mut name_handles = Vec::new();
     for ip in alive {
         let sink = Arc::clone(&names);

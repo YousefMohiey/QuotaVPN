@@ -170,3 +170,80 @@ pub fn mdns(ip: Ipv4Addr, wait: Duration) -> Option<String> {
     }
     None
 }
+
+
+/// Listen to the multicast resolver for a moment and keep every address record
+/// it announces: phones, TVs, printers and Macs say "name.local is 192.168.1.x"
+/// without being asked, which is the only name source that works on a network
+/// where reverse DNS and NetBIOS both stay silent.
+pub fn harvest(wait: Duration) -> std::collections::HashMap<String, String> {
+    use std::collections::HashMap;
+    use std::net::UdpSocket;
+
+    let mut out: HashMap<String, String> = HashMap::new();
+    let Ok(sock) = UdpSocket::bind("0.0.0.0:0") else {
+        return out;
+    };
+    let _ = sock.set_read_timeout(Some(Duration::from_millis(400)));
+
+    // QU bit set: responders answer to the source port instead of the group,
+    // so no multicast membership and no port 5353 binding is needed.
+    let mut pkt: Vec<u8> = vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+    for label in "_services._dns-sd._udp.local".split('.') {
+        pkt.push(label.len() as u8);
+        pkt.extend_from_slice(label.as_bytes());
+    }
+    pkt.push(0);
+    pkt.extend_from_slice(&[0x00, 0x0c, 0x80, 0x01]);
+    let _ = sock.send_to(&pkt, SocketAddr::new(IpAddr::V4(Ipv4Addr::new(224, 0, 0, 251)), 5353));
+
+    let deadline = std::time::Instant::now() + wait;
+    let mut buf = [0u8; 4096];
+    while std::time::Instant::now() < deadline {
+        let Ok((n, _)) = sock.recv_from(&mut buf) else {
+            continue;
+        };
+        let data = &buf[..n];
+        if n < 12 {
+            continue;
+        }
+        let qd = u16::from_be_bytes([data[4], data[5]]) as usize;
+        let an = u16::from_be_bytes([data[6], data[7]]) as usize;
+        let mut i = 12;
+        let mut ok = true;
+        for _ in 0..qd {
+            match read_name(data, i) {
+                Some((_, next)) => i = next + 4,
+                None => {
+                    ok = false;
+                    break;
+                }
+            }
+        }
+        if !ok {
+            continue;
+        }
+        for _ in 0..an {
+            let Some((name, next)) = read_name(data, i) else { break };
+            i = next;
+            if i + 10 > data.len() {
+                break;
+            }
+            let rtype = u16::from_be_bytes([data[i], data[i + 1]]);
+            let rdlen = u16::from_be_bytes([data[i + 8], data[i + 9]]) as usize;
+            i += 10;
+            if i + rdlen > data.len() {
+                break;
+            }
+            if rtype == 1 && rdlen == 4 {
+                let ip = format!("{}.{}.{}.{}", data[i], data[i + 1], data[i + 2], data[i + 3]);
+                let clean = name.trim_end_matches('.').trim_end_matches(".local").to_string();
+                if !clean.is_empty() {
+                    out.entry(ip).or_insert(clean);
+                }
+            }
+            i += rdlen;
+        }
+    }
+    out
+}
