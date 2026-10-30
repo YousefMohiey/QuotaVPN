@@ -122,54 +122,78 @@ pub async fn login(host: &str, user: &str, pass: &str) -> Result<Session, String
 }
 
 /// Pull one quoted argument list out of `new DHCPInfo(...)`.
+///
+/// The router writes its strings with JavaScript hex escapes: a dot is `\x2e`,
+/// a hyphen is `\x2d`. Reading those as literal text turns an address into
+/// nonsense that matches nothing, which is exactly how a working router looked
+/// like a silent one.
 fn fields(line: &str) -> Vec<String> {
+    let chars: Vec<char> = line.chars().collect();
     let mut out = Vec::new();
     let mut cur = String::new();
     let mut inside = false;
-    let mut escaped = false;
-    for ch in line.chars() {
+    let mut i = 0;
+    while i < chars.len() {
+        let ch = chars[i];
         if !inside {
             if ch == '"' {
                 inside = true;
                 cur.clear();
             }
-            continue;
-        }
-        if escaped {
-            cur.push(ch);
-            escaped = false;
+            i += 1;
             continue;
         }
         match ch {
-            '\\' => escaped = true,
+            '\' => {
+                // \xHH, or a plain escaped character.
+                if i + 3 < chars.len() && chars[i + 1] == 'x' {
+                    let hex: String = chars[i + 2..i + 4].iter().collect();
+                    if let Ok(byte) = u8::from_str_radix(&hex, 16) {
+                        cur.push(byte as char);
+                        i += 4;
+                        continue;
+                    }
+                }
+                if i + 1 < chars.len() {
+                    cur.push(chars[i + 1]);
+                    i += 2;
+                } else {
+                    i += 1;
+                }
+            }
             '"' => {
                 out.push(cur.clone());
                 inside = false;
+                i += 1;
             }
-            _ => cur.push(ch),
+            _ => {
+                cur.push(ch);
+                i += 1;
+            }
         }
     }
     out
 }
 
-/// A small log of what the router said, so a failed sign in can be diagnosed
-/// without asking anyone for their password. Never contains credentials.
-fn log(line: &str) {
-    let base = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| String::from("."));
-    let dir = std::path::Path::new(&base).join("quotavpn");
-    let _ = std::fs::create_dir_all(&dir);
-    let stamp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-    let _ = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(dir.join("router.log"))
-        .and_then(|mut f| {
-            use std::io::Write;
-            writeln!(f, "{stamp} {line}")
-        });
+/// Parse a saved copy of the router's list. Used by the diagnostic probe and
+/// by the session itself, so what is tested is what runs.
+pub fn parse_body(body: &str) -> Vec<RouterClient> {
+    let mut out = Vec::new();
+    for piece in body.split("new DHCPInfo(").skip(1) {
+        let line: String = piece.chars().take_while(|c| *c != ')').collect();
+        let a = fields(&line);
+        if a.len() < 4 {
+            continue;
+        }
+        let name = a[1].trim().to_string();
+        let ip = a[2].trim().to_string();
+        let mac = a[3].trim().replace('-', ":").to_lowercase();
+        if ip.is_empty() {
+            continue;
+        }
+        out.push(RouterClient { name, ip, mac });
+    }
+    out
 }
 
 impl Session {
@@ -248,4 +272,29 @@ pub async fn names_by_ip(session: &Session) -> HashMap<String, String> {
         }
     }
     map
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The exact shape the router sends, escapes and all.
+    #[test]
+    fn a_router_line_decodes_to_real_values() {
+        let line = r#""InternetGatewayDevice.LANDevice.1.Hosts.Host.2","WIN\x2d1KA5KPRHE6H","192\x2e168\x2e1\x2e3","04\x3a7c\x3a16\x3a7d\x3ae7\x3a02","83795","MSFT\x205\x2e0","Ethernet","DHCP","2605""#;
+        let a = fields(line);
+        assert_eq!(a[1], "WIN-1KA5KPRHE6H");
+        assert_eq!(a[2], "192.168.1.3");
+        assert_eq!(a[3], "04:7c:16:7d:e7:02");
+        assert_eq!(a[5], "MSFT 5.0");
+    }
+
+    /// A device the router has no name for stays empty rather than wrong.
+    #[test]
+    fn an_empty_name_stays_empty() {
+        let line = r#""InternetGatewayDevice.LANDevice.1.Hosts.Host.1","","192\x2e168\x2e1\x2e2","9c\x3a69\x3ad3\x3a4c\x3a30\x3ac8""#;
+        let a = fields(line);
+        assert_eq!(a[1], "");
+        assert_eq!(a[2], "192.168.1.2");
+    }
 }

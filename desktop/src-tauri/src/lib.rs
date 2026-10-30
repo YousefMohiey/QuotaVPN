@@ -2253,6 +2253,17 @@ pub fn run() {
         }
         return;
     }
+    // Parse a saved copy of the router's device list.
+    if let Some(i) = std::env::args().position(|a| a == "--router-parse") {
+        let path = std::env::args().nth(i + 1).unwrap_or_default();
+        let body = std::fs::read_to_string(&path).unwrap_or_default();
+        let clients = router_huawei::parse_body(&body);
+        for c in &clients {
+            println!("{:<18} {:<18} {}", c.ip, c.mac, c.name);
+        }
+        println!("ROUTER_PARSE {} clients", clients.len());
+        return;
+    }
     // Ask one device its name, on the wire.
     if let Some(i) = std::env::args().position(|a| a == "--lan-ask") {
         let ip = std::env::args().nth(i + 1).unwrap_or_default();
