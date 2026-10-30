@@ -1703,9 +1703,38 @@ async fn lan_known() -> Vec<quotacards::lan::Device> {
 /// Who is on this network: ip, mac and a name when the system resolves one.
 #[tauri::command]
 async fn lan_devices() -> Vec<quotacards::lan::Device> {
-    tauri::async_runtime::spawn_blocking(quotacards::lan::scan)
+    let list = tauri::async_runtime::spawn_blocking(quotacards::lan::scan)
         .await
-        .unwrap_or_default()
+        .unwrap_or_default();
+    // Names that are still missing are looked up in the background, so the list
+    // is on screen in a second and fills itself in a few seconds later.
+    let probe = list.clone();
+    std::thread::spawn(move || quotacards::lan::enrich_names(probe));
+    list
+}
+
+/// What the redirect is doing right now, so the screen can say so after a
+/// restart or a tab switch instead of forgetting it.
+#[tauri::command]
+fn lan_status(state: tauri::State<'_, LanState>) -> Option<LanStatus> {
+    let guard = state.0.lock().ok()?;
+    let session = guard.as_ref()?;
+    Some(LanStatus {
+        ip: session.target_ip.clone(),
+        mac: session.target_mac.clone(),
+        down_kbps: session.down_kbps.load(std::sync::atomic::Ordering::Relaxed),
+        up_kbps: session.up_kbps.load(std::sync::atomic::Ordering::Relaxed),
+        blocked: session.blocked.load(std::sync::atomic::Ordering::Relaxed),
+    })
+}
+
+#[derive(serde::Serialize)]
+pub struct LanStatus {
+    pub ip: String,
+    pub mac: String,
+    pub down_kbps: u32,
+    pub up_kbps: u32,
+    pub blocked: bool,
 }
 
 #[tauri::command]
@@ -2424,6 +2453,7 @@ pub fn run() {
             lan_start,
             lan_stop,
             lan_limits,
+            lan_status,
             lan_known,
             lan_devices,
             speed_cancel,

@@ -1,47 +1,67 @@
-import { useCallback, useEffect, useState } from "react"
-import { Ban, Gauge, Loader2, RefreshCw, Wifi } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { Ban, Gauge, Loader2, Monitor, RefreshCw, Wifi, X } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
-import { api, type LanDevice } from "@/lib/ipc"
+import { api, type LanDevice, type LanStatus } from "@/lib/ipc"
 import { cn } from "@/lib/utils"
 import { LanLimitDialog } from "@/components/LanLimitDialog"
 
-/** Who is on this network, as the machine can see it without a driver. */
+/** Who is on this network, and what is being done to them. */
 export function Network() {
   const { t } = useI18n()
   const [devices, setDevices] = useState<LanDevice[]>([])
   const [busy, setBusy] = useState(true)
   const [failed, setFailed] = useState(false)
-  const [blockedIp, setBlockedIp] = useState<string | null>(null)
+  const [active, setActive] = useState<LanStatus | null>(null)
   const [limitFor, setLimitFor] = useState<LanDevice | null>(null)
   const [err, setErr] = useState("")
+  const polled = useRef(0)
 
-  const scan = useCallback(async () => {
-    setBusy(true)
+  const scan = useCallback(async (quiet = false) => {
+    if (!quiet) setBusy(true)
     setFailed(false)
     try {
       const list = await api.lanDevices()
       setDevices(list)
+      // A missing name is being looked up in the background, so ask once more
+      // shortly rather than making the user press Refresh again.
+      if (!quiet && list.some((d) => d.name === "-") && polled.current < 2) {
+        polled.current += 1
+        window.setTimeout(() => void scan(true), 4000)
+      }
     } catch {
-      setFailed(true)
+      if (!quiet) setFailed(true)
     } finally {
-      setBusy(false)
+      if (!quiet) setBusy(false)
     }
   }, [])
 
-  // What the machine already knows shows at once; the sweep fills the rest in
-  // behind it, so the screen is never a spinner with nothing to read.
-  // One device at a time is redirected; the app keeps that state here so the
-  // row can show which one is currently cut off.
-  const toggleBlock = async (ip: string, mac: string) => {
+  const refreshStatus = useCallback(async () => {
+    try {
+      setActive(await api.lanStatus())
+    } catch {
+      setActive(null)
+    }
+  }, [])
+
+  const stopAll = async () => {
     setErr("")
     try {
-      if (blockedIp === ip) {
-        await api.lanStop()
-        setBlockedIp(null)
+      await api.lanStop()
+      setActive(null)
+    } catch (e) {
+      setErr(String(e))
+    }
+  }
+
+  const toggleBlock = async (d: LanDevice) => {
+    setErr("")
+    try {
+      if (active?.ip === d.ip) {
+        await stopAll()
         return
       }
-      await api.lanStart(ip, mac, true)
-      setBlockedIp(ip)
+      await api.lanStart(d.ip, d.mac, true)
+      await refreshStatus()
     } catch (e) {
       setErr(String(e))
     }
@@ -56,12 +76,30 @@ export function Network() {
       })
       .catch(() => undefined)
       .finally(() => {
-        if (alive) void scan()
+        if (alive) {
+          void scan()
+          void refreshStatus()
+        }
       })
     return () => {
       alive = false
     }
-  }, [scan])
+  }, [scan, refreshStatus])
+
+  const stateOf = (d: LanDevice): "blocked" | "capped" | "none" => {
+    if (!active || active.ip !== d.ip) return "none"
+    if (active.blocked) return "blocked"
+    if (active.down_kbps > 0 || active.up_kbps > 0) return "capped"
+    return "none"
+  }
+
+  const capLine = active
+    ? active.blocked
+      ? t("netActiveBlocked")
+      : t("netActiveCapped")
+          .replace("{down}", String(active.down_kbps))
+          .replace("{up}", String(active.up_kbps))
+    : ""
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1180px] flex-col gap-3">
@@ -85,11 +123,29 @@ export function Network() {
           </button>
         </div>
 
+        {active ? (
+          <div className="flex shrink-0 items-center gap-3 border-b border-line bg-[var(--brand-bg)] px-5 py-2.5">
+            <span className="shrink-0 font-mono text-[12px] text-txt" dir="ltr">
+              {active.ip}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-[12.5px] text-txt2">{capLine}</span>
+            <button
+              type="button"
+              onClick={() => void stopAll()}
+              className="press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border border-line bg-white/[0.02] px-2.5 text-[12px] text-txt2 hover:text-txt"
+            >
+              <X className="size-3.5" aria-hidden />
+              {t("netRemove")}
+            </button>
+          </div>
+        ) : null}
+
         {err ? (
           <div className="shrink-0 border-b border-line bg-[var(--red)]/10 px-5 py-2 text-[12px] text-[var(--red)]" dir="auto">
             {err}
           </div>
         ) : null}
+
         <div className="min-h-0 flex-1 overflow-y-auto">
           {busy && devices.length === 0 ? (
             <div className="grid h-full place-items-center text-[13px] text-txt3">{t("netScanning")}</div>
@@ -99,57 +155,91 @@ export function Network() {
             <div className="grid h-full place-items-center px-6 text-center text-[13px] text-txt3">{t("netEmpty")}</div>
           ) : (
             <ul className="flex flex-col">
-              {devices.map((d) => (
-                <li
-                  key={d.ip}
-                  className="flex h-[60px] items-center gap-4 border-b border-line px-5 last:border-b-0"
-                >
-                  <span className="grid size-9 shrink-0 place-items-center rounded-full border border-white/[0.11] bg-[rgb(255_255_255/0.03)] text-txt2">
-                    <Wifi className="size-4" aria-hidden />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[14px] font-medium text-txt" dir="auto">
-                      {d.name}
+              {devices.map((d) => {
+                const state = stateOf(d)
+                return (
+                  <li key={d.ip} className="flex h-[60px] items-center gap-4 border-b border-line px-5 last:border-b-0">
+                    <span
+                      className={cn(
+                        "grid size-9 shrink-0 place-items-center rounded-full border",
+                        d.self_pc
+                          ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-[var(--brand)]"
+                          : "border-white/[0.11] bg-[rgb(255_255_255/0.03)] text-txt2",
+                      )}
+                    >
+                      {d.self_pc ? <Monitor className="size-4" aria-hidden /> : <Wifi className="size-4" aria-hidden />}
                     </span>
-                    <span className="block truncate font-mono text-[12px] text-txt3" dir="ltr">
-                      {d.ip}
+                    <span className="min-w-0 flex-1">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="truncate text-[14px] font-medium text-txt" dir="auto">
+                          {d.name}
+                        </span>
+                        {d.self_pc ? (
+                          <span className="shrink-0 rounded-[5px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-1.5 py-[1px] text-[10.5px] font-medium text-[var(--brand)]">
+                            {t("netThisPc")}
+                          </span>
+                        ) : null}
+                        {state === "blocked" ? (
+                          <span className="shrink-0 rounded-[5px] border border-[var(--red)]/45 bg-[var(--red)]/10 px-1.5 py-[1px] text-[10.5px] font-medium text-[var(--red)]">
+                            {t("netStateBlocked")}
+                          </span>
+                        ) : null}
+                        {state === "capped" ? (
+                          <span className="shrink-0 rounded-[5px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-1.5 py-[1px] text-[10.5px] font-medium text-[var(--brand)]">
+                            {t("netStateCapped")}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="block truncate font-mono text-[12px] text-txt3" dir="ltr">
+                        {d.ip}
+                      </span>
                     </span>
-                  </span>
-                  <span className="hidden shrink-0 font-mono text-[12px] uppercase text-txt3 sm:block" dir="ltr">
-                    {d.mac}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setLimitFor(d)}
-                    className="press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border border-line bg-white/[0.02] px-2.5 text-[12px] text-txt2 transition-colors hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] hover:text-txt"
-                  >
-                    <Gauge className="size-3.5" aria-hidden />
-                    {t("netLimit")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void toggleBlock(d.ip, d.mac)}
-                    className={cn(
-                      "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors",
-                      blockedIp === d.ip
-                        ? "border-[var(--red)]/50 bg-[var(--red)]/10 text-[var(--red)]"
-                        : "border-line bg-white/[0.02] text-txt2 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] hover:text-txt",
-                    )}
-                  >
-                    <Ban className="size-3.5" aria-hidden />
-                    {blockedIp === d.ip ? t("netUnblock") : t("netBlock")}
-                  </button>
-                </li>
-              ))}
+                    <span className="hidden shrink-0 font-mono text-[12px] uppercase text-txt3 sm:block" dir="ltr">
+                      {d.mac}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setLimitFor(d)}
+                      className={cn(
+                        "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors",
+                        state === "capped"
+                          ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-[var(--brand)]"
+                          : "border-line bg-white/[0.02] text-txt2 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] hover:text-txt",
+                      )}
+                    >
+                      <Gauge className="size-3.5" aria-hidden />
+                      {t("netLimit")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void toggleBlock(d)}
+                      className={cn(
+                        "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors",
+                        state === "blocked"
+                          ? "border-[var(--red)]/50 bg-[var(--red)]/10 text-[var(--red)]"
+                          : "border-line bg-white/[0.02] text-txt2 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] hover:text-txt",
+                      )}
+                    >
+                      <Ban className="size-3.5" aria-hidden />
+                      {state === "blocked" ? t("netUnblock") : t("netBlock")}
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </div>
       </div>
+
       <LanLimitDialog
         device={limitFor}
+        current={active && limitFor && active.ip === limitFor.ip ? active : null}
         open={limitFor !== null}
-        onOpenChange={(o) => { if (!o) setLimitFor(null) }}
-        onApplied={() => setBlockedIp(null)}
+        onOpenChange={(o) => {
+          if (!o) setLimitFor(null)
+        }}
+        onApplied={() => void refreshStatus()}
+        onRemoved={() => void refreshStatus()}
       />
     </div>
   )

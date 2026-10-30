@@ -63,7 +63,7 @@ export const speedReach = (url: string): Promise<boolean> => call<boolean>("spee
 export type SpeedOut = { mbps: number | null; note: string }
 
 /** A device seen on the local network. */
-export type LanDevice = { ip: string; mac: string; name: string }
+export type LanDevice = { ip: string; mac: string; name: string; self_pc: boolean }
 
 /** Who is on this network. Scans the subnet and reads the neighbour table. */
 export const lanKnown = (): Promise<LanDevice[]> => call<LanDevice[]>("lan_known")
@@ -76,6 +76,16 @@ export const lanStart = (ip: string, mac: string, blocked: boolean): Promise<boo
   call<boolean>("lan_start", { ip, mac, blocked })
 
 export const lanStop = (): Promise<boolean> => call<boolean>("lan_stop")
+
+export type LanStatus = {
+  ip: string
+  mac: string
+  down_kbps: number
+  up_kbps: number
+  blocked: boolean
+}
+
+export const lanStatus = (): Promise<LanStatus | null> => call<LanStatus | null>("lan_status")
 
 export const lanLimits = (down_kbps: number, up_kbps: number): Promise<boolean> =>
   call<boolean>("lan_limits", { downKbps: down_kbps, upKbps: up_kbps })
@@ -151,6 +161,7 @@ export const api = {
   lanStart: (ip: string, mac: string, blocked: boolean): Promise<boolean> =>
     call<boolean>("lan_start", { ip, mac, blocked }),
   lanStop: (): Promise<boolean> => call<boolean>("lan_stop"),
+  lanStatus: (): Promise<LanStatus | null> => call<LanStatus | null>("lan_status"),
   lanLimits: (down_kbps: number, up_kbps: number): Promise<boolean> =>
     call<boolean>("lan_limits", { downKbps: down_kbps, upKbps: up_kbps }),
   lanDevices: (): Promise<LanDevice[]> => call<LanDevice[]>("lan_devices"),

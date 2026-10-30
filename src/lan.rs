@@ -18,6 +18,9 @@ pub struct Device {
     pub ip: String,
     pub mac: String,
     pub name: String,
+    /// True for the machine the app is running on, so its row can be labelled
+    /// instead of leaving the user to work it out.
+    pub self_pc: bool,
 }
 
 #[cfg(windows)]
@@ -142,7 +145,7 @@ pub fn known() -> Vec<Device> {
         if !keep(&ip, &mac) {
             continue;
         }
-        out.push(Device { ip, mac, name: String::from("-") });
+        out.push(Device { ip, mac, name: String::from("-"), self_pc: false });
     }
     sort_devices(&mut out);
     out
@@ -157,11 +160,55 @@ fn keep(ip: &str, mac: &str) -> bool {
     !(first == 0 || first >= 224 || ip == "255.255.255.255" || last == 255 || last == 0)
 }
 
+/// Names learned by asking devices directly, kept so the next scan is instant
+/// instead of waiting for every probe again.
+fn probe_cache_path() -> std::path::PathBuf {
+    let base = std::env::var("LOCALAPPDATA")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| std::path::PathBuf::from("."));
+    base.join("quotavpn").join("lan_probe_names.txt")
+}
+
+fn probe_cache() -> HashMap<String, String> {
+    let mut out = HashMap::new();
+    if let Ok(text) = std::fs::read_to_string(probe_cache_path()) {
+        for line in text.lines() {
+            if let Some((ip, name)) = line.split_once('|') {
+                out.insert(ip.to_string(), name.to_string());
+            }
+        }
+    }
+    out
+}
+
+fn remember_probe(ip: &str, name: &str) {
+    if name.is_empty() {
+        return;
+    }
+    let mut all = probe_cache();
+    if all.get(ip).map(|n| n == name).unwrap_or(false) {
+        return;
+    }
+    all.insert(ip.to_string(), name.to_string());
+    let path = probe_cache_path();
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let body: String = all.iter().map(|(ip, n)| format!("{ip}|{n}
+")).collect();
+    let _ = std::fs::write(path, body);
+}
+
 fn sort_devices(list: &mut [Device]) {
+    // This machine first, then by address: the row a person cares about most is
+    // the one they are sitting at.
     list.sort_by_key(|d| {
-        d.ip.split('.')
+        let addr = d
+            .ip
+            .split('.')
             .filter_map(|p| p.parse::<u32>().ok())
-            .fold(0u32, |acc, n| (acc << 8) | n)
+            .fold(0u32, |acc, n| (acc << 8) | n);
+        (if d.self_pc { 0u8 } else { 1 }, addr)
     });
 }
 
@@ -217,22 +264,77 @@ pub fn scan() -> Vec<Device> {
         let _ = h.join();
     }
 
-    // Names for the hosts that answered, in parallel, and never for the silent
-    // ones: a reverse lookup against a missing DNS server can hang for seconds.
-    let alive: Vec<String> = found
-        .lock()
-        .map(|g| g.iter().filter(|(_, a, _)| *a).map(|(ip, _, _)| ip.clone()).collect())
-        .unwrap_or_default();
-    let announced = crate::lan_names::harvest(std::time::Duration::from_millis(2600));
-    let names: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(announced));
-    let mut name_handles = Vec::new();
-    for ip in alive {
-        let sink = Arc::clone(&names);
-        name_handles.push(thread::spawn(move || {
+    // The list has to appear at once, so names come from what is already known:
+    // what a device announced to the router, and what asking it directly found
+    // last time. Probing every device again is what made Refresh feel broken.
+    let table = arp_table();
+    let announced_by_mac = crate::dhcp_names::cached();
+    let probed = probe_cache();
+    let mut out: Vec<Device> = Vec::new();
+    let results = found.lock().map(|g| g.clone()).unwrap_or_default();
+    for (ip, alive, _name) in results {
+        let mac = table.get(&ip).cloned().unwrap_or_default();
+        if !keep(&ip, &mac) {
+            continue;
+        }
+        if !alive && mac.is_empty() {
+            continue;
+        }
+        let resolved = probed
+            .get(&ip)
+            .cloned()
+            .filter(|n| !n.is_empty())
+            .or_else(|| announced_by_mac.get(&mac).cloned())
+            .unwrap_or_default();
+        out.push(Device {
+            ip,
+            mac,
+            name: if resolved.is_empty() { String::from("-") } else { resolved },
+            self_pc: false,
+        });
+    }
+
+    // This machine is always in the list and always labelled.
+    let me_mac = table.get(&me).cloned().unwrap_or_default();
+    let host = std::env::var("COMPUTERNAME")
+        .unwrap_or_else(|_| String::from("this pc"))
+        .to_lowercase();
+    out.push(Device {
+        ip: me.clone(),
+        mac: me_mac,
+        name: host,
+        self_pc: true,
+    });
+
+    sort_devices(&mut out);
+    out.dedup_by(|a, b| a.ip == b.ip);
+    out
+}
+
+
+/// Is the packet driver present? The control layer needs it; the listing does
+/// not, so the app can show who is on the line before asking for anything.
+pub fn npcap_installed() -> bool {
+    let sys = std::env::var("SystemRoot").unwrap_or_else(|_| String::from("C:/Windows"));
+    for rel in ["System32/Npcap/wpcap.dll", "System32/wpcap.dll", "SysWOW64/Npcap/wpcap.dll"] {
+        if std::path::Path::new(&format!("{sys}/{rel}")).is_file() {
+            return true;
+        }
+    }
+    false
+}
+
+/// Ask the devices that still have no name, in the background, and remember
+/// what they answer. The list is already on screen by the time this runs.
+pub fn enrich_names(list: Vec<Device>) {
+    let mut handles = Vec::new();
+    for d in list {
+        if d.self_pc || (d.name != "-" && !d.name.is_empty()) {
+            continue;
+        }
+        let ip = d.ip.clone();
+        handles.push(thread::spawn(move || {
             let mut found = String::new();
-            // Reverse DNS first, because a domain name is the most useful thing
-            // to show. Most home routers answer nothing, so the device itself is
-            // asked next: NetBIOS for Windows, mDNS for phones and printers.
             if let Ok(o) = hidden("ping").args(["-a", "-n", "1", "-w", "600", &ip]).output() {
                 let text = String::from_utf8_lossy(&o.stdout).to_string();
                 for raw in text.lines() {
@@ -257,58 +359,10 @@ pub fn scan() -> Vec<Device> {
                     }
                 }
             }
-            if !found.is_empty() {
-                if let Ok(mut g) = sink.lock() {
-                    g.insert(ip.clone(), found);
-                }
-            }
+            remember_probe(&ip, &found);
         }));
     }
-    for h in name_handles {
+    for h in handles {
         let _ = h.join();
     }
-    let name_map = names.lock().map(|g| g.clone()).unwrap_or_default();
-
-    let table = arp_table();
-    // Names a device announced to the router when it joined, remembered across
-    // sessions because a phone only announces itself once in a while.
-    let announced_by_mac = crate::dhcp_names::cached();
-    let mut out: Vec<Device> = Vec::new();
-    let results = found.lock().map(|g| g.clone()).unwrap_or_default();
-    for (ip, alive, name) in results {
-        let mac = table.get(&ip).cloned().unwrap_or_default();
-        if !keep(&ip, &mac) {
-            continue;
-        }
-        if !alive && mac.is_empty() {
-            continue;
-        }
-        let resolved = name_map
-            .get(&ip)
-            .cloned()
-            .filter(|n| !n.is_empty())
-            .or_else(|| announced_by_mac.get(&mac).cloned())
-            .unwrap_or(name);
-        out.push(Device {
-            ip,
-            mac,
-            name: if resolved.is_empty() { String::from("-") } else { resolved },
-        });
-    }
-    sort_devices(&mut out);
-    out.dedup_by(|a, b| a.ip == b.ip);
-    out
-}
-
-
-/// Is the packet driver present? The control layer needs it; the listing does
-/// not, so the app can show who is on the line before asking for anything.
-pub fn npcap_installed() -> bool {
-    let sys = std::env::var("SystemRoot").unwrap_or_else(|_| String::from("C:/Windows"));
-    for rel in ["System32/Npcap/wpcap.dll", "System32/wpcap.dll", "SysWOW64/Npcap/wpcap.dll"] {
-        if std::path::Path::new(&format!("{sys}/{rel}")).is_file() {
-            return true;
-        }
-    }
-    false
 }
