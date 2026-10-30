@@ -77,6 +77,9 @@ export const lanStart = (ip: string, mac: string, blocked: boolean): Promise<boo
 
 export const lanStop = (): Promise<boolean> => call<boolean>("lan_stop")
 
+export const lanLimits = (down_kbps: number, up_kbps: number): Promise<boolean> =>
+  call<boolean>("lan_limits", { downKbps: down_kbps, upKbps: up_kbps })
+
 export const lanDevices = (): Promise<LanDevice[]> => call<LanDevice[]>("lan_devices")
 
 /** Really stop a measurement: kills the cli and ends the built-in loops. */
@@ -148,6 +151,8 @@ export const api = {
   lanStart: (ip: string, mac: string, blocked: boolean): Promise<boolean> =>
     call<boolean>("lan_start", { ip, mac, blocked }),
   lanStop: (): Promise<boolean> => call<boolean>("lan_stop"),
+  lanLimits: (down_kbps: number, up_kbps: number): Promise<boolean> =>
+    call<boolean>("lan_limits", { downKbps: down_kbps, upKbps: up_kbps }),
   lanDevices: (): Promise<LanDevice[]> => call<LanDevice[]>("lan_devices"),
   probeServer: () => call<CmdResult>("probe_server"),
   generateCard: (name: string, kind: string, sni: string) =>

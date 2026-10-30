@@ -1665,6 +1665,16 @@ fn lan_start(state: tauri::State<'_, LanState>, ip: String, mac: Option<String>,
     Ok(true)
 }
 
+/// Set the caps for the active device. Zero means no cap.
+#[tauri::command]
+fn lan_limits(state: tauri::State<'_, LanState>, down_kbps: u32, up_kbps: u32) -> Result<bool, String> {
+    let guard = state.0.lock().map_err(|_| "state".to_string())?;
+    let Some(session) = guard.as_ref() else { return Ok(false) };
+    session.down_kbps.store(down_kbps, std::sync::atomic::Ordering::Relaxed);
+    session.up_kbps.store(up_kbps, std::sync::atomic::Ordering::Relaxed);
+    Ok(true)
+}
+
 /// Stop redirecting and hand the network back.
 #[tauri::command]
 fn lan_stop(state: tauri::State<'_, LanState>) -> Result<bool, String> {
@@ -2397,6 +2407,7 @@ pub fn run() {
             lan_wire,
             lan_start,
             lan_stop,
+            lan_limits,
             lan_known,
             lan_devices,
             speed_cancel,

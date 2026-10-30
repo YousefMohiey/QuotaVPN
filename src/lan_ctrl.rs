@@ -310,6 +310,8 @@ pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> 
     let tmac = target_mac.clone();
     let seen2 = Arc::clone(&seen);
     let fwd2 = Arc::clone(&forwarded);
+    let down2 = Arc::clone(&down);
+    let up2 = Arc::clone(&up);
 
     let handle = std::thread::spawn(move || {
         let Some(Some(cap)) = wpcap::with(|wp| wp.open(&w2.device)) else {
@@ -322,6 +324,11 @@ pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> 
         let Some(tip) = ip4(&target) else { return };
         let Some(gip) = ip4(&w2.gateway_ip) else { return };
 
+        // A cap is a queue that releases at a fixed rate. Anything that falls
+        // more than a third of a second behind is dropped instead of delayed,
+        // so a capped device stays responsive rather than turning into lag.
+        let mut next_up = Instant::now();
+        let mut next_down = Instant::now();
         let mut last_poison = Instant::now() - Duration::from_secs(5);
         let began = Instant::now();
         let limit = std::env::var("QC_LAN_LIMIT_SECS")
@@ -363,6 +370,23 @@ pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> 
             // Forward it: swap the link addresses and put it back on the wire.
             let mut out = frame.clone();
             let src_is_target = frame[6..12] == tm;
+            let rate = if src_is_target {
+                up2.load(Ordering::Relaxed) as u64 * 125
+            } else {
+                down2.load(Ordering::Relaxed) as u64 * 125
+            };
+            if rate > 0 {
+                let now = Instant::now();
+                let slot = if src_is_target { &mut next_up } else { &mut next_down };
+                let at = (*slot).max(now) + Duration::from_secs_f64(out.len() as f64 / rate as f64);
+                if at > now + Duration::from_millis(300) {
+                    continue;
+                }
+                *slot = at;
+                if at > now {
+                    std::thread::sleep(at - now);
+                }
+            }
             if src_is_target {
                 out[0..6].copy_from_slice(&gw);
                 out[6..12].copy_from_slice(&our);

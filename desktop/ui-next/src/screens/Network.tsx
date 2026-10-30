@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react"
-import { Ban, Loader2, RefreshCw, Wifi } from "lucide-react"
+import { Ban, Gauge, Loader2, RefreshCw, Wifi } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
 import { api, type LanDevice } from "@/lib/ipc"
 import { cn } from "@/lib/utils"
+import { LanLimitDialog } from "@/components/LanLimitDialog"
 
 /** Who is on this network, as the machine can see it without a driver. */
 export function Network() {
@@ -11,6 +12,7 @@ export function Network() {
   const [busy, setBusy] = useState(true)
   const [failed, setFailed] = useState(false)
   const [blockedIp, setBlockedIp] = useState<string | null>(null)
+  const [limitFor, setLimitFor] = useState<LanDevice | null>(null)
   const [err, setErr] = useState("")
 
   const scan = useCallback(async () => {
@@ -118,6 +120,14 @@ export function Network() {
                   </span>
                   <button
                     type="button"
+                    onClick={() => setLimitFor(d)}
+                    className="press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border border-line bg-white/[0.02] px-2.5 text-[12px] text-txt2 transition-colors hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] hover:text-txt"
+                  >
+                    <Gauge className="size-3.5" aria-hidden />
+                    {t("netLimit")}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => void toggleBlock(d.ip, d.mac)}
                     className={cn(
                       "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors",
@@ -135,6 +145,12 @@ export function Network() {
           )}
         </div>
       </div>
+      <LanLimitDialog
+        device={limitFor}
+        open={limitFor !== null}
+        onOpenChange={(o) => { if (!o) setLimitFor(null) }}
+        onApplied={() => setBlockedIp(null)}
+      />
     </div>
   )
 }
