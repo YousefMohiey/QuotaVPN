@@ -216,6 +216,7 @@ export const ar = {
   "netLimitRemove": "إزالة الحد",
   "netThisPc": "هذا الجهاز",
   "netProtected": "محمي",
+  "netGuardAlert": "شخص على هذه الشبكة يعيد توجيه بياناتك ({mac}). غيّر كلمة سر الواي فاي أو شغّل الـ VPN.",
   "netRemove": "إزالة",
   "netStateBlocked": "محجوب",
   "netStateCapped": "محدود",

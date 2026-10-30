@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Ban, Gauge, Loader2, Lock, Monitor, RefreshCw, Wifi, X } from "lucide-react"
+import { Ban, Gauge, Loader2, Monitor, RefreshCw, ShieldAlert, Wifi, X } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
-import { api, type LanDevice, type LanStatus } from "@/lib/ipc"
+import { api, type LanDevice, type LanGuard, type LanStatus } from "@/lib/ipc"
 import { cn } from "@/lib/utils"
 import { LanLimitDialog } from "@/components/LanLimitDialog"
 
@@ -14,6 +14,7 @@ export function Network() {
   const [active, setActive] = useState<LanStatus | null>(null)
   const [limitFor, setLimitFor] = useState<LanDevice | null>(null)
   const [err, setErr] = useState("")
+  const [guard, setGuard] = useState<LanGuard | null>(null)
   const polled = useRef(0)
 
   const scan = useCallback(async (quiet = false) => {
@@ -81,8 +82,14 @@ export function Network() {
           void refreshStatus()
         }
       })
+    // The guard is what protects this machine from the same trick.
+    const tick = window.setInterval(() => {
+      void api.lanGuard().then(setGuard).catch(() => undefined)
+    }, 5000)
+    void api.lanGuard().then(setGuard).catch(() => undefined)
     return () => {
       alive = false
+      window.clearInterval(tick)
     }
   }, [scan, refreshStatus])
 
@@ -122,6 +129,15 @@ export function Network() {
             {t("netRefresh")}
           </button>
         </div>
+
+        {guard && guard.attacker_mac ? (
+          <div className="flex shrink-0 items-center gap-3 border-b border-line bg-[var(--red)]/10 px-5 py-2.5">
+            <ShieldAlert className="size-4 shrink-0 text-[var(--red)]" aria-hidden />
+            <span className="min-w-0 flex-1 text-[12.5px] text-[var(--red)]" dir="auto">
+              {t("netGuardAlert").replace("{mac}", guard.attacker_mac)}
+            </span>
+          </div>
+        ) : null}
 
         {active ? (
           <div className="flex shrink-0 items-center gap-3 border-b border-line bg-[var(--brand-bg)] px-5 py-2.5">
@@ -179,12 +195,6 @@ export function Network() {
                             {t("netThisPc")}
                           </span>
                         ) : null}
-                        {d.protected && !d.self_pc ? (
-                          <span className="flex shrink-0 items-center gap-1 rounded-[5px] border border-line px-1.5 py-[1px] text-[10.5px] font-medium text-txt3">
-                            <Lock className="size-2.5" aria-hidden />
-                            {t("netProtected")}
-                          </span>
-                        ) : null}
                         {state === "blocked" ? (
                           <span className="shrink-0 rounded-[5px] border border-[var(--red)]/45 bg-[var(--red)]/10 px-1.5 py-[1px] text-[10.5px] font-medium text-[var(--red)]">
                             {t("netStateBlocked")}
@@ -206,7 +216,6 @@ export function Network() {
                     <button
                       type="button"
                       onClick={() => setLimitFor(d)}
-                      disabled={d.protected}
                       className={cn(
                         "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors disabled:cursor-not-allowed disabled:opacity-40",
                         state === "capped"
@@ -220,7 +229,6 @@ export function Network() {
                     <button
                       type="button"
                       onClick={() => void toggleBlock(d)}
-                      disabled={d.protected}
                       className={cn(
                         "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors disabled:cursor-not-allowed disabled:opacity-40",
                         state === "blocked"

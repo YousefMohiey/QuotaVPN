@@ -1665,6 +1665,12 @@ fn lan_start(state: tauri::State<'_, LanState>, ip: String, mac: Option<String>,
     Ok(true)
 }
 
+/// Whether anyone is trying to stand between this machine and the router.
+#[tauri::command]
+fn lan_guard() -> quotacards::lan_ctrl::Guard {
+    quotacards::lan_ctrl::guard_state()
+}
+
 /// Set the caps for the active device. Zero means no cap.
 #[tauri::command]
 fn lan_limits(state: tauri::State<'_, LanState>, down_kbps: u32, up_kbps: u32) -> Result<bool, String> {
@@ -2167,6 +2173,8 @@ pub fn run() {
     });
     // Names arrive when devices join, so listen for them in the background.
     quotacards::dhcp_names::start_background();
+    // Watch for anyone doing to this machine what this app does to others.
+    quotacards::lan_ctrl::start_guard();
 
     // Headless self-test for the WE quota flow, and a diagnostic the owner
     // can run on any PC: QC_WE_NUMBER and QC_WE_PASS in the environment,
@@ -2454,6 +2462,7 @@ pub fn run() {
             lan_stop,
             lan_limits,
             lan_status,
+            lan_guard,
             lan_known,
             lan_devices,
             speed_cancel,

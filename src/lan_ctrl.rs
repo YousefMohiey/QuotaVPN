@@ -23,23 +23,6 @@ pub struct Wire {
     pub gateway_mac: String,
 }
 
-/// Devices the user never wants touched: their own PC, a console, anything that
-/// must stay online. The list lives in a file so it survives updates, and the
-/// engine refuses to redirect a device on it even if the UI asks.
-pub fn protected_macs() -> Vec<String> {
-    let base = std::env::var("LOCALAPPDATA")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|_| std::path::PathBuf::from("."));
-    let path = base.join("quotavpn").join("lan_protect.txt");
-    let Ok(text) = std::fs::read_to_string(path) else {
-        return Vec::new();
-    };
-    text.lines()
-        .map(|l| l.trim().replace('-', ":").to_lowercase())
-        .filter(|l| !l.is_empty() && !l.starts_with('#'))
-        .collect()
-}
-
 /// A block that outlives the moment it was set is a network outage, so every
 /// session has a deadline and a written note of what it changed.
 fn journal_path() -> std::path::PathBuf {
@@ -323,9 +306,6 @@ pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> 
     if target_mac.is_empty() {
         return Err("target mac unknown".into());
     }
-    if protected_macs().iter().any(|m| *m == target_mac) {
-        return Err("refuse: protected".into());
-    }
     let stop = Arc::new(AtomicBool::new(false));
     let blocked_flag = Arc::new(AtomicBool::new(blocked));
     let down = Arc::new(std::sync::atomic::AtomicU32::new(0));
@@ -547,4 +527,77 @@ mod tests {
             assert_eq!(pace(1500, 0, &mut slot, now), Some(Duration::ZERO));
         }
     }
+}
+
+/// Someone else on the network can do to this machine exactly what this app
+/// does to others: claim to be the gateway and take the traffic. Watching for
+/// that is cheap, and it is the one defence that needs no administrator rights.
+#[derive(Clone, Default, serde::Serialize)]
+pub struct Guard {
+    pub watching: bool,
+    pub attacker_mac: String,
+    pub attacker_ip: String,
+    pub hits: u32,
+}
+
+static GUARD: std::sync::OnceLock<std::sync::Mutex<Guard>> = std::sync::OnceLock::new();
+
+fn guard_slot() -> &'static std::sync::Mutex<Guard> {
+    GUARD.get_or_init(|| std::sync::Mutex::new(Guard::default()))
+}
+
+pub fn guard_state() -> Guard {
+    guard_slot().lock().map(|g| g.clone()).unwrap_or_default()
+}
+
+fn note_attacker(mac: &str, ip: &str) {
+    if let Ok(mut g) = guard_slot().lock() {
+        g.attacker_mac = mac.to_string();
+        g.attacker_ip = ip.to_string();
+        g.hits = g.hits.saturating_add(1);
+    }
+}
+
+/// Watch the wire for a machine pretending to be the gateway, or pretending to
+/// be us. Runs for as long as the app is open.
+pub fn start_guard() {
+    std::thread::spawn(|| {
+        let Some(w) = wire() else { return };
+        let Some(Some(cap)) = wpcap::with(|p| p.open(&w.device)) else { return };
+        if let Ok(mut g) = guard_slot().lock() {
+            g.watching = true;
+        }
+        let gw_mac = mac_bytes(&w.gateway_mac).unwrap_or([0; 6]);
+        let our_mac = mac_bytes(&w.mac).unwrap_or([0; 6]);
+        let gw_ip = ip4(&w.gateway_ip).unwrap_or([0; 4]);
+        let our_ip = ip4(&w.ip).unwrap_or([0; 4]);
+
+        loop {
+            let Some(f) = cap.next() else { continue };
+            if f.len() < 42 || f[12] != 0x08 || f[13] != 0x06 {
+                continue;
+            }
+            // ARP replies only: those are what poison a cache.
+            if f[21] != 2 {
+                continue;
+            }
+            let sender_mac = &f[22..28];
+            let sender_ip = &f[28..32];
+            let mac_str = sender_mac
+                .iter()
+                .map(|b| format!("{b:02x}"))
+                .collect::<Vec<_>>()
+                .join(":");
+            // Our own redirection sends the same kind of frame, so ignore
+            // anything carrying our own address.
+            if sender_mac == our_mac {
+                continue;
+            }
+            if sender_ip == gw_ip && sender_mac != gw_mac {
+                note_attacker(&mac_str, &w.gateway_ip);
+            } else if sender_ip == our_ip && sender_mac != our_mac {
+                note_attacker(&mac_str, &w.ip);
+            }
+        }
+    });
 }

@@ -213,6 +213,7 @@ export const en = {
   "netLimitRemove": "Remove cap",
   "netThisPc": "This PC",
   "netProtected": "Protected",
+  "netGuardAlert": "Someone on this network is redirecting your traffic ({mac}). Change the wifi password, or turn the VPN on.",
   "netRemove": "Remove",
   "netStateBlocked": "Blocked",
   "netStateCapped": "Capped",
