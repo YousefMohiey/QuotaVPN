@@ -2074,6 +2074,16 @@ pub fn run() {
     // can run on any PC: QC_WE_NUMBER and QC_WE_PASS in the environment,
     // QuotaVPN.exe --we-probe. Prints units and PROBE_GREEN, exits nonzero
     // on any failure. Runs before the single-instance plugin on purpose.
+    // Headless device scan, for checking the network layer without the UI.
+    if std::env::args().any(|a| a == "--lan-probe") {
+        let started = std::time::Instant::now();
+        let devices = quotacards::lan::scan();
+        for d in &devices {
+            println!("{:<16} {:<18} {}", d.ip, d.mac, d.name);
+        }
+        println!("LAN_PROBE {} devices in {} ms", devices.len(), started.elapsed().as_millis());
+        return;
+    }
     if std::env::args().any(|a| a == "--we-probe") {
         we_quota::probe_main();
         return;

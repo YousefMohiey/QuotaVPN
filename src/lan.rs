@@ -121,7 +121,7 @@ fn arp_table() -> HashMap<String, String> {
 /// the name, and "Pinging ip with 32 bytes" when it does not.
 #[cfg(windows)]
 fn wake(ip: String) -> (String, bool, String) {
-    let out = match hidden("ping").args(["-n", "1", "-w", "260", &ip]).output() {
+    let out = match hidden("ping").args(["-n", "1", "-w", "180", &ip]).output() {
         Ok(o) => String::from_utf8_lossy(&o.stdout).to_string(),
         Err(_) => return (ip, false, String::new()),
     };
@@ -148,7 +148,9 @@ pub fn scan() -> Vec<Device> {
 
     let found: Arc<Mutex<Vec<(String, bool, String)>>> = Arc::new(Mutex::new(Vec::new()));
     let mut handles = Vec::new();
-    let chunk = 24usize;
+    // 32 workers: a /24 sweeps in about five seconds, which is the most a
+    // person will wait for a device list before assuming it is broken.
+    let chunk = 8usize;
     let mut batch = Vec::new();
     for i in 1..=hosts {
         let ip = Ipv4Addr::from(base + i).to_string();
