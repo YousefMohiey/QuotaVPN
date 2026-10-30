@@ -2,6 +2,7 @@
 pub mod config;
 pub mod lan;
 pub mod dhcp_names;
+pub mod fingerprint;
 pub mod lan_ask;
 pub mod lan_ctrl;
 pub mod lan_names;

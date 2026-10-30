@@ -217,15 +217,6 @@ fn usable_name(name: &str) -> bool {
     true
 }
 
-/// Phones hide behind a made-up address, which is why they look anonymous.
-fn random_mac(mac: &str) -> bool {
-    mac.split(':')
-        .next()
-        .and_then(|b| u8::from_str_radix(b, 16).ok())
-        .map(|b| b & 0x02 != 0)
-        .unwrap_or(false)
-}
-
 /// Take a batch of names learned passively and keep the ones that are new.
 pub fn remember_probed(found: &HashMap<String, String>) {
     let mut all = probe_cache();
@@ -332,12 +323,12 @@ pub fn scan() -> Vec<Device> {
             .filter(|n| !n.is_empty())
             .or_else(|| announced_by_mac.get(&mac).cloned())
             .unwrap_or_default();
+        // A name if one exists, otherwise the most useful true thing: who made
+        // it, and (from the background pass) what kind of device it is.
         let label = if usable_name(&resolved) {
             resolved
-        } else if random_mac(&mac) {
-            String::from("private")
         } else {
-            String::from("-")
+            crate::fingerprint::describe(&mac, &ip, "", None)
         };
         out.push(Device {
             ip,
@@ -422,6 +413,13 @@ pub fn enrich_names(list: Vec<Device>) {
             }
             if usable_name(&found) {
                 remember_probe(&ip, &found);
+            } else {
+                // No name to be had, so say what the device is instead.
+                let kind = crate::fingerprint::kind(&ip);
+                let label = crate::fingerprint::describe(&mac, &ip, "", kind);
+                if label != "-" {
+                    remember_probe(&ip, &label);
+                }
             }
         }));
     }
