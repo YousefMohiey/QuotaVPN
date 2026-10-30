@@ -49,9 +49,12 @@ fn local_ip() -> Option<String> {
 }
 
 /// The adapter, its MAC and the default gateway, read from the system.
+/// ipconfig marks addresses with a suffix such as "(Preferred)", and the
+/// adapter's Description line is what matches the packet driver's own list.
 fn adapter_info(ip: &str) -> Option<(String, String, String)> {
     let out = run("ipconfig", &["/all"]);
-    let mut current_adapter = String::new();
+    let mut name = String::new();
+    let mut description = String::new();
     let mut mac = String::new();
     let mut gateway = String::new();
     let mut seen_ip = false;
@@ -59,39 +62,51 @@ fn adapter_info(ip: &str) -> Option<(String, String, String)> {
     for raw in out.lines() {
         let line = raw.trim();
         let lower = line.to_lowercase();
-        if lower.starts_with("ethernet adapter") || lower.starts_with("wireless lan adapter") {
-            current_adapter = line
+        if lower.starts_with("ethernet adapter")
+            || lower.starts_with("wireless lan adapter")
+            || lower.starts_with("unknown adapter")
+        {
+            name = line
                 .split("adapter")
                 .nth(1)
                 .unwrap_or("")
                 .trim()
                 .trim_end_matches(':')
                 .to_string();
+            description.clear();
             mac.clear();
+            gateway.clear();
             seen_ip = false;
         }
-        if lower.contains("physical address") {
+        if lower.starts_with("description") {
+            if let Some(v) = line.split(':').nth(1) {
+                description = v.trim().to_string();
+            }
+        }
+        if lower.starts_with("physical address") {
             if let Some(v) = line.split(':').nth(1) {
                 mac = v.trim().replace('-', ":").to_lowercase();
             }
         }
-        if lower.contains("ipv4 address") {
+        if lower.starts_with("ipv4 address") {
             if let Some(v) = line.split(':').nth(1) {
-                if v.trim() == ip {
+                let addr = v.trim().split('(').next().unwrap_or("").trim();
+                if addr == ip {
                     seen_ip = true;
                 }
             }
         }
-        if lower.contains("default gateway") {
+        if lower.starts_with("default gateway") {
             if let Some(v) = line.split(':').nth(1) {
                 let g = v.trim();
-                if !g.is_empty() && g.split('.').count() == 4 {
+                if g.split('.').count() == 4 {
                     gateway = g.to_string();
                 }
             }
         }
         if seen_ip && !mac.is_empty() && !gateway.is_empty() {
-            return Some((current_adapter.clone(), mac.clone(), gateway.clone()));
+            let label = if description.is_empty() { name.clone() } else { description.clone() };
+            return Some((label, mac.clone(), gateway.clone()));
         }
     }
     None
@@ -127,7 +142,12 @@ fn mac_bytes(mac: &str) -> Option<[u8; 6]> {
 pub fn wire() -> Option<Wire> {
     let ip = local_ip()?;
     let (adapter, mac, gateway_ip) = adapter_info(&ip)?;
-    let gateway_mac = mac_for(&gateway_ip).unwrap_or_default();
+    // The gateway is only in the ARP table once something has spoken to it.
+    let mut gateway_mac = mac_for(&gateway_ip).unwrap_or_default();
+    if gateway_mac.is_empty() {
+        let _ = run("ping", &["-n", "1", "-w", "600", &gateway_ip]);
+        gateway_mac = mac_for(&gateway_ip).unwrap_or_default();
+    }
     let devices = wpcap::with(|w| w.devices())?;
     // The pcap name for an adapter is an opaque GUID path, so the adapter's own
     // description is what ties the two lists together.
