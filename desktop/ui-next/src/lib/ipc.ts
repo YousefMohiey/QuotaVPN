@@ -87,6 +87,11 @@ export type LanStatus = {
 
 export const lanStatus = (): Promise<LanStatus | null> => call<LanStatus | null>("lan_status")
 
+export const routerLink = (user: string, pass: string): Promise<boolean> =>
+  call<boolean>("router_link", { user, pass })
+export const routerStatus = (): Promise<boolean> => call<boolean>("router_status")
+export const routerUnlink = (): Promise<boolean> => call<boolean>("router_unlink")
+
 export type LanGuard = { watching: boolean; attacker_mac: string; attacker_ip: string; hits: number }
 export const lanGuard = (): Promise<LanGuard> => call<LanGuard>("lan_guard")
 
@@ -166,6 +171,9 @@ export const api = {
   lanStop: (): Promise<boolean> => call<boolean>("lan_stop"),
   lanStatus: (): Promise<LanStatus | null> => call<LanStatus | null>("lan_status"),
   lanGuard: (): Promise<LanGuard> => call<LanGuard>("lan_guard"),
+  routerLink: (user: string, pass: string): Promise<boolean> => call<boolean>("router_link", { user, pass }),
+  routerStatus: (): Promise<boolean> => call<boolean>("router_status"),
+  routerUnlink: (): Promise<boolean> => call<boolean>("router_unlink"),
   lanLimits: (down_kbps: number, up_kbps: number): Promise<boolean> =>
     call<boolean>("lan_limits", { downKbps: down_kbps, upKbps: up_kbps }),
   lanDevices: (): Promise<LanDevice[]> => call<LanDevice[]>("lan_devices"),

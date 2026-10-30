@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Ban, Gauge, Loader2, Monitor, RefreshCw, ShieldAlert, Wifi, X } from "lucide-react"
+import { Ban, Gauge, Loader2, Monitor, RefreshCw, Router, ShieldAlert, Wifi, X } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
 import { api, type LanDevice, type LanGuard, type LanStatus } from "@/lib/ipc"
 import { cn } from "@/lib/utils"
 import { LanLimitDialog } from "@/components/LanLimitDialog"
+import { RouterLinkDialog } from "@/components/RouterLinkDialog"
 
 /** Who is on this network, and what is being done to them. */
 export function Network() {
@@ -15,6 +16,8 @@ export function Network() {
   const [limitFor, setLimitFor] = useState<LanDevice | null>(null)
   const [err, setErr] = useState("")
   const [guard, setGuard] = useState<LanGuard | null>(null)
+  const [routerOpen, setRouterOpen] = useState(false)
+  const [routerLinked, setRouterLinked] = useState(false)
   const polled = useRef(0)
 
   const scan = useCallback(async (quiet = false) => {
@@ -85,8 +88,10 @@ export function Network() {
     // The guard is what protects this machine from the same trick.
     const tick = window.setInterval(() => {
       void api.lanGuard().then(setGuard).catch(() => undefined)
+    void api.routerStatus().then(setRouterLinked).catch(() => undefined)
     }, 5000)
     void api.lanGuard().then(setGuard).catch(() => undefined)
+    void api.routerStatus().then(setRouterLinked).catch(() => undefined)
     return () => {
       alive = false
       window.clearInterval(tick)
@@ -119,6 +124,19 @@ export function Network() {
           <span className="shrink-0 font-mono text-[11.5px] tabular-nums text-txt3">
             {busy ? t("netScanning") : t("netCount").replace("{n}", String(devices.length))}
           </span>
+          <button
+            type="button"
+            onClick={() => setRouterOpen(true)}
+            className={cn(
+              "press flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border px-3 text-[13px] transition-colors",
+              routerLinked
+                ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-[var(--brand)]"
+                : "border-line bg-white/[0.02] text-txt2 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] hover:text-txt",
+            )}
+          >
+            <Router className="size-3.5" aria-hidden />
+            {routerLinked ? t("routerLinked") : t("routerNames")}
+          </button>
           <button
             type="button"
             onClick={() => void scan()}
@@ -246,6 +264,15 @@ export function Network() {
           )}
         </div>
       </div>
+
+      <RouterLinkDialog
+        open={routerOpen}
+        onOpenChange={setRouterOpen}
+        onLinked={() => {
+          setRouterLinked(true)
+          void scan()
+        }}
+      />
 
       <LanLimitDialog
         device={limitFor}
