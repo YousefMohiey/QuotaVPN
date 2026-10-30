@@ -295,13 +295,9 @@ pub fn scan() -> Vec<Device> {
 /// Is the packet driver present? The control layer needs it; the listing does
 /// not, so the app can show who is on the line before asking for anything.
 pub fn npcap_installed() -> bool {
-    let sys = std::env::var("SystemRoot").unwrap_or_else(|_| String::from("C:\Windows"));
-    for candidate in [
-        format!("{sys}\System32\Npcap\wpcap.dll"),
-        format!("{sys}\System32\wpcap.dll"),
-        format!("{sys}\SysWOW64\Npcap\wpcap.dll"),
-    ] {
-        if std::path::Path::new(&candidate).is_file() {
+    let sys = std::env::var("SystemRoot").unwrap_or_else(|_| String::from("C:/Windows"));
+    for rel in ["System32/Npcap/wpcap.dll", "System32/wpcap.dll", "SysWOW64/Npcap/wpcap.dll"] {
+        if std::path::Path::new(&format!("{sys}/{rel}")).is_file() {
             return true;
         }
     }
