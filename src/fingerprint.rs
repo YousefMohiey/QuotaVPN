@@ -17,25 +17,59 @@ fn read_u32(at: usize) -> u32 {
     u32::from_le_bytes([OUI[at], OUI[at + 1], OUI[at + 2], OUI[at + 3]])
 }
 
-/// Binary search over the sorted block list.
-fn lookup_block(block: u32) -> Option<&'static str> {
-    let count = read_u32(0) as usize;
+fn read_u64(at: usize) -> u64 {
+    let mut b = [0u8; 8];
+    b.copy_from_slice(&OUI[at..at + 8]);
+    u64::from_le_bytes(b)
+}
+
+/// The table is three sorted groups, one per block size: 24, 28 and 36 bits.
+/// A longer block is more specific, so it is tried first.
+fn group(bits: usize) -> (usize, usize, usize) {
+    let count24 = read_u32(0) as usize;
+    let count28 = read_u32(4) as usize;
+    let count36 = read_u32(8) as usize;
+    let start = match bits {
+        24 => 12,
+        28 => 12 + count24 * 12,
+        _ => 12 + (count24 + count28) * 12,
+    };
+    let count = match bits {
+        24 => count24,
+        28 => count28,
+        _ => count36,
+    };
+    (start, count, 12 + (count24 + count28 + count36) * 12)
+}
+
+fn search(bits: usize, key: u64) -> Option<&'static str> {
+    let (start, count, blob_start) = group(bits);
     let mut lo = 0usize;
     let mut hi = count;
     while lo < hi {
         let mid = (lo + hi) / 2;
-        let base = 4 + mid * 8;
-        let key = read_u32(base);
-        if key == block {
-            let offset = read_u32(base + 4) as usize;
-            let start = 4 + count * 8 + offset;
-            let len = OUI[start..].iter().position(|b| *b == 0)?;
-            return std::str::from_utf8(&OUI[start..start + len]).ok();
+        let at = start + mid * 12;
+        let found = read_u64(at);
+        if found == key {
+            let offset = read_u32(at + 8) as usize;
+            let name_at = blob_start + offset;
+            let len = OUI[name_at..].iter().position(|b| *b == 0)?;
+            return std::str::from_utf8(&OUI[name_at..name_at + len]).ok();
         }
-        if key < block {
+        if found < key {
             lo = mid + 1;
         } else {
             hi = mid;
+        }
+    }
+    None
+}
+
+fn lookup_mac(mac: u64) -> Option<&'static str> {
+    for bits in [36usize, 28, 24] {
+        let key = mac >> (48 - bits);
+        if let Some(name) = search(bits, key) {
+            return Some(name);
         }
     }
     None
@@ -48,11 +82,11 @@ pub fn vendor(mac: &str) -> Option<String> {
     if octets.len() != 6 {
         return None;
     }
-    let mut key: u32 = 0;
-    for o in &octets[..3] {
-        key = (key << 8) | u32::from_str_radix(o, 16).ok()?;
+    let mut key: u64 = 0;
+    for o in &octets {
+        key = (key << 8) | u64::from_str_radix(o, 16).ok()?;
     }
-    lookup_block(key).map(tidy)
+    lookup_mac(key).map(tidy)
 }
 
 /// OUI entries are written in capitals and often end with a legal suffix.
@@ -161,5 +195,26 @@ pub fn describe(mac: &str, ip: &str, name: &str, kind: Option<&str>) -> String {
         (None, Some(w)) => w.to_string(),
         (None, None) if private_address(mac) => String::from("private"),
         (None, None) => String::from("-"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The register is a binary file, so prove the lookup actually reads it.
+    #[test]
+    fn known_blocks_resolve() {
+        assert_eq!(vendor("04:7C:16:00:00:01").as_deref(), Some("Micro-star intl"));
+        assert!(vendor("F0:A9:51:00:00:01").is_some(), "the router's block must resolve");
+        assert!(vendor("9C:69:D3:00:00:01").is_some(), "this machine's adapter must resolve");
+    }
+
+    /// A made-up address has no manufacturer, and saying so is the honest answer.
+    #[test]
+    fn a_random_address_has_no_maker() {
+        assert!(vendor("42:D5:2A:0C:BC:0A").is_none());
+        assert!(private_address("42:D5:2A:0C:BC:0A"));
+        assert!(!private_address("04:7C:16:7D:E7:02"));
     }
 }
