@@ -199,6 +199,33 @@ fn remember_probe(ip: &str, name: &str) {
     let _ = std::fs::write(path, body);
 }
 
+/// A name has to look like a name. Reverse lookups return things such as
+/// "0.0.0.0.0.0.0.0.8.E.F.ip6.arpa", which is an address, not a device.
+fn usable_name(name: &str) -> bool {
+    let n = name.trim();
+    if n.is_empty() || n == "-" {
+        return false;
+    }
+    let lower = n.to_lowercase();
+    if lower.ends_with(".arpa") || lower.contains("in-addr") || lower.contains("ip6.arpa") {
+        return false;
+    }
+    // A name made only of digits, dots and hex letters is an address.
+    if n.split('.').all(|part| part.chars().all(|c| c.is_ascii_hexdigit())) && n.contains('.') {
+        return false;
+    }
+    true
+}
+
+/// Phones hide behind a made-up address, which is why they look anonymous.
+fn random_mac(mac: &str) -> bool {
+    mac.split(':')
+        .next()
+        .and_then(|b| u8::from_str_radix(b, 16).ok())
+        .map(|b| b & 0x02 != 0)
+        .unwrap_or(false)
+}
+
 /// Take a batch of names learned passively and keep the ones that are new.
 pub fn remember_probed(found: &HashMap<String, String>) {
     let mut all = probe_cache();
@@ -305,10 +332,17 @@ pub fn scan() -> Vec<Device> {
             .filter(|n| !n.is_empty())
             .or_else(|| announced_by_mac.get(&mac).cloned())
             .unwrap_or_default();
+        let label = if usable_name(&resolved) {
+            resolved
+        } else if random_mac(&mac) {
+            String::from("private")
+        } else {
+            String::from("-")
+        };
         out.push(Device {
             ip,
             mac,
-            name: if resolved.is_empty() { String::from("-") } else { resolved },
+            name: label,
             self_pc: false,
         });
     }
@@ -386,7 +420,9 @@ pub fn enrich_names(list: Vec<Device>) {
                     }
                 }
             }
-            remember_probe(&ip, &found);
+            if usable_name(&found) {
+                remember_probe(&ip, &found);
+            }
         }));
     }
     for h in handles {

@@ -188,7 +188,7 @@ export function Network() {
                     <span className="min-w-0 flex-1">
                       <span className="flex min-w-0 items-center gap-2">
                         <span className="truncate text-[14px] font-medium text-txt" dir="auto">
-                          {d.name}
+                          {d.name === "private" ? t("netPrivateName") : d.name}
                         </span>
                         {d.self_pc ? (
                           <span className="shrink-0 rounded-[5px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-1.5 py-[1px] text-[10.5px] font-medium text-[var(--brand)]">
