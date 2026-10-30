@@ -134,6 +134,37 @@ fn wake(ip: String) -> (String, bool, String) {
     (ip, false, String::new())
 }
 
+/// Devices the neighbour table already knows, with no sweep at all. Instant,
+/// and enough to draw the list before the scan has finished.
+pub fn known() -> Vec<Device> {
+    let mut out: Vec<Device> = Vec::new();
+    for (ip, mac) in arp_table() {
+        if !keep(&ip, &mac) {
+            continue;
+        }
+        out.push(Device { ip, mac, name: String::from("-") });
+    }
+    sort_devices(&mut out);
+    out
+}
+
+fn keep(ip: &str, mac: &str) -> bool {
+    if mac.is_empty() || mac.starts_with("00:00:00") || mac.starts_with("ff:ff:ff") {
+        return false;
+    }
+    let first: u32 = ip.split('.').next().and_then(|p| p.parse().ok()).unwrap_or(0);
+    let last: u32 = ip.split('.').last().and_then(|p| p.parse().ok()).unwrap_or(0);
+    !(first == 0 || first >= 224 || ip == "255.255.255.255" || last == 255 || last == 0)
+}
+
+fn sort_devices(list: &mut [Device]) {
+    list.sort_by_key(|d| {
+        d.ip.split('.')
+            .filter_map(|p| p.parse::<u32>().ok())
+            .fold(0u32, |acc, n| (acc << 8) | n)
+    });
+}
+
 /// Every device on this subnet, sorted by address.
 pub fn scan() -> Vec<Device> {
     let Some(local) = local_ipv4() else {
@@ -225,17 +256,10 @@ pub fn scan() -> Vec<Device> {
     let results = found.lock().map(|g| g.clone()).unwrap_or_default();
     for (ip, alive, name) in results {
         let mac = table.get(&ip).cloned().unwrap_or_default();
-        if mac.is_empty() {
+        if !keep(&ip, &mac) {
             continue;
         }
-        // The neighbour table also holds multicast groups, the broadcast
-        // address and incomplete entries. None of those is a device.
-        let first: u32 = ip.split('.').next().and_then(|p| p.parse().ok()).unwrap_or(0);
-        let last: u32 = ip.split('.').last().and_then(|p| p.parse().ok()).unwrap_or(0);
-        if first == 0 || first >= 224 || ip == "255.255.255.255" || last == 255 || last == 0 {
-            continue;
-        }
-        if !alive && mac.starts_with("00:00:00") {
+        if !alive && mac.is_empty() {
             continue;
         }
         let resolved = name_map.get(&ip).cloned().unwrap_or(name);
@@ -245,12 +269,7 @@ pub fn scan() -> Vec<Device> {
             name: if resolved.is_empty() { String::from("-") } else { resolved },
         });
     }
-    // The router itself is the gateway, and it answers as an ordinary host.
-    out.sort_by_key(|d| {
-        d.ip.split('.')
-            .filter_map(|p| p.parse::<u32>().ok())
-            .fold(0u32, |acc, n| (acc << 8) | n)
-    });
+    sort_devices(&mut out);
     out.dedup_by(|a, b| a.ip == b.ip);
     out
 }

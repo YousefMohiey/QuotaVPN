@@ -1642,6 +1642,12 @@ async fn speed_up(
 /// Whether the bundled official client is fetched and runnable. The first
 /// call downloads it once and caches it under the app data dir.
 /// Stop whatever is measuring: the cli process and the built-in loops.
+/// The devices the machine already knows about, without sweeping.
+#[tauri::command]
+async fn lan_known() -> Vec<quotacards::lan::Device> {
+    quotacards::lan::known()
+}
+
 /// Who is on this network: ip, mac and a name when the system resolves one.
 #[tauri::command]
 async fn lan_devices() -> Vec<quotacards::lan::Device> {
@@ -2293,6 +2299,7 @@ pub fn run() {
             net_info,
             app_icons,
             speed_servers,
+            lan_known,
             lan_devices,
             speed_cancel,
             speed_latency,

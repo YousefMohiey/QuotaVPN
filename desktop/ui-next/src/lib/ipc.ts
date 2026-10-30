@@ -66,6 +66,8 @@ export type SpeedOut = { mbps: number | null; note: string }
 export type LanDevice = { ip: string; mac: string; name: string }
 
 /** Who is on this network. Scans the subnet and reads the neighbour table. */
+export const lanKnown = (): Promise<LanDevice[]> => call<LanDevice[]>("lan_known")
+
 export const lanDevices = (): Promise<LanDevice[]> => call<LanDevice[]>("lan_devices")
 
 /** Really stop a measurement: kills the cli and ends the built-in loops. */
@@ -132,6 +134,7 @@ async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
 
 export const api = {
   state: () => call<UiState>("get_state"),
+  lanKnown: (): Promise<LanDevice[]> => call<LanDevice[]>("lan_known"),
   lanDevices: (): Promise<LanDevice[]> => call<LanDevice[]>("lan_devices"),
   probeServer: () => call<CmdResult>("probe_server"),
   generateCard: (name: string, kind: string, sni: string) =>

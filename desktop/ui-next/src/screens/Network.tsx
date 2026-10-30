@@ -23,8 +23,22 @@ export function Network() {
     }
   }, [])
 
+  // What the machine already knows shows at once; the sweep fills the rest in
+  // behind it, so the screen is never a spinner with nothing to read.
   useEffect(() => {
-    void scan()
+    let alive = true
+    void api
+      .lanKnown()
+      .then((list) => {
+        if (alive && list.length) setDevices(list)
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (alive) void scan()
+      })
+    return () => {
+      alive = false
+    }
   }, [scan])
 
   return (
