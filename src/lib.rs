@@ -2,6 +2,8 @@
 pub mod config;
 pub mod lan;
 pub mod lan_names;
+#[cfg(target_os = "windows")]
+pub mod wpcap;
 pub mod server;
 pub mod ssh;
 pub mod updater;

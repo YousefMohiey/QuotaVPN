@@ -2086,6 +2086,19 @@ pub fn run() {
     // can run on any PC: QC_WE_NUMBER and QC_WE_PASS in the environment,
     // QuotaVPN.exe --we-probe. Prints units and PROBE_GREEN, exits nonzero
     // on any failure. Runs before the single-instance plugin on purpose.
+    // Does the packet driver load, and what does it see?
+    if std::env::args().any(|a| a == "--lan-driver") {
+        let ok = quotacards::wpcap::ready();
+        println!("driver_loaded={ok}");
+        if ok {
+            if let Some(devs) = quotacards::wpcap::with(|w| w.devices()) {
+                for d in devs {
+                    println!("{} | {}", d.name, d.description);
+                }
+            }
+        }
+        return;
+    }
     // Headless device scan, for checking the network layer without the UI.
     if std::env::args().any(|a| a == "--lan-probe") {
         let started = std::time::Instant::now();
