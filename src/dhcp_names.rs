@@ -105,6 +105,99 @@ fn mac_of(frame: &[u8]) -> Option<(String, String)> {
     None
 }
 
+/// Read a name out of an mDNS answer: a device that publishes an address
+/// record is telling the whole network its own name.
+fn mdns_name(frame: &[u8]) -> Option<(String, String)> {
+    if frame.len() < 14 || frame[12] != 0x08 || frame[13] != 0x00 {
+        return None;
+    }
+    let ihl = (frame[14] & 0x0f) as usize * 4;
+    if frame.len() < 14 + ihl + 8 || frame[14 + 9] != 17 {
+        return None;
+    }
+    let udp = 14 + ihl;
+    let src_port = u16::from_be_bytes([frame[udp], frame[udp + 1]]);
+    let dst_port = u16::from_be_bytes([frame[udp + 2], frame[udp + 3]]);
+    if src_port != 5353 && dst_port != 5353 {
+        return None;
+    }
+    let dns = udp + 8;
+    if frame.len() < dns + 12 {
+        return None;
+    }
+    let ancount = u16::from_be_bytes([frame[dns + 6], frame[dns + 7]]) as usize;
+    let qdcount = u16::from_be_bytes([frame[dns + 4], frame[dns + 5]]) as usize;
+    let mut i = dns + 12;
+    // Skip the questions, then walk the answers looking for an A record.
+    for _ in 0..qdcount {
+        i = skip_name(frame, i)?;
+        i += 4;
+    }
+    for _ in 0..ancount {
+        let name = read_name(frame, i)?;
+        i = skip_name(frame, i)?;
+        if i + 10 > frame.len() {
+            return None;
+        }
+        let rtype = u16::from_be_bytes([frame[i], frame[i + 1]]);
+        let rdlen = u16::from_be_bytes([frame[i + 8], frame[i + 9]]) as usize;
+        i += 10;
+        if i + rdlen > frame.len() {
+            return None;
+        }
+        if rtype == 1 && rdlen == 4 {
+            let ip = format!("{}.{}.{}.{}", frame[i], frame[i + 1], frame[i + 2], frame[i + 3]);
+            let clean = name.trim_end_matches('.').trim_end_matches(".local").to_string();
+            if !clean.is_empty() {
+                return Some((ip, clean));
+            }
+        }
+        i += rdlen;
+    }
+    None
+}
+
+fn skip_name(frame: &[u8], mut i: usize) -> Option<usize> {
+    loop {
+        let len = *frame.get(i)? as usize;
+        if len == 0 {
+            return Some(i + 1);
+        }
+        if len & 0xc0 == 0xc0 {
+            return Some(i + 2);
+        }
+        i += 1 + len;
+    }
+}
+
+fn read_name(frame: &[u8], start: usize) -> Option<String> {
+    let mut out = String::new();
+    let mut i = start;
+    let mut hops = 0;
+    loop {
+        let len = *frame.get(i)? as usize;
+        if len == 0 {
+            break;
+        }
+        if len & 0xc0 == 0xc0 {
+            let ptr = (((len & 0x3f) as usize) << 8) | *frame.get(i + 1)? as usize;
+            hops += 1;
+            if hops > 8 {
+                break;
+            }
+            i = ptr;
+            continue;
+        }
+        let label = frame.get(i + 1..i + 1 + len)?;
+        if !out.is_empty() {
+            out.push('.');
+        }
+        out.push_str(&String::from_utf8_lossy(label));
+        i += 1 + len;
+    }
+    Some(out)
+}
+
 /// Listen for the duration given and return whatever names were announced.
 pub fn listen(secs: u64) -> HashMap<String, String> {
     let mut found = HashMap::new();
@@ -115,13 +208,20 @@ pub fn listen(secs: u64) -> HashMap<String, String> {
         return found;
     };
     let deadline = Instant::now() + Duration::from_secs(secs);
+    let mut by_ip: HashMap<String, String> = HashMap::new();
     while Instant::now() < deadline {
         let Some(frame) = cap.next() else { continue };
         if let Some((mac, name)) = mac_of(&frame) {
             found.insert(mac, name);
         }
+        if let Some((ip, name)) = mdns_name(&frame) {
+            by_ip.insert(ip, name);
+        }
     }
     remember(&found);
+    if !by_ip.is_empty() {
+        crate::lan::remember_probed(&by_ip);
+    }
     found
 }
 

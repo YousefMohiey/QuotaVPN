@@ -199,6 +199,25 @@ fn remember_probe(ip: &str, name: &str) {
     let _ = std::fs::write(path, body);
 }
 
+/// Take a batch of names learned passively and keep the ones that are new.
+pub fn remember_probed(found: &HashMap<String, String>) {
+    let mut all = probe_cache();
+    let before = all.len();
+    for (ip, name) in found {
+        all.insert(ip.clone(), name.clone());
+    }
+    if all.len() == before {
+        return;
+    }
+    let path = probe_cache_path();
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let body: String = all.iter().map(|(ip, n)| format!("{ip}|{n}
+")).collect();
+    let _ = std::fs::write(path, body);
+}
+
 fn sort_devices(list: &mut [Device]) {
     // This machine first, then by address: the row a person cares about most is
     // the one they are sitting at.
