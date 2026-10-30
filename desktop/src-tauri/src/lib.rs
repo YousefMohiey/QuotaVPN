@@ -1649,23 +1649,17 @@ async fn lan_wire() -> Option<quotacards::lan_ctrl::Wire> {
 }
 
 /// Start standing between one device and the router. One at a time: two
-/// poisoned devices on the same wire fight over the same forwarding loop.
+/// poisoned devices on the same wire would fight over one forwarding loop.
 #[tauri::command]
-async fn lan_start(
-    state: tauri::State<'_, LanState>,
-    ip: String,
-    blocked: bool,
-) -> Result<bool, String> {
+fn lan_start(state: tauri::State<'_, LanState>, ip: String, blocked: bool) -> Result<bool, String> {
     let previous = {
         let mut guard = state.0.lock().map_err(|_| "state".to_string())?;
         guard.take()
     };
     if let Some(s) = previous {
-        let _ = tauri::async_runtime::spawn_blocking(move || s.stop()).await;
+        s.stop();
     }
-    let session = tauri::async_runtime::spawn_blocking(move || quotacards::lan_ctrl::start(&ip, blocked))
-        .await
-        .map_err(|e| e.to_string())??;
+    let session = quotacards::lan_ctrl::start(&ip, blocked)?;
     let mut guard = state.0.lock().map_err(|_| "state".to_string())?;
     *guard = Some(session);
     Ok(true)
@@ -1673,15 +1667,15 @@ async fn lan_start(
 
 /// Stop redirecting and hand the network back.
 #[tauri::command]
-async fn lan_stop(state: tauri::State<'_, LanState>) -> bool {
+fn lan_stop(state: tauri::State<'_, LanState>) -> Result<bool, String> {
     let session = {
-        let Ok(mut guard) = state.0.lock() else { return false };
+        let mut guard = state.0.lock().map_err(|_| "state".to_string())?;
         guard.take()
     };
     if let Some(s) = session {
-        let _ = tauri::async_runtime::spawn_blocking(move || s.stop()).await;
+        s.stop();
     }
-    true
+    Ok(true)
 }
 
 /// Whether the packet driver the control layer needs is installed.
