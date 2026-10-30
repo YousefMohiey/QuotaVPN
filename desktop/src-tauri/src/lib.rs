@@ -2139,9 +2139,10 @@ pub fn run() {
             ),
             None => println!("wire: none"),
         }
-        match quotacards::lan_ctrl::start(&ip, true) {
+        let block = std::env::args().nth(i + 3).map(|v| v != "0").unwrap_or(true);
+        match quotacards::lan_ctrl::start(&ip, block) {
             Ok(s) => {
-                println!("started on {} (blocked)", s.target_ip);
+                println!("started on {} (blocked={block})", s.target_ip);
                 std::thread::sleep(std::time::Duration::from_secs(secs));
                 let seen = s.seen.load(std::sync::atomic::Ordering::Relaxed);
                 let fwd = s.forwarded.load(std::sync::atomic::Ordering::Relaxed);
