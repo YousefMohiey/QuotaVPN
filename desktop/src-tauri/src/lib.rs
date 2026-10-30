@@ -21,7 +21,8 @@ use tauri_plugin_updater::UpdaterExt;
 
 pub mod speed;
 pub mod ookla;
-pub mod we_quota;
+pub mod router_huawei;
+mod we_quota;
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
@@ -1708,15 +1709,54 @@ async fn lan_known() -> Vec<quotacards::lan::Device> {
 
 /// Who is on this network: ip, mac and a name when the system resolves one.
 #[tauri::command]
-async fn lan_devices() -> Vec<quotacards::lan::Device> {
-    let list = tauri::async_runtime::spawn_blocking(quotacards::lan::scan)
+async fn lan_devices(state: tauri::State<'_, RouterState>) -> Result<Vec<quotacards::lan::Device>, String> {
+    let mut list = tauri::async_runtime::spawn_blocking(quotacards::lan::scan)
         .await
         .unwrap_or_default();
+    // The router knows every name, including the phones that hide theirs.
+    {
+        let guard = state.0.lock().await;
+        if let Some(session) = guard.as_ref() {
+            let names = router_huawei::names_by_ip(session).await;
+            for d in list.iter_mut() {
+                if let Some(name) = names.get(&d.ip) {
+                    if !name.is_empty() {
+                        d.name = name.clone();
+                    }
+                }
+            }
+        }
+    }
     // Names that are still missing are looked up in the background, so the list
     // is on screen in a second and fills itself in a few seconds later.
     let probe = list.clone();
     std::thread::spawn(move || quotacards::lan::enrich_names(probe));
-    list
+    Ok(list)
+}
+
+/// Log in to the router so the device list can carry real names.
+#[tauri::command]
+async fn router_link(state: tauri::State<'_, RouterState>, user: String, pass: String) -> Result<bool, String> {
+    let host = quotacards::lan_ctrl::wire()
+        .map(|w| w.gateway_ip)
+        .ok_or("no gateway")?;
+    let session = router_huawei::login(&host, &user, &pass).await?;
+    let mut guard = state.0.lock().await;
+    *guard = Some(session);
+    Ok(true)
+}
+
+#[tauri::command]
+async fn router_status(state: tauri::State<'_, RouterState>) -> Result<bool, String> {
+    let guard = state.0.lock().await;
+    Ok(guard.is_some())
+}
+
+#[tauri::command]
+async fn router_unlink(state: tauri::State<'_, RouterState>) -> Result<bool, String> {
+    let mut guard = state.0.lock().await;
+    *guard = None;
+    Ok(true)
 }
 
 /// What the redirect is doing right now, so the screen can say so after a
@@ -2162,6 +2202,10 @@ fn set_webview_memory_low(app: &tauri::AppHandle, low: bool) {
     });
 }
 
+/// A logged-in router, kept for the session so the device list can ask it for
+/// names without logging in again on every scan.
+pub struct RouterState(pub tokio::sync::Mutex<Option<router_huawei::Session>>);
+
 /// The one redirection that may be active at a time.
 pub struct LanState(pub std::sync::Mutex<Option<quotacards::lan_ctrl::Session>>);
 
@@ -2320,6 +2364,7 @@ pub fn run() {
         .manage(Engine(Mutex::new(None)))
         .manage(we_quota::WeQuota::new())
         .manage(LanState(std::sync::Mutex::new(None)))
+        .manage(RouterState(tokio::sync::Mutex::new(None)))
         .setup(|app| {
             // Same OS config dir as the previous desktop app: cards carry
             // over, nothing to re-enter. (No chdir - that is phone-only.)
@@ -2471,6 +2516,9 @@ pub fn run() {
             lan_limits,
             lan_status,
             lan_guard,
+            router_link,
+            router_status,
+            router_unlink,
             lan_known,
             lan_devices,
             speed_cancel,
