@@ -63,7 +63,7 @@ export const speedReach = (url: string): Promise<boolean> => call<boolean>("spee
 export type SpeedOut = { mbps: number | null; note: string }
 
 /** A device seen on the local network. */
-export type LanDevice = { ip: string; mac: string; name: string; self_pc: boolean }
+export type LanDevice = { ip: string; mac: string; name: string; self_pc: boolean; protected: boolean }
 
 /** Who is on this network. Scans the subnet and reads the neighbour table. */
 export const lanKnown = (): Promise<LanDevice[]> => call<LanDevice[]>("lan_known")

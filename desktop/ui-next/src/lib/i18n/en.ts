@@ -212,6 +212,7 @@ export const en = {
   "netLimitApply": "Apply",
   "netLimitRemove": "Remove cap",
   "netThisPc": "This PC",
+  "netProtected": "Protected",
   "netRemove": "Remove",
   "netStateBlocked": "Blocked",
   "netStateCapped": "Capped",

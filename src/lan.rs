@@ -21,6 +21,8 @@ pub struct Device {
     /// True for the machine the app is running on, so its row can be labelled
     /// instead of leaving the user to work it out.
     pub self_pc: bool,
+    /// On the never-touch list: the engine will refuse to redirect it.
+    pub protected: bool,
 }
 
 #[cfg(windows)]
@@ -145,7 +147,7 @@ pub fn known() -> Vec<Device> {
         if !keep(&ip, &mac) {
             continue;
         }
-        out.push(Device { ip, mac, name: String::from("-"), self_pc: false });
+        out.push(Device { ip, mac, name: String::from("-"), self_pc: false, protected: false });
     }
     sort_devices(&mut out);
     out
@@ -270,6 +272,7 @@ pub fn scan() -> Vec<Device> {
     let table = arp_table();
     let announced_by_mac = crate::dhcp_names::cached();
     let probed = probe_cache();
+    let protect = crate::lan_ctrl::protected_macs();
     let mut out: Vec<Device> = Vec::new();
     let results = found.lock().map(|g| g.clone()).unwrap_or_default();
     for (ip, alive, _name) in results {
@@ -287,6 +290,7 @@ pub fn scan() -> Vec<Device> {
             .or_else(|| announced_by_mac.get(&mac).cloned())
             .unwrap_or_default();
         out.push(Device {
+            protected: protect.contains(&mac),
             ip,
             mac,
             name: if resolved.is_empty() { String::from("-") } else { resolved },
@@ -304,6 +308,7 @@ pub fn scan() -> Vec<Device> {
         mac: me_mac,
         name: host,
         self_pc: true,
+        protected: true,
     });
 
     sort_devices(&mut out);

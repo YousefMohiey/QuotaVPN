@@ -215,6 +215,7 @@ export const ar = {
   "netLimitApply": "تطبيق",
   "netLimitRemove": "إزالة الحد",
   "netThisPc": "هذا الجهاز",
+  "netProtected": "محمي",
   "netRemove": "إزالة",
   "netStateBlocked": "محجوب",
   "netStateCapped": "محدود",

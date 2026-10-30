@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Ban, Gauge, Loader2, Monitor, RefreshCw, Wifi, X } from "lucide-react"
+import { Ban, Gauge, Loader2, Lock, Monitor, RefreshCw, Wifi, X } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
 import { api, type LanDevice, type LanStatus } from "@/lib/ipc"
 import { cn } from "@/lib/utils"
@@ -179,6 +179,12 @@ export function Network() {
                             {t("netThisPc")}
                           </span>
                         ) : null}
+                        {d.protected && !d.self_pc ? (
+                          <span className="flex shrink-0 items-center gap-1 rounded-[5px] border border-line px-1.5 py-[1px] text-[10.5px] font-medium text-txt3">
+                            <Lock className="size-2.5" aria-hidden />
+                            {t("netProtected")}
+                          </span>
+                        ) : null}
                         {state === "blocked" ? (
                           <span className="shrink-0 rounded-[5px] border border-[var(--red)]/45 bg-[var(--red)]/10 px-1.5 py-[1px] text-[10.5px] font-medium text-[var(--red)]">
                             {t("netStateBlocked")}
@@ -200,8 +206,9 @@ export function Network() {
                     <button
                       type="button"
                       onClick={() => setLimitFor(d)}
+                      disabled={d.protected}
                       className={cn(
-                        "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors",
+                        "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors disabled:cursor-not-allowed disabled:opacity-40",
                         state === "capped"
                           ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-[var(--brand)]"
                           : "border-line bg-white/[0.02] text-txt2 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] hover:text-txt",
@@ -213,8 +220,9 @@ export function Network() {
                     <button
                       type="button"
                       onClick={() => void toggleBlock(d)}
+                      disabled={d.protected}
                       className={cn(
-                        "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors",
+                        "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors disabled:cursor-not-allowed disabled:opacity-40",
                         state === "blocked"
                           ? "border-[var(--red)]/50 bg-[var(--red)]/10 text-[var(--red)]"
                           : "border-line bg-white/[0.02] text-txt2 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] hover:text-txt",

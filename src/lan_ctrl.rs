@@ -23,6 +23,23 @@ pub struct Wire {
     pub gateway_mac: String,
 }
 
+/// Devices the user never wants touched: their own PC, a console, anything that
+/// must stay online. The list lives in a file so it survives updates, and the
+/// engine refuses to redirect a device on it even if the UI asks.
+pub fn protected_macs() -> Vec<String> {
+    let base = std::env::var("LOCALAPPDATA")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| std::path::PathBuf::from("."));
+    let path = base.join("quotavpn").join("lan_protect.txt");
+    let Ok(text) = std::fs::read_to_string(path) else {
+        return Vec::new();
+    };
+    text.lines()
+        .map(|l| l.trim().replace('-', ":").to_lowercase())
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .collect()
+}
+
 /// A block that outlives the moment it was set is a network outage, so every
 /// session has a deadline and a written note of what it changed.
 fn journal_path() -> std::path::PathBuf {
@@ -305,6 +322,9 @@ pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> 
     }
     if target_mac.is_empty() {
         return Err("target mac unknown".into());
+    }
+    if protected_macs().iter().any(|m| *m == target_mac) {
+        return Err("refuse: protected".into());
     }
     let stop = Arc::new(AtomicBool::new(false));
     let blocked_flag = Arc::new(AtomicBool::new(blocked));
