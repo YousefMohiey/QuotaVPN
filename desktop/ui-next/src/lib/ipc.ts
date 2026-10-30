@@ -62,6 +62,12 @@ export const speedReach = (url: string): Promise<boolean> => call<boolean>("spee
 /** Result of one throughput measurement: Mbps, or why it measured nothing. */
 export type SpeedOut = { mbps: number | null; note: string }
 
+/** A device seen on the local network. */
+export type LanDevice = { ip: string; mac: string; name: string }
+
+/** Who is on this network. Scans the subnet and reads the neighbour table. */
+export const lanDevices = (): Promise<LanDevice[]> => call<LanDevice[]>("lan_devices")
+
 /** Really stop a measurement: kills the cli and ends the built-in loops. */
 export const speedCancel = (): Promise<boolean> => call<boolean>("speed_cancel")
 
@@ -126,6 +132,7 @@ async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
 
 export const api = {
   state: () => call<UiState>("get_state"),
+  lanDevices: (): Promise<LanDevice[]> => call<LanDevice[]>("lan_devices"),
   probeServer: () => call<CmdResult>("probe_server"),
   generateCard: (name: string, kind: string, sni: string) =>
     call<CmdResult>("generate_card", { name, kind, sni }),

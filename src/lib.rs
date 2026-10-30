@@ -1,5 +1,6 @@
 //! QuotaCards library surface (used by the app and the smoke example).
 pub mod config;
+pub mod lan;
 pub mod server;
 pub mod ssh;
 pub mod updater;

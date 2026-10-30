@@ -1,12 +1,12 @@
 import { AnimatePresence, motion } from "motion/react"
-import { ArrowDownToLine, Gauge, History as HistoryIcon, Home as HomeIcon, Settings as SettingsIcon } from "lucide-react"
+import { ArrowDownToLine, Gauge, History as HistoryIcon, Home as HomeIcon, Settings as SettingsIcon, Wifi } from "lucide-react"
 import type { ComponentType } from "react"
 import { ValorantMark } from "@/components/ValorantMark"
 import { cn } from "@/lib/utils"
 import { useI18n, type StrKey } from "@/lib/i18n"
 import { useApp } from "@/state/app"
 
-export type Tab = "home" | "speed" | "voice" | "history" | "result" | "apps" | "settings"
+export type Tab = "home" | "speed" | "voice" | "history" | "result" | "apps" | "network" | "settings"
 
 const EASE_OUT = [0.1, 0.9, 0.2, 1] as const
 
@@ -14,6 +14,7 @@ const PRIMARY: Array<{ id: Tab; icon: ComponentType<{ className?: string; stroke
   { id: "home", icon: HomeIcon, key: "tabHome" },
   { id: "voice", icon: ValorantMark, key: "tabVoice" },
   { id: "speed", icon: Gauge, key: "tabSpeed" },
+  { id: "network", icon: Wifi, key: "tabNetwork" },
   { id: "history", icon: HistoryIcon, key: "history" },
 ]
 

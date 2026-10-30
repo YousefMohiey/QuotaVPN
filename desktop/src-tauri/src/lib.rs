@@ -1642,6 +1642,14 @@ async fn speed_up(
 /// Whether the bundled official client is fetched and runnable. The first
 /// call downloads it once and caches it under the app data dir.
 /// Stop whatever is measuring: the cli process and the built-in loops.
+/// Who is on this network: ip, mac and a name when the system resolves one.
+#[tauri::command]
+async fn lan_devices() -> Vec<quotacards::lan::Device> {
+    tauri::async_runtime::spawn_blocking(quotacards::lan::scan)
+        .await
+        .unwrap_or_default()
+}
+
 #[tauri::command]
 async fn speed_cancel() -> bool {
     speed::CANCELLED.store(true, std::sync::atomic::Ordering::Relaxed);
@@ -2275,6 +2283,7 @@ pub fn run() {
             net_info,
             app_icons,
             speed_servers,
+            lan_devices,
             speed_cancel,
             speed_latency,
             speed_reach,

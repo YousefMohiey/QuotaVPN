@@ -8,6 +8,7 @@ import { QuotaToast } from "@/components/QuotaToast"
 import { closeTopOverlay } from "@/lib/navStack"
 import { Home } from "@/screens/Home"
 import { Speed } from "@/screens/Speed"
+import { Network } from "@/screens/Network"
 import { Voice } from "@/screens/Voice"
 import { SpeedHistory } from "@/screens/SpeedHistory"
 import { SpeedResult } from "@/screens/SpeedResult"
@@ -148,6 +149,7 @@ export default function App() {
       "1": "home",
       "2": "voice",
       "3": "speed",
+      "6": "network",
       "4": "history",
       "5": "settings",
     }
@@ -235,6 +237,7 @@ export default function App() {
               >
                 {tab === "home" && <Home onOpenApps={() => go("apps")} />}
                 {tab === "speed" && <Speed />}
+                {tab === "network" && <Network />}
                 {tab === "voice" && <Voice />}
                 {tab === "history" && <SpeedHistory onOpenResult={openResult} />}
                 {tab === "result" && <SpeedResult runAt={resultAt} onBack={back} />}
