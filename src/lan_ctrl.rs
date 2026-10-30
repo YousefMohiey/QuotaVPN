@@ -558,6 +558,42 @@ fn note_attacker(mac: &str, ip: &str) {
     }
 }
 
+/// Read one frame and decide whether it is someone claiming an address that is
+/// not theirs. Returns the claimed address and the machine that claimed it.
+fn arp_claim(
+    f: &[u8],
+    our_mac: [u8; 6],
+    gw_mac: [u8; 6],
+    gw_ip: [u8; 4],
+    our_ip: [u8; 4],
+) -> Option<(String, String)> {
+    if f.len() < 42 || f[12] != 0x08 || f[13] != 0x06 {
+        return None;
+    }
+    // ARP replies only: those are what poison a cache.
+    if f[21] != 2 {
+        return None;
+    }
+    let sender_mac = &f[22..28];
+    let sender_ip = &f[28..32];
+    // Our own redirection sends the same kind of frame, so ignore our address.
+    if sender_mac == our_mac {
+        return None;
+    }
+    let mac = sender_mac
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<Vec<_>>()
+        .join(":");
+    if sender_ip == gw_ip && sender_mac != gw_mac {
+        return Some((mac, String::from("gateway")));
+    }
+    if sender_ip == our_ip && sender_mac != our_mac {
+        return Some((mac, String::from("this pc")));
+    }
+    None
+}
+
 /// Watch the wire for a machine pretending to be the gateway, or pretending to
 /// be us. Runs for as long as the app is open.
 pub fn start_guard() {
@@ -577,27 +613,53 @@ pub fn start_guard() {
             if f.len() < 42 || f[12] != 0x08 || f[13] != 0x06 {
                 continue;
             }
-            // ARP replies only: those are what poison a cache.
-            if f[21] != 2 {
-                continue;
-            }
-            let sender_mac = &f[22..28];
-            let sender_ip = &f[28..32];
-            let mac_str = sender_mac
-                .iter()
-                .map(|b| format!("{b:02x}"))
-                .collect::<Vec<_>>()
-                .join(":");
-            // Our own redirection sends the same kind of frame, so ignore
-            // anything carrying our own address.
-            if sender_mac == our_mac {
-                continue;
-            }
-            if sender_ip == gw_ip && sender_mac != gw_mac {
-                note_attacker(&mac_str, &w.gateway_ip);
-            } else if sender_ip == our_ip && sender_mac != our_mac {
-                note_attacker(&mac_str, &w.ip);
+            if let Some((mac, ip)) = arp_claim(&f, our_mac, gw_mac, gw_ip, our_ip) {
+                note_attacker(&mac, &ip);
             }
         }
     });
+}
+
+#[cfg(test)]
+mod guard_tests {
+    use super::*;
+
+    fn frame(sender_mac: [u8; 6], sender_ip: [u8; 4]) -> Vec<u8> {
+        let mut f = vec![0u8; 42];
+        f[12] = 0x08;
+        f[13] = 0x06;
+        f[21] = 2; // reply
+        f[22..28].copy_from_slice(&sender_mac);
+        f[28..32].copy_from_slice(&sender_ip);
+        f
+    }
+
+    const US: [u8; 6] = [0x9c, 0x69, 0xd3, 0x4c, 0x30, 0xc8];
+    const GW: [u8; 6] = [0xf0, 0xa9, 0x51, 0xc1, 0xeb, 0xda];
+    const GW_IP: [u8; 4] = [192, 168, 1, 1];
+    const US_IP: [u8; 4] = [192, 168, 1, 2];
+
+    #[test]
+    fn a_stranger_claiming_the_gateway_is_caught() {
+        let evil = [0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff];
+        let hit = arp_claim(&frame(evil, GW_IP), US, GW, GW_IP, US_IP);
+        assert_eq!(hit.map(|(m, _)| m), Some(String::from("aa:bb:cc:dd:ee:ff")));
+    }
+
+    #[test]
+    fn the_real_gateway_is_not_an_attack() {
+        assert!(arp_claim(&frame(GW, GW_IP), US, GW, GW_IP, US_IP).is_none());
+    }
+
+    #[test]
+    fn our_own_redirection_is_not_an_attack() {
+        // When this app redirects someone it sends exactly this frame.
+        assert!(arp_claim(&frame(US, GW_IP), US, GW, GW_IP, US_IP).is_none());
+    }
+
+    #[test]
+    fn a_stranger_claiming_to_be_this_pc_is_caught() {
+        let evil = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66];
+        assert!(arp_claim(&frame(evil, US_IP), US, GW, GW_IP, US_IP).is_some());
+    }
 }
