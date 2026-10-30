@@ -25,8 +25,11 @@ pub struct pcap_if_t {
 
 #[repr(C)]
 pub struct pcap_pkthdr {
-    pub ts_sec: i64,
-    pub ts_usec: i64,
+    // Windows timeval uses 32-bit longs, so this struct is 16 bytes, not 24.
+    // Reading it as 64-bit put caplen at the wrong offset and the length read
+    // came back as garbage, which is what crashed the app.
+    pub ts_sec: i32,
+    pub ts_usec: i32,
     pub caplen: c_uint,
     pub len: c_uint,
 }
@@ -179,7 +182,10 @@ impl Capture {
         if rc != 1 || data.is_null() || hdr.is_null() {
             return None;
         }
-        let len = unsafe { (*hdr).caplen } as usize;
+        let len = (unsafe { (*hdr).caplen } as usize).min(65_535);
+        if len == 0 {
+            return None;
+        }
         Some(unsafe { std::slice::from_raw_parts(data, len) }.to_vec())
     }
 }
