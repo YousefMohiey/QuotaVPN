@@ -2293,7 +2293,10 @@ pub fn run() {
         let started = std::time::Instant::now();
         let devices = quotacards::lan::scan();
         for d in &devices {
-            println!("{:<16} {:<18} {}", d.ip, d.mac, d.name);
+            // The same label the app shows, including the port fingerprint.
+            let kind = quotacards::fingerprint::kind(&d.ip);
+            let label = quotacards::fingerprint::describe(&d.mac, &d.ip, &d.name, kind);
+            println!("{:<16} {:<18} {}  [{}]", d.ip, d.mac, label, kind.unwrap_or("-"));
         }
         println!("LAN_PROBE {} devices in {} ms", devices.len(), started.elapsed().as_millis());
         return;

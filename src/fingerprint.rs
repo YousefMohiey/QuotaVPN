@@ -14,39 +14,53 @@ use std::time::Duration;
 /// every network tool uses, and it turns three bytes of an address into a name.
 const MANUF: &str = include_str!("../assets/manuf.txt");
 
-fn table() -> &'static HashMap<u32, String> {
-    static TABLE: OnceLock<HashMap<u32, String>> = OnceLock::new();
+type Blocks = (HashMap<u32, String>, HashMap<u64, String>);
+
+fn table() -> &'static Blocks {
+    static TABLE: OnceLock<Blocks> = OnceLock::new();
     TABLE.get_or_init(|| {
-        let mut map = HashMap::new();
+        let mut by3: HashMap<u32, String> = HashMap::new();
+        let mut by6: HashMap<u64, String> = HashMap::new();
         for line in MANUF.lines() {
             if line.starts_with('#') || line.is_empty() {
                 continue;
             }
             let mut parts = line.split('\t');
             let Some(prefix) = parts.next() else { continue };
-            let Some(name) = parts.next() else { continue };
-            // Only whole three-byte blocks: a subdivided range would need the
-            // full six bytes to be right, and guessing would be worse than "-".
-            let octets: Vec<&str> = prefix.split(':').collect();
-            if octets.len() != 3 {
+            let short = parts.next().unwrap_or("");
+            // The long name is the readable one; the short name is truncated
+            // to ten characters and reads badly in a list.
+            let long = parts.next().unwrap_or("");
+            let name = if long.trim().is_empty() { short } else { long };
+            if name.trim().is_empty() {
                 continue;
             }
-            let mut key: u32 = 0;
+            let octets: Vec<&str> = prefix.split(':').collect();
+            let mut value: u64 = 0;
             let mut ok = true;
-            for o in octets {
-                match u32::from_str_radix(o, 16) {
-                    Ok(v) => key = (key << 8) | v,
+            for o in &octets {
+                match u64::from_str_radix(o, 16) {
+                    Ok(v) => value = (value << 8) | v,
                     Err(_) => {
                         ok = false;
                         break;
                     }
                 }
             }
-            if ok {
-                map.insert(key, tidy(name));
+            if !ok {
+                continue;
+            }
+            match octets.len() {
+                3 => {
+                    by3.insert(value as u32, tidy(name));
+                }
+                6 => {
+                    by6.insert(value, tidy(name));
+                }
+                _ => {}
             }
         }
-        map
+        (by3, by6)
     })
 }
 
@@ -57,11 +71,16 @@ pub fn vendor(mac: &str) -> Option<String> {
     if octets.len() != 6 {
         return None;
     }
-    let mut key: u32 = 0;
-    for o in &octets[..3] {
-        key = (key << 8) | u32::from_str_radix(o, 16).ok()?;
+    let mut key: u64 = 0;
+    for o in &octets {
+        key = (key << 8) | u64::from_str_radix(o, 16).ok()?;
     }
-    table().get(&key).cloned()
+    let (by3, by6) = table();
+    // A subdivided block is more specific than the three-byte one.
+    if let Some(name) = by6.get(&key) {
+        return Some(name.clone());
+    }
+    by3.get(&((key >> 24) as u32)).cloned()
 }
 
 /// OUI entries are written in capitals and often end with a legal suffix.
