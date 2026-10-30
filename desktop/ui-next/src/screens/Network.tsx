@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react"
-import { Loader2, RefreshCw, Wifi } from "lucide-react"
+import { Ban, Loader2, RefreshCw, Wifi } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
 import { api, type LanDevice } from "@/lib/ipc"
+import { cn } from "@/lib/utils"
 
 /** Who is on this network, as the machine can see it without a driver. */
 export function Network() {
@@ -9,6 +10,8 @@ export function Network() {
   const [devices, setDevices] = useState<LanDevice[]>([])
   const [busy, setBusy] = useState(true)
   const [failed, setFailed] = useState(false)
+  const [blockedIp, setBlockedIp] = useState<string | null>(null)
+  const [err, setErr] = useState("")
 
   const scan = useCallback(async () => {
     setBusy(true)
@@ -25,6 +28,23 @@ export function Network() {
 
   // What the machine already knows shows at once; the sweep fills the rest in
   // behind it, so the screen is never a spinner with nothing to read.
+  // One device at a time is redirected; the app keeps that state here so the
+  // row can show which one is currently cut off.
+  const toggleBlock = async (ip: string) => {
+    setErr("")
+    try {
+      if (blockedIp === ip) {
+        await api.lanStop()
+        setBlockedIp(null)
+        return
+      }
+      await api.lanStart(ip, true)
+      setBlockedIp(ip)
+    } catch (e) {
+      setErr(String(e))
+    }
+  }
+
   useEffect(() => {
     let alive = true
     void api
@@ -63,6 +83,11 @@ export function Network() {
           </button>
         </div>
 
+        {err ? (
+          <div className="shrink-0 border-b border-line bg-[var(--red)]/10 px-5 py-2 text-[12px] text-[var(--red)]" dir="auto">
+            {err}
+          </div>
+        ) : null}
         <div className="min-h-0 flex-1 overflow-y-auto">
           {busy && devices.length === 0 ? (
             <div className="grid h-full place-items-center text-[13px] text-txt3">{t("netScanning")}</div>
@@ -88,9 +113,22 @@ export function Network() {
                       {d.ip}
                     </span>
                   </span>
-                  <span className="shrink-0 font-mono text-[12px] uppercase text-txt2" dir="ltr">
+                  <span className="hidden shrink-0 font-mono text-[12px] uppercase text-txt3 sm:block" dir="ltr">
                     {d.mac}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => void toggleBlock(d.ip)}
+                    className={cn(
+                      "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors",
+                      blockedIp === d.ip
+                        ? "border-[var(--red)]/50 bg-[var(--red)]/10 text-[var(--red)]"
+                        : "border-line bg-white/[0.02] text-txt2 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] hover:text-txt",
+                    )}
+                  >
+                    <Ban className="size-3.5" aria-hidden />
+                    {blockedIp === d.ip ? t("netUnblock") : t("netBlock")}
+                  </button>
                 </li>
               ))}
             </ul>

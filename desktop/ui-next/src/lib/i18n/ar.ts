@@ -206,6 +206,8 @@ export const ar = {
   "netTitle": "الأجهزة على هذه الشبكة",
   "netSub": "كل ما تراه الحاسبة على شبكتك",
   "netRefresh": "تحديث",
+  "netBlock": "حجب",
+  "netUnblock": "إلغاء الحجب",
   "netScanning": "جارٍ الفحص",
   "netEmpty": "لم يستجب أي جهاز",
   "netFail": "فشل الفحص",

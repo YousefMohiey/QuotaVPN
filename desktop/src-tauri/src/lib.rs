@@ -1642,6 +1642,48 @@ async fn speed_up(
 /// Whether the bundled official client is fetched and runnable. The first
 /// call downloads it once and caches it under the app data dir.
 /// Stop whatever is measuring: the cli process and the built-in loops.
+/// The wire this machine sits on: adapter, mac, gateway.
+#[tauri::command]
+async fn lan_wire() -> Option<quotacards::lan_ctrl::Wire> {
+    tauri::async_runtime::spawn_blocking(quotacards::lan_ctrl::wire).await.ok().flatten()
+}
+
+/// Start standing between one device and the router. One at a time: two
+/// poisoned devices on the same wire fight over the same forwarding loop.
+#[tauri::command]
+async fn lan_start(
+    state: tauri::State<'_, LanState>,
+    ip: String,
+    blocked: bool,
+) -> Result<bool, String> {
+    let previous = {
+        let mut guard = state.0.lock().map_err(|_| "state".to_string())?;
+        guard.take()
+    };
+    if let Some(s) = previous {
+        let _ = tauri::async_runtime::spawn_blocking(move || s.stop()).await;
+    }
+    let session = tauri::async_runtime::spawn_blocking(move || quotacards::lan_ctrl::start(&ip, blocked))
+        .await
+        .map_err(|e| e.to_string())??;
+    let mut guard = state.0.lock().map_err(|_| "state".to_string())?;
+    *guard = Some(session);
+    Ok(true)
+}
+
+/// Stop redirecting and hand the network back.
+#[tauri::command]
+async fn lan_stop(state: tauri::State<'_, LanState>) -> bool {
+    let session = {
+        let Ok(mut guard) = state.0.lock() else { return false };
+        guard.take()
+    };
+    if let Some(s) = session {
+        let _ = tauri::async_runtime::spawn_blocking(move || s.stop()).await;
+    }
+    true
+}
+
 /// Whether the packet driver the control layer needs is installed.
 #[tauri::command]
 async fn npcap_ready() -> bool {
@@ -2081,6 +2123,9 @@ fn set_webview_memory_low(app: &tauri::AppHandle, low: bool) {
     });
 }
 
+/// The one redirection that may be active at a time.
+pub struct LanState(pub std::sync::Mutex<Option<quotacards::lan_ctrl::Session>>);
+
 pub fn run() {
     // Headless self-test for the WE quota flow, and a diagnostic the owner
     // can run on any PC: QC_WE_NUMBER and QC_WE_PASS in the environment,
@@ -2174,6 +2219,7 @@ pub fn run() {
         .manage(State(Mutex::new(AppConfig::default())))
         .manage(Engine(Mutex::new(None)))
         .manage(we_quota::WeQuota::new())
+        .manage(LanState(std::sync::Mutex::new(None)))
         .setup(|app| {
             // Same OS config dir as the previous desktop app: cards carry
             // over, nothing to re-enter. (No chdir - that is phone-only.)
@@ -2319,6 +2365,9 @@ pub fn run() {
             app_icons,
             speed_servers,
             npcap_ready,
+            lan_wire,
+            lan_start,
+            lan_stop,
             lan_known,
             lan_devices,
             speed_cancel,

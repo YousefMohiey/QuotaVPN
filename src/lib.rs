@@ -1,6 +1,7 @@
 //! QuotaCards library surface (used by the app and the smoke example).
 pub mod config;
 pub mod lan;
+pub mod lan_ctrl;
 pub mod lan_names;
 #[cfg(target_os = "windows")]
 pub mod wpcap;

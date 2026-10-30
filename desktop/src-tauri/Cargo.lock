@@ -4372,6 +4372,7 @@ dependencies = [
  "ssh-key 0.6.7",
  "tokio",
  "uuid",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

@@ -203,6 +203,8 @@ export const en = {
   "netTitle": "Devices on this network",
   "netSub": "Everything the machine can see on your subnet",
   "netRefresh": "Refresh",
+  "netBlock": "Block",
+  "netUnblock": "Unblock",
   "netScanning": "Scanning",
   "netEmpty": "No devices answered",
   "netFail": "The scan failed",

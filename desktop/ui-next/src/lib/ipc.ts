@@ -68,6 +68,15 @@ export type LanDevice = { ip: string; mac: string; name: string }
 /** Who is on this network. Scans the subnet and reads the neighbour table. */
 export const lanKnown = (): Promise<LanDevice[]> => call<LanDevice[]>("lan_known")
 
+/** The wire this machine sits on, or null when the driver is missing. */
+export type LanWire = { device: string; adapter: string; mac: string; ip: string; gateway_ip: string; gateway_mac: string }
+export const lanWire = (): Promise<LanWire | null> => call<LanWire | null>("lan_wire")
+
+export const lanStart = (ip: string, blocked: boolean): Promise<boolean> =>
+  call<boolean>("lan_start", { ip, blocked })
+
+export const lanStop = (): Promise<boolean> => call<boolean>("lan_stop")
+
 export const lanDevices = (): Promise<LanDevice[]> => call<LanDevice[]>("lan_devices")
 
 /** Really stop a measurement: kills the cli and ends the built-in loops. */
@@ -135,6 +144,9 @@ async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
 export const api = {
   state: () => call<UiState>("get_state"),
   lanKnown: (): Promise<LanDevice[]> => call<LanDevice[]>("lan_known"),
+  lanWire: (): Promise<LanWire | null> => call<LanWire | null>("lan_wire"),
+  lanStart: (ip: string, blocked: boolean): Promise<boolean> => call<boolean>("lan_start", { ip, blocked }),
+  lanStop: (): Promise<boolean> => call<boolean>("lan_stop"),
   lanDevices: (): Promise<LanDevice[]> => call<LanDevice[]>("lan_devices"),
   probeServer: () => call<CmdResult>("probe_server"),
   generateCard: (name: string, kind: string, sni: string) =>
