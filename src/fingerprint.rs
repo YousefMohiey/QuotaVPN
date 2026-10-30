@@ -5,63 +5,40 @@
 //! made the thing, and what kind of thing it is. A person reading "Vivo, phone"
 //! knows which row is their phone; a row of dashes tells them nothing.
 
-use std::collections::HashMap;
 use std::net::{IpAddr, SocketAddr, TcpStream};
-use std::sync::OnceLock;
 use std::time::Duration;
 
-/// The Wireshark manufacturer table, shipped with the app. It is the same list
-/// every network tool uses, and it turns three bytes of an address into a name.
-const MANUF: &str = include_str!("../assets/manuf.txt");
+/// The IEEE manufacturer register, shipped with the app as a compact table:
+/// a sorted list of the three-byte blocks and one blob of names. No network
+/// call, no download, and it works with the app offline.
+const OUI: &[u8] = include_bytes!("../assets/oui.bin");
 
-type Blocks = (HashMap<u32, String>, HashMap<u64, String>);
+fn read_u32(at: usize) -> u32 {
+    u32::from_le_bytes([OUI[at], OUI[at + 1], OUI[at + 2], OUI[at + 3]])
+}
 
-fn table() -> &'static Blocks {
-    static TABLE: OnceLock<Blocks> = OnceLock::new();
-    TABLE.get_or_init(|| {
-        let mut by3: HashMap<u32, String> = HashMap::new();
-        let mut by6: HashMap<u64, String> = HashMap::new();
-        for line in MANUF.lines() {
-            if line.starts_with('#') || line.is_empty() {
-                continue;
-            }
-            let mut parts = line.split('\t');
-            let Some(prefix) = parts.next() else { continue };
-            let short = parts.next().unwrap_or("");
-            // The long name is the readable one; the short name is truncated
-            // to ten characters and reads badly in a list.
-            let long = parts.next().unwrap_or("");
-            let name = if long.trim().is_empty() { short } else { long };
-            if name.trim().is_empty() {
-                continue;
-            }
-            let octets: Vec<&str> = prefix.split(':').collect();
-            let mut value: u64 = 0;
-            let mut ok = true;
-            for o in &octets {
-                match u64::from_str_radix(o, 16) {
-                    Ok(v) => value = (value << 8) | v,
-                    Err(_) => {
-                        ok = false;
-                        break;
-                    }
-                }
-            }
-            if !ok {
-                continue;
-            }
-            match octets.len() {
-                3 => {
-                    by3.insert(value as u32, tidy(name));
-                }
-                6 => {
-                    by6.insert(value, tidy(name));
-                }
-                _ => {}
-            }
+/// Binary search over the sorted block list.
+fn lookup_block(block: u32) -> Option<&'static str> {
+    let count = read_u32(0) as usize;
+    let mut lo = 0usize;
+    let mut hi = count;
+    while lo < hi {
+        let mid = (lo + hi) / 2;
+        let base = 4 + mid * 8;
+        let key = read_u32(base);
+        if key == block {
+            let offset = read_u32(base + 4) as usize;
+            let start = 4 + count * 8 + offset;
+            let len = OUI[start..].iter().position(|b| *b == 0)?;
+            return std::str::from_utf8(&OUI[start..start + len]).ok();
         }
-        (by3, by6)
-    })
+        if key < block {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    None
 }
 
 /// The manufacturer, from the hardware address, when the address is real.
@@ -71,16 +48,11 @@ pub fn vendor(mac: &str) -> Option<String> {
     if octets.len() != 6 {
         return None;
     }
-    let mut key: u64 = 0;
-    for o in &octets {
-        key = (key << 8) | u64::from_str_radix(o, 16).ok()?;
+    let mut key: u32 = 0;
+    for o in &octets[..3] {
+        key = (key << 8) | u32::from_str_radix(o, 16).ok()?;
     }
-    let (by3, by6) = table();
-    // A subdivided block is more specific than the three-byte one.
-    if let Some(name) = by6.get(&key) {
-        return Some(name.clone());
-    }
-    by3.get(&((key >> 24) as u32)).cloned()
+    lookup_block(key).map(tidy)
 }
 
 /// OUI entries are written in capitals and often end with a legal suffix.
@@ -153,6 +125,18 @@ pub fn kind(ip: &str) -> Option<&'static str> {
     None
 }
 
+/// A label from the two things a scan already knows: the hardware address and
+/// the time-to-live of the reply. No extra packets, no waiting.
+pub fn describe_ttl(mac: &str, ttl: u32) -> String {
+    let kind = match ttl {
+        0 => None,
+        1..=64 => Some("unix"),
+        65..=127 => Some("device"),
+        _ => Some("windows"),
+    };
+    describe(mac, "", "", kind)
+}
+
 /// The line a row shows when there is no name: who made it, and what it is.
 pub fn describe(mac: &str, ip: &str, name: &str, kind: Option<&str>) -> String {
     if !name.is_empty() && name != "-" && name != "private" {
@@ -166,6 +150,8 @@ pub fn describe(mac: &str, ip: &str, name: &str, kind: Option<&str>) -> String {
         "camera" => "camera",
         "tv" => "tv",
         "linux" => "linux device",
+        "unix" => "device",
+        "windows" => "windows pc",
         _ => "device",
     });
     match (maker, what) {

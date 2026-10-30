@@ -129,7 +129,16 @@ fn wake(ip: String) -> (String, bool, String) {
         Err(_) => return (ip, false, String::new()),
     };
     let alive = out.contains("TTL=") || out.contains("TTL =");
-    (ip, alive, String::new())
+    // The reply's time-to-live is a free hint at the operating system: Windows
+    // starts at 128, phones and Unix at 64.
+    let ttl = out
+        .split("TTL=")
+        .nth(1)
+        .or_else(|| out.split("TTL =").nth(1))
+        .and_then(|rest| rest.trim().split(|c: char| !c.is_ascii_digit()).next())
+        .and_then(|v| v.parse::<u32>().ok())
+        .unwrap_or(0);
+    (ip, alive, format!("{ttl}"))
 }
 
 #[cfg(not(windows))]
@@ -309,7 +318,7 @@ pub fn scan() -> Vec<Device> {
     let probed = probe_cache();
     let mut out: Vec<Device> = Vec::new();
     let results = found.lock().map(|g| g.clone()).unwrap_or_default();
-    for (ip, alive, _name) in results {
+    for (ip, alive, ttl) in results {
         let mac = table.get(&ip).cloned().unwrap_or_default();
         if !keep(&ip, &mac) {
             continue;
@@ -325,10 +334,11 @@ pub fn scan() -> Vec<Device> {
             .unwrap_or_default();
         // A name if one exists, otherwise the most useful true thing: who made
         // it, and (from the background pass) what kind of device it is.
+        let ttl: u32 = ttl.parse().unwrap_or(0);
         let label = if usable_name(&resolved) {
             resolved
         } else {
-            crate::fingerprint::describe(&mac, &ip, "", None)
+            crate::fingerprint::describe_ttl(&mac, ttl)
         };
         out.push(Device {
             ip,
