@@ -23,7 +23,7 @@ tauri-plugin-single-instance = "2"
 # Exit-address lookup for the speed page. In Rust so no webview policy,
 # CORS rule or fetch quirk can block it. Rustls is already in the tree for
 # the updater, so this adds no new TLS stack.
-reqwest = { version = "0.13", default-features = false, features = ["rustls", "json"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "form"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
