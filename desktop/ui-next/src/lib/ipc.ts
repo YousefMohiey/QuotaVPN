@@ -118,6 +118,13 @@ export const lanLimits = (down_kbps: number, up_kbps: number): Promise<boolean> 
 
 export const lanDevices = (): Promise<LanDevice[]> => call<LanDevice[]>("lan_devices")
 
+/** Watch every device at once. Their traffic is counted, never dropped. */
+export const lanMonitorStart = (): Promise<boolean> => call<boolean>("lan_monitor_start")
+export const lanMonitorStop = (): Promise<boolean> => call<boolean>("lan_monitor_stop")
+export const lanMonitorActive = (): Promise<boolean> => call<boolean>("lan_monitor_active")
+export type LanTraffic = { ip: string; up: number; down: number }
+export const lanTraffic = (): Promise<LanTraffic[]> => call<LanTraffic[]>("lan_traffic")
+
 /** Really stop a measurement: kills the cli and ends the built-in loops. */
 export const speedCancel = (): Promise<boolean> => call<boolean>("speed_cancel")
 
@@ -188,6 +195,10 @@ export const api = {
     call<boolean>("lan_start", { ip, mac, blocked }),
   lanStop: (): Promise<boolean> => call<boolean>("lan_stop"),
   lanProtect: (mac: string, on: boolean): Promise<boolean> => call<boolean>("lan_protect", { mac, on }),
+  lanMonitorStart: (): Promise<boolean> => call<boolean>("lan_monitor_start"),
+  lanMonitorStop: (): Promise<boolean> => call<boolean>("lan_monitor_stop"),
+  lanMonitorActive: (): Promise<boolean> => call<boolean>("lan_monitor_active"),
+  lanTraffic: (): Promise<LanTraffic[]> => call<LanTraffic[]>("lan_traffic"),
   lanStatus: (): Promise<LanStatus | null> => call<LanStatus | null>("lan_status"),
   lanGuard: (): Promise<LanGuard> => call<LanGuard>("lan_guard"),
   openPage: (url: string): Promise<boolean> => call<boolean>("open_page", { url }),

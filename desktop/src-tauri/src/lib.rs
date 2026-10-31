@@ -905,6 +905,16 @@ async fn setup_helper() -> Result<CmdResult, String> {
         if vpn::task_installed() {
             return Ok(CmdResult { ok: true, msg: "ready".into() });
         }
+        // The privileged pass says what went wrong as soon as it knows. Waiting
+        // three minutes to report a failure that happened in one second is how
+        // "setting up the tunnel" turned into a hang.
+        let said = vpn::setup_log_tail();
+        if said.contains("task failed") || said.contains("engine failed") {
+            return Ok(CmdResult {
+                ok: false,
+                msg: format!("The tunnel setup did not finish: {said}"),
+            });
+        }
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     }
     // Nothing appeared: say what the privileged pass wrote, not a guess.
@@ -1813,6 +1823,72 @@ async fn lan_devices(
     Ok(list)
 }
 
+
+/// Start watching every device on the network. Their traffic passes through
+/// this machine so it can be counted; nothing is dropped and nothing is slowed.
+#[tauri::command]
+async fn lan_monitor_start(state: tauri::State<'_, MonitorState>) -> Result<bool, String> {
+    {
+        let guard = state.0.lock().map_err(|_| "state".to_string())?;
+        if guard.is_some() {
+            return Ok(true);
+        }
+    }
+    let list = tauri::async_runtime::spawn_blocking(quotacards::lan::scan)
+        .await
+        .unwrap_or_default();
+    let targets: Vec<(String, String)> = list
+        .iter()
+        .filter(|d| !d.self_pc && !d.protected_always && !d.mac.is_empty())
+        .map(|d| (d.ip.clone(), d.mac.clone()))
+        .collect();
+    if targets.is_empty() {
+        return Err("No devices to watch".into());
+    }
+    let session = tauri::async_runtime::spawn_blocking(move || {
+        quotacards::lan_ctrl::start_monitor(targets)
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+    let mut guard = state.0.lock().map_err(|_| "state".to_string())?;
+    *guard = Some(session);
+    Ok(true)
+}
+
+/// Stop watching and hand the network back.
+#[tauri::command]
+fn lan_monitor_stop(state: tauri::State<'_, MonitorState>) -> Result<bool, String> {
+    let taken = {
+        let mut guard = state.0.lock().map_err(|_| "state".to_string())?;
+        guard.take()
+    };
+    if let Some(session) = taken {
+        session.stop();
+    }
+    Ok(true)
+}
+
+/// Whether the whole network is being watched right now.
+#[tauri::command]
+fn lan_monitor_active(state: tauri::State<'_, MonitorState>) -> Result<bool, String> {
+    let guard = state.0.lock().map_err(|_| "state".to_string())?;
+    Ok(guard.is_some())
+}
+
+/// Bytes seen per device since the watch began.
+#[tauri::command]
+fn lan_traffic(state: tauri::State<'_, MonitorState>) -> Result<Vec<TrafficRow>, String> {
+    let guard = state.0.lock().map_err(|_| "state".to_string())?;
+    let Some(session) = guard.as_ref() else {
+        return Ok(Vec::new());
+    };
+    Ok(session
+        .snapshot()
+        .into_iter()
+        .map(|(ip, up, down)| TrafficRow { ip, up, down })
+        .collect())
+}
+
 /// Open a web page in the user's own browser. Used for the one thing the app
 /// cannot install for them.
 #[tauri::command]
@@ -2345,6 +2421,17 @@ pub struct RouterState(pub tokio::sync::Mutex<Option<router_huawei::Session>>);
 /// The one redirection that may be active at a time.
 pub struct LanState(pub std::sync::Mutex<Option<quotacards::lan_ctrl::Session>>);
 
+/// The whole-network watcher, separate from the one-device session above:
+/// watching does not drop or pace anything, and it covers every device at once.
+pub struct MonitorState(pub std::sync::Mutex<Option<quotacards::lan_ctrl::MonitorSession>>);
+
+#[derive(serde::Serialize)]
+pub struct TrafficRow {
+    pub ip: String,
+    pub up: u64,
+    pub down: u64,
+}
+
 pub fn run() {
     // Undo any redirection a previous run failed to clean up: a killed app
     // leaves the router believing this machine is the device it blocked.
@@ -2468,6 +2555,45 @@ pub fn run() {
     // moment the product asks Windows for administrator, once per machine.
     // Answers "does this account already have its helper task", so the
     // installer only asks Windows for administrator when it actually has to.
+    // What the update feed would offer, without a window. Used to prove that
+    // an install left behind for months jumps straight to the newest build
+    // instead of stepping through every release in between.
+    if std::env::args().any(|a| a == "--update-check") {
+        let args: Vec<String> = std::env::args().collect();
+        let flag = |name: &str| -> Option<String> {
+            args.iter()
+                .position(|a| a == name)
+                .and_then(|i| args.get(i + 1))
+                .cloned()
+        };
+        let channel = flag("--channel").unwrap_or_else(|| "normal".to_string());
+        let current = flag("--as-version").unwrap_or_else(|| env!("CARGO_PKG_VERSION").to_string());
+        let stable_feed =
+            "https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/latest.json".to_string();
+        let url = if channel == "experimental" {
+            tauri::async_runtime::block_on(experimental_feed_url()).unwrap_or(stable_feed)
+        } else {
+            stable_feed
+        };
+        let offered = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(15))
+            .user_agent("QuotaVPN")
+            .build()
+            .ok()
+            .and_then(|c| tauri::async_runtime::block_on(async {
+                c.get(&url).send().await.ok()?.text().await.ok()
+            }))
+            .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+            .and_then(|v| v.get("version").and_then(|x| x.as_str()).map(|x| x.to_string()));
+        match offered {
+            Some(v) => {
+                println!("channel={channel} current={current} offered={v} newer={}", newer(&v, &current));
+                println!("feed={url}");
+            }
+            None => println!("channel={channel} current={current} offered=none feed={url}"),
+        }
+        return;
+    }
     if std::env::args().any(|a| a == "--check-helper") {
         std::process::exit(if vpn::task_installed() { 0 } else { 3 });
     }
@@ -2547,6 +2673,7 @@ pub fn run() {
         .manage(Engine(Mutex::new(None)))
         .manage(we_quota::WeQuota::new())
         .manage(LanState(std::sync::Mutex::new(None)))
+        .manage(MonitorState(std::sync::Mutex::new(None)))
         .manage(RouterState(tokio::sync::Mutex::new(None)))
         .setup(|app| {
             // Same OS config dir as the previous desktop app: cards carry
@@ -2700,6 +2827,10 @@ pub fn run() {
             lan_status,
             lan_guard,
             lan_protect,
+            lan_traffic,
+            lan_monitor_active,
+            lan_monitor_stop,
+            lan_monitor_start,
             router_link,
             open_page,
             router_autolink,

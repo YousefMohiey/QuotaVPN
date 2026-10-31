@@ -8,8 +8,9 @@
 
 use crate::wpcap;
 use std::net::UdpSocket;
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 /// What we need to know about the wire we are on.
@@ -558,34 +559,189 @@ pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> 
 /// Undo anything a previous run left behind. Called once at startup: if the
 /// app was killed mid-block, the router still believes this machine is the
 /// device, and that device has no internet until the entry expires.
+
+/// Watching every device at once.
+///
+/// The same trick as a block, applied to the whole list: every device is told
+/// this PC is the gateway and the gateway is told every device is this PC. Then
+/// all their traffic passes here, and counting it is free because it is already
+/// in hand. Nothing is dropped and nothing is paced, so this changes speed not
+/// connectivity.
+pub struct MonitorSession {
+    pub stop: Arc<AtomicBool>,
+    /// Bytes out and in per device address, as they pass.
+    pub bytes: Arc<Mutex<HashMap<String, (u64, u64)>>>,
+    handle: Option<std::thread::JoinHandle<()>>,
+}
+
+impl MonitorSession {
+    pub fn stop(mut self) {
+        self.stop.store(true, Ordering::Relaxed);
+        if let Some(h) = self.handle.take() {
+            let _ = h.join();
+        }
+    }
+
+    pub fn snapshot(&self) -> Vec<(String, u64, u64)> {
+        let map = self.bytes.lock().unwrap();
+        let mut out: Vec<(String, u64, u64)> =
+            map.iter().map(|(ip, (up, down))| (ip.clone(), *up, *down)).collect();
+        out.sort_by(|a, b| a.0.cmp(&b.0));
+        out
+    }
+}
+
+pub fn start_monitor(targets: Vec<(String, String)>) -> Result<MonitorSession, String> {
+    if !wpcap::ready() {
+        return Err("driver".into());
+    }
+    let w = wire().ok_or("no wire")?;
+    // The router and this machine are never watched: their traffic either does
+    // not pass here or would take the network down if it did.
+    let list: Vec<(String, String)> = targets
+        .into_iter()
+        .filter(|(ip, mac)| !mac.is_empty() && ip != &w.ip && ip != &w.gateway_ip)
+        .collect();
+    if list.is_empty() {
+        return Err("nothing to watch".into());
+    }
+
+    let stop = Arc::new(AtomicBool::new(false));
+    let bytes: Arc<Mutex<HashMap<String, (u64, u64)>>> = Arc::new(Mutex::new(HashMap::new()));
+    {
+        let mut map = bytes.lock().unwrap();
+        for (ip, _) in &list {
+            map.insert(ip.clone(), (0, 0));
+        }
+    }
+
+    // Every pair in the journal, so a crash is undone on the next launch.
+    let journal: Vec<String> = list
+        .iter()
+        .map(|(ip, mac)| format!("{ip}|{mac}|{}|{}", w.gateway_ip, w.gateway_mac))
+        .collect();
+    write_journal(&journal.join("
+"));
+
+    let w2 = w.clone();
+    let stop2 = Arc::clone(&stop);
+    let bytes2 = Arc::clone(&bytes);
+    let handle = std::thread::spawn(move || {
+        let Some(Some(cap)) = wpcap::with(|wp| wp.open(&w2.device)) else {
+            return;
+        };
+        let our = mac_bytes(&w2.mac).unwrap_or([0; 6]);
+        let gw = mac_bytes(&w2.gateway_mac).unwrap_or([0xff; 6]);
+        let Some(gip) = ip4(&w2.gateway_ip) else { return };
+
+        // mac, address, and the string the counters are keyed by
+        let mut peers: Vec<([u8; 6], [u8; 4], String)> = Vec::new();
+        for (ip, mac) in &list {
+            if let (Some(m), Some(a)) = (mac_bytes(mac), ip4(ip)) {
+                peers.push((m, a, ip.clone()));
+            }
+        }
+        if peers.is_empty() {
+            return;
+        }
+
+        let mut last_poison = Instant::now() - Duration::from_secs(5);
+        while !stop2.load(Ordering::Relaxed) {
+            if last_poison.elapsed() > Duration::from_millis(900) {
+                last_poison = Instant::now();
+                for (tm, tip, _) in &peers {
+                    let _ = cap.send(&arp_reply(*tm, our, gip, *tm, *tip));
+                    let _ = cap.send(&arp_reply(gw, our, *tip, gw, gip));
+                }
+            }
+
+            let Some(frame) = cap.next() else { continue };
+            if frame.len() < 34 {
+                continue;
+            }
+            if frame[0..6] != our {
+                continue;
+            }
+            if frame[12] != 0x08 || frame[13] != 0x00 {
+                continue;
+            }
+            let src = &frame[6..12];
+            let mut out = frame.clone();
+
+            // Out: a device we are watching sent it.
+            if let Some((_, _, key)) = peers.iter().find(|(m, _, _)| m == src) {
+                out[0..6].copy_from_slice(&gw);
+                out[6..12].copy_from_slice(&our);
+                if cap.send(&out) {
+                    if let Some(entry) = bytes2.lock().unwrap().get_mut(key) {
+                        entry.0 += out.len() as u64;
+                    }
+                }
+                continue;
+            }
+
+            // In: addressed to one of them, which is why it came to us.
+            let dst_ip = [frame[30], frame[31], frame[32], frame[33]];
+            if let Some((tm, _, key)) = peers.iter().find(|(_, a, _)| a == &dst_ip) {
+                out[0..6].copy_from_slice(tm);
+                out[6..12].copy_from_slice(&our);
+                if cap.send(&out) {
+                    if let Some(entry) = bytes2.lock().unwrap().get_mut(key) {
+                        entry.1 += out.len() as u64;
+                    }
+                }
+            }
+        }
+
+        // Hand every table back the way it was found.
+        for _ in 0..4 {
+            for (tm, tip, _) in &peers {
+                let _ = cap.send(&arp_reply(*tm, gw, gip, *tm, *tip));
+                let _ = cap.send(&arp_reply(gw, *tm, *tip, gw, gip));
+            }
+            std::thread::sleep(Duration::from_millis(120));
+        }
+        clear_journal();
+    });
+
+    Ok(MonitorSession { stop, bytes, handle: Some(handle) })
+}
+
 pub fn repair() -> bool {
     let Ok(text) = std::fs::read_to_string(journal_path()) else {
         return false;
     };
-    let parts: Vec<&str> = text.trim().split('|').collect();
-    if parts.len() != 4 {
+    // One line per device: a monitor run poisons the whole list at once, so a
+    // journal that only remembers the first one would leave the rest lying.
+    let mut peers: Vec<([u8; 6], [u8; 6], [u8; 4], [u8; 4])> = Vec::new();
+    for line in text.lines() {
+        let parts: Vec<&str> = line.trim().split('|').collect();
+        if parts.len() != 4 {
+            continue;
+        }
+        let (Some(tm), Some(gw), Some(tip), Some(gip)) = (
+            mac_bytes(parts[1]),
+            mac_bytes(parts[3]),
+            ip4(parts[0]),
+            ip4(parts[2]),
+        ) else {
+            continue;
+        };
+        peers.push((tm, gw, tip, gip));
+    }
+    if peers.is_empty() {
         clear_journal();
         return false;
     }
-    let (target_ip, target_mac, gateway_ip, gateway_mac) = (parts[0], parts[1], parts[2], parts[3]);
     let Some(w) = wire() else { return false };
-    let (Some(tm), Some(gw), Some(tip), Some(gip)) = (
-        mac_bytes(target_mac),
-        mac_bytes(gateway_mac),
-        ip4(target_ip),
-        ip4(gateway_ip),
-    ) else {
-        clear_journal();
-        return false;
-    };
     let Some(Some(cap)) = wpcap::with(|wp| wp.open(&w.device)) else {
         return false;
     };
     for _ in 0..4 {
-        let to_target = arp_reply(tm, gw, gip, tm, tip);
-        let to_gateway = arp_reply(gw, tm, tip, gw, gip);
-        let _ = cap.send(&to_target);
-        let _ = cap.send(&to_gateway);
+        for (tm, gw, tip, gip) in &peers {
+            let _ = cap.send(&arp_reply(*tm, *gw, *gip, *tm, *tip));
+            let _ = cap.send(&arp_reply(*gw, *tm, *tip, *gw, *gip));
+        }
         std::thread::sleep(Duration::from_millis(150));
     }
     clear_journal();

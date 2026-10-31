@@ -270,6 +270,23 @@ fn sort_devices(list: &mut [Device]) {
 }
 
 /// Every device on this subnet, sorted by address.
+/// A device name is a string a stranger chose. Keep what a person can read and
+/// drop the rest: a name carrying control characters or a broken encoding
+/// renders as a row of empty boxes, which tells the user less than the maker
+/// label would.
+fn clean_name(raw: &str) -> String {
+    let kept: String = raw
+        .chars()
+        .filter(|c| c.is_alphanumeric() || matches!(c, ' ' | '-' | '_' | '.' | '(' | ')'))
+        .collect();
+    let kept = kept.trim().trim_matches('.').trim().to_string();
+    if kept.chars().filter(|c| c.is_alphanumeric()).count() < 2 {
+        String::new()
+    } else {
+        kept
+    }
+}
+
 pub fn scan() -> Vec<Device> {
     let Some(local) = local_ipv4() else {
         return Vec::new();
@@ -378,6 +395,20 @@ pub fn scan() -> Vec<Device> {
         protected: false,
         protected_always: false,
     });
+
+    // Names come from strangers: keep the readable part, and fall back to the
+    // maker when nothing readable is left.
+    for d in out.iter_mut() {
+        if d.self_pc {
+            continue;
+        }
+        let cleaned = clean_name(&d.name);
+        if cleaned.is_empty() && d.name != "-" {
+            d.name = String::from("private");
+        } else if !cleaned.is_empty() {
+            d.name = cleaned;
+        }
+    }
 
     sort_devices(&mut out);
     out.dedup_by(|a, b| a.ip == b.ip);

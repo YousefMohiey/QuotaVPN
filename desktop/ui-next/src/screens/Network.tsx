@@ -1,5 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Activity, Ban, Gauge, Info, Loader2, Monitor, RefreshCw, Router, ShieldAlert, ShieldCheck, Wifi, X } from "lucide-react"
+import {
+  Activity,
+  Ban,
+  Gauge,
+  Info,
+  Loader2,
+  Monitor,
+  RefreshCw,
+  Router,
+  ShieldAlert,
+  ShieldCheck,
+  Wifi,
+  X,
+} from "lucide-react"
 import { useI18n } from "@/lib/i18n"
 import { api, type LanDevice, type LanGuard, type LanStatus } from "@/lib/ipc"
 import { cn } from "@/lib/utils"
@@ -13,7 +26,9 @@ function fmtRate(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB/s`
 }
 
-/** Who is on this network, and what is being done to them. */
+type Live = { up: number; down: number }
+
+/** Who is on this network, what they are moving, and what is being done to them. */
 export function Network() {
   const { t } = useI18n()
   const [devices, setDevices] = useState<LanDevice[]>([])
@@ -25,9 +40,11 @@ export function Network() {
   const [guard, setGuard] = useState<LanGuard | null>(null)
   const [routerOpen, setRouterOpen] = useState(false)
   const [routerLinked, setRouterLinked] = useState(false)
-  const [rates, setRates] = useState<{ up: number; down: number } | null>(null)
-  const lastBytes = useRef<{ up: number; down: number; at: number } | null>(null)
   const [driverReady, setDriverReady] = useState<boolean | null>(null)
+  const [watching, setWatching] = useState(false)
+  const [watchBusy, setWatchBusy] = useState(false)
+  const [live, setLive] = useState<Record<string, Live>>({})
+  const prevTraffic = useRef<Record<string, { up: number; down: number; at: number }>>({})
   const polled = useRef(0)
 
   const scan = useCallback(async (quiet = false) => {
@@ -51,28 +68,34 @@ export function Network() {
 
   const refreshStatus = useCallback(async () => {
     try {
-      const next = await api.lanStatus()
-      setActive(next)
-      // Real numbers, not an estimate: the counters come from the frames that
-      // actually passed through this machine.
-      if (!next) {
-        lastBytes.current = null
-        setRates(null)
-        return
-      }
-      const now = Date.now()
-      const before = lastBytes.current
-      if (before && now > before.at) {
-        const seconds = (now - before.at) / 1000
-        setRates({
-          up: Math.max(0, Math.round((next.up_bytes - before.up) / seconds)),
-          down: Math.max(0, Math.round((next.down_bytes - before.down) / seconds)),
-        })
-      }
-      lastBytes.current = { up: next.up_bytes, down: next.down_bytes, at: now }
+      setActive(await api.lanStatus())
     } catch {
       setActive(null)
-      setRates(null)
+    }
+  }, [])
+
+  /** One sample of every device's counters, turned into a rate. */
+  const sampleTraffic = useCallback(async () => {
+    try {
+      const rows = await api.lanTraffic()
+      const now = Date.now()
+      const next: Record<string, Live> = {}
+      for (const row of rows) {
+        const before = prevTraffic.current[row.ip]
+        if (before && now > before.at) {
+          const seconds = (now - before.at) / 1000
+          next[row.ip] = {
+            up: Math.max(0, Math.round((row.up - before.up) / seconds)),
+            down: Math.max(0, Math.round((row.down - before.down) / seconds)),
+          }
+        } else {
+          next[row.ip] = { up: 0, down: 0 }
+        }
+        prevTraffic.current[row.ip] = { up: row.up, down: row.down, at: now }
+      }
+      setLive(next)
+    } catch {
+      setLive({})
     }
   }, [])
 
@@ -100,6 +123,37 @@ export function Network() {
     }
   }
 
+  const toggleProtect = async (d: LanDevice) => {
+    setErr("")
+    try {
+      await api.lanProtect(d.mac, !d.protected)
+      await scan(true)
+    } catch (e) {
+      setErr(String(e))
+    }
+  }
+
+  const toggleWatch = async () => {
+    setErr("")
+    setWatchBusy(true)
+    try {
+      if (watching) {
+        await api.lanMonitorStop()
+        setWatching(false)
+        setLive({})
+        prevTraffic.current = {}
+      } else {
+        await api.lanMonitorStart()
+        prevTraffic.current = {}
+        setWatching(true)
+      }
+    } catch (e) {
+      setErr(String(e))
+    } finally {
+      setWatchBusy(false)
+    }
+  }
+
   useEffect(() => {
     let alive = true
     void api
@@ -112,28 +166,37 @@ export function Network() {
         if (alive) {
           void scan()
           void refreshStatus()
+          void api.lanMonitorActive().then(setWatching).catch(() => undefined)
         }
       })
-    // The guard is what protects this machine from the same trick.
+
     const tick = window.setInterval(() => {
       void api.lanGuard().then(setGuard).catch(() => undefined)
-    void api.npcapReady().then(setDriverReady).catch(() => setDriverReady(null))
-    void api
-      .routerStatus()
-      .then(async (linked) => {
-        if (linked) {
-          setRouterLinked(true)
-          return
-        }
-        // A saved sign in means the names come back on their own.
-        const ok = await api.routerAutoLink().catch(() => false)
-        if (ok) {
-          setRouterLinked(true)
-          void scan(true)
-        }
-      })
-      .catch(() => undefined)
-    }, 5000)
+      void api.npcapReady().then(setDriverReady).catch(() => setDriverReady(null))
+      void api
+        .routerStatus()
+        .then(async (linked) => {
+          if (linked) {
+            setRouterLinked(true)
+            return
+          }
+          const ok = await api.routerAutoLink().catch(() => false)
+          if (ok) {
+            setRouterLinked(true)
+            void scan(true)
+          }
+        })
+        .catch(() => undefined)
+      void api
+        .lanMonitorActive()
+        .then((on) => {
+          setWatching(on)
+          if (on) void sampleTraffic()
+          else setLive({})
+        })
+        .catch(() => undefined)
+    }, 1500)
+
     void api.lanGuard().then(setGuard).catch(() => undefined)
     void api.npcapReady().then(setDriverReady).catch(() => setDriverReady(null))
     void api
@@ -151,39 +214,12 @@ export function Network() {
         }
       })
       .catch(() => undefined)
+
     return () => {
       alive = false
       window.clearInterval(tick)
     }
-  }, [scan, refreshStatus])
-
-  // Watching a device means standing in its path, because that is the only
-  // place its traffic can be counted. Nothing is capped and nothing is
-  // dropped; the counters are the whole point.
-  const toggleMonitor = async (d: LanDevice) => {
-    setErr("")
-    try {
-      if (active?.ip === d.ip && !active.blocked && active.down_kbps === 0 && active.up_kbps === 0) {
-        await stopAll()
-        return
-      }
-      await api.lanStart(d.ip, d.mac, false)
-      lastBytes.current = null
-      await refreshStatus()
-    } catch (e) {
-      setErr(String(e))
-    }
-  }
-
-  const toggleProtect = async (d: LanDevice) => {
-    setErr("")
-    try {
-      await api.lanProtect(d.mac, !d.protected)
-      await scan(true)
-    } catch (e) {
-      setErr(String(e))
-    }
-  }
+  }, [scan, refreshStatus, sampleTraffic])
 
   const stateOf = (d: LanDevice): "blocked" | "capped" | "none" => {
     if (!active || active.ip !== d.ip) return "none"
@@ -200,7 +236,7 @@ export function Network() {
       d.source === "router" ? "netSrcRouter" : d.source === "device" ? "netSrcDevice" : d.source === "vendor" ? "netSrcGuess" : ""
     if (!key) return null
     return (
-      <span className="shrink-0 rounded-[5px] border border-line px-1.5 py-[1px] text-[10px] text-txt3">
+      <span className="shrink-0 rounded-[5px] border border-line px-1.5 py-[1px] text-[11px] text-txt3">
         {t(key)}
       </span>
     )
@@ -209,48 +245,88 @@ export function Network() {
   const capLine = active
     ? active.blocked
       ? t("netActiveBlocked")
-      : t("netActiveCapped")
-          .replace("{down}", String(active.down_kbps))
-          .replace("{up}", String(active.up_kbps))
+      : t("netActiveCapped").replace("{down}", String(active.down_kbps)).replace("{up}", String(active.up_kbps))
     : ""
 
+  const totalDown = Object.values(live).reduce((sum, v) => sum + v.down, 0)
+  const totalUp = Object.values(live).reduce((sum, v) => sum + v.up, 0)
+
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1180px] flex-col gap-3">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1180px] flex-col">
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
-        <div className="flex shrink-0 items-center gap-3 border-b border-line px-5 py-3.5">
-          <Wifi className="size-4 shrink-0 text-txt2" aria-hidden />
-          <span className="min-w-0 flex-1 truncate text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
-            {t("netTitle")}
+        {/* The one control this screen exists for, and what it is producing. */}
+        <div className="flex shrink-0 items-center gap-5 border-b border-line px-6 py-5">
+          <span
+            className={cn(
+              "grid size-11 shrink-0 place-items-center rounded-full border",
+              watching
+                ? "border-[var(--green)]/45 bg-[var(--green)]/10 text-[var(--green)]"
+                : "border-white/[0.11] bg-white/[0.03] text-txt2",
+            )}
+          >
+            <Activity className="size-5" aria-hidden />
           </span>
-          <span className="shrink-0 font-mono text-[11.5px] tabular-nums text-txt3">
-            {busy ? t("netScanning") : t("netCount").replace("{n}", String(devices.length))}
-          </span>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[15px] font-medium text-txt">
+              {watching ? t("netWatching") : t("netIdle")}
+            </div>
+            <div className="mt-1 flex min-w-0 items-center gap-3 text-[12px] text-txt2">
+              <span className="truncate">{t("netCount").replace("{n}", String(devices.length))}</span>
+              {watching ? (
+                <span className="shrink-0 font-mono text-[12px] tabular-nums" dir="ltr">
+                  <span className="text-[var(--green)]">v {fmtRate(totalDown)}</span>
+                  <span className="px-1.5 text-txt3">/</span>
+                  <span className="text-[var(--brand)]">^ {fmtRate(totalUp)}</span>
+                </span>
+              ) : null}
+            </div>
+          </div>
           <button
             type="button"
             onClick={() => setRouterOpen(true)}
             className={cn(
-              "press flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border px-3 text-[13px] transition-colors",
+              "press flex h-10 shrink-0 items-center gap-1.5 rounded-[10px] px-3 text-[13px] transition-colors",
               routerLinked
-                ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-[var(--brand)]"
-                : "border-line bg-white/[0.02] text-txt2 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] hover:text-txt",
+                ? "border border-[var(--brand-line)] bg-[var(--brand-bg)] text-[var(--brand)]"
+                : "border border-line bg-white/[0.02] text-txt2 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] hover:text-txt",
             )}
           >
-            <Router className="size-3.5" aria-hidden />
+            <Router className="size-4" aria-hidden />
             {routerLinked ? t("routerLinked") : t("routerNames")}
           </button>
           <button
             type="button"
             onClick={() => void scan()}
             disabled={busy}
-            className="press flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border border-line bg-white/[0.02] px-3 text-[13px] text-txt transition-colors hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] disabled:cursor-wait disabled:opacity-60"
+            title={t("netRefresh")}
+            className="press grid size-10 shrink-0 place-items-center rounded-[10px] border border-line bg-white/[0.02] text-txt transition-colors hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] disabled:cursor-wait disabled:opacity-60"
           >
-            {busy ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : <RefreshCw className="size-3.5" aria-hidden />}
-            {t("netRefresh")}
+            {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <RefreshCw className="size-4" aria-hidden />}
+          </button>
+          <button
+            type="button"
+            onClick={() => void toggleWatch()}
+            disabled={watchBusy || driverReady === false}
+            className={cn(
+              "press flex h-10 shrink-0 items-center gap-2 rounded-[10px] px-4 text-[13.5px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45",
+              watching
+                ? "border border-[var(--green)]/45 bg-[var(--green)]/10 text-[var(--green)]"
+                : "bg-[var(--brand)] text-white hover:brightness-110",
+            )}
+          >
+            {watchBusy ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : watching ? (
+              <X className="size-4" aria-hidden />
+            ) : (
+              <Activity className="size-4" aria-hidden />
+            )}
+            {watching ? t("netStopWatch") : t("netStartWatch")}
           </button>
         </div>
 
         {driverReady === false ? (
-          <div className="flex shrink-0 items-center gap-3 border-b border-line bg-[var(--brand-bg)] px-5 py-2.5">
+          <div className="flex shrink-0 items-center gap-3 border-b border-line bg-[var(--brand-bg)] px-6 py-2.5">
             <Info className="size-4 shrink-0 text-[var(--brand)]" aria-hidden />
             <span className="min-w-0 flex-1 text-[12.5px] text-txt2" dir="auto">
               {t("netDriverBody")}
@@ -266,7 +342,7 @@ export function Network() {
         ) : null}
 
         {guard && guard.attacker_mac ? (
-          <div className="flex shrink-0 items-center gap-3 border-b border-line bg-[var(--red)]/10 px-5 py-2.5">
+          <div className="flex shrink-0 items-center gap-3 border-b border-line bg-[var(--red)]/10 px-6 py-2.5">
             <ShieldAlert className="size-4 shrink-0 text-[var(--red)]" aria-hidden />
             <span className="min-w-0 flex-1 text-[12.5px] text-[var(--red)]" dir="auto">
               {t("netGuardAlert").replace("{mac}", guard.attacker_mac)}
@@ -275,18 +351,11 @@ export function Network() {
         ) : null}
 
         {active ? (
-          <div className="flex shrink-0 items-center gap-3 border-b border-line bg-[var(--brand-bg)] px-5 py-2.5">
+          <div className="flex shrink-0 items-center gap-3 border-b border-line bg-[var(--brand-bg)] px-6 py-2.5">
             <span className="shrink-0 font-mono text-[12px] text-txt" dir="ltr">
               {active.ip}
             </span>
             <span className="min-w-0 flex-1 truncate text-[12.5px] text-txt2">{capLine}</span>
-            {rates ? (
-              <span className="shrink-0 font-mono text-[12px] tabular-nums text-txt" dir="ltr">
-                <span className="text-[var(--green)]">v {fmtRate(rates.down)}</span>
-                <span className="px-1.5 text-txt3">/</span>
-                <span className="text-[var(--brand)]">^ {fmtRate(rates.up)}</span>
-              </span>
-            ) : null}
             <button
               type="button"
               onClick={() => void stopAll()}
@@ -299,7 +368,7 @@ export function Network() {
         ) : null}
 
         {err ? (
-          <div className="shrink-0 border-b border-line bg-[var(--red)]/10 px-5 py-2 text-[12px] text-[var(--red)]" dir="auto">
+          <div className="shrink-0 border-b border-line bg-[var(--red)]/10 px-6 py-2 text-[12px] text-[var(--red)]" dir="auto">
             {err}
           </div>
         ) : null}
@@ -315,8 +384,12 @@ export function Network() {
             <ul className="flex flex-col">
               {devices.map((d) => {
                 const state = stateOf(d)
+                const rate = live[d.ip]
                 return (
-                  <li key={d.ip} className="flex h-[60px] items-center gap-4 border-b border-line px-5 last:border-b-0">
+                  <li
+                    key={d.ip}
+                    className="flex h-[64px] items-center gap-4 border-b border-line px-6 last:border-b-0"
+                  >
                     <span
                       className={cn(
                         "grid size-9 shrink-0 place-items-center rounded-full border",
@@ -327,100 +400,103 @@ export function Network() {
                     >
                       {d.self_pc ? <Monitor className="size-4" aria-hidden /> : <Wifi className="size-4" aria-hidden />}
                     </span>
-                    <span className="min-w-0 flex-1">
+
+                    <span className="min-w-0 flex-[1.6]">
                       <span className="flex min-w-0 items-center gap-2">
                         <span className="truncate text-[14px] font-medium text-txt" dir="auto">
                           {d.name === "private" ? t("netPrivateName") : d.name}
                         </span>
                         {d.self_pc ? (
-                          <span className="shrink-0 rounded-[5px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-1.5 py-[1px] text-[10.5px] font-medium text-[var(--brand)]">
+                          <span className="shrink-0 rounded-[5px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-1.5 py-[1px] text-[11px] font-medium text-[var(--brand)]">
                             {t("netThisPc")}
                           </span>
                         ) : null}
                         {d.protected ? (
-                          <span className="flex shrink-0 items-center gap-1 rounded-[5px] border border-[var(--green)]/40 bg-[var(--green)]/10 px-1.5 py-[1px] text-[10.5px] font-medium text-[var(--green)]">
+                          <span className="flex shrink-0 items-center gap-1 rounded-[5px] border border-[var(--green)]/40 bg-[var(--green)]/10 px-1.5 py-[1px] text-[11px] font-medium text-[var(--green)]">
                             <ShieldCheck className="size-3" aria-hidden />
                             {t("netProtected")}
                           </span>
                         ) : null}
                         {sourceChip(d)}
                         {state === "blocked" ? (
-                          <span className="shrink-0 rounded-[5px] border border-[var(--red)]/45 bg-[var(--red)]/10 px-1.5 py-[1px] text-[10.5px] font-medium text-[var(--red)]">
+                          <span className="shrink-0 rounded-[5px] border border-[var(--red)]/45 bg-[var(--red)]/10 px-1.5 py-[1px] text-[11px] font-medium text-[var(--red)]">
                             {t("netStateBlocked")}
                           </span>
                         ) : null}
                         {state === "capped" ? (
-                          <span className="shrink-0 rounded-[5px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-1.5 py-[1px] text-[10.5px] font-medium text-[var(--brand)]">
+                          <span className="shrink-0 rounded-[5px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-1.5 py-[1px] text-[11px] font-medium text-[var(--brand)]">
                             {t("netStateCapped")}
                           </span>
                         ) : null}
                       </span>
-                      <span className="block truncate font-mono text-[12px] text-txt3" dir="ltr">
+                      <span className="mt-0.5 block truncate font-mono text-[12px] text-txt3" dir="ltr">
                         {d.ip}
                       </span>
                     </span>
-                    <span className="hidden shrink-0 font-mono text-[12px] uppercase text-txt3 sm:block" dir="ltr">
+
+                    <span className="hidden w-[150px] shrink-0 font-mono text-[12px] uppercase text-txt3 md:block" dir="ltr">
                       {d.mac}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => void toggleMonitor(d)}
-                      disabled={driverReady === false || d.protected}
-                      title={t("netMonitor")}
-                      className={cn(
-                        "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors disabled:cursor-not-allowed disabled:opacity-40",
-                        active?.ip === d.ip && state === "none"
-                          ? "border-[var(--green)]/45 bg-[var(--green)]/10 text-[var(--green)]"
-                          : "border-line bg-white/[0.02] text-txt2 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] hover:text-txt",
+
+                    {/* The reading this screen is for: what that device is moving now. */}
+                    <span className="w-[168px] shrink-0 text-right font-mono text-[12.5px] tabular-nums" dir="ltr">
+                      {watching && rate ? (
+                        <>
+                          <span className="text-[var(--green)]">v {fmtRate(rate.down)}</span>
+                          <span className="px-1.5 text-txt3">/</span>
+                          <span className="text-[var(--brand)]">^ {fmtRate(rate.up)}</span>
+                        </>
+                      ) : (
+                        <span className="text-txt3">-</span>
                       )}
-                    >
-                      <Activity className="size-3.5" aria-hidden />
-                      {t("netMonitor")}
-                    </button>
-                    {d.protected_always ? null : (
-                    <button
-                      type="button"
-                      onClick={() => void toggleProtect(d)}
-                      title={d.protected ? t("netUnprotect") : t("netProtect")}
-                      className={cn(
-                        "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors",
-                        d.protected
-                          ? "border-[var(--green)]/45 bg-[var(--green)]/10 text-[var(--green)]"
-                          : "border-line bg-white/[0.02] text-txt2 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] hover:text-txt",
+                    </span>
+
+                    <span className="flex shrink-0 items-center gap-2">
+                      {d.protected_always ? null : (
+                        <button
+                          type="button"
+                          onClick={() => void toggleProtect(d)}
+                          title={d.protected ? t("netUnprotect") : t("netProtect")}
+                          className={cn(
+                            "press grid size-8 place-items-center rounded-[9px] border transition-colors",
+                            d.protected
+                              ? "border-[var(--green)]/45 bg-[var(--green)]/10 text-[var(--green)]"
+                              : "border-line bg-white/[0.02] text-txt2 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] hover:text-txt",
+                          )}
+                        >
+                          <ShieldCheck className="size-3.5" aria-hidden />
+                        </button>
                       )}
-                    >
-                      <ShieldCheck className="size-3.5" aria-hidden />
-                      {d.protected ? t("netUnprotect") : t("netProtect")}
-                    </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setLimitFor(d)}
-                      disabled={driverReady === false || d.protected}
-                      className={cn(
-                        "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors disabled:cursor-not-allowed disabled:opacity-40",
-                        state === "capped"
-                          ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-[var(--brand)]"
-                          : "border-line bg-white/[0.02] text-txt2 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] hover:text-txt",
-                      )}
-                    >
-                      <Gauge className="size-3.5" aria-hidden />
-                      {t("netLimit")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void toggleBlock(d)}
-                      disabled={driverReady === false || d.protected}
-                      className={cn(
-                        "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors disabled:cursor-not-allowed disabled:opacity-40",
-                        state === "blocked"
-                          ? "border-[var(--red)]/50 bg-[var(--red)]/10 text-[var(--red)]"
-                          : "border-line bg-white/[0.02] text-txt2 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] hover:text-txt",
-                      )}
-                    >
-                      <Ban className="size-3.5" aria-hidden />
-                      {state === "blocked" ? t("netUnblock") : t("netBlock")}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setLimitFor(d)}
+                        disabled={driverReady === false || d.protected}
+                        title={t("netLimit")}
+                        className={cn(
+                          "press flex h-8 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+                          state === "capped"
+                            ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-[var(--brand)]"
+                            : "border-line bg-white/[0.02] text-txt2 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] hover:text-txt",
+                        )}
+                      >
+                        <Gauge className="size-3.5" aria-hidden />
+                        {t("netLimit")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void toggleBlock(d)}
+                        disabled={driverReady === false || d.protected}
+                        className={cn(
+                          "press flex h-8 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+                          state === "blocked"
+                            ? "border-[var(--red)]/50 bg-[var(--red)]/10 text-[var(--red)]"
+                            : "border-line bg-white/[0.02] text-txt2 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] hover:text-txt",
+                        )}
+                      >
+                        <Ban className="size-3.5" aria-hidden />
+                        {state === "blocked" ? t("netUnblock") : t("netBlock")}
+                      </button>
+                    </span>
                   </li>
                 )
               })}

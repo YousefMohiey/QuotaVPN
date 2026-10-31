@@ -948,33 +948,154 @@ pub fn run_engine_headless() {
 
 /// Register the task. Runs in the elevated pass (`QuotaVPN.exe --setup-helper`),
 /// so this is the only moment the product asks Windows for administrator.
+/// Register the privileged helper for one account.
+///
+/// `/IT` is not decoration: without it the task is created as "run whether the
+/// user is logged on or not", which needs the account's password, and on a
+/// Microsoft account schtasks refuses with a credentials error. With `/IT` the
+/// task uses the interactive token and needs no password, while `/RL HIGHEST`
+/// still runs it elevated.
 pub fn install_task(owner: &str) -> Result<(), String> {
     let _ = std::fs::remove_file(engine_ps_path());
     let exe = std::env::current_exe().map_err(|e| format!("exe: {e}"))?;
-    let tr = format!("\"{}\" --run-engine", exe.display());
+    let exe = exe.display().to_string();
+    let name = format!("QuotaVPN Tunnel {owner}");
+    // Name first, because the elevated pass may be running as an administrator
+    // on behalf of someone else. If the name cannot be mapped, the account
+    // running this process is the next best answer, and it is always valid.
+    let principal = sid_for(owner)
+        .or_else(current_sid)
+        .unwrap_or_else(|| owner.to_string());
+
+    // A task definition rather than command line flags. InteractiveToken means
+    // the task uses the logged-on user's token and needs no stored password,
+    // which is the difference between working and "the user name or password
+    // is incorrect" on a Microsoft account. HighestAvailable still runs it
+    // elevated, which is what creating the tunnel adapter needs.
+    let xml = format!(
+        r#"<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>QuotaVPN tunnel helper for {owner}</Description>
+  </RegistrationInfo>
+  <Triggers />
+  <Principals>
+    <Principal id="Author">
+      <UserId>{principal}</UserId>
+      <LogonType>InteractiveToken</LogonType>
+      <RunLevel>HighestAvailable</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>false</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <UseUnifiedSchedulingEngine>true</UseUnifiedSchedulingEngine>
+    <WakeToRun>false</WakeToRun>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <Priority>7</Priority>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>{exe}</Command>
+      <Arguments>--run-engine</Arguments>
+    </Exec>
+  </Actions>
+</Task>
+"#,
+        owner = xml_escape(owner),
+        principal = xml_escape(&principal),
+        exe = xml_escape(&exe),
+    );
+
+    let dir = engine_dir();
+    let _ = std::fs::create_dir_all(&dir);
+    let file = dir.join("helper-task.xml");
+    std::fs::write(&file, xml).map_err(|e| format!("task xml: {e}"))?;
+
     let out = run_hidden(
         "schtasks",
+        &["/Create", "/TN", &name, "/XML", &file.to_string_lossy(), "/F"],
+    )
+    .map_err(|e| format!("task: {e}"))?;
+    let _ = std::fs::remove_file(&file);
+    if out.status.success() {
+        return Ok(());
+    }
+
+    // Keep the plain command line as a fallback for the rare machine where the
+    // definition is refused, and report both reasons if neither works.
+    let tr = format!("\"{exe}\" --run-engine");
+    let out2 = run_hidden(
+        "schtasks",
         &[
-            "/Create", "/TN", &format!("QuotaVPN Tunnel {owner}"), "/TR", &tr, "/SC", "ONCE",
-            "/ST", "00:00", "/RU", owner, "/RL", "HIGHEST", "/F",
+            "/Create", "/TN", &name, "/TR", &tr, "/SC", "ONCE", "/ST", "00:00", "/RU", owner,
+            "/RL", "HIGHEST", "/IT", "/F",
         ],
     )
     .map_err(|e| format!("task: {e}"))?;
-    if out.status.success() {
-        Ok(())
-    } else {
-        // schtasks writes its complaint to stdout, not stderr, so reading only
-        // stderr produced an empty reason and the window said "did not allow"
-        // for every possible failure.
-        let err = String::from_utf8_lossy(&out.stderr).trim().to_string();
-        let said = String::from_utf8_lossy(&out.stdout).trim().to_string();
-        Err(match (err.is_empty(), said.is_empty()) {
-            (false, false) => format!("{err} {said}"),
-            (false, true) => err,
-            (true, false) => said,
-            (true, true) => "schtasks returned an error with no message".to_string(),
-        })
+    if out2.status.success() {
+        return Ok(());
     }
+    let first = said(&out);
+    let second = said(&out2);
+    Err(format!("{first} / {second}"))
+}
+
+/// schtasks writes its complaint to stdout, not stderr.
+fn said(out: &std::process::Output) -> String {
+    let err = String::from_utf8_lossy(&out.stderr).trim().to_string();
+    let std_out = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    match (err.is_empty(), std_out.is_empty()) {
+        (false, false) => format!("{err} {std_out}"),
+        (false, true) => err,
+        (true, false) => std_out,
+        (true, true) => "schtasks returned an error with no message".to_string(),
+    }
+}
+
+/// The security identifier for an account name.
+///
+/// A task principal written as a bare name has to be resolved by the Task
+/// Scheduler, and on a Microsoft account that resolution is exactly what
+/// fails. A SID always resolves.
+fn sid_for(user: &str) -> Option<String> {
+    let quoted = user.replace(char::from(39), "''");
+    let script = format!(
+        "(New-Object System.Security.Principal.NTAccount('{quoted}')).Translate([System.Security.Principal.SecurityIdentifier]).Value"
+    );
+    let out = run_hidden("powershell", &["-NoProfile", "-Command", &script]).ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let sid = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if sid.starts_with("S-1-") { Some(sid) } else { None }
+}
+
+/// The SID of the account running this process. Always resolvable, and the
+/// right answer whenever the elevated pass is running as the person who asked.
+fn current_sid() -> Option<String> {
+    let out = run_hidden("whoami", &["/user", "/fo", "csv", "/nh"]).ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let text = String::from_utf8_lossy(&out.stdout);
+    let sid = text.split(',').nth(1)?.trim().trim_matches('"').to_string();
+    if sid.starts_with("S-1-") { Some(sid) } else { None }
+}
+
+fn xml_escape(raw: &str) -> String {
+    raw.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
 }
 
 pub fn remove_task() {

@@ -62,8 +62,9 @@
     ReadEnvStr $9 "USERNAME"
     ExecShell "runas" "$INSTDIR\${MAINBINARYNAME}.exe" "--setup-helper --as $9" SW_HIDE
     ; Wait for it, so the app opens with a working tunnel instead of a button
-    ; that asks for the same permission the installer just asked for. The
-    ; first run downloads the engine, so this waits two minutes.
+    ; that asks for the same permission the installer just asked for. The task
+    ; is written first and takes a second, so half a minute is generous and a
+    ; failure does not hold the installer hostage for two.
     StrCpy $1 0
     qvp_setup_wait:
       Sleep 1000
@@ -75,7 +76,7 @@
         Goto qvp_setup_done
       ${EndIf}
       IntOp $1 $1 + 1
-      ${If} $1 < 120
+      ${If} $1 < 30
         Goto qvp_setup_wait
       ${EndIf}
     qvp_setup_done:
