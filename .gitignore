@@ -28,3 +28,7 @@ __pycache__/
 
 # development signing material never leaves this machine
 driver/certs/
+
+# driver build output
+driver/QuotaVpnPkt/obj/
+driver/QuotaVpnPkt/*.sys
