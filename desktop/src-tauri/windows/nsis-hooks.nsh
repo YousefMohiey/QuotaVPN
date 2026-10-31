@@ -25,6 +25,10 @@
   Delete /REBOOTOK "$SMPROGRAMS\QuotaCards.lnk"
   Delete /REBOOTOK "$SMPROGRAMS\Quota.lnk"
   RMDir /r "$SMPROGRAMS\QuotaCards"
+  ; Older installers shipped two command line harnesses next to the app.
+  ; They are developer tools and never belonged to the product.
+  Delete "$INSTDIR\clitest.exe"
+  Delete "$INSTDIR\spdtest.exe"
   RMDir /r "$SMPROGRAMS\Quota"
   SetShellVarContext current
 

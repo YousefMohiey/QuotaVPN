@@ -1,6 +1,6 @@
 [package]
 name = "quotacards-desktop"
-version = "0.5.7"
+version = "0.5.8"
 default-run = "QuotaVPN"
 edition = "2021"
 
@@ -47,6 +47,20 @@ windows-core = "0.61"
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+# The two command line harnesses are developer tools, not part of the product.
+# Leaving them in a release build put three near-identical unsigned executables
+# in the installer, which is exactly the shape antivirus heuristics dislike.
+tools = []
+
+[[bin]]
+name = "clitest"
+path = "src/bin/clitest.rs"
+required-features = ["tools"]
+
+[[bin]]
+name = "spdtest"
+path = "src/bin/spdtest.rs"
+required-features = ["tools"]
 
 [profile.release]
 # The bare exe is served as a test download and folded into the installer:
