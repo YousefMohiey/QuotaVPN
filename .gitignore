@@ -25,3 +25,6 @@ __pycache__/
 
 # editor and agent tooling, never part of the app
 .clawhub/
+
+# development signing material never leaves this machine
+driver/certs/
