@@ -1766,6 +1766,7 @@ async fn router_link(state: tauri::State<'_, RouterState>, user: String, pass: S
         .map(|w| w.gateway_ip)
         .ok_or("no gateway")?;
     let session = router_huawei::login(&host, &user, &pass).await?;
+    session.dump_pages().await;
     // Signed in once: keep it sealed for this Windows account.
     let _ = router_remember::save(&user, &pass);
     let mut guard = state.0.lock().await;
@@ -1784,6 +1785,7 @@ async fn router_autolink(state: tauri::State<'_, RouterState>) -> Result<bool, S
         .ok_or("no gateway")?;
     match router_huawei::login(&host, &user, &pass).await {
         Ok(session) => {
+            session.dump_pages().await;
             let mut guard = state.0.lock().await;
             *guard = Some(session);
             Ok(true)

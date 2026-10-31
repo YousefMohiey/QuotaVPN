@@ -217,6 +217,36 @@ fn log(line: &str) {
 }
 
 impl Session {
+    /// Save the pages this family of routers uses for filtering, so the right
+    /// one can be read instead of guessed. Local only, and it holds nothing but
+    /// what the router itself shows an administrator.
+    pub async fn dump_pages(&self) {
+        const PAGES: [(&str, &str); 4] = [
+            ("macfilter", "/html/bbsp/macfilter/macfilter.asp"),
+            ("parental", "/html/bbsp/parentalcontrol/parentalcontrol.asp"),
+            ("wlanfilter", "/html/amp/wlanfilter/wlanfilter.asp"),
+            ("qos", "/html/bbsp/upnplane/upnplane.asp"),
+        ];
+        let base = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| String::from("."));
+        let dir = std::path::Path::new(&base).join("quotavpn").join("router_pages");
+        let _ = std::fs::create_dir_all(&dir);
+        for (name, page) in PAGES {
+            if let Ok(r) = self
+                .client
+                .post(format!("{}{page}", self.host))
+                .header(reqwest::header::COOKIE, self.cookie.clone())
+                .form(&[("x.X_HW_Token", self.token.clone())])
+                .send()
+                .await
+            {
+                let status = r.status().as_u16();
+                let text = r.text().await.unwrap_or_default();
+                log(&format!("dump {page} status={status} len={}", text.len()));
+                let _ = std::fs::write(dir.join(format!("{name}.txt")), text);
+            }
+        }
+    }
+
     /// The router's own list: every device it handed an address to.
     pub async fn clients(&self) -> Result<Vec<RouterClient>, String> {
         // Routers in this family do not agree on the page name, so ask the
