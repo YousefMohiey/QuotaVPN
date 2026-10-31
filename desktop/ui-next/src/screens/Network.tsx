@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Ban, Gauge, Loader2, Monitor, RefreshCw, Router, ShieldAlert, Wifi, X } from "lucide-react"
+import { Ban, Gauge, Info, Loader2, Monitor, RefreshCw, Router, ShieldAlert, Wifi, X } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
 import { api, type LanDevice, type LanGuard, type LanStatus } from "@/lib/ipc"
 import { cn } from "@/lib/utils"
@@ -18,6 +18,7 @@ export function Network() {
   const [guard, setGuard] = useState<LanGuard | null>(null)
   const [routerOpen, setRouterOpen] = useState(false)
   const [routerLinked, setRouterLinked] = useState(false)
+  const [driverReady, setDriverReady] = useState<boolean | null>(null)
   const polled = useRef(0)
 
   const scan = useCallback(async (quiet = false) => {
@@ -88,6 +89,7 @@ export function Network() {
     // The guard is what protects this machine from the same trick.
     const tick = window.setInterval(() => {
       void api.lanGuard().then(setGuard).catch(() => undefined)
+    void api.npcapReady().then(setDriverReady).catch(() => setDriverReady(null))
     void api
       .routerStatus()
       .then(async (linked) => {
@@ -105,6 +107,7 @@ export function Network() {
       .catch(() => undefined)
     }, 5000)
     void api.lanGuard().then(setGuard).catch(() => undefined)
+    void api.npcapReady().then(setDriverReady).catch(() => setDriverReady(null))
     void api
       .routerStatus()
       .then(async (linked) => {
@@ -189,6 +192,22 @@ export function Network() {
             {t("netRefresh")}
           </button>
         </div>
+
+        {driverReady === false ? (
+          <div className="flex shrink-0 items-center gap-3 border-b border-line bg-[var(--brand-bg)] px-5 py-2.5">
+            <Info className="size-4 shrink-0 text-[var(--brand)]" aria-hidden />
+            <span className="min-w-0 flex-1 text-[12.5px] text-txt2" dir="auto">
+              {t("netDriverBody")}
+            </span>
+            <button
+              type="button"
+              onClick={() => void api.openPage("https://npcap.com/#download")}
+              className="press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-2.5 text-[12px] text-[var(--brand)]"
+            >
+              {t("netDriverGet")}
+            </button>
+          </div>
+        ) : null}
 
         {guard && guard.attacker_mac ? (
           <div className="flex shrink-0 items-center gap-3 border-b border-line bg-[var(--red)]/10 px-5 py-2.5">
@@ -277,6 +296,7 @@ export function Network() {
                     <button
                       type="button"
                       onClick={() => setLimitFor(d)}
+                      disabled={driverReady === false}
                       className={cn(
                         "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors disabled:cursor-not-allowed disabled:opacity-40",
                         state === "capped"
@@ -290,6 +310,7 @@ export function Network() {
                     <button
                       type="button"
                       onClick={() => void toggleBlock(d)}
+                      disabled={driverReady === false}
                       className={cn(
                         "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors disabled:cursor-not-allowed disabled:opacity-40",
                         state === "blocked"

@@ -204,6 +204,8 @@ export const ar = {
   "tabSpeed": "السرعة",
   "tabNetwork": "الشبكة",
   "netTitle": "الأجهزة على هذه الشبكة",
+  "netDriverBody": "الحجب والتحديد والأسماء تحتاج تعريف Npcap المجاني. ثبّته مرة واحدة ثم أعد فتح البرنامج.",
+  "netDriverGet": "تحميل Npcap",
   "netSub": "كل ما تراه الحاسبة على شبكتك",
   "netRefresh": "تحديث",
   "routerNames": "أسماء الراوتر",

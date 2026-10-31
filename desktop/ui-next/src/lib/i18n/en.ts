@@ -201,6 +201,8 @@ export const en = {
   "tabSpeed": "Speed",
   "tabNetwork": "Network",
   "netTitle": "Devices on this network",
+  "netDriverBody": "Limit, Block and names need the free Npcap driver. Install it once, then reopen the app.",
+  "netDriverGet": "Get Npcap",
   "netSub": "Everything the machine can see on your subnet",
   "netRefresh": "Refresh",
   "routerNames": "Router names",

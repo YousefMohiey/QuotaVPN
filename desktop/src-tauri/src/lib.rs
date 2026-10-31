@@ -1736,6 +1736,29 @@ async fn lan_devices(state: tauri::State<'_, RouterState>) -> Result<Vec<quotaca
     Ok(list)
 }
 
+/// Open a web page in the user's own browser. Used for the one thing the app
+/// cannot install for them.
+#[tauri::command]
+fn open_page(url: String) -> bool {
+    if !url.starts_with("https://") {
+        return false;
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const NO_WINDOW: u32 = 0x0800_0000;
+        return std::process::Command::new("cmd")
+            .args(["/C", "start", "", &url])
+            .creation_flags(NO_WINDOW)
+            .spawn()
+            .is_ok();
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
+}
+
 /// Log in to the router so the device list can carry real names.
 #[tauri::command]
 async fn router_link(state: tauri::State<'_, RouterState>, user: String, pass: String) -> Result<bool, String> {
@@ -2571,6 +2594,7 @@ pub fn run() {
             lan_status,
             lan_guard,
             router_link,
+            open_page,
             router_autolink,
             router_status,
             router_unlink,

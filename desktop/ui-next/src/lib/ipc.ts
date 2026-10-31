@@ -87,6 +87,9 @@ export type LanStatus = {
 
 export const lanStatus = (): Promise<LanStatus | null> => call<LanStatus | null>("lan_status")
 
+export const openPage = (url: string): Promise<boolean> => call<boolean>("open_page", { url })
+export const npcapReady = (): Promise<boolean> => call<boolean>("npcap_ready")
+
 export const routerLink = (user: string, pass: string): Promise<boolean> =>
   call<boolean>("router_link", { user, pass })
 export const routerStatus = (): Promise<boolean> => call<boolean>("router_status")
@@ -172,6 +175,8 @@ export const api = {
   lanStop: (): Promise<boolean> => call<boolean>("lan_stop"),
   lanStatus: (): Promise<LanStatus | null> => call<LanStatus | null>("lan_status"),
   lanGuard: (): Promise<LanGuard> => call<LanGuard>("lan_guard"),
+  openPage: (url: string): Promise<boolean> => call<boolean>("open_page", { url }),
+  npcapReady: (): Promise<boolean> => call<boolean>("npcap_ready"),
   routerLink: (user: string, pass: string): Promise<boolean> => call<boolean>("router_link", { user, pass }),
   routerStatus: (): Promise<boolean> => call<boolean>("router_status"),
   routerAutoLink: (): Promise<boolean> => call<boolean>("router_autolink"),
