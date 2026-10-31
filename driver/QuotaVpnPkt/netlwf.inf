@@ -1,0 +1,226 @@
+;-------------------------------------------------------------------------
+; NdisLwf.INF -- Sample NDIS LightWeight Filter Driver
+;
+; Copyright (c) Microsoft Corporation.  All rights reserved.
+;
+; TODO: Search for comments marked "TODO:", and follow their instructions to
+; customize this INF for your driver.  Then delete the "TODO:" comments.
+;-------------------------------------------------------------------------
+
+[version]
+; Do not change these values
+Signature       = "$Windows NT$"
+Class           = NetService
+ClassGUID       = {4D36E974-E325-11CE-BFC1-08002BE10318}
+CatalogFile     = netlwf.cat
+PnpLockdown     = 1
+
+; TODO: Customize this string for your company name
+Provider        = %ProviderString%
+
+; TODO: Customize this string for the driver version
+DriverVer       = 10/01/2002,6.0.5019.0
+
+; Note: Starting with OS build version 25319 there is an update to the Network Installation UI
+; that allows for installation in the driver package's Driver store directory. All builds 
+; above 25319 can and should install drivers using DIRID 13.
+[Manufacturer]
+%ManufacturerName%=Standard,NT$ARCH$,NT$ARCH$.10.0...25319
+
+; TODO: Change the "MS_NdisLwf" name below to identify your component.
+; This name can be used with netcfg.exe to install/uninstall the driver.
+
+[Standard.NT$ARCH$.10.0...25319]
+%NdisLwf_Desc%=Install, MS_NdisLwf
+
+[Standard.NT$ARCH$]
+%NdisLwf_Desc%=Install_NC, MS_NdisLwf
+
+;-------------------------------------------------------------------------
+; Installation Section
+;-------------------------------------------------------------------------
+[Install]
+AddReg=LWF_Ndi
+; All LWFs must include the 0x40000 bit (NCF_LW_FILTER). Unlike miniports, you
+; don't usually need to customize this value.
+Characteristics=0x40000
+
+; TODO: You must generate your own random GUID and insert it here.  Then, update
+; FILTER_UNIQUE_NAME in filter.h to match this GUID identically.  Both should
+; have {curly braces}.
+NetCfgInstanceId="{5cbf81bd-5055-47cd-9055-a76b2b4e3697}"
+
+Copyfiles = ndislwf.copyfiles.sys
+
+[Install_NC]
+AddReg=LWF_Ndi
+; All LWFs must include the 0x40000 bit (NCF_LW_FILTER). Unlike miniports, you
+; don't usually need to customize this value.
+Characteristics=0x40000
+
+; TODO: You must generate your own random GUID and insert it here.  Then, update
+; FILTER_UNIQUE_NAME in filter.h to match this GUID identically.  Both should
+; have {curly braces}.
+NetCfgInstanceId="{5cbf81bd-5055-47cd-9055-a76b2b4e3697}"
+
+Copyfiles = ndislwf_nc.copyfiles.sys
+
+[SourceDisksNames]
+1=%NdisLwf_Desc%,"",,
+
+[SourceDisksFiles]
+; TODO: Customize the name of your binary here.
+; Also include any related files that should be installed with your driver.
+ndislwf.sys=1
+
+[DestinationDirs]
+ndislwf.copyfiles.sys=13
+ndislwf_nc.copyfiles.sys=12
+
+[ndislwf.copyfiles.sys]
+; TODO: Customize the name of your binary here.
+ndislwf.sys,,,2
+
+[ndislwf_nc.copyfiles.sys]
+; TODO: Customize the name of your binary here.
+ndislwf.sys,,,2
+
+;-------------------------------------------------------------------------
+; Ndi installation support
+;-------------------------------------------------------------------------
+[LWF_Ndi]
+; TODO: Customize the name of the NT service that will start your driver.
+; Then, update FILTER_SERVICE_NAME in filter.h.
+HKR, Ndi,Service,,"NdisLwf"
+; TODO: Repeat the NT service name above here.  Optionally, you may control
+; other services alongside the primary service.
+HKR, Ndi,CoServices,0x00010000,"NdisLwf"
+HKR, Ndi,HelpText,,%NdisLwf_HelpText%
+; TODO: Set the FilterClass here.  The FilterClass controls the order in which
+; filters are bound to the underlying miniport.  Possible options include:
+;     Custom, Diagnostic, Failover, Loadbalance, Vpn, Compression, Encryption, Scheduler
+; See MSDN for a description of each.
+HKR, Ndi,FilterClass,, compression
+; TODO: Specify whether you have a Modifying or Monitoring filter.
+; For a Monitoring filter, use this:
+;     HKR, Ndi,FilterType,0x00010001, 1 ; Monitoring filter
+; For a Modifying filter, use this:
+;     HKR, Ndi,FilterType,0x00010001, 2 ; Modifying filter
+HKR, Ndi,FilterType,0x00010001,2
+; Do not change these values
+HKR, Ndi\Interfaces,UpperRange,,"noupper"
+HKR, Ndi\Interfaces,LowerRange,,"nolower"
+; TODO: Ensure that the list of media types below is correct.  Typically,
+; filters include "ethernet".  Filters may also include "ppip" to include
+; native WWAN stacks, but you must be prepared to handle the packet framing.
+; Possible values are listed on MSDN, but common values include:
+;     ethernet, wan, ppip, wlan
+HKR, Ndi\Interfaces, FilterMediaTypes,,"ethernet, wan, ppip"
+; TODO: Specify whether you have a Mandatory or Optional filter.
+; For a Mandatory filter, use this:
+;     HKR, Ndi,FilterRunType,0x00010001, 1 ; Mandatory filter
+; For an Optional filter, use this:
+;     HKR, Ndi,FilterRunType,0x00010001, 2 ; Optional filter
+HKR, Ndi,FilterRunType,0x00010001, 1 ; Mandatory filter
+
+; By default, Mandatory filters unbind all protocols when they are
+; installed/uninstalled, while Optional filters merely pause the stack.  If you
+; would like to override this behavior, you can include these options.  These
+; options only take effect with 6.30 filters on Windows "8" or later.
+; To prevent a full unbind, and merely pause/restart protocols:
+;     HKR, Ndi,UnbindOnAttach,0x00010001, 0 ; Do not unbind during FilterAttach
+;     HKR, Ndi,UnbindOnDetach,0x00010001, 0 ; Do not unbind during FilterDetach
+; To force a full unbind/bind (which includes pause/restart, of course):
+;     HKR, Ndi,UnbindOnAttach,0x00010001, 1 ; Unbind during FilterAttach
+;     HKR, Ndi,UnbindOnDetach,0x00010001, 1 ; Unbind during FilterDetach
+;
+
+; NDIS can start a miniport stack even if some Optional filters are
+; missing.  However, NDIS reserves the right to wait for the Optional
+; filters to be registered, since it's faster to attach a filter if
+; the protocols haven't been bound yet.
+; If your Optional filter is unlikely to be started at boot, you can
+; use this hint to inform NDIS to spend less time waiting for your
+; filter.  Note this setting is ignored for Mandatory filters; NDIS
+; always waits forever for all Mandatory filters.
+;     HKR, Ndi,NdisBootStart,0x00010001, 0 ; Don't wait for this driver to start at boot
+; Enable this setting only if your filter will be bound, but the driver
+; is not usually started at boot.  If your driver will typically start
+; at boot, then enabling this setting would defeat the NDIS heuristic
+; and slightly slow down boot.
+
+;-------------------------------------------------------------------------
+; Service installation support
+;-------------------------------------------------------------------------
+[Install.Services]
+; TODO: Customize the name of your NT service here.
+; You may also want to add the SPSVCINST_STARTSERVICE flag, like this:
+;     AddService=NdisLwf,0x800,NdisLwf_Service_Inst ; SPSVCINST_STARTSERVICE
+AddService=NdisLwf,,NdisLwf_Service_Inst
+
+[NdisLwf_Service_Inst]
+DisplayName     = %NdisLwf_Desc%
+ServiceType     = 1 ;SERVICE_KERNEL_DRIVER
+; Typically you will want your filter driver to start with SERVICE_SYSTEM_START.
+; If it is an Optional filter, you may also use 3;SERVICE_DEMAND_START.
+StartType       = 1 ;SERVICE_SYSTEM_START
+ErrorControl    = 1 ;SERVICE_ERROR_NORMAL
+; TODO: Customize this to your binary's filename.
+ServiceBinary   = %13%\ndislwf.sys
+LoadOrderGroup  = NDIS
+Description     = %NdisLwf_Desc%
+AddReg          = NdisImPlatformBindingOptions.reg
+
+[Install_NC.Services]
+; TODO: Customize the name of your NT service here.
+; You may also want to add the SPSVCINST_STARTSERVICE flag, like this:
+;     AddService=NdisLwf,0x800,NdisLwf_NC_Service_Inst ; SPSVCINST_STARTSERVICE
+AddService=NdisLwf,,NdisLwf_NC_Service_Inst
+
+[NdisLwf_NC_Service_Inst]
+DisplayName     = %NdisLwf_Desc%
+ServiceType     = 1 ;SERVICE_KERNEL_DRIVER
+; Typically you will want your filter driver to start with SERVICE_SYSTEM_START.
+; If it is an Optional filter, you may also use 3;SERVICE_DEMAND_START.
+StartType       = 1 ;SERVICE_SYSTEM_START
+ErrorControl    = 1 ;SERVICE_ERROR_NORMAL
+; TODO: Customize this to your binary's filename.
+ServiceBinary   = %12%\ndislwf.sys
+LoadOrderGroup  = NDIS
+Description     = %NdisLwf_Desc%
+AddReg          = NdisImPlatformBindingOptions.reg
+
+[Install.Remove.Services]
+; TODO: Customize the name of your NT service here.
+; The SPSVCINST_STOPSERVICE flag instructs SCM to stop the NT service
+; before uninstalling the driver.
+DelService=NdisLwf,0x200 ; SPSVCINST_STOPSERVICE
+
+[Install_NC.Remove.Services]
+; TODO: Customize the name of your NT service here.
+; The SPSVCINST_STOPSERVICE flag instructs SCM to stop the NT service
+; before uninstalling the driver.
+DelService=NdisLwf,0x200 ; SPSVCINST_STOPSERVICE
+
+[NdisImPlatformBindingOptions.reg]
+; By default, when an LBFO team or Bridge is created, all filters will be
+; unbound from the underlying members and bound to the TNic(s). This keyword
+; allows a component to opt out of the default behavior
+; To prevent binding this filter to the TNic(s):
+;   HKR, Parameters, NdisImPlatformBindingOptions,0x00010001,1 ; Do not bind to TNic
+; To prevent unbinding this filter from underlying members:
+;   HKR, Parameters, NdisImPlatformBindingOptions,0x00010001,2 ; Do not unbind from Members
+; To prevent both binding to TNic and unbinding from members:
+;   HKR, Parameters, NdisImPlatformBindingOptions,0x00010001,3 ; Do not bind to TNic or unbind from Members
+HKR, Parameters, NdisImPlatformBindingOptions,0x00010001,0 ; Subscribe to default behavior
+
+[Strings]
+; TODO: Customize these strings.
+ProviderString = "TODO-Set-Provider"
+ManufacturerName = "TODO-Set-Manufacturer"
+NdisLwf_Desc = "NDIS Sample LightWeight Filter"
+NdisLwf_HelpText = "Sample to demonstrate NDIS LightWeight Filters"
+
+
+
+
