@@ -29,7 +29,7 @@ fn protect(plain: &[u8]) -> Option<Vec<u8>> {
         let mut out = CRYPT_INTEGER_BLOB::default();
         CryptProtectData(&input, None, None, None, None, 0, &mut out).ok()?;
         let bytes = std::slice::from_raw_parts(out.pbData, out.cbData as usize).to_vec();
-        let _ = LocalFree(out.pbData as *mut core::ffi::c_void);
+        let _ = LocalFree(Some(windows::Win32::Foundation::HLOCAL(out.pbData as *mut core::ffi::c_void)));
         Some(bytes)
     }
 }
@@ -44,7 +44,7 @@ fn unprotect(sealed: &[u8]) -> Option<Vec<u8>> {
         let mut out = CRYPT_INTEGER_BLOB::default();
         CryptUnprotectData(&input, None, None, None, None, 0, &mut out).ok()?;
         let bytes = std::slice::from_raw_parts(out.pbData, out.cbData as usize).to_vec();
-        let _ = LocalFree(out.pbData as *mut core::ffi::c_void);
+        let _ = LocalFree(Some(windows::Win32::Foundation::HLOCAL(out.pbData as *mut core::ffi::c_void)));
         Some(bytes)
     }
 }
