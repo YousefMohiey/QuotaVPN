@@ -185,7 +185,6 @@ pub fn describe(mac: &str, ip: &str, name: &str, kind: Option<&str>) -> String {
         "tv" => "tv",
         "linux" => "linux device",
         "unix" => "device",
-        "windows" => "windows pc",
         _ => "device",
     });
     match (maker, what) {

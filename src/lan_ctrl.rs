@@ -396,8 +396,21 @@ pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> 
         // A cap is a queue that releases at a fixed rate. Anything that falls
         // more than a third of a second behind is dropped instead of delayed,
         // so a capped device stays responsive rather than turning into lag.
+        let bytes_sent = Arc::new(std::sync::atomic::AtomicU64::new(0));
         let mut next_up = Instant::now();
         let mut next_down = Instant::now();
+        // A cap that cannot be seen working is a rumour, so the forwarding loop
+        // writes down what it actually did every few seconds.
+        let log_path = std::env::var("LOCALAPPDATA")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|_| std::path::PathBuf::from("."))
+            .join("quotavpn")
+            .join("cap.log");
+        let mut last_report = Instant::now();
+        let mut last_seen = 0u64;
+        let mut last_forwarded = 0u64;
+        let mut last_bytes = 0u64;
+
         let mut last_poison = Instant::now() - Duration::from_secs(5);
         let began = Instant::now();
         let limit = std::env::var("QC_LAN_LIMIT_SECS")
@@ -407,6 +420,37 @@ pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> 
         while !stop2.load(Ordering::Relaxed) {
             if began.elapsed() > Duration::from_secs(limit) {
                 break;
+            }
+            if last_report.elapsed() > Duration::from_secs(4) {
+                let seen_now = seen2.load(Ordering::Relaxed);
+                let fwd_now = fwd2.load(Ordering::Relaxed);
+                let bytes_now = bytes_sent.load(Ordering::Relaxed);
+                let line = format!(
+                    "{} target={} cap_down={}KB/s cap_up={}KB/s frames_in={} frames_out={} bytes_out={} blocked={}",
+                    began.elapsed().as_secs(),
+                    target,
+                    down2.load(Ordering::Relaxed),
+                    up2.load(Ordering::Relaxed),
+                    seen_now - last_seen,
+                    fwd_now - last_forwarded,
+                    bytes_now - last_bytes,
+                    blocked2.load(Ordering::Relaxed)
+                );
+                last_seen = seen_now;
+                last_forwarded = fwd_now;
+                last_bytes = bytes_now;
+                last_report = Instant::now();
+                if let Some(dir) = log_path.parent() {
+                    let _ = std::fs::create_dir_all(dir);
+                }
+                let _ = std::fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&log_path)
+                    .and_then(|mut f| {
+                        use std::io::Write;
+                        writeln!(f, "{line}")
+                    });
             }
             // Keep both sides convinced. Every second is enough to survive a
             // router that refreshes, and cheap enough to run all day.
@@ -439,10 +483,11 @@ pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> 
             // Forward it: swap the link addresses and put it back on the wire.
             let mut out = frame.clone();
             let src_is_target = frame[6..12] == tm;
+            // The field says KB/s and means it: kilobytes, not kilobits.
             let rate = if src_is_target {
-                up2.load(Ordering::Relaxed) as u64 * 125
+                up2.load(Ordering::Relaxed) as u64 * 1024
             } else {
-                down2.load(Ordering::Relaxed) as u64 * 125
+                down2.load(Ordering::Relaxed) as u64 * 1024
             };
             if rate > 0 {
                 let now = Instant::now();
@@ -465,6 +510,7 @@ pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> 
             }
             if cap.send(&out) {
                 fwd2.fetch_add(1, Ordering::Relaxed);
+                bytes_sent.fetch_add(out.len() as u64, Ordering::Relaxed);
             }
             let _ = (sip, gip);
         }
