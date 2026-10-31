@@ -43,6 +43,31 @@ type FnNextEx = unsafe extern "system" fn(*mut c_void, *mut *mut pcap_pkthdr, *m
 type FnClose = unsafe extern "system" fn(*mut c_void);
 type FnGetErr = unsafe extern "system" fn(*mut c_void) -> *const c_char;
 
+/// Same note, callable from other modules.
+pub fn note_public(line: &str) {
+    note(line);
+}
+
+/// Load failures leave a note: a driver that is present but will not load is
+/// indistinguishable from a missing one otherwise.
+fn note(line: &str) {
+    let base = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| String::from("."));
+    let dir = std::path::Path::new(&base).join("quotavpn");
+    let _ = std::fs::create_dir_all(&dir);
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let _ = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(dir.join("wpcap.log"))
+        .and_then(|mut f| {
+            use std::io::Write;
+            writeln!(f, "{stamp} {line}")
+        });
+}
+
 pub struct Wpcap {
     _lib: *mut c_void,
     pub findalldevs: FnFindAllDevs,
@@ -87,8 +112,13 @@ impl Wpcap {
                 }
             }
             if handle.is_null() {
+                note(&format!(
+                    "load failed: every path refused, last error {}",
+                    std::io::Error::last_os_error()
+                ));
                 return None;
             }
+            note("wpcap loaded");
 
             unsafe fn sym(handle: *mut c_void, name: &str) -> Option<*const c_void> {
                 let c = CString::new(name).ok()?;
@@ -166,16 +196,15 @@ impl Capture {
     /// Put one frame on the wire. This is how an ARP reply is sent.
     pub fn send(&self, frame: &[u8]) -> bool {
         // Safety: the handle belongs to this capture and the buffer outlives the call.
-        let wp = WPCAP.with(|w| w.borrow().as_ref().map(|x| x as *const Wpcap));
-        let Some(wp) = wp else { return false };
-        let f = unsafe { (*wp).sendpacket };
+        let Some(wp) = loaded() else { return false };
+        let f = wp.sendpacket;
         unsafe { f(self.handle, frame.as_ptr(), frame.len() as c_int) == 0 }
     }
 
     /// Wait for one frame, up to the open timeout.
     pub fn next(&self) -> Option<Vec<u8>> {
-        let wp = WPCAP.with(|w| w.borrow().as_ref().map(|x| x as *const Wpcap))?;
-        let f = unsafe { (*wp).next_ex };
+        let wp = loaded()?;
+        let f = wp.next_ex;
         let mut hdr: *mut pcap_pkthdr = std::ptr::null_mut();
         let mut data: *const c_uchar = std::ptr::null();
         let rc = unsafe { f(self.handle, &mut hdr, &mut data) };
@@ -192,36 +221,32 @@ impl Capture {
 
 impl Drop for Capture {
     fn drop(&mut self) {
-        if let Some(wp) = WPCAP.with(|w| w.borrow().as_ref().map(|x| x as *const Wpcap)) {
-            unsafe { ((*wp).close)(self.handle) };
+        if let Some(wp) = loaded() {
+            unsafe { (wp.close)(self.handle) };
         }
     }
 }
 
-thread_local! {
-    static WPCAP: std::cell::RefCell<Option<Wpcap>> = const { std::cell::RefCell::new(None) };
+/// One handle for the whole process. It used to be per thread, which meant a
+/// worker thread could report the driver missing while another thread had it
+/// loaded, and that is exactly how a working driver looked broken.
+static WPCAP: std::sync::OnceLock<Option<Wpcap>> = std::sync::OnceLock::new();
+
+// The handle and the function pointers are process-wide facts; sharing them
+// across threads is safe, calling them is what needs care.
+unsafe impl Send for Wpcap {}
+unsafe impl Sync for Wpcap {}
+
+fn loaded() -> Option<&'static Wpcap> {
+    WPCAP.get_or_init(Wpcap::load).as_ref()
 }
 
-/// Load the driver once for this thread and report whether it is usable.
+/// Load the driver once and report whether it is usable.
 pub fn ready() -> bool {
-    WPCAP.with(|w| {
-        if w.borrow().is_some() {
-            return true;
-        }
-        match Wpcap::load() {
-            Some(lib) => {
-                *w.borrow_mut() = Some(lib);
-                true
-            }
-            None => false,
-        }
-    })
+    loaded().is_some()
 }
 
 /// Run something with the loaded driver.
 pub fn with<R>(f: impl FnOnce(&Wpcap) -> R) -> Option<R> {
-    if !ready() {
-        return None;
-    }
-    WPCAP.with(|w| w.borrow().as_ref().map(f))
+    loaded().map(f)
 }

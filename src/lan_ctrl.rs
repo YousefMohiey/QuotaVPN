@@ -332,6 +332,7 @@ pub fn start(target_ip: &str, blocked: bool) -> Result<Session, String> {
 /// quiet is not in it, and a phone that ignores pings never fills it.
 pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> Result<Session, String> {
     if !wpcap::ready() {
+        crate::wpcap::note_public(&format!("start_with: driver not ready for {target_ip}"));
         return Err("driver".into());
     }
     let w = wire().ok_or("no wire")?;
