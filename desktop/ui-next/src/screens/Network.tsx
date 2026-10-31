@@ -88,10 +88,38 @@ export function Network() {
     // The guard is what protects this machine from the same trick.
     const tick = window.setInterval(() => {
       void api.lanGuard().then(setGuard).catch(() => undefined)
-    void api.routerStatus().then(setRouterLinked).catch(() => undefined)
+    void api
+      .routerStatus()
+      .then(async (linked) => {
+        if (linked) {
+          setRouterLinked(true)
+          return
+        }
+        // A saved sign in means the names come back on their own.
+        const ok = await api.routerAutoLink().catch(() => false)
+        if (ok) {
+          setRouterLinked(true)
+          void scan(true)
+        }
+      })
+      .catch(() => undefined)
     }, 5000)
     void api.lanGuard().then(setGuard).catch(() => undefined)
-    void api.routerStatus().then(setRouterLinked).catch(() => undefined)
+    void api
+      .routerStatus()
+      .then(async (linked) => {
+        if (linked) {
+          setRouterLinked(true)
+          return
+        }
+        // A saved sign in means the names come back on their own.
+        const ok = await api.routerAutoLink().catch(() => false)
+        if (ok) {
+          setRouterLinked(true)
+          void scan(true)
+        }
+      })
+      .catch(() => undefined)
     return () => {
       alive = false
       window.clearInterval(tick)
@@ -103,6 +131,20 @@ export function Network() {
     if (active.blocked) return "blocked"
     if (active.down_kbps > 0 || active.up_kbps > 0) return "capped"
     return "none"
+  }
+
+  // A name means different things depending on where it came from, and the
+  // difference matters: a router name is exact, a guess is a guess.
+  const sourceChip = (d: LanDevice) => {
+    if (d.self_pc) return null
+    const key =
+      d.source === "router" ? "netSrcRouter" : d.source === "device" ? "netSrcDevice" : d.source === "guess" ? "netSrcGuess" : ""
+    if (!key) return null
+    return (
+      <span className="shrink-0 rounded-[5px] border border-line px-1.5 py-[1px] text-[10px] text-txt3">
+        {t(key)}
+      </span>
+    )
   }
 
   const capLine = active
@@ -213,6 +255,7 @@ export function Network() {
                             {t("netThisPc")}
                           </span>
                         ) : null}
+                        {sourceChip(d)}
                         {state === "blocked" ? (
                           <span className="shrink-0 rounded-[5px] border border-[var(--red)]/45 bg-[var(--red)]/10 px-1.5 py-[1px] text-[10.5px] font-medium text-[var(--red)]">
                             {t("netStateBlocked")}

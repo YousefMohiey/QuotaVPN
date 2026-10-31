@@ -22,6 +22,7 @@ use tauri_plugin_updater::UpdaterExt;
 pub mod speed;
 pub mod ookla;
 pub mod router_huawei;
+mod router_remember;
 mod we_quota;
 
 #[cfg(windows)]
@@ -1722,6 +1723,7 @@ async fn lan_devices(state: tauri::State<'_, RouterState>) -> Result<Vec<quotaca
                 if let Some(name) = names.get(&d.ip) {
                     if !name.is_empty() {
                         d.name = name.clone();
+                        d.source = String::from("router");
                     }
                 }
             }
@@ -1741,9 +1743,35 @@ async fn router_link(state: tauri::State<'_, RouterState>, user: String, pass: S
         .map(|w| w.gateway_ip)
         .ok_or("no gateway")?;
     let session = router_huawei::login(&host, &user, &pass).await?;
+    // Signed in once: keep it sealed for this Windows account.
+    let _ = router_remember::save(&user, &pass);
     let mut guard = state.0.lock().await;
     *guard = Some(session);
     Ok(true)
+}
+
+/// Reconnect with the saved login, if there is one.
+#[tauri::command]
+async fn router_autolink(state: tauri::State<'_, RouterState>) -> Result<bool, String> {
+    let Some((user, pass)) = router_remember::load() else {
+        return Ok(false);
+    };
+    let host = quotacards::lan_ctrl::wire()
+        .map(|w| w.gateway_ip)
+        .ok_or("no gateway")?;
+    match router_huawei::login(&host, &user, &pass).await {
+        Ok(session) => {
+            let mut guard = state.0.lock().await;
+            *guard = Some(session);
+            Ok(true)
+        }
+        Err(_) => {
+            // The router changed its password or the account changed. Drop the
+            // stale secret so the button asks for a fresh sign in.
+            router_remember::clear();
+            Ok(false)
+        }
+    }
 }
 
 #[tauri::command]
@@ -1756,6 +1784,7 @@ async fn router_status(state: tauri::State<'_, RouterState>) -> Result<bool, Str
 async fn router_unlink(state: tauri::State<'_, RouterState>) -> Result<bool, String> {
     let mut guard = state.0.lock().await;
     *guard = None;
+    router_remember::clear();
     Ok(true)
 }
 
@@ -2531,6 +2560,7 @@ pub fn run() {
             lan_status,
             lan_guard,
             router_link,
+            router_autolink,
             router_status,
             router_unlink,
             lan_known,

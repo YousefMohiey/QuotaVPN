@@ -63,7 +63,7 @@ export const speedReach = (url: string): Promise<boolean> => call<boolean>("spee
 export type SpeedOut = { mbps: number | null; note: string }
 
 /** A device seen on the local network. */
-export type LanDevice = { ip: string; mac: string; name: string; self_pc: boolean }
+export type LanDevice = { ip: string; mac: string; name: string; self_pc: boolean; source: string }
 
 /** Who is on this network. Scans the subnet and reads the neighbour table. */
 export const lanKnown = (): Promise<LanDevice[]> => call<LanDevice[]>("lan_known")
@@ -90,6 +90,7 @@ export const lanStatus = (): Promise<LanStatus | null> => call<LanStatus | null>
 export const routerLink = (user: string, pass: string): Promise<boolean> =>
   call<boolean>("router_link", { user, pass })
 export const routerStatus = (): Promise<boolean> => call<boolean>("router_status")
+export const routerAutoLink = (): Promise<boolean> => call<boolean>("router_autolink")
 export const routerUnlink = (): Promise<boolean> => call<boolean>("router_unlink")
 
 export type LanGuard = { watching: boolean; attacker_mac: string; attacker_ip: string; hits: number }
@@ -173,6 +174,7 @@ export const api = {
   lanGuard: (): Promise<LanGuard> => call<LanGuard>("lan_guard"),
   routerLink: (user: string, pass: string): Promise<boolean> => call<boolean>("router_link", { user, pass }),
   routerStatus: (): Promise<boolean> => call<boolean>("router_status"),
+  routerAutoLink: (): Promise<boolean> => call<boolean>("router_autolink"),
   routerUnlink: (): Promise<boolean> => call<boolean>("router_unlink"),
   lanLimits: (down_kbps: number, up_kbps: number): Promise<boolean> =>
     call<boolean>("lan_limits", { downKbps: down_kbps, upKbps: up_kbps }),

@@ -21,6 +21,9 @@ pub struct Device {
     /// True for the machine the app is running on, so its row can be labelled
     /// instead of leaving the user to work it out.
     pub self_pc: bool,
+    /// Where the name came from: "self", "router", "device" (it announced
+    /// itself) or "guess" (read from the hardware address).
+    pub source: String,
 }
 
 #[cfg(windows)]
@@ -154,7 +157,7 @@ pub fn known() -> Vec<Device> {
         if !keep(&ip, &mac) {
             continue;
         }
-        out.push(Device { ip, mac, name: String::from("-"), self_pc: false });
+        out.push(Device { ip, mac, name: String::from("-"), self_pc: false, source: String::new() });
     }
     sort_devices(&mut out);
     out
@@ -335,16 +338,19 @@ pub fn scan() -> Vec<Device> {
         // A name if one exists, otherwise the most useful true thing: who made
         // it, and (from the background pass) what kind of device it is.
         let ttl: u32 = ttl.parse().unwrap_or(0);
-        let label = if usable_name(&resolved) {
-            resolved
+        let (label, source) = if usable_name(&resolved) {
+            let from_router = false;
+            let _ = from_router;
+            (resolved, String::from("device"))
         } else {
-            crate::fingerprint::describe_ttl(&mac, ttl)
+            (crate::fingerprint::describe_ttl(&mac, ttl), String::from("guess"))
         };
         out.push(Device {
             ip,
             mac,
             name: label,
             self_pc: false,
+            source,
         });
     }
 
@@ -358,6 +364,7 @@ pub fn scan() -> Vec<Device> {
         mac: me_mac,
         name: host,
         self_pc: true,
+        source: String::from("self"),
     });
 
     sort_devices(&mut out);
