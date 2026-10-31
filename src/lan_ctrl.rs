@@ -80,16 +80,37 @@ fn local_ip() -> Option<String> {
     Some(sock.local_addr().ok()?.ip().to_string())
 }
 
-/// The adapter, its MAC and the default gateway, read from the system.
-/// ipconfig marks addresses with a suffix such as "(Preferred)", and the
-/// adapter's Description line is what matches the packet driver's own list.
-fn adapter_info(ip: &str) -> Option<(String, String, String)> {
+/// One adapter as Windows describes it.
+struct Adapter {
+    description: String,
+    mac: String,
+    ip: String,
+    gateway: String,
+}
+
+fn adapters() -> Vec<Adapter> {
     let out = run("ipconfig", &["/all"]);
+    let mut list: Vec<Adapter> = Vec::new();
     let mut name = String::new();
     let mut description = String::new();
     let mut mac = String::new();
+    let mut ip = String::new();
     let mut gateway = String::new();
-    let mut seen_ip = false;
+
+    let flush = |list: &mut Vec<Adapter>, description: &str, name: &str, mac: &str, ip: &str, gateway: &str| {
+        if !ip.is_empty() && !gateway.is_empty() && !mac.is_empty() {
+            list.push(Adapter {
+                description: if description.is_empty() {
+                    name.to_string()
+                } else {
+                    description.to_string()
+                },
+                mac: mac.to_string(),
+                ip: ip.to_string(),
+                gateway: gateway.to_string(),
+            });
+        }
+    };
 
     for raw in out.lines() {
         let line = raw.trim();
@@ -98,6 +119,7 @@ fn adapter_info(ip: &str) -> Option<(String, String, String)> {
             || lower.starts_with("wireless lan adapter")
             || lower.starts_with("unknown adapter")
         {
+            flush(&mut list, &description, &name, &mac, &ip, &gateway);
             name = line
                 .split("adapter")
                 .nth(1)
@@ -107,8 +129,8 @@ fn adapter_info(ip: &str) -> Option<(String, String, String)> {
                 .to_string();
             description.clear();
             mac.clear();
+            ip.clear();
             gateway.clear();
-            seen_ip = false;
         }
         if lower.starts_with("description") {
             if let Some(v) = line.split(':').nth(1) {
@@ -120,15 +142,15 @@ fn adapter_info(ip: &str) -> Option<(String, String, String)> {
                 mac = v.trim().replace('-', ":").to_lowercase();
             }
         }
-        if lower.starts_with("ipv4 address") {
+        if lower.starts_with("ipv4 address") && ip.is_empty() {
             if let Some(v) = line.split(':').nth(1) {
                 let addr = v.trim().split('(').next().unwrap_or("").trim();
-                if addr == ip {
-                    seen_ip = true;
+                if addr.split('.').count() == 4 {
+                    ip = addr.to_string();
                 }
             }
         }
-        if lower.starts_with("default gateway") {
+        if lower.starts_with("default gateway") && gateway.is_empty() {
             if let Some(v) = line.split(':').nth(1) {
                 let g = v.trim();
                 if g.split('.').count() == 4 {
@@ -136,12 +158,44 @@ fn adapter_info(ip: &str) -> Option<(String, String, String)> {
                 }
             }
         }
-        if seen_ip && !mac.is_empty() && !gateway.is_empty() {
-            let label = if description.is_empty() { name.clone() } else { description.clone() };
-            return Some((label, mac.clone(), gateway.clone()));
-        }
     }
-    None
+    flush(&mut list, &description, &name, &mac, &ip, &gateway);
+    list
+}
+
+/// The adapter that actually leads to the router.
+///
+/// This used to start from the default route, which is a tunnel whenever the
+/// VPN is connected: the app then looked for a gateway on a TUN adapter that
+/// has none, and reported no gateway while the network was perfectly fine.
+fn best_adapter() -> Option<Adapter> {
+    let list = adapters();
+    let mut best: Option<(i32, Adapter)> = None;
+    for a in list {
+        let d = a.description.to_lowercase();
+        let virtual_like = ["tap", "wintun", "wireguard", "openvpn", "sing-box", "virtualbox",
+            "bluetooth", "wi-fi direct", "loopback", "hyper-v", "vpn", "tunnel"]
+            .iter()
+            .any(|k| d.contains(k));
+        if virtual_like {
+            continue;
+        }
+        let physical = d.contains("ethernet") || d.contains("wireless") || d.contains("wi-fi");
+        let mut score = 0;
+        if physical {
+            score += 10;
+        }
+        if d.contains("wireless") || d.contains("wi-fi") {
+            score += 1;
+        }
+        if let Some((best_score, _)) = &best {
+            if score <= *best_score {
+                continue;
+            }
+        }
+        best = Some((score, a));
+    }
+    best.map(|(_, a)| a)
 }
 
 fn mac_for(ip: &str) -> Option<String> {
@@ -172,8 +226,8 @@ fn mac_bytes(mac: &str) -> Option<[u8; 6]> {
 
 /// Work out which wire to sit on.
 pub fn wire() -> Option<Wire> {
-    let ip = local_ip()?;
-    let (adapter, mac, gateway_ip) = adapter_info(&ip)?;
+    let chosen = best_adapter()?;
+    let (ip, mac, gateway_ip, adapter) = (chosen.ip, chosen.mac, chosen.gateway, chosen.description);
     // The gateway is only in the ARP table once something has spoken to it.
     let mut gateway_mac = mac_for(&gateway_ip).unwrap_or_default();
     if gateway_mac.is_empty() {

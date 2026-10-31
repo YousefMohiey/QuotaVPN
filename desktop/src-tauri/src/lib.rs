@@ -2282,6 +2282,17 @@ pub fn run() {
         }
         return;
     }
+    // Print the wire the app would use, without touching the network.
+    if std::env::args().any(|a| a == "--lan-wire") {
+        match quotacards::lan_ctrl::wire() {
+            Some(w) => println!(
+                "adapter={} ip={} mac={} gateway={} gw_mac={} device={}",
+                w.adapter, w.ip, w.mac, w.gateway_ip, w.gateway_mac, w.device
+            ),
+            None => println!("wire: none"),
+        }
+        return;
+    }
     // Parse a saved copy of the router's device list.
     if let Some(i) = std::env::args().position(|a| a == "--router-parse") {
         let path = std::env::args().nth(i + 1).unwrap_or_default();
