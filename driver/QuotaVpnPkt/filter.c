@@ -153,10 +153,16 @@ Return Value:
         }
 
         Status = FilterRegisterDevice();
+        if (Status == STATUS_SUCCESS)
+        {
+            Status = TapInitialize();
+        }
 
         if (Status != NDIS_STATUS_SUCCESS)
         {
-            NdisFDeregisterFilterDriver(FilterDriverHandle);
+            TapCleanup();
+
+    NdisFDeregisterFilterDriver(FilterDriverHandle);
             FILTER_FREE_LOCK(&FilterListLock);
             DEBUGP(DL_WARN, "Register device for the filter driver failed.\n");
             break;
@@ -1219,6 +1225,13 @@ Return Value:
     // list, and the scratch fields are don't-care).
     //
 
+    NetBufferLists = TapStripOwnSends(NetBufferLists);
+
+    if (NetBufferLists == NULL)
+    {
+        return;
+    }
+
     if (pFilter->TrackSends)
     {
         CurrNbl = NetBufferLists;
@@ -1468,6 +1481,8 @@ N.B.: It is important to check the ReceiveFlags in NDIS_TEST_RECEIVE_CANNOT_PEND
 
     PMS_FILTER          pFilter = (PMS_FILTER)FilterModuleContext;
     BOOLEAN             DispatchLevel;
+
+    TapCapture(pFilter, NetBufferLists);
     ULONG               Ref;
     BOOLEAN             bFalse = FALSE;
 #if DBG

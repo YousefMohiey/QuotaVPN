@@ -232,6 +232,84 @@ FilterDeviceIoControl(
             break;
 
 
+        case TAP_IOCTL_SELECT:
+        {
+            //
+            // Input is the instance name of the adapter to tap. Empty input
+            // releases the tap.
+            //
+            PUCHAR     name;
+            ULONG      nameLength;
+            PMS_FILTER found = NULL;
+
+            InputBuffer = (PUCHAR)Irp->AssociatedIrp.SystemBuffer;
+            InputBufferLength = IrpSp->Parameters.DeviceIoControl.InputBufferLength;
+
+            if (InputBufferLength == 0)
+            {
+                TapSetTarget(NULL);
+                Status = STATUS_SUCCESS;
+                break;
+            }
+
+            name = InputBuffer;
+            nameLength = InputBufferLength;
+
+            FILTER_ACQUIRE_LOCK(&FilterListLock, bFalse);
+            Link = FilterModuleList.Flink;
+            while (Link != &FilterModuleList)
+            {
+                pFilter = CONTAINING_RECORD(Link, MS_FILTER, FilterModuleLink);
+                if (pFilter->FilterModuleName.Length == nameLength &&
+                    NdisEqualMemory(pFilter->FilterModuleName.Buffer, name, nameLength))
+                {
+                    found = pFilter;
+                    break;
+                }
+                Link = Link->Flink;
+            }
+            FILTER_RELEASE_LOCK(&FilterListLock, bFalse);
+
+            TapSetTarget(found);
+            Status = (found != NULL) ? STATUS_SUCCESS : STATUS_NOT_FOUND;
+            break;
+        }
+
+        case TAP_IOCTL_READ:
+        {
+            OutputBuffer = (PUCHAR)Irp->AssociatedIrp.SystemBuffer;
+            OutputBufferLength = IrpSp->Parameters.DeviceIoControl.OutputBufferLength;
+            Status = TapRead(OutputBuffer, OutputBufferLength, &InfoLength);
+            break;
+        }
+
+        case TAP_IOCTL_WRITE:
+        {
+            InputBuffer = (PUCHAR)Irp->AssociatedIrp.SystemBuffer;
+            InputBufferLength = IrpSp->Parameters.DeviceIoControl.InputBufferLength;
+            Status = TapSend(InputBuffer, InputBufferLength);
+            break;
+        }
+
+        case TAP_IOCTL_STATS:
+        {
+            ULONG used = 0;
+
+            OutputBuffer = (PUCHAR)Irp->AssociatedIrp.SystemBuffer;
+            OutputBufferLength = IrpSp->Parameters.DeviceIoControl.OutputBufferLength;
+
+            if (OutputBufferLength < 4 * sizeof(ULONG))
+            {
+                Status = STATUS_BUFFER_TOO_SMALL;
+                break;
+            }
+
+            TapStats((PULONG)OutputBuffer, &used);
+            InfoLength = used;
+            Status = STATUS_SUCCESS;
+            break;
+        }
+
         default:
             break;
     }
