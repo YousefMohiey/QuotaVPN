@@ -63,7 +63,15 @@ export const speedReach = (url: string): Promise<boolean> => call<boolean>("spee
 export type SpeedOut = { mbps: number | null; note: string }
 
 /** A device seen on the local network. */
-export type LanDevice = { ip: string; mac: string; name: string; self_pc: boolean; source: string }
+export type LanDevice = {
+  ip: string
+  mac: string
+  name: string
+  self_pc: boolean
+  source: string
+  protected: boolean
+  protected_always: boolean
+}
 
 /** Who is on this network. Scans the subnet and reads the neighbour table. */
 export const lanKnown = (): Promise<LanDevice[]> => call<LanDevice[]>("lan_known")
@@ -77,12 +85,18 @@ export const lanStart = (ip: string, mac: string, blocked: boolean): Promise<boo
 
 export const lanStop = (): Promise<boolean> => call<boolean>("lan_stop")
 
+/** Keep a device out of reach of the controls, or let it back in. */
+export const lanProtect = (mac: string, on: boolean): Promise<boolean> =>
+  call<boolean>("lan_protect", { mac, on })
+
 export type LanStatus = {
   ip: string
   mac: string
   down_kbps: number
   up_kbps: number
   blocked: boolean
+  up_bytes: number
+  down_bytes: number
 }
 
 export const lanStatus = (): Promise<LanStatus | null> => call<LanStatus | null>("lan_status")
@@ -173,6 +187,7 @@ export const api = {
   lanStart: (ip: string, mac: string, blocked: boolean): Promise<boolean> =>
     call<boolean>("lan_start", { ip, mac, blocked }),
   lanStop: (): Promise<boolean> => call<boolean>("lan_stop"),
+  lanProtect: (mac: string, on: boolean): Promise<boolean> => call<boolean>("lan_protect", { mac, on }),
   lanStatus: (): Promise<LanStatus | null> => call<LanStatus | null>("lan_status"),
   lanGuard: (): Promise<LanGuard> => call<LanGuard>("lan_guard"),
   openPage: (url: string): Promise<boolean> => call<boolean>("open_page", { url }),

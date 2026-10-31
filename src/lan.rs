@@ -22,8 +22,16 @@ pub struct Device {
     /// instead of leaving the user to work it out.
     pub self_pc: bool,
     /// Where the name came from: "self", "router", "device" (it announced
-    /// itself) or "guess" (read from the hardware address).
+    /// itself) or "vendor" (read from the hardware address).
     pub source: String,
+    /// Protected devices are never capped or blocked: the router, this PC,
+    /// and anything the user marked.
+    #[serde(default)]
+    pub protected: bool,
+    /// True when protection is not the user's to remove: this PC and the
+    /// router stay safe whatever the screen says.
+    #[serde(default)]
+    pub protected_always: bool,
 }
 
 #[cfg(windows)]
@@ -157,7 +165,7 @@ pub fn known() -> Vec<Device> {
         if !keep(&ip, &mac) {
             continue;
         }
-        out.push(Device { ip, mac, name: String::from("-"), self_pc: false, source: String::new() });
+        out.push(Device { ip, mac, name: String::from("-"), self_pc: false, source: String::new(), protected: false, protected_always: false });
     }
     sort_devices(&mut out);
     out
@@ -343,7 +351,7 @@ pub fn scan() -> Vec<Device> {
             let _ = from_router;
             (resolved, String::from("device"))
         } else {
-            (crate::fingerprint::describe_ttl(&mac, ttl), String::from("guess"))
+            (crate::fingerprint::describe_ttl(&mac, ttl), String::from("vendor"))
         };
         out.push(Device {
             ip,
@@ -351,6 +359,8 @@ pub fn scan() -> Vec<Device> {
             name: label,
             self_pc: false,
             source,
+            protected: false,
+            protected_always: false,
         });
     }
 
@@ -365,6 +375,8 @@ pub fn scan() -> Vec<Device> {
         name: host,
         self_pc: true,
         source: String::from("self"),
+        protected: false,
+        protected_always: false,
     });
 
     sort_devices(&mut out);

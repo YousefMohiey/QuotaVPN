@@ -310,6 +310,9 @@ pub struct Session {
     /// Frames that arrived for the target and frames we put back on the wire.
     pub seen: Arc<std::sync::atomic::AtomicU64>,
     pub forwarded: Arc<std::sync::atomic::AtomicU64>,
+    /// Bytes the target sent and bytes it received, counted as they pass.
+    pub bytes_up: Arc<std::sync::atomic::AtomicU64>,
+    pub bytes_down: Arc<std::sync::atomic::AtomicU64>,
     handle: Option<std::thread::JoinHandle<()>>,
 }
 
@@ -367,6 +370,8 @@ pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> 
     let up = Arc::new(std::sync::atomic::AtomicU32::new(0));
     let seen = Arc::new(std::sync::atomic::AtomicU64::new(0));
     let forwarded = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let bytes_up = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let bytes_down = Arc::new(std::sync::atomic::AtomicU64::new(0));
 
     write_journal(&format!(
         "{}|{}|{}|{}",
@@ -380,6 +385,8 @@ pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> 
     let tmac = target_mac.clone();
     let seen2 = Arc::clone(&seen);
     let fwd2 = Arc::clone(&forwarded);
+    let up_bytes = Arc::clone(&bytes_up);
+    let down_bytes = Arc::clone(&bytes_down);
     let down2 = Arc::clone(&down);
     let up2 = Arc::clone(&up);
 
@@ -512,6 +519,11 @@ pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> 
             if cap.send(&out) {
                 fwd2.fetch_add(1, Ordering::Relaxed);
                 bytes_sent.fetch_add(out.len() as u64, Ordering::Relaxed);
+                if src_is_target {
+                    up_bytes.fetch_add(out.len() as u64, Ordering::Relaxed);
+                } else {
+                    down_bytes.fetch_add(out.len() as u64, Ordering::Relaxed);
+                }
             }
             let _ = (sip, gip);
         }
@@ -537,6 +549,8 @@ pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> 
         up_kbps: up,
         seen,
         forwarded,
+        bytes_up,
+        bytes_down,
         handle: Some(handle),
     })
 }

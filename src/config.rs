@@ -46,6 +46,10 @@ pub struct AppConfig {
     /// releases only; "experimental" also takes the newest test builds.
     #[serde(default)]
     pub update_channel: String,
+    /// Hardware addresses the user chose to keep safe. A protected device can
+    /// never be capped or blocked, whatever the rest of the screen says.
+    #[serde(default)]
+    pub lan_protected: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

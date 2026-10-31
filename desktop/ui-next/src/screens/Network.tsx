@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Ban, Gauge, Info, Loader2, Monitor, RefreshCw, Router, ShieldAlert, Wifi, X } from "lucide-react"
+import { Activity, Ban, Gauge, Info, Loader2, Monitor, RefreshCw, Router, ShieldAlert, ShieldCheck, Wifi, X } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
 import { api, type LanDevice, type LanGuard, type LanStatus } from "@/lib/ipc"
 import { cn } from "@/lib/utils"
 import { LanLimitDialog } from "@/components/LanLimitDialog"
 import { RouterLinkDialog } from "@/components/RouterLinkDialog"
+
+/** Bytes per second as something a person reads at a glance. */
+function fmtRate(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B/s`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB/s`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB/s`
+}
 
 /** Who is on this network, and what is being done to them. */
 export function Network() {
@@ -18,6 +25,8 @@ export function Network() {
   const [guard, setGuard] = useState<LanGuard | null>(null)
   const [routerOpen, setRouterOpen] = useState(false)
   const [routerLinked, setRouterLinked] = useState(false)
+  const [rates, setRates] = useState<{ up: number; down: number } | null>(null)
+  const lastBytes = useRef<{ up: number; down: number; at: number } | null>(null)
   const [driverReady, setDriverReady] = useState<boolean | null>(null)
   const polled = useRef(0)
 
@@ -42,9 +51,28 @@ export function Network() {
 
   const refreshStatus = useCallback(async () => {
     try {
-      setActive(await api.lanStatus())
+      const next = await api.lanStatus()
+      setActive(next)
+      // Real numbers, not an estimate: the counters come from the frames that
+      // actually passed through this machine.
+      if (!next) {
+        lastBytes.current = null
+        setRates(null)
+        return
+      }
+      const now = Date.now()
+      const before = lastBytes.current
+      if (before && now > before.at) {
+        const seconds = (now - before.at) / 1000
+        setRates({
+          up: Math.max(0, Math.round((next.up_bytes - before.up) / seconds)),
+          down: Math.max(0, Math.round((next.down_bytes - before.down) / seconds)),
+        })
+      }
+      lastBytes.current = { up: next.up_bytes, down: next.down_bytes, at: now }
     } catch {
       setActive(null)
+      setRates(null)
     }
   }, [])
 
@@ -129,6 +157,34 @@ export function Network() {
     }
   }, [scan, refreshStatus])
 
+  // Watching a device means standing in its path, because that is the only
+  // place its traffic can be counted. Nothing is capped and nothing is
+  // dropped; the counters are the whole point.
+  const toggleMonitor = async (d: LanDevice) => {
+    setErr("")
+    try {
+      if (active?.ip === d.ip && !active.blocked && active.down_kbps === 0 && active.up_kbps === 0) {
+        await stopAll()
+        return
+      }
+      await api.lanStart(d.ip, d.mac, false)
+      lastBytes.current = null
+      await refreshStatus()
+    } catch (e) {
+      setErr(String(e))
+    }
+  }
+
+  const toggleProtect = async (d: LanDevice) => {
+    setErr("")
+    try {
+      await api.lanProtect(d.mac, !d.protected)
+      await scan(true)
+    } catch (e) {
+      setErr(String(e))
+    }
+  }
+
   const stateOf = (d: LanDevice): "blocked" | "capped" | "none" => {
     if (!active || active.ip !== d.ip) return "none"
     if (active.blocked) return "blocked"
@@ -137,11 +193,11 @@ export function Network() {
   }
 
   // A name means different things depending on where it came from, and the
-  // difference matters: a router name is exact, a guess is a guess.
+  // difference matters: a router name is exact, a hardware one is the maker.
   const sourceChip = (d: LanDevice) => {
     if (d.self_pc) return null
     const key =
-      d.source === "router" ? "netSrcRouter" : d.source === "device" ? "netSrcDevice" : d.source === "guess" ? "netSrcGuess" : ""
+      d.source === "router" ? "netSrcRouter" : d.source === "device" ? "netSrcDevice" : d.source === "vendor" ? "netSrcGuess" : ""
     if (!key) return null
     return (
       <span className="shrink-0 rounded-[5px] border border-line px-1.5 py-[1px] text-[10px] text-txt3">
@@ -224,6 +280,13 @@ export function Network() {
               {active.ip}
             </span>
             <span className="min-w-0 flex-1 truncate text-[12.5px] text-txt2">{capLine}</span>
+            {rates ? (
+              <span className="shrink-0 font-mono text-[12px] tabular-nums text-txt" dir="ltr">
+                <span className="text-[var(--green)]">v {fmtRate(rates.down)}</span>
+                <span className="px-1.5 text-txt3">/</span>
+                <span className="text-[var(--brand)]">^ {fmtRate(rates.up)}</span>
+              </span>
+            ) : null}
             <button
               type="button"
               onClick={() => void stopAll()}
@@ -274,6 +337,12 @@ export function Network() {
                             {t("netThisPc")}
                           </span>
                         ) : null}
+                        {d.protected ? (
+                          <span className="flex shrink-0 items-center gap-1 rounded-[5px] border border-[var(--green)]/40 bg-[var(--green)]/10 px-1.5 py-[1px] text-[10.5px] font-medium text-[var(--green)]">
+                            <ShieldCheck className="size-3" aria-hidden />
+                            {t("netProtected")}
+                          </span>
+                        ) : null}
                         {sourceChip(d)}
                         {state === "blocked" ? (
                           <span className="shrink-0 rounded-[5px] border border-[var(--red)]/45 bg-[var(--red)]/10 px-1.5 py-[1px] text-[10.5px] font-medium text-[var(--red)]">
@@ -295,8 +364,39 @@ export function Network() {
                     </span>
                     <button
                       type="button"
+                      onClick={() => void toggleMonitor(d)}
+                      disabled={driverReady === false || d.protected}
+                      title={t("netMonitor")}
+                      className={cn(
+                        "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+                        active?.ip === d.ip && state === "none"
+                          ? "border-[var(--green)]/45 bg-[var(--green)]/10 text-[var(--green)]"
+                          : "border-line bg-white/[0.02] text-txt2 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] hover:text-txt",
+                      )}
+                    >
+                      <Activity className="size-3.5" aria-hidden />
+                      {t("netMonitor")}
+                    </button>
+                    {d.protected_always ? null : (
+                    <button
+                      type="button"
+                      onClick={() => void toggleProtect(d)}
+                      title={d.protected ? t("netUnprotect") : t("netProtect")}
+                      className={cn(
+                        "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors",
+                        d.protected
+                          ? "border-[var(--green)]/45 bg-[var(--green)]/10 text-[var(--green)]"
+                          : "border-line bg-white/[0.02] text-txt2 hover:border-[var(--brand-line)] hover:bg-[var(--brand-bg)] hover:text-txt",
+                      )}
+                    >
+                      <ShieldCheck className="size-3.5" aria-hidden />
+                      {d.protected ? t("netUnprotect") : t("netProtect")}
+                    </button>
+                    )}
+                    <button
+                      type="button"
                       onClick={() => setLimitFor(d)}
-                      disabled={driverReady === false}
+                      disabled={driverReady === false || d.protected}
                       className={cn(
                         "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors disabled:cursor-not-allowed disabled:opacity-40",
                         state === "capped"
@@ -310,7 +410,7 @@ export function Network() {
                     <button
                       type="button"
                       onClick={() => void toggleBlock(d)}
-                      disabled={driverReady === false}
+                      disabled={driverReady === false || d.protected}
                       className={cn(
                         "press flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] transition-colors disabled:cursor-not-allowed disabled:opacity-40",
                         state === "blocked"

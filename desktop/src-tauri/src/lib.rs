@@ -1662,7 +1662,19 @@ async fn lan_wire() -> Option<quotacards::lan_ctrl::Wire> {
 /// Start standing between one device and the router. One at a time: two
 /// poisoned devices on the same wire would fight over one forwarding loop.
 #[tauri::command]
-fn lan_start(state: tauri::State<'_, LanState>, ip: String, mac: Option<String>, blocked: bool) -> Result<bool, String> {
+fn lan_start(
+    state: tauri::State<'_, LanState>,
+    cfg: tauri::State<'_, State>,
+    ip: String,
+    mac: Option<String>,
+    blocked: bool,
+) -> Result<bool, String> {
+    {
+        let guard = cfg.0.lock().map_err(|_| "config".to_string())?;
+        if let Some(why) = protected_reason(&ip, mac.as_deref().unwrap_or(""), &guard) {
+            return Err(why);
+        }
+    }
     let previous = {
         let mut guard = state.0.lock().map_err(|_| "state".to_string())?;
         guard.take()
@@ -1676,6 +1688,38 @@ fn lan_start(state: tauri::State<'_, LanState>, ip: String, mac: Option<String>,
     Ok(true)
 }
 
+/// Keep a device out of reach of the controls, or let it back in.
+#[tauri::command]
+fn lan_protect(mac: String, on: bool, state: tauri::State<State>) -> Result<bool, String> {
+    let mac = mac.to_lowercase();
+    let mut cfg = state.0.lock().map_err(|_| "config".to_string())?;
+    let already = cfg.lan_protected.iter().any(|m| m.eq_ignore_ascii_case(&mac));
+    if on && !already {
+        cfg.lan_protected.push(mac);
+        cfg.save();
+    } else if !on && already {
+        cfg.lan_protected.retain(|m| !m.eq_ignore_ascii_case(&mac));
+        cfg.save();
+    }
+    Ok(true)
+}
+
+/// Whether this address is off limits, and why, in words the window can show.
+fn protected_reason(ip: &str, mac: &str, cfg: &AppConfig) -> Option<String> {
+    if let Some(w) = quotacards::lan_ctrl::wire() {
+        if ip == w.ip {
+            return Some("This PC is protected".to_string());
+        }
+        if !w.gateway_ip.is_empty() && ip == w.gateway_ip {
+            return Some("The router is protected".to_string());
+        }
+    }
+    if cfg.lan_protected.iter().any(|m| m.eq_ignore_ascii_case(mac)) {
+        return Some("This device is protected".to_string());
+    }
+    None
+}
+
 /// Whether anyone is trying to stand between this machine and the router.
 #[tauri::command]
 fn lan_guard() -> quotacards::lan_ctrl::Guard {
@@ -1684,9 +1728,20 @@ fn lan_guard() -> quotacards::lan_ctrl::Guard {
 
 /// Set the caps for the active device. Zero means no cap.
 #[tauri::command]
-fn lan_limits(state: tauri::State<'_, LanState>, down_kbps: u32, up_kbps: u32) -> Result<bool, String> {
+fn lan_limits(
+    state: tauri::State<'_, LanState>,
+    cfg: tauri::State<'_, State>,
+    down_kbps: u32,
+    up_kbps: u32,
+) -> Result<bool, String> {
     let guard = state.0.lock().map_err(|_| "state".to_string())?;
     let Some(session) = guard.as_ref() else { return Ok(false) };
+    {
+        let conf = cfg.0.lock().map_err(|_| "config".to_string())?;
+        if let Some(why) = protected_reason(&session.target_ip, &session.target_mac, &conf) {
+            return Err(why);
+        }
+    }
     session.down_kbps.store(down_kbps, std::sync::atomic::Ordering::Relaxed);
     session.up_kbps.store(up_kbps, std::sync::atomic::Ordering::Relaxed);
     Ok(true)
@@ -1719,7 +1774,10 @@ async fn lan_known() -> Vec<quotacards::lan::Device> {
 
 /// Who is on this network: ip, mac and a name when the system resolves one.
 #[tauri::command]
-async fn lan_devices(state: tauri::State<'_, RouterState>) -> Result<Vec<quotacards::lan::Device>, String> {
+async fn lan_devices(
+    state: tauri::State<'_, RouterState>,
+    cfg: tauri::State<'_, State>,
+) -> Result<Vec<quotacards::lan::Device>, String> {
     let mut list = tauri::async_runtime::spawn_blocking(quotacards::lan::scan)
         .await
         .unwrap_or_default();
@@ -1737,6 +1795,16 @@ async fn lan_devices(state: tauri::State<'_, RouterState>) -> Result<Vec<quotaca
                 }
             }
         }
+    }
+    // Protection, marked here so every screen agrees: the router and this PC
+    // are always safe, plus whatever the user marked. The list is what the
+    // controls read before they are allowed to act.
+    let chosen = cfg.0.lock().map(|c| c.lan_protected.clone()).unwrap_or_default();
+    let gateway_ip = quotacards::lan_ctrl::wire().map(|w| w.gateway_ip).unwrap_or_default();
+    for d in list.iter_mut() {
+        let fixed = d.self_pc || (!gateway_ip.is_empty() && d.ip == gateway_ip);
+        d.protected_always = fixed;
+        d.protected = fixed || chosen.iter().any(|m| m.eq_ignore_ascii_case(&d.mac));
     }
     // Names that are still missing are looked up in the background, so the list
     // is on screen in a second and fills itself in a few seconds later.
@@ -1834,6 +1902,8 @@ fn lan_status(state: tauri::State<'_, LanState>) -> Option<LanStatus> {
         down_kbps: session.down_kbps.load(std::sync::atomic::Ordering::Relaxed),
         up_kbps: session.up_kbps.load(std::sync::atomic::Ordering::Relaxed),
         blocked: session.blocked.load(std::sync::atomic::Ordering::Relaxed),
+        up_bytes: session.bytes_up.load(std::sync::atomic::Ordering::Relaxed),
+        down_bytes: session.bytes_down.load(std::sync::atomic::Ordering::Relaxed),
     })
 }
 
@@ -1844,6 +1914,9 @@ pub struct LanStatus {
     pub down_kbps: u32,
     pub up_kbps: u32,
     pub blocked: bool,
+    /// Bytes seen from this device and to it since the session began.
+    pub up_bytes: u64,
+    pub down_bytes: u64,
 }
 
 #[tauri::command]
@@ -2626,6 +2699,7 @@ pub fn run() {
             lan_limits,
             lan_status,
             lan_guard,
+            lan_protect,
             router_link,
             open_page,
             router_autolink,
