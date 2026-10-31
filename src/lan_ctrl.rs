@@ -874,17 +874,48 @@ pub fn start_guard() {
         if let Ok(mut g) = guard_slot().lock() {
             g.watching = true;
         }
-        let gw_mac = mac_bytes(&w.gateway_mac).unwrap_or([0; 6]);
-        let our_mac = mac_bytes(&w.mac).unwrap_or([0; 6]);
-        let gw_ip = ip4(&w.gateway_ip).unwrap_or([0; 4]);
-        let our_ip = ip4(&w.ip).unwrap_or([0; 4]);
+        let Some(gw_mac) = mac_bytes(&w.gateway_mac) else {
+            return;
+        };
+        let Some(our_mac) = mac_bytes(&w.mac) else {
+            return;
+        };
+        let Some(gw_ip) = ip4(&w.gateway_ip) else {
+            return;
+        };
+        let Some(our_ip) = ip4(&w.ip) else {
+            return;
+        };
+        // A missing address must never mean "everyone is an attacker": with an
+        // empty gateway address the real router looks like an impostor and the
+        // app accuses the one machine that is supposed to be there.
+        if gw_mac == [0u8; 6] || our_mac == [0u8; 6] || gw_ip == [0u8; 4] {
+            return;
+        }
 
+        let mut known_gateway = gw_mac;
+        let mut checked = Instant::now();
         loop {
             let Some(f) = cap.next() else { continue };
             if f.len() < 42 || f[12] != 0x08 || f[13] != 0x06 {
                 continue;
             }
-            if let Some((mac, ip)) = arp_claim(&f, our_mac, gw_mac, gw_ip, our_ip) {
+            // The router can be replaced or hand out a new address while the
+            // app is open. Re-read the table every few seconds so a change of
+            // hardware does not turn into an accusation.
+            if checked.elapsed() > Duration::from_secs(10) {
+                checked = Instant::now();
+                if let Some(m) = mac_for(&w.gateway_ip) {
+                    if let Some(b) = mac_bytes(&m) {
+                        known_gateway = b;
+                    }
+                }
+            }
+            let sender = &f[22..28];
+            if sender == known_gateway {
+                continue;
+            }
+            if let Some((mac, ip)) = arp_claim(&f, our_mac, known_gateway, gw_ip, our_ip) {
                 note_attacker(&mac, &ip);
             }
         }

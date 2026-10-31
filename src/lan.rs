@@ -287,6 +287,62 @@ fn clean_name(raw: &str) -> String {
     }
 }
 
+/// Adapters Windows invents are not devices on the network: a VirtualBox
+/// host-only card, a TAP adapter or a Wi-Fi Direct ghost each carry a hardware
+/// address but no machine stands behind it.
+fn virtual_mac(mac: &str) -> bool {
+    let m = mac.to_ascii_lowercase().replace('-', ":");
+    [
+        "0a:00:27", "00:ff", "00:50:56", "08:00:27", "52:54:00", "00:15:5d",
+    ]
+    .iter()
+    .any(|p| m.starts_with(p))
+}
+
+/// Every hardware address that belongs to this machine. Windows invents extra
+/// adapters (Wi-Fi Direct ghosts, host-only cards, TAP), and each of them can
+/// answer as if it were a separate device on the network.
+fn local_macs() -> std::collections::HashSet<String> {
+    let mut out = std::collections::HashSet::new();
+    let Ok(o) = hidden("getmac").args(["/fo", "csv", "/nh"]).output() else {
+        return out;
+    };
+    let text = String::from_utf8_lossy(&o.stdout);
+    for line in text.lines() {
+        let Some(first) = line.trim().trim_start_matches('"').split('"').next() else {
+            continue;
+        };
+        let m = first.to_ascii_lowercase().replace('-', ":");
+        if m.len() == 17 && m.matches(':').count() == 5 {
+            out.insert(m);
+        }
+    }
+    out
+}
+
+/// The hardware address of the adapter that owns `ip`, which is what this
+/// machine is called on the wire. ARP never lists your own address, so it
+/// cannot come from the table.
+fn own_mac(ip: &str) -> String {
+    let Ok(o) = hidden("ipconfig").arg("/all").output() else {
+        return String::new();
+    };
+    let text = String::from_utf8_lossy(&o.stdout);
+    let mut last = String::new();
+    for line in text.lines() {
+        let l = line.trim();
+        if l.contains("Physical Address") {
+            if let Some((_, v)) = l.split_once(':') {
+                last = v.trim().to_ascii_lowercase().replace('-', ":");
+            }
+        }
+        if l.contains(ip) && last.len() == 17 {
+            return last;
+        }
+    }
+    String::new()
+}
+
 pub fn scan() -> Vec<Device> {
     let Some(local) = local_ipv4() else {
         return Vec::new();
@@ -382,7 +438,11 @@ pub fn scan() -> Vec<Device> {
     }
 
     // This machine is always in the list and always labelled.
-    let me_mac = table.get(&me).cloned().unwrap_or_default();
+    let me_mac = table
+        .get(&me)
+        .cloned()
+        .filter(|m| !m.is_empty())
+        .unwrap_or_else(|| own_mac(&me));
     let host = std::env::var("COMPUTERNAME")
         .unwrap_or_else(|_| String::from("this pc"))
         .to_lowercase();
@@ -412,6 +472,19 @@ pub fn scan() -> Vec<Device> {
 
     sort_devices(&mut out);
     out.dedup_by(|a, b| a.ip == b.ip);
+
+    // A hardware address belongs to exactly one machine. A stale row can point
+    // several addresses at the same hardware, and this machine's own virtual
+    // adapters appear as if they were devices. Both make the list lie, so the
+    // invented ones go and only the first address keeps a shared address.
+    let mine = local_macs();
+    out.retain(|d| d.self_pc || !virtual_mac(&d.mac));
+    out.retain(|d| {
+        d.self_pc || !mine.contains(&d.mac.to_ascii_lowercase().replace('-', ":"))
+    });
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+    out.retain(|d| d.self_pc || d.mac.is_empty() || seen.insert(d.mac.to_ascii_lowercase()));
+    sort_devices(&mut out);
     out
 }
 
