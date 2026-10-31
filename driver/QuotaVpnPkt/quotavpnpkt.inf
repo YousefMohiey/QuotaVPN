@@ -19,21 +19,21 @@ PnpLockdown     = 1
 Provider        = %ProviderString%
 
 ; TODO: Customize this string for the driver version
-DriverVer       = 10/01/2002,6.0.5019.0
+DriverVer = 10/31/2026,1.0.0.0
 
 ; Note: Starting with OS build version 25319 there is an update to the Network Installation UI
 ; that allows for installation in the driver package's Driver store directory. All builds 
 ; above 25319 can and should install drivers using DIRID 13.
 [Manufacturer]
-%ManufacturerName%=Standard,NT$ARCH$,NT$ARCH$.10.0...25319
+%ManufacturerName%=Standard,NTamd64,NTamd64.10.0...25319
 
 ; TODO: Change the "MS_QuotaVpnPkt" name below to identify your component.
 ; This name can be used with netcfg.exe to install/uninstall the driver.
 
-[Standard.NT$ARCH$.10.0...25319]
+[Standard.NTamd64.10.0...25319]
 %QuotaVpnPkt_Desc%=Install, MS_QuotaVpnPkt
 
-[Standard.NT$ARCH$]
+[Standard.NTamd64]
 %QuotaVpnPkt_Desc%=Install_NC, MS_QuotaVpnPkt
 
 ;-------------------------------------------------------------------------
@@ -50,7 +50,7 @@ Characteristics=0x40000
 ; have {curly braces}.
 NetCfgInstanceId="{87d44058-41e2-40d2-b587-fd2d8643769a}"
 
-Copyfiles = ndislwf.copyfiles.sys
+Copyfiles = QuotaVpnPkt.copyfiles.sys
 
 [Install_NC]
 AddReg=LWF_Ndi
@@ -63,7 +63,7 @@ Characteristics=0x40000
 ; have {curly braces}.
 NetCfgInstanceId="{87d44058-41e2-40d2-b587-fd2d8643769a}"
 
-Copyfiles = ndislwf_nc.copyfiles.sys
+Copyfiles = QuotaVpnPkt_nc.copyfiles.sys
 
 [SourceDisksNames]
 1=%QuotaVpnPkt_Desc%,"",,
@@ -71,19 +71,19 @@ Copyfiles = ndislwf_nc.copyfiles.sys
 [SourceDisksFiles]
 ; TODO: Customize the name of your binary here.
 ; Also include any related files that should be installed with your driver.
-ndislwf.sys=1
+QuotaVpnPkt.sys=1
 
 [DestinationDirs]
-ndislwf.copyfiles.sys=13
-ndislwf_nc.copyfiles.sys=12
+QuotaVpnPkt.copyfiles.sys=13
+QuotaVpnPkt_nc.copyfiles.sys=12
 
-[ndislwf.copyfiles.sys]
+[QuotaVpnPkt.copyfiles.sys]
 ; TODO: Customize the name of your binary here.
-ndislwf.sys,,,2
+QuotaVpnPkt.sys,,,2
 
-[ndislwf_nc.copyfiles.sys]
+[QuotaVpnPkt_nc.copyfiles.sys]
 ; TODO: Customize the name of your binary here.
-ndislwf.sys,,,2
+QuotaVpnPkt.sys,,,2
 
 ;-------------------------------------------------------------------------
 ; Ndi installation support
@@ -166,7 +166,7 @@ ServiceType     = 1 ;SERVICE_KERNEL_DRIVER
 StartType       = 1 ;SERVICE_SYSTEM_START
 ErrorControl    = 1 ;SERVICE_ERROR_NORMAL
 ; TODO: Customize this to your binary's filename.
-ServiceBinary   = %13%\ndislwf.sys
+ServiceBinary   = %13%\QuotaVpnPkt.sys
 LoadOrderGroup  = NDIS
 Description     = %QuotaVpnPkt_Desc%
 AddReg          = NdisImPlatformBindingOptions.reg
@@ -185,7 +185,7 @@ ServiceType     = 1 ;SERVICE_KERNEL_DRIVER
 StartType       = 1 ;SERVICE_SYSTEM_START
 ErrorControl    = 1 ;SERVICE_ERROR_NORMAL
 ; TODO: Customize this to your binary's filename.
-ServiceBinary   = %12%\ndislwf.sys
+ServiceBinary   = %12%\QuotaVpnPkt.sys
 LoadOrderGroup  = NDIS
 Description     = %QuotaVpnPkt_Desc%
 AddReg          = NdisImPlatformBindingOptions.reg
@@ -216,7 +216,7 @@ HKR, Parameters, NdisImPlatformBindingOptions,0x00010001,0 ; Subscribe to defaul
 
 [Strings]
 ; TODO: Customize these strings.
-ProviderString = "TODO-Set-Provider"
+ProviderString = "QuotaVPN"
 ManufacturerName = "TODO-Set-Manufacturer"
 QuotaVpnPkt_Desc = "QuotaVPN Packet Filter"
 QuotaVpnPkt_HelpText = "Reads and sends frames for the QuotaVPN network controls"
