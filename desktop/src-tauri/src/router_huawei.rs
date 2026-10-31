@@ -196,6 +196,26 @@ pub fn parse_body(body: &str) -> Vec<RouterClient> {
     out
 }
 
+/// A small log of what the router said, so a failed sign in can be diagnosed
+/// without asking anyone for their password. Never contains credentials.
+fn log(line: &str) {
+    let base = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| String::from("."));
+    let dir = std::path::Path::new(&base).join("quotavpn");
+    let _ = std::fs::create_dir_all(&dir);
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let _ = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(dir.join("router.log"))
+        .and_then(|mut f| {
+            use std::io::Write;
+            writeln!(f, "{stamp} {line}")
+        });
+}
+
 impl Session {
     /// The router's own list: every device it handed an address to.
     pub async fn clients(&self) -> Result<Vec<RouterClient>, String> {
