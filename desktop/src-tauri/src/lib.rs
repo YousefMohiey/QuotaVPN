@@ -898,15 +898,24 @@ async fn setup_helper() -> Result<CmdResult, String> {
             msg: "Windows did not allow the setup. Approve the prompt to finish it".into(),
         });
     }
-    for _ in 0..40 {
+    // The first setup also downloads the engine and the driver, which on a
+    // slow line takes minutes. Giving up after twenty seconds told people the
+    // setup had failed while it was still running.
+    for _ in 0..360 {
         if vpn::task_installed() {
             return Ok(CmdResult { ok: true, msg: "ready".into() });
         }
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     }
+    // Nothing appeared: say what the privileged pass wrote, not a guess.
+    let detail = vpn::setup_log_tail();
     Ok(CmdResult {
         ok: false,
-        msg: "Windows did not allow the setup. Approve the prompt to finish it".into(),
+        msg: if detail.is_empty() {
+            "The tunnel setup did not finish. Approve the Windows prompt to let it run".into()
+        } else {
+            format!("The tunnel setup did not finish: {detail}")
+        },
     })
 }
 
@@ -2412,10 +2421,32 @@ pub fn run() {
             .and_then(|i| args.get(i + 1))
             .cloned()
             .unwrap_or_else(vpn::account_name);
-        let _ = vpn::ensure_engine();
+        // This pass runs hidden, so its console goes nowhere. Every step is
+        // written to the engine log, because a silent failure here is
+        // indistinguishable from a refused prompt in the window that asked.
+        let exe = std::env::current_exe()
+            .map(|p| p.display().to_string())
+            .unwrap_or_default();
+        vpn::app_log(&format!(
+            "setup-helper: start owner={owner} elevated={} exe={exe}",
+            vpn::is_elevated()
+        ));
+        // The task first. It takes a second, and it is what the window and the
+        // installer wait for; the engine is a download and can finish after
+        // they have moved on.
         match vpn::install_task(&owner) {
-            Ok(()) => println!("helper installed"),
-            Err(e) => eprintln!("helper failed: {e}"),
+            Ok(()) => {
+                vpn::app_log("setup-helper: task installed");
+                println!("helper installed");
+            }
+            Err(e) => {
+                vpn::app_log(&format!("setup-helper: task failed: {e}"));
+                eprintln!("helper failed: {e}");
+            }
+        }
+        match vpn::ensure_engine() {
+            Ok(msg) => vpn::app_log(&format!("setup-helper: engine {msg}")),
+            Err(e) => vpn::app_log(&format!("setup-helper: engine failed: {e}")),
         }
         return;
     }

@@ -46,6 +46,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
     status,
     setStatus,
   } = useApp()
+  const [settingUp, setSettingUp] = useState(false)
 
   const state: DialState = phase === "on" ? "on" : phase === "connecting" ? "connecting" : "idle"
   const working = phase === "connecting"
@@ -164,13 +165,19 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 <Button
                   size="sm"
                   className="h-8 rounded-[7px] bg-[var(--brand)] px-3 text-[12px] font-medium text-white"
+                  disabled={settingUp}
                   onClick={() => {
                     void (async () => {
-                      if (await setupHelper()) toggle()
+                      setSettingUp(true)
+                      try {
+                        if (await setupHelper()) toggle()
+                      } finally {
+                        setSettingUp(false)
+                      }
                     })()
                   }}
                 >
-                  {t("tunnelSetupBtn")}
+                  {settingUp ? t("tunnelSetupWorking") : t("tunnelSetupBtn")}
                 </Button>
                 {status ? (
                   <span className="mt-0.5 max-w-[280px] text-[11px] leading-snug text-[var(--red)]">{status}</span>

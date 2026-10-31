@@ -803,7 +803,41 @@ pub fn task_installed() -> bool {
         Ok(o) if o.status.success() => o,
         _ => return false,
     };
-    String::from_utf8_lossy(&out.stdout).contains("--run-engine")
+    let xml = String::from_utf8_lossy(&out.stdout);
+    if !xml.contains("--run-engine") {
+        return false;
+    }
+    // A task left over from an older install points at a binary that may no
+    // longer exist, and connecting through it fails with nothing to read.
+    // Treat a task aimed at another path as no task at all, so the setup runs
+    // again and rewrites it.
+    let exe = match std::env::current_exe() {
+        Ok(p) => p.display().to_string().to_lowercase(),
+        Err(_) => return true,
+    };
+    xml.to_lowercase().contains(&exe)
+}
+
+/// What the privileged setup pass wrote, for the window that asked for it.
+pub fn setup_log_tail() -> String {
+    let text = match std::fs::read_to_string(engine_log_path()) {
+        Ok(t) => t,
+        Err(_) => return String::new(),
+    };
+    let mut lines: Vec<&str> = text
+        .lines()
+        .filter(|l| l.contains("setup-helper:"))
+        .collect();
+    if lines.is_empty() {
+        return String::new();
+    }
+    let start = lines.len().saturating_sub(3);
+    lines.drain(..start);
+    lines
+        .iter()
+        .map(|l| l.split("setup-helper:").nth(1).unwrap_or(l).trim())
+        .collect::<Vec<_>>()
+        .join("; ")
 }
 
 /// The script the helper task runs. It exists so the privileged side can clear
@@ -929,7 +963,17 @@ pub fn install_task(owner: &str) -> Result<(), String> {
     if out.status.success() {
         Ok(())
     } else {
-        Err(String::from_utf8_lossy(&out.stderr).trim().to_string())
+        // schtasks writes its complaint to stdout, not stderr, so reading only
+        // stderr produced an empty reason and the window said "did not allow"
+        // for every possible failure.
+        let err = String::from_utf8_lossy(&out.stderr).trim().to_string();
+        let said = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        Err(match (err.is_empty(), said.is_empty()) {
+            (false, false) => format!("{err} {said}"),
+            (false, true) => err,
+            (true, false) => said,
+            (true, true) => "schtasks returned an error with no message".to_string(),
+        })
     }
 }
 

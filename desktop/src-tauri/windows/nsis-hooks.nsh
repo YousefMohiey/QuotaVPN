@@ -52,7 +52,33 @@
   Pop $0
   ${If} $0 != 0
     DetailPrint "Setting up the tunnel helper (one time)"
-    ExecShell "runas" "$INSTDIR\${MAINBINARYNAME}.exe" "--setup-helper" SW_HIDE
+    ; The owner is passed explicitly: a standard user who elevates with an
+    ; administrator's credentials runs the helper pass as THAT administrator,
+    ; and without this the task is registered for the wrong account and the
+    ; app never finds it.
+    ; Read the name from the environment: inside this macro the literal
+    ; $USERNAME reached the child unexpanded, and a task registered for a user
+    ; called "$USERNAME" is a task nobody owns.
+    ReadEnvStr $9 "USERNAME"
+    ExecShell "runas" "$INSTDIR\${MAINBINARYNAME}.exe" "--setup-helper --as $9" SW_HIDE
+    ; Wait for it, so the app opens with a working tunnel instead of a button
+    ; that asks for the same permission the installer just asked for. The
+    ; first run downloads the engine, so this waits two minutes.
+    StrCpy $1 0
+    qvp_setup_wait:
+      Sleep 1000
+      nsExec::ExecToStack '"$INSTDIR\${MAINBINARYNAME}.exe" --check-helper'
+      Pop $0
+      Pop $3
+      ${If} $0 == 0
+        DetailPrint "Tunnel helper ready"
+        Goto qvp_setup_done
+      ${EndIf}
+      IntOp $1 $1 + 1
+      ${If} $1 < 120
+        Goto qvp_setup_wait
+      ${EndIf}
+    qvp_setup_done:
   ${EndIf}
 
   !insertmacro QCVPN_PURGE_LEGACY_SHORTCUTS

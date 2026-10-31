@@ -281,6 +281,7 @@ export const en = {
   "chBadge": "Experimental",
   "tunnelSetupBody": "This PC needs a one-time tunnel setup",
   "tunnelSetupBtn": "Set up the tunnel",
+  "tunnelSetupWorking": "Setting up the tunnel",
   "setLead": "App, connection, and update settings",
   "weLinked": "Linked",
   "weNotLinked": "Not linked",

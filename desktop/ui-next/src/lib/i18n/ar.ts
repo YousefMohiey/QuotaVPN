@@ -284,6 +284,7 @@ export const ar = {
   "chBadge": "تجريبي",
   "tunnelSetupBody": "هذا الجهاز يحتاج إعدادًا واحدًا للنفق",
   "tunnelSetupBtn": "إعداد النفق",
+  "tunnelSetupWorking": "جارٍ إعداد النفق",
   "setLead": "إعدادات التطبيق والاتصال والتحديثات",
   "weLinked": "مرتبط",
   "weNotLinked": "غير مرتبط",
