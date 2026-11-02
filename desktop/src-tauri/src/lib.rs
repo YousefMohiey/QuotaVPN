@@ -1099,6 +1099,17 @@ async fn tunnel_copy_log(app: tauri::AppHandle) -> Result<CmdResult, String> {
     Ok(CmdResult { ok: true, msg: "Log copied - paste it to Cypher".into() })
 }
 
+
+/// Put text on the clipboard through the native clipboard, which does not
+/// depend on what the web engine decides about the async clipboard API.
+#[tauri::command]
+fn copy_text(app: tauri::AppHandle, text: String) -> Result<bool, String> {
+    app.clipboard()
+        .write_text(text)
+        .map_err(|e| e.to_string())?;
+    Ok(true)
+}
+
 /// Curated Windows processes for per-app routing (exe name + label).
 /// The engine matches by process name/path; whole-PC stays the default.
 #[tauri::command]
@@ -1778,8 +1789,25 @@ async fn npcap_ready() -> bool {
 
 /// The devices the machine already knows about, without sweeping.
 #[tauri::command]
-async fn lan_known() -> Vec<quotacards::lan::Device> {
-    quotacards::lan::known()
+fn lan_known(cfg: tauri::State<'_, State>) -> Vec<quotacards::lan::Device> {
+    let mut list = quotacards::lan::known();
+    // The cached list is painted before the scan answers, so the two facts the
+    // page needs at once are filled here as well: who the router is, and which
+    // addresses the owner protected.
+    let gateway = quotacards::lan_ctrl::wire()
+        .map(|w| w.gateway_ip)
+        .unwrap_or_default();
+    let protected = cfg.0.lock().map(|c| c.lan_protected.clone()).unwrap_or_default();
+    for d in list.iter_mut() {
+        if d.self_pc || d.ip == gateway {
+            d.protected_always = !d.self_pc;
+            d.protected = true;
+        }
+        if protected.iter().any(|m| m == &d.mac) {
+            d.protected = true;
+        }
+    }
+    list
 }
 
 /// Who is on this network: ip, mac and a name when the system resolves one.
@@ -2837,6 +2865,7 @@ pub fn run() {
             router_status,
             router_unlink,
             lan_known,
+            copy_text,
             lan_devices,
             speed_cancel,
             speed_latency,

@@ -218,6 +218,7 @@ export const api = {
   revokeCard: (uuid: string) => call<CmdResult>("revoke_card", { uuid }),
   setCardSni: (uuid: string, sni: string) => call<CmdResult>("set_card_sni", { uuid, sni }),
   copyCard: (uuid: string) => call<CmdResult>("copy_card", { uuid }),
+  copyToClipboard: (text: string) => call<boolean>("copy_text", { text }),
   start: (uuid: string, appsMode: string, apps: string[], transport: string, voice?: boolean) =>
     call<CmdResult>("tunnel_start", { uuid, appsMode, apps, transport, voice }),
   stop: () => call<CmdResult>("tunnel_stop"),

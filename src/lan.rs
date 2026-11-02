@@ -159,13 +159,85 @@ fn wake(ip: String) -> (String, bool, String) {
 
 /// Devices the neighbour table already knows, with no sweep at all. Instant,
 /// and enough to draw the list before the scan has finished.
+/// The last scan, kept on disk so the page opens with the devices it already
+/// knows instead of an empty table that fills in a few seconds later.
+fn devices_cache_path() -> std::path::PathBuf {
+    let base = std::env::var("LOCALAPPDATA")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| std::path::PathBuf::from("."));
+    base.join("quotavpn").join("lan_devices.txt")
+}
+
+fn save_known(list: &[Device]) {
+    let path = devices_cache_path();
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let text: String = list
+        .iter()
+        .map(|d| {
+            format!(
+                "{}|{}|{}|{}|{}|{}|{}",
+                d.ip,
+                d.mac,
+                d.name,
+                d.source,
+                if d.self_pc { 1 } else { 0 },
+                if d.protected { 1 } else { 0 },
+                if d.protected_always { 1 } else { 0 }
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("
+");
+    let _ = std::fs::write(path, text);
+}
+
+fn cached_devices() -> Vec<Device> {
+    let mut out = Vec::new();
+    let Ok(text) = std::fs::read_to_string(devices_cache_path()) else {
+        return out;
+    };
+    for line in text.lines() {
+        let parts: Vec<&str> = line.split('|').collect();
+        if parts.len() < 5 {
+            continue;
+        }
+        out.push(Device {
+            ip: parts[0].to_string(),
+            mac: parts[1].to_string(),
+            name: parts[2].to_string(),
+            self_pc: parts[4] == "1",
+            source: parts[3].to_string(),
+            protected: parts.get(5).is_some_and(|v| *v == "1"),
+            // Older cache lines carry no protection flags; the live scan fills
+            // them, and the router keeps its chip either way.
+            protected_always: parts.get(6).is_some_and(|v| *v == "1"),
+        });
+    }
+    out
+}
+
 pub fn known() -> Vec<Device> {
-    let mut out: Vec<Device> = Vec::new();
+    // What the last scan saw, with anything the table reports right now folded
+    // in. The page paints this at once and the live scan corrects it.
+    let mut out: Vec<Device> = cached_devices();
     for (ip, mac) in arp_table() {
         if !keep(&ip, &mac) {
             continue;
         }
-        out.push(Device { ip, mac, name: String::from("-"), self_pc: false, source: String::new(), protected: false, protected_always: false });
+        match out.iter_mut().find(|d| d.ip == ip) {
+            Some(d) => d.mac = mac,
+            None => out.push(Device {
+                ip,
+                mac,
+                name: String::from("-"),
+                self_pc: false,
+                source: String::new(),
+                protected: false,
+                protected_always: false,
+            }),
+        }
     }
     sort_devices(&mut out);
     out
@@ -279,7 +351,9 @@ fn clean_name(raw: &str) -> String {
         .chars()
         .filter(|c| c.is_alphanumeric() || matches!(c, ' ' | '-' | '_' | '.' | '(' | ')'))
         .collect();
-    let kept = kept.trim().trim_matches('.').trim().to_string();
+    // Runs of spaces come from names padded on the wire; one space reads right.
+    let kept = kept.split_whitespace().collect::<Vec<_>>().join(" ");
+    let kept = kept.trim().trim_matches('.').to_string();
     if kept.chars().filter(|c| c.is_alphanumeric()).count() < 2 {
         String::new()
     } else {
@@ -472,6 +546,7 @@ pub fn scan() -> Vec<Device> {
 
     sort_devices(&mut out);
     out.dedup_by(|a, b| a.ip == b.ip);
+    save_known(&out);
 
     // A hardware address belongs to exactly one machine. A stale row can point
     // several addresses at the same hardware, and this machine's own virtual

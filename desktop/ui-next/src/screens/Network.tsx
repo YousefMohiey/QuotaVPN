@@ -4,6 +4,7 @@ import {
   ArrowDown,
   ArrowUp,
   Ban,
+  Check,
   ChevronRight,
   Cpu,
   Gauge,
@@ -25,6 +26,7 @@ import {
 import { useI18n } from "@/lib/i18n"
 import { api, type LanDevice, type LanGuard, type LanStatus } from "@/lib/ipc"
 import { cn } from "@/lib/utils"
+import { copyText } from "@/lib/clipboard"
 import { LanLimitDialog } from "@/components/LanLimitDialog"
 import { RouterLinkDialog } from "@/components/RouterLinkDialog"
 
@@ -64,6 +66,7 @@ export function Network() {
   const [query, setQuery] = useState("")
   const [sort, setSort] = useState<Sort>("ip")
   const [menu, setMenu] = useState<{ ip: string; x: number; y: number } | null>(null)
+  const [copied, setCopied] = useState<string | null>(null)
   const prevTraffic = useRef<Record<string, { up: number; down: number; at: number }>>({})
   const polled = useRef(0)
 
@@ -180,12 +183,23 @@ export function Network() {
     }
   }
 
-  const copy = async (text: string) => {
+  const copy = async (text: string, key?: string) => {
     setMenu(null)
+    // The native clipboard first: the engine's async API is refused in some
+    // builds, and a copy that silently does nothing is worse than none.
+    let ok = false
     try {
-      await navigator.clipboard.writeText(text)
+      ok = await api.copyToClipboard(text)
     } catch {
+      ok = await copyText(text)
+    }
+    if (!ok) {
       setErr(t("netCopyFailed"))
+      return
+    }
+    if (key) {
+      setCopied(key)
+      window.setTimeout(() => setCopied((c) => (c === key ? null : c)), 1400)
     }
   }
 
@@ -604,12 +618,35 @@ export function Network() {
                       </span>
                     </span>
 
-                    <span className="truncate font-mono text-[12.5px] text-txt2" dir="ltr">
-                      {d.ip}
-                    </span>
-                    <span className="truncate font-mono text-[12px] uppercase text-txt3" dir="ltr">
-                      {d.mac || "-"}
-                    </span>
+                    {/* Press either address to copy it. The affordance only
+                        appears on hover, so the column stays quiet at rest. */}
+                    <button
+                      type="button"
+                      onClick={() => void copy(d.ip, `ip-${d.ip}`)}
+                      title={t("netCopyIp")}
+                      className="group relative -mx-1.5 flex min-w-0 items-center rounded-[6px] px-1.5 py-1 transition-colors hover:bg-white/[0.05]"
+                    >
+                      <span className="truncate font-mono text-[12.5px] text-txt2 group-hover:text-txt" dir="ltr">
+                        {d.ip}
+                      </span>
+                      {copied === `ip-${d.ip}` ? (
+                        <Check className="absolute right-1.5 top-1/2 size-3 -translate-y-1/2 text-[var(--green)]" aria-hidden />
+                      ) : null}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void copy(d.mac.toUpperCase(), `mac-${d.ip}`)}
+                      disabled={!d.mac}
+                      title={t("netCopyMac")}
+                      className="group relative -mx-1.5 flex min-w-0 items-center rounded-[6px] px-1.5 py-1 transition-colors hover:bg-white/[0.05] disabled:cursor-default"
+                    >
+                      <span className="truncate font-mono text-[12px] uppercase text-txt3 group-hover:text-txt2" dir="ltr">
+                        {d.mac || "-"}
+                      </span>
+                      {copied === `mac-${d.ip}` ? (
+                        <Check className="absolute right-1.5 top-1/2 size-3 -translate-y-1/2 text-[var(--green)]" aria-hidden />
+                      ) : null}
+                    </button>
 
                     <span className="flex flex-col gap-0.5 font-mono text-[11.5px] tabular-nums" dir="ltr">
                       {watching && rate ? (
