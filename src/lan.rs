@@ -161,6 +161,54 @@ fn wake(ip: String) -> (String, bool, String) {
 /// and enough to draw the list before the scan has finished.
 /// The last scan, kept on disk so the page opens with the devices it already
 /// knows instead of an empty table that fills in a few seconds later.
+/// Names the router gave us, kept by hardware address so they survive a
+/// restart. A router name belongs to the machine that owns that address, so
+/// this is the one cache that cannot drift onto the wrong device.
+fn router_names_path() -> std::path::PathBuf {
+    let base = std::env::var("LOCALAPPDATA")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| std::path::PathBuf::from("."));
+    base.join("quotavpn").join("lan_router_names.txt")
+}
+
+/// Every name the router has ever given, keyed by lower case address.
+pub fn router_names() -> std::collections::HashMap<String, String> {
+    let mut out = std::collections::HashMap::new();
+    let Ok(text) = std::fs::read_to_string(router_names_path()) else {
+        return out;
+    };
+    for line in text.lines() {
+        if let Some((mac, name)) = line.split_once('|') {
+            let mac = mac.trim().to_ascii_lowercase().replace('-', ":");
+            let name = name.trim();
+            if !mac.is_empty() && !name.is_empty() {
+                out.insert(mac, name.to_string());
+            }
+        }
+    }
+    out
+}
+
+/// Keep what the router just told us, and keep what it told us before.
+pub fn save_router_names(pairs: Vec<(String, String)>) {
+    let mut all = router_names();
+    for (mac, name) in pairs {
+        let mac = mac.trim().to_ascii_lowercase().replace('-', ":");
+        let name = name.trim().to_string();
+        if !mac.is_empty() && !name.is_empty() {
+            all.insert(mac, name);
+        }
+    }
+    let path = router_names_path();
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let mut lines: Vec<String> = all.into_iter().map(|(m, n)| format!("{m}|{n}")).collect();
+    lines.sort();
+    let _ = std::fs::write(path, lines.join("
+"));
+}
+
 fn devices_cache_path() -> std::path::PathBuf {
     let base = std::env::var("LOCALAPPDATA")
         .map(std::path::PathBuf::from)
@@ -237,6 +285,13 @@ pub fn known() -> Vec<Device> {
                 protected: false,
                 protected_always: false,
             }),
+        }
+    }
+    let named = router_names();
+    for d in out.iter_mut() {
+        if let Some(name) = named.get(&d.mac.to_ascii_lowercase()) {
+            d.name = name.clone();
+            d.source = String::from("router");
         }
     }
     sort_devices(&mut out);
@@ -552,6 +607,14 @@ pub fn scan() -> Vec<Device> {
     // several addresses at the same hardware, and this machine's own virtual
     // adapters appear as if they were devices. Both make the list lie, so the
     // invented ones go and only the first address keeps a shared address.
+    let named = router_names();
+    for d in out.iter_mut() {
+        if let Some(name) = named.get(&d.mac.to_ascii_lowercase()) {
+            d.name = name.clone();
+            d.source = String::from("router");
+        }
+    }
+
     let mine = local_macs();
     out.retain(|d| d.self_pc || !virtual_mac(&d.mac));
     out.retain(|d| {

@@ -4,7 +4,6 @@ import {
   Ban,
   Check,
   ChevronRight,
-  Cpu,
   Gauge,
   Info,
   LayoutGrid,
@@ -36,7 +35,7 @@ function fmtRate(bytes: number): string {
 }
 
 type Live = { up: number; down: number }
-type Filter = "all" | "protected" | "announced" | "hardware"
+type Filter = "all" | "protected" | "router" | "announced"
 type Sort = "ip" | "traffic"
 
 /** Who is on this network, what they are moving, and what can be done to them. */
@@ -276,7 +275,7 @@ export function Network() {
       all: devices.length,
       protected: devices.filter(isProtected).length,
       announced: devices.filter((d) => d.source === "device").length,
-      hardware: devices.filter((d) => d.source === "vendor").length,
+      router: devices.filter((d) => d.source === "router").length,
     }
   }, [devices])
 
@@ -286,7 +285,7 @@ export function Network() {
     let list = devices.filter((d) => {
       if (filter === "protected" && !isProtected(d)) return false
       if (filter === "announced" && d.source !== "device") return false
-      if (filter === "hardware" && d.source !== "vendor") return false
+      if (filter === "router" && d.source !== "router") return false
       if (!q) return true
       return (
         d.name.toLowerCase().includes(q) ||
@@ -304,9 +303,13 @@ export function Network() {
   // The gateway is the device the scan marks as always protected, and it is the
   // one row that is also the router itself.
   const gateway = devices.find((d) => d.protected_always && !d.self_pc)
-  const gatewayLabel = gateway
-    ? `${t("netRouter")} (${gateway.name.replace(/\s*device$/i, "")})`
-    : t("netRouter")
+  const gatewayLabel = (() => {
+    if (!gateway || !gateway.name || gateway.name === "-") return t("netRouter")
+    // A router that names itself should not be repeated inside a label.
+    return /router/i.test(gateway.name)
+      ? gateway.name
+      : `${t("netRouter")} (${gateway.name.replace(/\s*device$/i, "")})`
+  })()
 
   // One bar per device, measured against the busiest on the list, so a glance
   // answers who is using the connection.
@@ -320,8 +323,8 @@ export function Network() {
   const filters: { id: Filter; label: string; icon: typeof LayoutGrid; n: number }[] = [
     { id: "all", label: t("netAllDevices"), icon: LayoutGrid, n: counts.all },
     { id: "protected", label: t("netProtected"), icon: ShieldCheck, n: counts.protected },
+    { id: "router", label: t("netRouter"), icon: Router, n: counts.router },
     { id: "announced", label: t("netAnnounced"), icon: Wifi, n: counts.announced },
-    { id: "hardware", label: t("netHardware"), icon: Cpu, n: counts.hardware },
   ]
 
   return (

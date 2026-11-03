@@ -1824,13 +1824,22 @@ async fn lan_devices(
         let guard = state.0.lock().await;
         if let Some(session) = guard.as_ref() {
             let names = router_huawei::names_by_ip(session).await;
+            let mut learned: Vec<(String, String)> = Vec::new();
             for d in list.iter_mut() {
                 if let Some(name) = names.get(&d.ip) {
                     if !name.is_empty() {
                         d.name = name.clone();
                         d.source = String::from("router");
+                        if !d.mac.is_empty() {
+                            learned.push((d.mac.clone(), name.clone()));
+                        }
                     }
                 }
+            }
+            // Written down by address, so the next launch shows the same names
+            // without signing in to the router again.
+            if !learned.is_empty() {
+                quotacards::lan::save_router_names(learned);
             }
         }
     }
