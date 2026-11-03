@@ -190,9 +190,42 @@ fn spawn_game_watch(app: tauri::AppHandle) {
             let now = process_running("VALORANT-Win64-Shipping.exe".into());
             if now != up {
                 up = now;
+                // The webview is suspended while the window sits in the tray,
+                // and a suspended page runs no script at all, so an event sent
+                // to it would be read by nobody. Wake it for the transition,
+                // let it arm or stand down the helper, then let it sleep again.
+                wake_for_game(&app);
                 let _ = app.emit("game-state", serde_json::json!({ "running": now }));
             }
             std::thread::sleep(std::time::Duration::from_secs(3));
+        }
+    });
+}
+
+/// How long the page is kept awake after the game opens or closes. A voice
+/// start can wait on a cold engine, so this covers the whole run plus the
+/// retry that follows a slow first report.
+const GAME_WAKE_SECS: u64 = 90;
+
+/// Resume a hidden or minimized window's webview just long enough for the
+/// game event to be acted on, then suspend it again if it is still hidden.
+fn wake_for_game(app: &tauri::AppHandle) {
+    let Some(w) = app.get_webview_window("main") else {
+        return;
+    };
+    let hidden = !w.is_visible().unwrap_or(true) || w.is_minimized().unwrap_or(false);
+    if !hidden {
+        return;
+    }
+    set_webview_memory_low(app, false);
+    let handle = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_secs(GAME_WAKE_SECS));
+        if let Some(w) = handle.get_webview_window("main") {
+            let hidden = !w.is_visible().unwrap_or(true) || w.is_minimized().unwrap_or(false);
+            if hidden {
+                set_webview_memory_low(&handle, true);
+            }
         }
     });
 }
