@@ -26,12 +26,72 @@ const APPS = [
 // instead of photographed by luck.
 const SLOW = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("slow") === "1"
 
+
+// The network screen in the dev render: a handful of devices and counters that
+// keep climbing, so the traffic bars can be judged without touching a real
+// network. Nothing here ships.
+const DEMO_DEVICES = [
+  { ip: "192.168.1.2", mac: "9c:69:d3:4c:30:c8", name: "win-studio", self_pc: true, source: "self", protected: true, protected_always: false },
+  { ip: "192.168.1.1", mac: "f0:a9:51:c1:eb:da", name: "Huawei device", self_pc: false, source: "vendor", protected: true, protected_always: true },
+  { ip: "192.168.1.3", mac: "04:7c:16:7d:e7:02", name: "Micro-star intl", self_pc: false, source: "vendor", protected: false, protected_always: false },
+  { ip: "192.168.1.6", mac: "18:1d:ea:e0:56:ff", name: "Ei", self_pc: false, source: "device", protected: false, protected_always: false },
+  { ip: "192.168.1.23", mac: "b2:8c:39:3a:0e:91", name: "Private address", self_pc: false, source: "vendor", protected: false, protected_always: false },
+  { ip: "192.168.1.35", mac: "1e:92:58:2f:e9:4f", name: "Private address", self_pc: false, source: "vendor", protected: false, protected_always: false },
+  { ip: "192.168.1.46", mac: "82:d0:c2:a6:fe:c8", name: "private device", self_pc: false, source: "vendor", protected: false, protected_always: false },
+]
+
+const DEMO_RATE: Record<string, [number, number]> = {
+  "192.168.1.2": [12_000, 340_000],
+  "192.168.1.1": [4_000, 9_000],
+  "192.168.1.3": [420_000, 96_000],
+  "192.168.1.6": [1_800_000, 60_000],
+  "192.168.1.23": [180_000, 12_000],
+  "192.168.1.35": [0, 0],
+  "192.168.1.46": [64_000, 3_000],
+}
+
+const demoCounters: Record<string, { up: number; down: number }> = {}
+let demoAt = Date.now()
+
+function demoTraffic() {
+  const now = Date.now()
+  const dt = Math.max(0.2, (now - demoAt) / 1000)
+  demoAt = now
+  for (const d of DEMO_DEVICES) {
+    const [down, up] = DEMO_RATE[d.ip] ?? [0, 0]
+    const c = demoCounters[d.ip] ?? { up: 0, down: 0 }
+    c.down += Math.round(down * dt)
+    c.up += Math.round(up * dt)
+    demoCounters[d.ip] = c
+  }
+  return DEMO_DEVICES.map((d) => ({ ip: d.ip, up: demoCounters[d.ip].up, down: demoCounters[d.ip].down }))
+}
+
 export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   await new Promise((r) => setTimeout(r, SLOW ? 2600 : 40))
   const ok = (msg = ""): CmdResult => ({ ok: true, msg })
   switch (cmd) {
     case "get_state":
       return { server_ip: "qc-speed.example.com", ssh_user: "ubuntu", ssh_port: 22, cards, version: "0.4.15", update_channel: "normal" } as T
+    case "lan_known":
+    case "lan_devices":
+      return DEMO_DEVICES as T
+    case "lan_monitor_active":
+      return true as T
+    case "lan_traffic":
+      return demoTraffic() as T
+    case "lan_status":
+      return null as T
+    case "lan_guard":
+      return { watching: true, attacker_mac: "" } as T
+    case "npcap_ready":
+      return true as T
+    case "router_status":
+      return true as T
+    case "router_autolink":
+      return true as T
+    case "copy_text":
+      return true as T
     case "probe_server":
       return ok("Server reachable.") as T
     case "generate_card": {

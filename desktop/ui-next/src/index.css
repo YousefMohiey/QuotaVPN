@@ -490,3 +490,41 @@
   background: rgb(255 255 255 / 0.24);
   background-clip: content-box;
 }
+
+/* Network monitor motion. Every rule here is feedback or state: the copy tick,
+   the menu opening, the list answering a filter, and the traffic bars following
+   their numbers. Nothing loops except the live dot, and every motion drops to a
+   plain fade when the system asks for less. */
+@keyframes net-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes net-pop-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes net-menu-in {
+  from { opacity: 0; transform: scale(0.96) translateY(-2px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes net-live {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+@keyframes net-wait {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.65; }
+}
+.net-list-in { animation: net-fade-in 140ms var(--ease-out); }
+.net-check-in { animation: net-pop-in 120ms var(--ease-out); }
+.net-menu-in { animation: net-menu-in 150ms var(--ease-out); transform-origin: top right; }
+.net-live-dot { animation: net-live 2s ease-in-out infinite; }
+.net-wait { animation: net-wait 1.4s ease-in-out infinite; }
+.net-bar { transition: transform 320ms var(--ease-out); }
+.net-row { transition: background-color 140ms var(--ease-out); }
+
+@media (prefers-reduced-motion: reduce) {
+  .net-list-in, .net-check-in, .net-menu-in { animation: net-fade-in 120ms ease; }
+  .net-live-dot, .net-wait { animation: none; }
+  .net-bar { transition: none; }
+}

@@ -265,6 +265,7 @@ export const en = {
   "netCopyIp": "Copy address",
   "netCopyMac": "Copy hardware address",
   "netCopyFailed": "Could not copy to the clipboard",
+  "netBusy": "Total traffic, compared with the busiest device",
 
   "talking": "Talking to the server",
   "testPort": "Check server",

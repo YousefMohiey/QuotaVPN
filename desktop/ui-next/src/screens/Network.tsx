@@ -315,6 +315,12 @@ export function Network() {
     ? `${t("netRouter")} (${gateway.name.replace(/\s*device$/i, "")})`
     : t("netRouter")
 
+  // One bar per device, measured against the busiest on the list, so a glance
+  // answers who is using the connection.
+  const busiest = Math.max(
+    1,
+    ...shown.map((d) => (live[d.ip]?.down ?? 0) + (live[d.ip]?.up ?? 0)),
+  )
   const totalDown = Object.values(live).reduce((sum, v) => sum + v.down, 0)
   const totalUp = Object.values(live).reduce((sum, v) => sum + v.up, 0)
 
@@ -341,8 +347,11 @@ export function Network() {
         </span>
         <div className="min-w-0">
           <h1 className="truncate text-[22px] font-semibold leading-tight text-txt">{t("netTitle")}</h1>
-          <p className="mt-0.5 truncate text-[13px] text-txt2">
-            {watching ? t("netWatching") : t("netIdle")}
+          <p className="mt-0.5 flex items-center gap-1.5 truncate text-[13px] text-txt2">
+            {watching ? (
+              <span className="net-live-dot size-1.5 shrink-0 rounded-full bg-[var(--green)]" aria-hidden />
+            ) : null}
+            <span className="truncate">{watching ? t("netWatching") : t("netIdle")}</span>
           </p>
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-2.5">
@@ -407,7 +416,9 @@ export function Network() {
           <ArrowDown className="size-[18px] shrink-0 text-[var(--green)]" aria-hidden />
           <div className="min-w-0">
             <div className="truncate text-[19px] font-semibold leading-tight text-txt tabular-nums">
-              {watching ? fmtRate(totalDown) : "-"}
+              <span key={watching ? "on" : "off"} className="net-list-in">
+                {watching ? fmtRate(totalDown) : "-"}
+              </span>
             </div>
             <div className="truncate text-[12px] text-txt3">{t("netDownload")}</div>
           </div>
@@ -416,7 +427,9 @@ export function Network() {
           <ArrowUp className="size-[18px] shrink-0 text-[var(--brand-strong)]" aria-hidden />
           <div className="min-w-0">
             <div className="truncate text-[19px] font-semibold leading-tight text-txt tabular-nums">
-              {watching ? fmtRate(totalUp) : "-"}
+              <span key={watching ? "on" : "off"} className="net-list-in">
+                {watching ? fmtRate(totalUp) : "-"}
+              </span>
             </div>
             <div className="truncate text-[12px] text-txt3">{t("netUpload")}</div>
           </div>
@@ -565,15 +578,43 @@ export function Network() {
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {busy && devices.length === 0 ? (
-            <div className="grid h-full place-items-center text-[13px] text-txt3">{t("netScanning")}</div>
+            // First run on a machine with no remembered list: the shape of the
+            // table, breathing, instead of a word in an empty panel.
+            <ul className="flex flex-col" aria-hidden>
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <li key={i} className={cn(GRID, "h-16 border-b border-[var(--line)] px-5 last:border-b-0")}>
+                  <span className="flex items-center gap-3">
+                    <span className="net-wait size-8 rounded-full bg-white/[0.05]" />
+                    <span className="net-wait h-3 w-32 rounded bg-white/[0.05]" />
+                  </span>
+                  <span className="net-wait h-3 w-16 rounded bg-white/[0.05]" />
+                  <span className="net-wait h-3 w-24 rounded bg-white/[0.05]" />
+                  <span className="net-wait h-3 w-12 rounded bg-white/[0.05]" />
+                  <span />
+                </li>
+              ))}
+            </ul>
           ) : failed ? (
-            <div className="grid h-full place-items-center px-6 text-center text-[13px] text-txt3">{t("netFail")}</div>
+            <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+              <ShieldAlert className="size-5 text-txt3" aria-hidden />
+              <span className="text-[13px] text-txt3">{t("netFail")}</span>
+              <button
+                type="button"
+                onClick={() => void scan()}
+                className="press h-8 rounded-[9px] border border-[var(--line-strong)] px-3 text-[12px] text-txt2 transition-colors hover:text-txt"
+              >
+                {t("netRefresh")}
+              </button>
+            </div>
           ) : shown.length === 0 ? (
-            <div className="grid h-full place-items-center px-6 text-center text-[13px] text-txt3">
-              {devices.length === 0 ? t("netEmpty") : t("netNoMatch")}
+            <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+              <Wifi className="size-5 text-txt3" aria-hidden />
+              <span className="text-[13px] text-txt3">
+                {devices.length === 0 ? t("netEmpty") : t("netNoMatch")}
+              </span>
             </div>
           ) : (
-            <ul className="flex flex-col">
+            <ul key={`${filter}|${query}|${sort}`} className="net-list-in flex flex-col">
               {shown.map((d) => {
                 const state = stateOf(d)
                 const rate = live[d.ip]
@@ -583,7 +624,7 @@ export function Network() {
                     key={d.ip}
                     className={cn(
                       GRID,
-                      "h-16 border-b border-[var(--line)] px-5 last:border-b-0",
+                      "net-row h-16 border-b border-[var(--line)] px-5 last:border-b-0 hover:bg-white/[0.02]",
                     )}
                   >
                     <span className="flex min-w-0 items-center gap-3">
@@ -630,7 +671,7 @@ export function Network() {
                         {d.ip}
                       </span>
                       {copied === `ip-${d.ip}` ? (
-                        <Check className="absolute right-1.5 top-1/2 size-3 -translate-y-1/2 text-[var(--green)]" aria-hidden />
+                        <Check className="net-check-in absolute right-1.5 top-1/2 size-3 -translate-y-1/2 text-[var(--green)]" aria-hidden />
                       ) : null}
                     </button>
                     <button
@@ -644,11 +685,15 @@ export function Network() {
                         {d.mac || "-"}
                       </span>
                       {copied === `mac-${d.ip}` ? (
-                        <Check className="absolute right-1.5 top-1/2 size-3 -translate-y-1/2 text-[var(--green)]" aria-hidden />
+                        <Check className="net-check-in absolute right-1.5 top-1/2 size-3 -translate-y-1/2 text-[var(--green)]" aria-hidden />
                       ) : null}
                     </button>
 
-                    <span className="flex flex-col gap-0.5 font-mono text-[11.5px] tabular-nums" dir="ltr">
+                    <span
+                      className="flex min-w-0 flex-col gap-0.5 font-mono text-[11.5px] tabular-nums"
+                      dir="ltr"
+                      title={watching ? t("netBusy") : undefined}
+                    >
                       {watching && rate ? (
                         <>
                           <span className="flex items-center gap-1 text-[var(--green)]">
@@ -658,6 +703,12 @@ export function Network() {
                           <span className="flex items-center gap-1 text-[var(--brand-strong)]">
                             <ArrowUp className="size-3 shrink-0" aria-hidden />
                             <span className="truncate">{fmtRate(rate.up)}</span>
+                          </span>
+                          <span className="mt-1 block h-[3px] w-full overflow-hidden rounded-full bg-white/[0.05]" aria-hidden>
+                            <span
+                              className="net-bar block h-full origin-left rounded-full bg-white/25"
+                              style={{ transform: `scaleX(${Math.min(1, (rate.down + rate.up) / busiest)})` }}
+                            />
                           </span>
                         </>
                       ) : (
@@ -735,7 +786,7 @@ export function Network() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setMenu(null)} aria-hidden />
           <div
-            className="fixed z-50 min-w-[168px] overflow-hidden rounded-[10px] border border-[var(--line-strong)] bg-[var(--panel-hover)] py-1 shadow-[var(--sh-2)]"
+            className="net-menu-in fixed z-50 min-w-[168px] overflow-hidden rounded-[10px] border border-[var(--line-strong)] bg-[var(--panel-hover)] py-1 shadow-[var(--sh-2)]"
             style={{ left: Math.max(12, menu.x - 168), top: menu.y + 6 }}
           >
             <button
