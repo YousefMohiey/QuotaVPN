@@ -2,8 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Activity,
   Ban,
-  ArrowDown,
-  ArrowUp,
   Check,
   ChevronRight,
   Cpu,
@@ -528,22 +526,25 @@ export function Network() {
         </div>
       </div>
 
-      {/* Every device is its own container, so the list never ends in empty slots. */}
+      {/* Each device is its own card. Columns, not a grid: the count changes
+          with the network, and a grid would leave empty slots on the last row. */}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {busy && devices.length === 0 ? (
-          <ul className="grid auto-rows-[minmax(84px,92px)] content-start gap-2" aria-hidden>
-            {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-              <li
+          <div className="grid grid-cols-3 content-start gap-3.5" aria-hidden>
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <div
                 key={i}
-                className="grid grid-cols-[44px_minmax(0,1.5fr)_minmax(0,.9fr)_minmax(0,1fr)] items-center gap-4 rounded-[var(--r-card)] border border-[var(--line)] bg-[var(--panel)] px-4"
+                className="rounded-[var(--r-card)] border border-[var(--line)] bg-[var(--panel)] p-4"
               >
-                <span className="net-wait size-11 rounded-full bg-white/[0.05]" />
-                <span className="net-wait h-3 w-40 rounded bg-white/[0.05]" />
-                <span className="net-wait h-3 w-24 rounded bg-white/[0.05]" />
-                <span className="net-wait h-3 w-28 rounded bg-white/[0.05]" />
-              </li>
+                <div className="flex items-center gap-3">
+                  <span className="net-wait size-10 rounded-full bg-white/[0.05]" />
+                  <span className="net-wait h-3 w-28 rounded bg-white/[0.05]" />
+                </div>
+                <span className="net-wait mt-4 block h-3 w-20 rounded bg-white/[0.05]" />
+                <span className="net-wait mt-4 block h-5 w-24 rounded bg-white/[0.05]" />
+              </div>
             ))}
-          </ul>
+          </div>
         ) : failed ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">
             <ShieldAlert className="size-5 text-txt3" aria-hidden />
@@ -564,94 +565,92 @@ export function Network() {
             </span>
           </div>
         ) : (
-          <ul key={`${filter}|${query}|${sort}`} className="net-list-in grid auto-rows-[minmax(84px,92px)] content-start gap-2">
+          <div key={`${filter}|${query}|${sort}`} className="net-list-in grid grid-cols-3 content-start gap-3.5">
             {shown.map((d) => {
               const state = stateOf(d)
               const rate = live[d.ip]
               const protectedRow = d.protected || d.protected_always
               const total = (rate?.down ?? 0) + (rate?.up ?? 0)
               return (
-                <li
+                <div
                   key={d.ip}
-                  className="net-row grid grid-cols-[44px_minmax(0,1.5fr)_minmax(0,.9fr)_minmax(0,1fr)_auto] items-center gap-4 rounded-[var(--r-card)] border border-[var(--line)] bg-[var(--panel)] px-4 hover:bg-[var(--panel-hover)]"
+                  className="net-row flex flex-col rounded-[var(--r-card)] border border-[var(--line)] bg-[var(--panel)] p-4 hover:bg-[var(--panel-hover)]"
                 >
-                  <span
-                    className={cn(
-                      "grid size-11 shrink-0 place-items-center rounded-full border",
-                      d.self_pc
-                        ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-[var(--brand-strong)]"
-                        : "border-[var(--line)] text-txt2",
-                    )}
-                  >
-                    {d.self_pc ? <Monitor className="size-[17px]" aria-hidden /> : <Wifi className="size-[17px]" aria-hidden />}
-                  </span>
-
-                  <span className="min-w-0">
-                    <span className="flex min-w-0 items-center gap-1.5">
-                      <span className="truncate text-[14px] font-semibold text-txt" dir="auto">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={cn(
+                        "grid size-10 shrink-0 place-items-center rounded-full border",
+                        d.self_pc
+                          ? "border-[var(--brand-line)] bg-[var(--brand-bg)] text-[var(--brand-strong)]"
+                          : "border-[var(--line)] text-txt2",
+                      )}
+                    >
+                      {d.self_pc ? <Monitor className="size-4" aria-hidden /> : <Wifi className="size-4" aria-hidden />}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[14px] font-semibold text-txt" dir="auto">
                         {d.name === "private" ? t("netPrivateName") : d.name}
-                      </span>
-                    </span>
-                    <span className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
-                      {d.self_pc ? <Badge tone="brand">{t("netThisPc")}</Badge> : null}
-                      {protectedRow ? <Badge tone="green" icon={ShieldCheck}>{t("netProtected")}</Badge> : null}
-                      {d.source === "device" ? <Badge>{t("netAnnounced")}</Badge> : null}
-                      {d.source === "vendor" ? <Badge>{t("netHardware")}</Badge> : null}
-                      {state === "blocked" ? <Badge tone="red">{t("netStateBlocked")}</Badge> : null}
-                      {state === "capped" ? <Badge tone="brand">{t("netStateCapped")}</Badge> : null}
-                    </span>
-                  </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void copy(d.ip, `ip-${d.ip}`)}
+                        title={t("netCopyIp")}
+                        className="group flex items-center gap-1.5 rounded-[6px] font-mono text-[11.5px] text-txt2 transition-colors hover:text-txt"
+                      >
+                        <span dir="ltr">{d.ip}</span>
+                        {copied === `ip-${d.ip}` ? (
+                          <Check className="net-check-in size-3 text-[var(--green)]" aria-hidden />
+                        ) : null}
+                      </button>
+                    </div>
+                  </div>
 
-                  <span className="min-w-0 font-mono text-[11.5px] leading-[1.5]">
-                    <button
-                      type="button"
-                      onClick={() => void copy(d.ip, `ip-${d.ip}`)}
-                      title={t("netCopyIp")}
-                      className="group relative flex w-full items-center gap-1.5 rounded-[6px] px-1 text-txt2 transition-colors hover:bg-white/[0.05] hover:text-txt"
-                    >
-                      <span className="truncate" dir="ltr">{d.ip}</span>
-                      {copied === `ip-${d.ip}` ? (
-                        <Check className="net-check-in absolute right-0 size-3 text-[var(--green)]" aria-hidden />
-                      ) : null}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void copy(d.mac.toUpperCase(), `mac-${d.ip}`)}
-                      disabled={!d.mac}
-                      title={t("netCopyMac")}
-                      className="group relative flex w-full items-center gap-1.5 rounded-[6px] px-1 text-txt3 transition-colors hover:bg-white/[0.05] hover:text-txt2 disabled:cursor-default"
-                    >
-                      <span className="truncate uppercase" dir="ltr">{d.mac || "-"}</span>
-                      {copied === `mac-${d.ip}` ? (
-                        <Check className="net-check-in absolute right-0 size-3 text-[var(--green)]" aria-hidden />
-                      ) : null}
-                    </button>
-                  </span>
+                  <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                    {d.self_pc ? <Badge tone="brand">{t("netThisPc")}</Badge> : null}
+                    {protectedRow ? <Badge tone="green" icon={ShieldCheck}>{t("netProtected")}</Badge> : null}
+                    {d.source === "device" ? <Badge>{t("netAnnounced")}</Badge> : null}
+                    {d.source === "vendor" ? <Badge>{t("netHardware")}</Badge> : null}
+                    {state === "blocked" ? <Badge tone="red">{t("netStateBlocked")}</Badge> : null}
+                    {state === "capped" ? <Badge tone="brand">{t("netStateCapped")}</Badge> : null}
+                  </div>
 
-                  <span className="flex min-w-0 items-start gap-5" dir="ltr">
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-1.5 truncate font-mono text-[14.5px] font-semibold text-[var(--green)] tabular-nums">
-                        <ArrowDown className="size-3.5 shrink-0" aria-hidden />
+                  <button
+                    type="button"
+                    onClick={() => void copy(d.mac.toUpperCase(), `mac-${d.ip}`)}
+                    disabled={!d.mac}
+                    title={t("netCopyMac")}
+                    className="group mt-2 flex max-w-full items-center gap-1.5 rounded-[6px] font-mono text-[11px] uppercase text-txt3 transition-colors hover:text-txt2 disabled:cursor-default"
+                  >
+                    <span className="truncate" dir="ltr">{d.mac || "-"}</span>
+                    {copied === `mac-${d.ip}` ? (
+                      <Check className="net-check-in size-3 shrink-0 text-[var(--green)]" aria-hidden />
+                    ) : null}
+                  </button>
+
+                  <div className="mt-3.5 flex items-start gap-5" dir="ltr">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[10px] uppercase tracking-[0.08em] text-txt3">{t("netDownload")}</div>
+                      <div className="mt-0.5 truncate font-mono text-[17px] font-semibold text-[var(--green)] tabular-nums">
                         {watching && rate ? fmtRate(rate.down) : "-"}
-                      </span>
+                      </div>
                       {watching && rate ? (
-                        <span className="mt-1 block h-[3px] w-full overflow-hidden rounded-full bg-white/[0.05]" aria-hidden>
-                          <span
-                            className="net-bar block h-full origin-left rounded-full bg-white/25"
+                        <div className="mt-1.5 h-[3px] w-full overflow-hidden rounded-full bg-white/[0.05]" aria-hidden>
+                          <div
+                            className="net-bar h-full origin-left rounded-full bg-white/25"
                             style={{ transform: `scaleX(${Math.min(1, total / busiest)})` }}
                           />
-                        </span>
+                        </div>
                       ) : null}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-1.5 truncate font-mono text-[14.5px] font-semibold text-[var(--brand-strong)] tabular-nums">
-                        <ArrowUp className="size-3.5 shrink-0" aria-hidden />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[10px] uppercase tracking-[0.08em] text-txt3">{t("netUpload")}</div>
+                      <div className="mt-0.5 truncate font-mono text-[17px] font-semibold text-[var(--brand-strong)] tabular-nums">
                         {watching && rate ? fmtRate(rate.up) : "-"}
-                      </span>
-                    </span>
-                  </span>
+                      </div>
+                    </div>
+                  </div>
 
-                  <span className="flex shrink-0 items-center gap-1.5">
+                  <div className="mt-auto flex items-center gap-1.5 border-t border-[var(--line)] pt-2.5">
                     {d.protected_always ? (
                       <span className="size-8" />
                     ) : (
@@ -706,15 +705,15 @@ export function Network() {
                       }}
                       title={t("netMore")}
                       aria-label={t("netMore")}
-                      className="press grid size-8 place-items-center rounded-[8px] border border-[var(--line-strong)] text-txt2 transition-colors hover:bg-white/[0.04] hover:text-txt"
+                      className="press ml-auto grid size-8 place-items-center rounded-[8px] border border-[var(--line-strong)] text-txt2 transition-colors hover:bg-white/[0.04] hover:text-txt"
                     >
                       <MoreVertical className="size-[15px]" aria-hidden />
                     </button>
-                  </span>
-                </li>
+                  </div>
+                </div>
               )
             })}
-          </ul>
+          </div>
         )}
       </div>
 
