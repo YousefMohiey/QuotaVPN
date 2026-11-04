@@ -1959,6 +1959,37 @@ fn lan_traffic(state: tauri::State<'_, MonitorState>) -> Result<Vec<TrafficRow>,
         .collect())
 }
 
+
+/// Whether the kill switch is armed, and whether the block is on right now.
+#[tauri::command]
+fn kill_switch_state() -> serde_json::Value {
+    serde_json::json!({
+        "armed": vpn::kill_switch_on(),
+        "blocked": vpn::traffic_blocked(),
+    })
+}
+
+#[tauri::command]
+fn kill_switch_set(on: bool) -> Result<bool, String> {
+    vpn::set_kill_switch(on)?;
+    Ok(true)
+}
+
+/// Lift a block that is in place without starting a tunnel. Elevates once.
+#[tauri::command]
+fn kill_switch_release() -> Result<bool, String> {
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let script = format!(
+        "Start-Process -FilePath '{}' -ArgumentList '--killswitch','off' -Verb RunAs -WindowStyle Hidden",
+        exe.display()
+    );
+    std::process::Command::new("powershell")
+        .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", &script])
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    Ok(true)
+}
+
 /// Open a web page in the user's own browser. Used for the one thing the app
 /// cannot install for them.
 #[tauri::command]
@@ -2675,6 +2706,19 @@ pub fn run() {
     }
     // The helper task's own body: start the engine hidden and stay alive until
     // it is stopped. Runs as a GUI binary, so Windows draws no console window.
+    // One shot, run elevated by the app: put the outbound block on or take it
+    // off. This is the only way the block can be lifted without the engine.
+    if std::env::args().any(|a| a == "--killswitch") {
+        let args: Vec<String> = std::env::args().collect();
+        let mode = args
+            .iter()
+            .position(|a| a == "--killswitch")
+            .and_then(|i| args.get(i + 1))
+            .cloned()
+            .unwrap_or_default();
+        vpn::block_traffic(mode == "on");
+        return;
+    }
     if std::env::args().any(|a| a == "--run-engine") {
         vpn::run_engine_headless();
         return;
@@ -2908,6 +2952,9 @@ pub fn run() {
             router_unlink,
             lan_known,
             copy_text,
+            kill_switch_state,
+            kill_switch_set,
+            kill_switch_release,
             lan_devices,
             speed_cancel,
             speed_latency,

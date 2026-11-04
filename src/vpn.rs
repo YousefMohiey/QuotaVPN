@@ -894,6 +894,67 @@ pub fn write_engine_cmd() {
 /// The task runs the app itself with this flag. A PowerShell script as the
 /// task action opened a console window on every connect, which read as the app
 /// shelling out; the app is a GUI binary, so Windows never gives it one.
+
+/// The kill switch.
+///
+/// Windows Firewall lets a block rule beat every allow rule, so "permit only
+/// the tunnel" cannot be expressed with rules alone. What can be expressed is
+/// the case that matters: when the engine dies while it was supposed to be
+/// carrying traffic, nothing leaves this machine until the tunnel is back or
+/// the user lifts the block. That is the leak the switch exists to stop, and
+/// it holds across a crash because the rule lives in Windows, not in us.
+const KILL_RULE: &str = "QuotaVPN Kill Switch";
+
+fn kill_flag_path() -> std::path::PathBuf {
+    dirs::data_local_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("quotacards")
+        .join("killswitch.txt")
+}
+
+pub fn kill_switch_on() -> bool {
+    std::fs::read_to_string(kill_flag_path())
+        .map(|t| t.trim() == "1")
+        .unwrap_or(false)
+}
+
+pub fn set_kill_switch(on: bool) -> Result<(), String> {
+    let path = kill_flag_path();
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    std::fs::write(&path, if on { "1" } else { "0" }).map_err(|e| e.to_string())?;
+    if !on {
+        block_traffic(false);
+    }
+    Ok(())
+}
+
+/// True when the block rule is in the firewall right now.
+pub fn traffic_blocked() -> bool {
+    let out = run_hidden("netsh", &["advfirewall", "firewall", "show", "rule", &format!("name={KILL_RULE}")]);
+    matches!(out, Ok(o) if o.status.success())
+}
+
+/// Add or remove the block. Both need elevation; the engine helper runs with
+/// it, and the app reaches the same code through `--killswitch`.
+pub fn block_traffic(block: bool) {
+    if block {
+        let _ = run_hidden(
+            "netsh",
+            &["advfirewall", "firewall", "add", "rule", &format!("name={KILL_RULE}"),
+              "dir=out", "action=block", "enable=yes", "profile=any"],
+        );
+        app_log("killswitch: outbound blocked");
+    } else {
+        let _ = run_hidden(
+            "netsh",
+            &["advfirewall", "firewall", "delete", "rule", &format!("name={KILL_RULE}")],
+        );
+        app_log("killswitch: outbound released");
+    }
+}
+
 pub fn run_engine_headless() {
     let cfg = tun_config_path();
     // No tunnel config means this PC has never connected: nothing to run.
@@ -917,6 +978,12 @@ pub fn run_engine_headless() {
     let stop_path = engine_dir().join("engine.stop");
     let _ = std::fs::remove_file(&pid_path);
     let _ = std::fs::remove_file(&stop_path);
+    // A block left from the last death is lifted the moment a session starts,
+    // because the tunnel is about to carry the traffic it was protecting.
+    let guarding = kill_switch_on();
+    if guarding && traffic_blocked() {
+        block_traffic(false);
+    }
 
     let mut cmd = cmd_hidden(&singbox_path().to_string_lossy());
     cmd.args(["run", "-c", &cfg.to_string_lossy()]);
@@ -944,6 +1011,15 @@ pub fn run_engine_headless() {
         }
     }
     let _ = std::fs::remove_file(&pid_path);
+    // Asked to stop: the user is closing the tunnel, so nothing should be
+    // held. Died on its own: hold everything until they are back.
+    if guarding {
+        if stop_path.exists() {
+            block_traffic(false);
+        } else {
+            block_traffic(true);
+        }
+    }
 }
 
 /// Register the task. Runs in the elevated pass (`QuotaVPN.exe --setup-helper`),

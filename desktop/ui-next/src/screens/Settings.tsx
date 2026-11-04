@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Download, Languages, Loader2, MonitorPlay, RefreshCw } from "lucide-react"
+import { Download, Languages, Loader2, MonitorPlay, RefreshCw, ShieldOff } from "lucide-react"
 import { Toggle } from "@/components/Toggle"
 import { Segmented } from "@/components/Segmented"
 import { Tip } from "@/components/Tip"
@@ -128,6 +128,23 @@ function WeQuotaRows() {
 }
 
 export function Settings() {
+  const [killArmed, setKillArmed] = useState(false)
+  const [killBlocked, setKillBlocked] = useState(false)
+  const refreshKill = () => {
+    void api
+      .killSwitchState()
+      .then((s) => {
+        setKillArmed(Boolean(s?.armed))
+        setKillBlocked(Boolean(s?.blocked))
+      })
+      .catch(() => undefined)
+  }
+  useEffect(() => {
+    refreshKill()
+    const id = window.setInterval(refreshKill, 4000)
+    return () => window.clearInterval(id)
+  }, [])
+
   const { t, lang, setLang } = useI18n()
   const { update, updateState, updateError, checkUpdates, applyUpdate, updatePct, version, updateChannel, setUpdateChannel } =
     useApp()
@@ -233,6 +250,37 @@ export function Settings() {
       </Section>
 
       <Section label={t("setConnGroup")} gap>
+        <Row
+          icon={ShieldOff}
+          title={t("killTitle")}
+          body={
+            <span>
+              {t("killBody")}
+              {killBlocked ? (
+                <span className="mt-1 block text-[var(--red)]">{t("killBlocked")}</span>
+              ) : null}
+            </span>
+          }
+          control={
+            <span className="flex items-center gap-2">
+              {killBlocked ? (
+                <button
+                  type="button"
+                  onClick={() => void api.killSwitchRelease().then(() => window.setTimeout(refreshKill, 2500))}
+                  className="press h-8 rounded-[8px] border border-[var(--red-line)] bg-[var(--red-bg)] px-2.5 text-[12px] text-[var(--red)]"
+                >
+                  {t("killRelease")}
+                </button>
+              ) : null}
+              <Toggle
+                on={killArmed}
+                busy={false}
+                onFlip={() => void api.killSwitchSet(!killArmed).then(() => setKillArmed(!killArmed))}
+                label={t("killTitle")}
+              />
+            </span>
+          }
+        />
         <WeQuotaRows />
       </Section>
 
