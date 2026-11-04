@@ -80,7 +80,11 @@ cd desktop && npx @tauri-apps/cli@2 build --bundles deb,appimage
 
 ## What is proven and what is not
 
-Proven here: the source compiles for Linux and the packages are produced.
+Proven: the source compiles on Ubuntu, and the packages are produced. The
+`.deb` was opened and checked: an ELF binary at `/usr/bin/QuotaVPN`, a
+desktop entry, and icons from 32 to 512.
 
-Not proven here: a running tunnel, because there is no Linux machine on the
-build box. The first real session on Linux is the test that matters.
+Not proven: a running tunnel, because there is no Linux machine on the build
+box. The first real session on Linux is the test that matters. Expect the
+first connect to be the interesting one: the engine downloads, pkexec asks
+for the password, and the TUN device comes up.
