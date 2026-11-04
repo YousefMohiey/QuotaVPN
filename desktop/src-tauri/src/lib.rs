@@ -2059,14 +2059,26 @@ fn kill_switch_set(on: bool) -> Result<bool, String> {
 #[tauri::command]
 fn kill_switch_release() -> Result<bool, String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    let script = format!(
-        "Start-Process -FilePath '{}' -ArgumentList '--killswitch','off' -Verb RunAs -WindowStyle Hidden",
-        exe.display()
-    );
-    std::process::Command::new("powershell")
-        .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", &script])
-        .spawn()
-        .map_err(|e| e.to_string())?;
+    #[cfg(windows)]
+    {
+        let script = format!(
+            "Start-Process -FilePath '{}' -ArgumentList '--killswitch','off' -Verb RunAs -WindowStyle Hidden",
+            exe.display()
+        );
+        std::process::Command::new("powershell")
+            .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", &script])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(not(windows))]
+    {
+        std::process::Command::new("pkexec")
+            .arg(&exe)
+            .arg("--killswitch")
+            .arg("off")
+            .spawn()
+            .map_err(|e| format!("pkexec: {e}"))?;
+    }
     Ok(true)
 }
 
