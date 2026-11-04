@@ -1716,6 +1716,7 @@ async fn lan_wire() -> Option<quotacards::lan_ctrl::Wire> {
 /// Start standing between one device and the router. One at a time: two
 /// poisoned devices on the same wire would fight over one forwarding loop.
 #[tauri::command]
+#[cfg(windows)]
 fn lan_start(
     state: tauri::State<'_, LanState>,
     cfg: tauri::State<'_, State>,
@@ -1744,6 +1745,7 @@ fn lan_start(
 
 /// Keep a device out of reach of the controls, or let it back in.
 #[tauri::command]
+#[cfg(windows)]
 fn lan_protect(mac: String, on: bool, state: tauri::State<State>) -> Result<bool, String> {
     let mac = mac.to_lowercase();
     let mut cfg = state.0.lock().map_err(|_| "config".to_string())?;
@@ -1776,12 +1778,14 @@ fn protected_reason(ip: &str, mac: &str, cfg: &AppConfig) -> Option<String> {
 
 /// Whether anyone is trying to stand between this machine and the router.
 #[tauri::command]
+#[cfg(windows)]
 fn lan_guard() -> quotacards::lan_ctrl::Guard {
     quotacards::lan_ctrl::guard_state()
 }
 
 /// Set the caps for the active device. Zero means no cap.
 #[tauri::command]
+#[cfg(windows)]
 fn lan_limits(
     state: tauri::State<'_, LanState>,
     cfg: tauri::State<'_, State>,
@@ -1803,6 +1807,7 @@ fn lan_limits(
 
 /// Stop redirecting and hand the network back.
 #[tauri::command]
+#[cfg(windows)]
 fn lan_stop(state: tauri::State<'_, LanState>) -> Result<bool, String> {
     let session = {
         let mut guard = state.0.lock().map_err(|_| "state".to_string())?;
@@ -1822,6 +1827,7 @@ async fn npcap_ready() -> bool {
 
 /// The devices the machine already knows about, without sweeping.
 #[tauri::command]
+#[cfg(windows)]
 fn lan_known(cfg: tauri::State<'_, State>) -> Vec<quotacards::lan::Device> {
     let mut list = quotacards::lan::known();
     // The cached list is painted before the scan answers, so the two facts the
@@ -1927,6 +1933,7 @@ async fn lan_monitor_start(state: tauri::State<'_, MonitorState>) -> Result<bool
 
 /// Stop watching and hand the network back.
 #[tauri::command]
+#[cfg(windows)]
 fn lan_monitor_stop(state: tauri::State<'_, MonitorState>) -> Result<bool, String> {
     let taken = {
         let mut guard = state.0.lock().map_err(|_| "state".to_string())?;
@@ -1940,6 +1947,7 @@ fn lan_monitor_stop(state: tauri::State<'_, MonitorState>) -> Result<bool, Strin
 
 /// Whether the whole network is being watched right now.
 #[tauri::command]
+#[cfg(windows)]
 fn lan_monitor_active(state: tauri::State<'_, MonitorState>) -> Result<bool, String> {
     let guard = state.0.lock().map_err(|_| "state".to_string())?;
     Ok(guard.is_some())
@@ -1947,6 +1955,7 @@ fn lan_monitor_active(state: tauri::State<'_, MonitorState>) -> Result<bool, Str
 
 /// Bytes seen per device since the watch began.
 #[tauri::command]
+#[cfg(windows)]
 fn lan_traffic(state: tauri::State<'_, MonitorState>) -> Result<Vec<TrafficRow>, String> {
     let guard = state.0.lock().map_err(|_| "state".to_string())?;
     let Some(session) = guard.as_ref() else {
@@ -2070,6 +2079,7 @@ async fn router_unlink(state: tauri::State<'_, RouterState>) -> Result<bool, Str
 /// What the redirect is doing right now, so the screen can say so after a
 /// restart or a tab switch instead of forgetting it.
 #[tauri::command]
+#[cfg(windows)]
 fn lan_status(state: tauri::State<'_, LanState>) -> Option<LanStatus> {
     let guard = state.0.lock().ok()?;
     let session = guard.as_ref()?;
@@ -2533,6 +2543,114 @@ pub struct TrafficRow {
     pub down: u64,
 }
 
+#[cfg(windows)]
+fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync + 'static {
+    tauri::generate_handler![
+        setup_helper,
+        get_state,
+        probe_server,
+        generate_card,
+        import_card,
+        revoke_card,
+        copy_card,
+        set_card_sni,
+        tunnel_start,
+        tunnel_stop,
+        tunnel_status,
+        tunnel_health,
+        tunnel_traffic,
+        tunnel_log,
+        tunnel_copy_log,
+        tunnel_probe,
+        tunnel_apps,
+        resolve_host,
+        check_update,
+        apply_update,
+        set_update_channel,
+        net_info,
+        app_icons,
+        speed_servers,
+        npcap_ready,
+        lan_wire,
+        lan_start,
+        lan_stop,
+        lan_limits,
+        lan_status,
+        lan_guard,
+        lan_protect,
+        lan_traffic,
+        lan_monitor_active,
+        lan_monitor_stop,
+        lan_monitor_start,
+        router_link,
+        open_page,
+        router_autolink,
+        router_status,
+        router_unlink,
+        lan_known,
+        copy_text,
+        kill_switch_state,
+        kill_switch_set,
+        kill_switch_release,
+        lan_devices,
+        speed_cancel,
+        speed_latency,
+        speed_reach,
+        speed_down,
+        speed_up,
+        speedtest_cli_ready,
+        speedtest_cli,
+        process_running,
+        autostart_get,
+        autostart_set,
+        we_quota::we_quota_challenge,
+        we_quota::we_quota_login,
+        we_quota::we_quota_usage,
+        we_quota::we_quota_logout
+    ]
+}
+
+#[cfg(not(windows))]
+fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync + 'static {
+    tauri::generate_handler![
+        setup_helper,
+        get_state,
+        probe_server,
+        generate_card,
+        import_card,
+        revoke_card,
+        copy_card,
+        set_card_sni,
+        tunnel_start,
+        tunnel_stop,
+        tunnel_status,
+        tunnel_health,
+        tunnel_traffic,
+        tunnel_log,
+        tunnel_copy_log,
+        tunnel_probe,
+        tunnel_apps,
+        resolve_host,
+        check_update,
+        apply_update,
+        set_update_channel,
+        net_info,
+        app_icons,
+        open_page,
+        copy_text,
+        kill_switch_state,
+        kill_switch_set,
+        kill_switch_release,
+        process_running,
+        autostart_get,
+        autostart_set,
+        we_quota::we_quota_challenge,
+        we_quota::we_quota_login,
+        we_quota::we_quota_usage,
+        we_quota::we_quota_logout
+    ]
+}
+
 pub fn run() {
     // Undo any redirection a previous run failed to clean up: a killed app
     // leaves the router believing this machine is the device it blocked.
@@ -2908,69 +3026,7 @@ pub fn run() {
             }
             _ => {}
         })
-        .invoke_handler(tauri::generate_handler![
-            setup_helper,
-            get_state,
-            probe_server,
-            generate_card,
-            import_card,
-            revoke_card,
-            copy_card,
-            set_card_sni,
-            tunnel_start,
-            tunnel_stop,
-            tunnel_status,
-            tunnel_health,
-            tunnel_traffic,
-            tunnel_log,
-            tunnel_copy_log,
-            tunnel_probe,
-            tunnel_apps,
-            resolve_host,
-            check_update,
-            apply_update,
-            set_update_channel,
-            net_info,
-            app_icons,
-            speed_servers,
-            npcap_ready,
-            lan_wire,
-            lan_start,
-            lan_stop,
-            lan_limits,
-            lan_status,
-            lan_guard,
-            lan_protect,
-            lan_traffic,
-            lan_monitor_active,
-            lan_monitor_stop,
-            lan_monitor_start,
-            router_link,
-            open_page,
-            router_autolink,
-            router_status,
-            router_unlink,
-            lan_known,
-            copy_text,
-            kill_switch_state,
-            kill_switch_set,
-            kill_switch_release,
-            lan_devices,
-            speed_cancel,
-            speed_latency,
-            speed_reach,
-            speed_down,
-            speed_up,
-            speedtest_cli_ready,
-            speedtest_cli,
-            process_running,
-            autostart_get,
-            autostart_set,
-            we_quota::we_quota_challenge,
-            we_quota::we_quota_login,
-            we_quota::we_quota_usage,
-            we_quota::we_quota_logout
-        ])
+        .invoke_handler(handlers())
         .build(tauri::generate_context!())
         .expect("QuotaVPN failed to start")
         .run(|app, event| {
