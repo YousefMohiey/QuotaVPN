@@ -46,15 +46,9 @@ jobs:
           npm ci
           npm run build
 
-      - name: Build the app
-        working-directory: desktop/src-tauri
-        run: cargo build --release --locked
-
-      - name: Package a deb and an AppImage
-        working-directory: desktop/src-tauri
-        run: |
-          npx --yes @tauri-apps/cli@2 build --no-bundle || true
-          npx --yes @tauri-apps/cli@2 build --bundles deb,appimage
+      - name: Build the app and its packages
+        working-directory: desktop
+        run: npx --yes @tauri-apps/cli@2 build --bundles deb,appimage
 
       - name: Keep the artifacts
         uses: actions/upload-artifact@v4
