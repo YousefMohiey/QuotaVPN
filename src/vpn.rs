@@ -100,6 +100,7 @@ fn pick_addresses(routes4: &str, routes6: &str, adapters: &str) -> (String, Stri
     )
 }
 
+#[cfg(windows)]
 fn pick_tun_ips() -> (String, String) {
     let routes4 = run_hidden("route", &["print", "-4"])
         .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
@@ -140,10 +141,12 @@ pub fn engine_dir() -> PathBuf {
     base.join("quotacards").join("engine")
 }
 
+#[cfg(windows)]
 pub fn singbox_path() -> PathBuf {
     engine_dir().join("sing-box.exe")
 }
 
+#[cfg(windows)]
 pub fn wintun_path() -> PathBuf {
     engine_dir().join("wintun.dll")
 }
@@ -172,6 +175,7 @@ fn run_hidden(prog: &str, args: &[&str]) -> Result<std::process::Output, String>
 }
 
 /// True when running elevated. `net session` only succeeds as admin.
+#[cfg(windows)]
 pub fn is_elevated() -> bool {
     run_hidden("net", &["session"])
         .map(|o| o.status.success())
@@ -180,6 +184,7 @@ pub fn is_elevated() -> bool {
 
 /// Download + extract the sing-box engine (pinned) and wintun driver.
 /// Version-stamped so a stale engine is replaced automatically.
+#[cfg(windows)]
 pub fn ensure_engine() -> Result<String, String> {
     let dir = engine_dir();
     std::fs::create_dir_all(&dir).map_err(|e| format!("mkdir: {e}"))?;
@@ -743,6 +748,7 @@ pub fn engine_log_tail() -> String {
 
 /// Ask the engine to exit on its own (lets it delete its TUN adapter -
 /// a force-kill can leave a ghost adapter that blocks the next connect).
+#[cfg(windows)]
 pub fn request_graceful_stop(pid: u32) {
     let _ = run_hidden("taskkill", &["/PID", &pid.to_string()]);
 }
@@ -773,6 +779,7 @@ pub fn app_log(line: &str) {
 /// profile, so a single machine-wide task name would make a second account on
 /// the same PC drive the first account's engine and config. The name carries
 /// the account so each user gets their own helper.
+#[cfg(windows)]
 pub fn task_name() -> String {
     format!("QuotaVPN Tunnel {}", account_name())
 }
@@ -781,6 +788,7 @@ pub fn task_name() -> String {
 /// from the environment: a process started through runas or
 /// CreateProcessWithLogonW carries the launcher's USERNAME, which made a
 /// second user believe it was already set up.
+#[cfg(windows)]
 pub fn account_name() -> String {
     let who = run_hidden("whoami", &[])
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
@@ -798,6 +806,7 @@ pub fn account_name() -> String {
 /// The action is checked too: a task left over from the PowerShell-script
 /// version still starts the engine, but opens a console window on every
 /// connect, so it counts as not installed and the setup pass replaces it.
+#[cfg(windows)]
 pub fn task_installed() -> bool {
     let out = match run_hidden("schtasks", &["/Query", "/TN", &task_name(), "/XML"]) {
         Ok(o) if o.status.success() => o,
@@ -846,6 +855,7 @@ pub fn setup_log_tail() -> String {
 /// name reserved, and the next start dies with
 /// "create adapter: Cannot create a file when that file already exists".
 /// Clearing phantoms needs administrator rights, which the task has.
+#[cfg(windows)]
 pub fn engine_ps_path() -> PathBuf {
     engine_dir().join("run-engine.ps1")
 }
@@ -856,6 +866,7 @@ pub fn engine_ps_path() -> PathBuf {
 /// died with "create adapter: Cannot create a file when that file already
 /// exists" until the machine was restarted), and report the engine pid, which
 /// an ordinary user cannot read from a SYSTEM process.
+#[cfg(windows)]
 pub fn write_engine_cmd() {
     let sb = singbox_path();
     let cfg = tun_config_path();
@@ -931,6 +942,7 @@ pub fn set_kill_switch(on: bool) -> Result<(), String> {
 }
 
 /// True when the block rule is in the firewall right now.
+#[cfg(windows)]
 pub fn traffic_blocked() -> bool {
     let out = run_hidden("netsh", &["advfirewall", "firewall", "show", "rule", &format!("name={KILL_RULE}")]);
     matches!(out, Ok(o) if o.status.success())
@@ -938,6 +950,7 @@ pub fn traffic_blocked() -> bool {
 
 /// Add or remove the block. Both need elevation; the engine helper runs with
 /// it, and the app reaches the same code through `--killswitch`.
+#[cfg(windows)]
 pub fn block_traffic(block: bool) {
     if block {
         let _ = run_hidden(
@@ -955,6 +968,7 @@ pub fn block_traffic(block: bool) {
     }
 }
 
+#[cfg(windows)]
 pub fn run_engine_headless() {
     let cfg = tun_config_path();
     // No tunnel config means this PC has never connected: nothing to run.
@@ -1031,6 +1045,7 @@ pub fn run_engine_headless() {
 /// Microsoft account schtasks refuses with a credentials error. With `/IT` the
 /// task uses the interactive token and needs no password, while `/RL HIGHEST`
 /// still runs it elevated.
+#[cfg(windows)]
 pub fn install_task(owner: &str) -> Result<(), String> {
     let _ = std::fs::remove_file(engine_ps_path());
     let exe = std::env::current_exe().map_err(|e| format!("exe: {e}"))?;
@@ -1142,6 +1157,7 @@ fn said(out: &std::process::Output) -> String {
 /// A task principal written as a bare name has to be resolved by the Task
 /// Scheduler, and on a Microsoft account that resolution is exactly what
 /// fails. A SID always resolves.
+#[cfg(windows)]
 fn sid_for(user: &str) -> Option<String> {
     let quoted = user.replace(char::from(39), "''");
     let script = format!(
@@ -1174,6 +1190,7 @@ fn xml_escape(raw: &str) -> String {
         .replace('"', "&quot;")
 }
 
+#[cfg(windows)]
 pub fn remove_task() {
     let deleted = run_hidden("schtasks", &["/Delete", "/TN", &task_name(), "/F"])
         .map(|o| o.status.success())
@@ -1217,6 +1234,7 @@ pub fn remove_task() {
     std::thread::sleep(std::time::Duration::from_secs(3));
 }
 
+#[cfg(windows)]
 fn start_task() -> Result<(), String> {
     let out = run_hidden("schtasks", &["/Run", "/TN", &task_name()]).map_err(|e| format!("task: {e}"))?;
     if out.status.success() {
@@ -1226,12 +1244,14 @@ fn start_task() -> Result<(), String> {
     }
 }
 
+#[cfg(windows)]
 pub fn stop_task() {
     let _ = run_hidden("schtasks", &["/End", "/TN", &task_name()]);
 }
 
 /// The pid of the engine our task started: the sing-box whose command line
 /// names our own config path. Anything else called sing-box is not ours.
+#[cfg(windows)]
 pub fn task_engine_pid() -> Option<u32> {
     // The helper runs as SYSTEM, and an ordinary user cannot read the command
     // line of a SYSTEM process, so the pid comes from the file the helper
@@ -1254,6 +1274,7 @@ pub fn task_engine_pid() -> Option<u32> {
 
 /// True when that pid is a live sing-box: the image name is readable even for
 /// a SYSTEM process, unlike its command line.
+#[cfg(windows)]
 pub fn engine_alive(pid: u32) -> bool {
     run_hidden("tasklist", &["/FI", &format!("PID eq {pid}"), "/FO", "CSV", "/NH"])
         .map(|o| String::from_utf8_lossy(&o.stdout).to_lowercase().contains("sing-box.exe"))
@@ -1270,6 +1291,7 @@ pub fn engine_alive(pid: u32) -> bool {
 /// exists") and cannot open that ghost either ("Element not found"), so the
 /// tunnel never comes up while the app happily reports connected. A fresh name
 /// sidesteps the ghost instead of asking the user to reboot.
+#[cfg(windows)]
 fn refresh_tun_name() -> Option<String> {
     let p = tun_config_path();
     let raw = std::fs::read_to_string(&p).ok()?;
@@ -1306,6 +1328,7 @@ fn tun_adapter_up() -> bool {
     }
 }
 
+#[cfg(windows)]
 pub fn start_engine() -> Result<u32, String> {
     if !task_installed() {
         return Err("setup-needed".to_string());
@@ -1361,6 +1384,7 @@ pub fn start_engine() -> Result<u32, String> {
 }
 
 /// Stop whatever the task is running, then clean routes and adapter.
+#[cfg(windows)]
 pub fn stop_engine() {
     // An ordinary user may end the task but cannot kill the SYSTEM process it
     // started, so the script watches for this file and stops the engine
@@ -1507,6 +1531,7 @@ pub fn egress_ip_direct() -> Result<String, String> {
 /// networks) and never owns a default route. Requiring a default route is
 /// exactly what left the voice helper looping on "Connecting" while a
 /// healthy engine was already carrying the voice traffic.
+#[cfg(windows)]
 pub fn tun_routes_present() -> bool {
     let ip = current_tun_ip();
     run_hidden("route", &["print", "-4"])
@@ -1542,6 +1567,7 @@ pub fn engine_cleanup() {
     engine_cleanup_keep(None);
 }
 
+#[cfg(windows)]
 pub fn engine_cleanup_keep(keep: Option<u32>) {
     // fast path: kill OUR engine via the pid file (no wmic - wmic alone
     // can take 2-5s on Win11 and froze the old UI on every disconnect)
@@ -2034,3 +2060,354 @@ mod tests {
             .all(|o| o["tag"] != "proxy"));
     }
 }
+
+
+// ---------------------------------------------------------------------------
+// Linux
+//
+// Same contract, different plumbing. No scheduled task: the engine needs root
+// for the tunnel, so it is started once per session through pkexec and the app
+// talks to it through the same files. The kill switch is a real allow list
+// here, which Windows could not express through its firewall alone.
+// ---------------------------------------------------------------------------
+#[cfg(target_os = "linux")]
+pub fn singbox_path() -> PathBuf {
+    engine_dir().join("sing-box")
+}
+
+#[cfg(target_os = "linux")]
+pub fn wintun_path() -> PathBuf {
+    engine_dir().join("wintun.dll")
+}
+
+#[cfg(target_os = "linux")]
+pub fn is_elevated() -> bool {
+    run_hidden("id", &["-u"])
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim() == "0")
+        .unwrap_or(false)
+}
+
+#[cfg(target_os = "linux")]
+pub fn ensure_engine() -> Result<String, String> {
+    let dir = engine_dir();
+    std::fs::create_dir_all(&dir).map_err(|e| format!("mkdir: {e}"))?;
+    let ver_file = dir.join("tun-version.txt");
+    let cur = std::fs::read_to_string(&ver_file).unwrap_or_default();
+    let want = format!("sing-box {ENGINE_VER} linux");
+    if singbox_path().exists() && cur.trim() == want {
+        return Ok("engine ready".to_string());
+    }
+    let tgz = dir.join("engine.tar.gz");
+    let url = format!(
+        "https://github.com/SagerNet/sing-box/releases/download/v{ENGINE_VER}/sing-box-{ENGINE_VER}-linux-amd64.tar.gz"
+    );
+    let dl = run_hidden(
+        "curl",
+        &[
+            "-L", "--max-time", "180", "-A", "QuotaVPN", "-o",
+            &tgz.to_string_lossy(), &url,
+        ],
+    )
+    .map(|o| o.status.success())
+    .unwrap_or(false)
+        && tgz.exists();
+    if !dl {
+        return Err("engine download failed (check internet)".to_string());
+    }
+    run_hidden("tar", &["-xzf", &tgz.to_string_lossy(), "-C", &dir.to_string_lossy()])
+        .map_err(|e| format!("extract: {e}"))?;
+    let _ = std::fs::remove_file(&tgz);
+    let inner = dir.join(format!("sing-box-{ENGINE_VER}-linux-amd64"));
+    if singbox_path().exists() {
+        let _ = std::fs::remove_file(singbox_path());
+    }
+    std::fs::rename(inner.join("sing-box"), singbox_path())
+        .map_err(|e| format!("install engine: {e}"))?;
+    let _ = std::fs::remove_dir_all(inner);
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(singbox_path(), std::fs::Permissions::from_mode(0o755));
+    std::fs::write(&ver_file, &want).map_err(|e| e.to_string())?;
+    Ok("engine installed".to_string())
+}
+
+#[cfg(target_os = "linux")]
+fn pick_tun_ips() -> (String, String) {
+    let routes4 = run_hidden("ip", &["route"])
+        .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
+        .unwrap_or_default();
+    let routes6 = run_hidden("ip", &["-6", "route"])
+        .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
+        .unwrap_or_default();
+    let adapters = run_hidden("ip", &["addr"])
+        .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
+        .unwrap_or_default();
+    pick_addresses(&routes4, &routes6, &adapters)
+}
+
+/// No helper task on Linux: root comes from pkexec per session.
+#[cfg(target_os = "linux")]
+pub fn task_installed() -> bool {
+    true
+}
+
+#[cfg(target_os = "linux")]
+pub fn install_task(_owner: &str) -> Result<(), String> {
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+pub fn remove_task() {}
+
+#[cfg(target_os = "linux")]
+pub fn task_name() -> String {
+    "quotavpn-engine".to_string()
+}
+
+#[cfg(target_os = "linux")]
+pub fn task_engine_pid() -> Option<u32> {
+    let pid = std::fs::read_to_string(engine_dir().join("engine.pid"))
+        .ok()?
+        .trim()
+        .parse::<u32>()
+        .ok()?;
+    if std::path::Path::new(&format!("/proc/{pid}")).exists() {
+        Some(pid)
+    } else {
+        None
+    }
+}
+
+#[cfg(target_os = "linux")]
+pub fn account_name() -> String {
+    std::env::var("USER")
+        .or_else(|_| std::env::var("LOGNAME"))
+        .unwrap_or_else(|_| "user".to_string())
+}
+
+#[cfg(target_os = "linux")]
+pub fn request_graceful_stop(pid: u32) {
+    let _ = run_hidden("kill", &["-TERM", &pid.to_string()]);
+}
+
+#[cfg(target_os = "linux")]
+pub fn tun_routes_present() -> bool {
+    let routes = run_hidden("ip", &["route", "show", "default"])
+        .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
+        .unwrap_or_default();
+    routes.lines().any(|l| {
+        l.starts_with("default")
+            && (l.contains("tun") || l.contains("QuotaVPN") || l.contains("quotatun"))
+    })
+}
+
+/// The block: drop everything leaving this machine except loopback, the
+/// tunnel itself, the server it connects to, and replies to flows that
+/// already exist. Applied before the engine starts, so a tunnel that dies
+/// leaves the block in place instead of the bare internet.
+#[cfg(target_os = "linux")]
+pub fn block_traffic(block: bool) {
+    if block {
+        let _ = run_hidden("nft", &["delete", "table", "inet", "quotavpn"]);
+        let _ = run_hidden("nft", &["add", "table", "inet", "quotavpn"]);
+        let _ = run_hidden(
+            "nft",
+            &["add", "chain", "inet", "quotavpn", "out",
+              "{ type filter hook output priority 0; policy drop; }"],
+        );
+        let _ = run_hidden("nft", &["add", "rule", "inet", "quotavpn", "out", "oif", "lo", "accept"]);
+        let _ = run_hidden(
+            "nft",
+            &["add", "rule", "inet", "quotavpn", "out", "oifname", "QuotaVPN*", "accept"],
+        );
+        let _ = run_hidden(
+            "nft",
+            &["add", "rule", "inet", "quotavpn", "out", "oifname", "quotatun", "accept"],
+        );
+        let _ = run_hidden(
+            "nft",
+            &["add", "rule", "inet", "quotavpn", "out", "ct", "state", "established,related", "accept"],
+        );
+        for cidr in server_cidrs() {
+            let _ = run_hidden(
+                "nft",
+                &["add", "rule", "inet", "quotavpn", "out", "ip", "daddr",
+                  cidr.split('/').next().unwrap_or(cidr.as_str()), "accept"],
+            );
+        }
+        app_log("killswitch: outbound allowed through the tunnel only");
+    } else {
+        let _ = run_hidden("nft", &["delete", "table", "inet", "quotavpn"]);
+        app_log("killswitch: released");
+    }
+}
+
+/// Server addresses the tunnel is allowed to reach while the block is on.
+#[cfg(target_os = "linux")]
+fn server_cidrs() -> Vec<String> {
+    std::fs::read_to_string(engine_dir().join("server-ips.txt"))
+        .map(|t| {
+            t.lines()
+                .map(|l| l.trim().to_string())
+                .filter(|l| !l.is_empty())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+#[cfg(target_os = "linux")]
+pub fn traffic_blocked() -> bool {
+    run_hidden("nft", &["list", "table", "inet", "quotavpn"])
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+#[cfg(target_os = "linux")]
+pub fn engine_alive(pid: u32) -> bool {
+    std::path::Path::new(&format!("/proc/{pid}")).exists()
+}
+
+#[cfg(target_os = "linux")]
+pub fn engine_cleanup_keep(_keep: Option<u32>) {
+    if let Some(pid) = task_engine_pid() {
+        let _ = run_hidden("kill", &["-TERM", &pid.to_string()]);
+    }
+    let _ = std::fs::remove_file(engine_dir().join("engine.pid"));
+}
+
+#[cfg(target_os = "linux")]
+pub fn start_engine() -> Result<u32, String> {
+    if let Some(old) = task_engine_pid() {
+        let _ = run_hidden("kill", &["-TERM", &old.to_string()]);
+        for _ in 0..25 {
+            if task_engine_pid().is_none() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(200));
+        }
+    }
+    let _ = std::fs::remove_file(engine_dir().join("engine.stop"));
+    if is_elevated() {
+        let child = spawn_engine()?;
+        let pid = child.id();
+        let _ = std::fs::write(engine_dir().join("engine.pid"), pid.to_string());
+        return Ok(pid);
+    }
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/root".to_string());
+    let _ = std::fs::remove_file(engine_dir().join("engine.pid"));
+    // pkexec asks once per session; HOME is carried over so root writes its
+    // runtime files into the same folder the app watches.
+    std::process::Command::new("pkexec")
+        .arg("env")
+        .arg(format!("HOME={home}"))
+        .arg(&exe)
+        .arg("--run-engine")
+        .spawn()
+        .map_err(|e| format!("pkexec: {e}"))?;
+    for _ in 0..120 {
+        if let Some(pid) = task_engine_pid() {
+            return Ok(pid);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(250));
+    }
+    Err("the tunnel did not start (was the password cancelled?)".to_string())
+}
+
+#[cfg(target_os = "linux")]
+pub fn stop_engine() {
+    let _ = std::fs::write(engine_dir().join("engine.stop"), "1");
+    if let Some(pid) = task_engine_pid() {
+        let mut gone = false;
+        for _ in 0..20 {
+            if !engine_alive(pid) {
+                gone = true;
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(150));
+        }
+        if !gone {
+            let _ = run_hidden("kill", &["-KILL", &pid.to_string()]);
+        }
+    }
+    let _ = std::fs::remove_file(engine_dir().join("engine.stop"));
+    let _ = std::fs::remove_file(engine_dir().join("engine.pid"));
+    block_traffic(false);
+    engine_cleanup_keep(None);
+}
+
+#[cfg(target_os = "linux")]
+pub fn run_engine_headless() {
+    let cfg = tun_config_path();
+    if !cfg.exists() {
+        return;
+    }
+    let pid_path = engine_dir().join("engine.pid");
+    let stop_path = engine_dir().join("engine.stop");
+    let _ = std::fs::remove_file(&pid_path);
+    let _ = std::fs::remove_file(&stop_path);
+    let guarding = kill_switch_on();
+    if guarding {
+        block_traffic(true);
+    }
+    let mut cmd = cmd_hidden(&singbox_path().to_string_lossy());
+    cmd.args(["run", "-c", &cfg.to_string_lossy()]);
+    if let Ok(f) = std::fs::File::create(engine_log_path()) {
+        if let Ok(e) = f.try_clone() {
+            cmd.stdout(e);
+        }
+        cmd.stderr(f);
+    }
+    match cmd.spawn() {
+        Ok(mut child) => {
+            let pid = child.id();
+            let _ = std::fs::write(&pid_path, pid.to_string());
+            app_log(&format!("engine started (pid {pid})"));
+            loop {
+                if stop_path.exists() {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    break;
+                }
+                if let Ok(Some(_)) = child.try_wait() {
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(400));
+            }
+        }
+        Err(e) => {
+            app_log(&format!("engine failed to start: {e}"));
+        }
+    }
+    let _ = std::fs::remove_file(&pid_path);
+    if guarding {
+        if stop_path.exists() {
+            block_traffic(false);
+        } else {
+            block_traffic(true);
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn refresh_tun_name() -> String {
+    "quotatun".to_string()
+}
+
+#[cfg(target_os = "linux")]
+fn cleanup_tun_routes() {}
+
+#[cfg(target_os = "linux")]
+fn kill_stale_engine() {}
+
+#[cfg(target_os = "linux")]
+fn sid_for(_who: &str) -> Option<String> {
+    None
+}
+
+#[cfg(target_os = "linux")]
+pub fn engine_ps_path() -> PathBuf {
+    engine_dir().join("engine.ps1")
+}
+
+#[cfg(target_os = "linux")]
+pub fn write_engine_cmd() {}
