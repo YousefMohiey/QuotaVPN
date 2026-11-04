@@ -476,6 +476,7 @@ fn read_log_tail(n: usize) -> String {
 /// The "Launch with Valorant" toggle leans on this: the UI polls for the
 /// game process and arms the voice helper itself when it appears.
 #[tauri::command]
+#[cfg(windows)]
 fn process_running(name: String) -> bool {
     use windows::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
     use windows::Win32::System::Diagnostics::ToolHelp::{
@@ -1651,6 +1652,7 @@ fn icon_png(_path: &str) -> Option<Vec<u8>> {
 /// LibreSpeed public list as a fallback pool. Neither sends CORS headers, so
 /// the webview cannot read them, only the backend can.
 #[tauri::command]
+#[cfg(windows)]
 async fn speed_servers() -> Option<String> {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(12))
@@ -1726,6 +1728,7 @@ fn speed_client(follow: bool) -> reqwest::Client {
 }
 
 #[tauri::command]
+#[cfg(windows)]
 async fn speed_latency(url: String, probes: u32) -> Vec<f64> {
     speed::latency(&speed_client(false), &url, probes.clamp(1, 10)).await
 }
@@ -1736,11 +1739,13 @@ async fn speed_latency(url: String, probes: u32) -> Vec<f64> {
 /// second name fails on every download and upload while a plain ping still
 /// works. Candidates that cannot complete the full path are not offered.
 #[tauri::command]
+#[cfg(windows)]
 async fn speed_reach(url: String) -> bool {
     !speed::latency(&speed_client(true), &url, 1).await.is_empty()
 }
 
 #[tauri::command]
+#[cfg(windows)]
 async fn speed_down(app: tauri::AppHandle, urls: Vec<String>, seconds: f64) -> speed::SpeedOut {
     speed::uncancel();
     speed::download(&speed_client(true), &urls, seconds.clamp(1.0, 30.0), |v| {
@@ -1750,6 +1755,7 @@ async fn speed_down(app: tauri::AppHandle, urls: Vec<String>, seconds: f64) -> s
 }
 
 #[tauri::command]
+#[cfg(windows)]
 async fn speed_up(
     app: tauri::AppHandle,
     url: String,
@@ -1768,6 +1774,7 @@ async fn speed_up(
 /// Stop whatever is measuring: the cli process and the built-in loops.
 /// The wire this machine sits on: adapter, mac, gateway.
 #[tauri::command]
+#[cfg(windows)]
 async fn lan_wire() -> Option<quotacards::lan_ctrl::Wire> {
     tauri::async_runtime::spawn_blocking(quotacards::lan_ctrl::wire).await.ok().flatten()
 }
@@ -1881,6 +1888,7 @@ fn lan_stop(state: tauri::State<'_, LanState>) -> Result<bool, String> {
 
 /// Whether the packet driver the control layer needs is installed.
 #[tauri::command]
+#[cfg(windows)]
 async fn npcap_ready() -> bool {
     quotacards::lan::npcap_installed()
 }
@@ -1911,6 +1919,7 @@ fn lan_known(cfg: tauri::State<'_, State>) -> Vec<quotacards::lan::Device> {
 
 /// Who is on this network: ip, mac and a name when the system resolves one.
 #[tauri::command]
+#[cfg(windows)]
 async fn lan_devices(
     state: tauri::State<'_, RouterState>,
     cfg: tauri::State<'_, State>,
@@ -1963,6 +1972,7 @@ async fn lan_devices(
 /// Start watching every device on the network. Their traffic passes through
 /// this machine so it can be counted; nothing is dropped and nothing is slowed.
 #[tauri::command]
+#[cfg(windows)]
 async fn lan_monitor_start(state: tauri::State<'_, MonitorState>) -> Result<bool, String> {
     {
         let guard = state.0.lock().map_err(|_| "state".to_string())?;
@@ -2084,6 +2094,7 @@ fn open_page(url: String) -> bool {
 
 /// Log in to the router so the device list can carry real names.
 #[tauri::command]
+#[cfg(windows)]
 async fn router_link(state: tauri::State<'_, RouterState>, user: String, pass: String) -> Result<bool, String> {
     let host = quotacards::lan_ctrl::wire()
         .map(|w| w.gateway_ip)
@@ -2099,6 +2110,7 @@ async fn router_link(state: tauri::State<'_, RouterState>, user: String, pass: S
 
 /// Reconnect with the saved login, if there is one.
 #[tauri::command]
+#[cfg(windows)]
 async fn router_autolink(state: tauri::State<'_, RouterState>) -> Result<bool, String> {
     let Some((user, pass)) = router_remember::load() else {
         return Ok(false);
@@ -2123,12 +2135,14 @@ async fn router_autolink(state: tauri::State<'_, RouterState>) -> Result<bool, S
 }
 
 #[tauri::command]
+#[cfg(windows)]
 async fn router_status(state: tauri::State<'_, RouterState>) -> Result<bool, String> {
     let guard = state.0.lock().await;
     Ok(guard.is_some())
 }
 
 #[tauri::command]
+#[cfg(windows)]
 async fn router_unlink(state: tauri::State<'_, RouterState>) -> Result<bool, String> {
     let mut guard = state.0.lock().await;
     *guard = None;
@@ -2155,6 +2169,7 @@ fn lan_status(state: tauri::State<'_, LanState>) -> Option<LanStatus> {
 }
 
 #[derive(serde::Serialize)]
+#[cfg(windows)]
 pub struct LanStatus {
     pub ip: String,
     pub mac: String,
@@ -2167,6 +2182,7 @@ pub struct LanStatus {
 }
 
 #[tauri::command]
+#[cfg(windows)]
 async fn speed_cancel() -> bool {
     speed::CANCELLED.store(true, std::sync::atomic::Ordering::Relaxed);
     ookla::cancel();
@@ -2174,6 +2190,7 @@ async fn speed_cancel() -> bool {
 }
 
 #[tauri::command]
+#[cfg(windows)]
 async fn speedtest_cli_ready() -> bool {
     ookla::ensure_binary().await.is_some()
 }
@@ -2181,6 +2198,7 @@ async fn speedtest_cli_ready() -> bool {
 /// One full test through the official Ookla client. Live progress arrives as
 /// `speed-phase` and `speed-tick` events.
 #[tauri::command]
+#[cfg(windows)]
 async fn speedtest_cli(app: tauri::AppHandle) -> Option<ookla::CliResult> {
     speed::uncancel();
     let exe = ookla::ensure_binary().await?;
@@ -2600,6 +2618,7 @@ pub struct LanState(pub std::sync::Mutex<Option<quotacards::lan_ctrl::Session>>)
 pub struct MonitorState(pub std::sync::Mutex<Option<quotacards::lan_ctrl::MonitorSession>>);
 
 #[derive(serde::Serialize)]
+#[cfg(windows)]
 pub struct TrafficRow {
     pub ip: String,
     pub up: u64,
@@ -2680,6 +2699,7 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         setup_helper,
         get_state,
         probe_server,
+        platform,
         generate_card,
         import_card,
         revoke_card,
@@ -2693,7 +2713,6 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         tunnel_log,
         tunnel_copy_log,
         tunnel_probe,
-        tunnel_apps,
         resolve_host,
         check_update,
         apply_update,
@@ -2705,7 +2724,6 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         kill_switch_state,
         kill_switch_set,
         kill_switch_release,
-        process_running,
         autostart_get,
         autostart_set,
         we_quota::we_quota_challenge,
@@ -2976,10 +2994,13 @@ pub fn run() {
         .manage(State(Mutex::new(AppConfig::default())))
         .manage(Engine(Mutex::new(None)))
         .manage(we_quota::WeQuota::new())
-        .manage(LanState(std::sync::Mutex::new(None)))
-        .manage(MonitorState(std::sync::Mutex::new(None)))
-        .manage(RouterState(tokio::sync::Mutex::new(None)))
         .setup(|app| {
+            #[cfg(windows)]
+            {
+                app.manage(LanState(std::sync::Mutex::new(None)));
+                app.manage(MonitorState(std::sync::Mutex::new(None)));
+                app.manage(RouterState(tokio::sync::Mutex::new(None)));
+            }
             // Same OS config dir as the previous desktop app: cards carry
             // over, nothing to re-enter. (No chdir - that is phone-only.)
             let cfg = std::panic::catch_unwind(std::panic::AssertUnwindSafe(

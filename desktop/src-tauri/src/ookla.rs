@@ -314,7 +314,7 @@ pub fn cancel() {
     if let Some(pid) = pid {
         let _ = std::process::Command::new("taskkill")
             .args(["/F", "/T", "/PID", &pid.to_string()])
-            .creation_flags(CREATE_NO_WINDOW)
+            .creation_flags(0x0800_0000)
             .status();
     }
     if let Ok(mut g) = RUNNING.lock() {
@@ -342,7 +342,7 @@ pub fn run(
     {
         // The CLI is a console program: without this flag Windows opens a
         // terminal window for it every time a test runs.
-        cmd.creation_flags(CREATE_NO_WINDOW);
+        cmd.creation_flags(0x0800_0000);
     }
     let mut child = cmd.spawn().ok()?;
     if let Ok(mut g) = RUNNING.lock() {
