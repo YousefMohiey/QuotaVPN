@@ -13,6 +13,8 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 /// One device seen on the local network.
+#[cfg(not(target_os = "windows"))]
+use crate::wincompat::CmdExt;
 #[derive(Clone, serde::Serialize)]
 pub struct Device {
     pub ip: String,

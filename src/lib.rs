@@ -1,4 +1,6 @@
 //! QuotaCards library surface (used by the app and the smoke example).
+#[cfg(not(target_os = "windows"))]
+pub mod wincompat;
 pub mod config;
 #[cfg(target_os = "windows")]
 pub mod lan;

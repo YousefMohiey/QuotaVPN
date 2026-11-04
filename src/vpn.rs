@@ -36,6 +36,8 @@ static TUN_GEN: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new
 
 /// Bump the generation (call on the UI thread when stopping). Returns the
 /// new generation.
+#[cfg(not(target_os = "windows"))]
+use crate::wincompat::CmdExt;
 pub fn bump_gen() -> u64 {
     TUN_GEN.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1
 }

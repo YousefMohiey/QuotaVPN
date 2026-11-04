@@ -26,6 +26,8 @@ pub struct Wire {
 
 /// A block that outlives the moment it was set is a network outage, so every
 /// session has a deadline and a written note of what it changed.
+#[cfg(not(target_os = "windows"))]
+use crate::wincompat::CmdExt;
 fn journal_path() -> std::path::PathBuf {
     // The app's own data directory is the one place that is always writable,
     // whatever the working directory or the environment happens to be.

@@ -10,6 +10,8 @@
 //! Mbps for the bars, the result block gives the final numbers, the server
 //! and ISP lines, and the speedtest.net result URL.
 
+#[cfg(not(windows))]
+use crate::wincompat::CmdExt;
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};

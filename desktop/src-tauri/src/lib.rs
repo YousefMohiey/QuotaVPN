@@ -11,6 +11,10 @@ use quotacards::{
     server, vpn,
 };
 use std::sync::Mutex;
+#[cfg(not(windows))]
+mod wincompat;
+#[cfg(not(windows))]
+use wincompat::CmdExt;
 use tauri::Manager;
 use tauri::Emitter;
 use tauri::WindowEvent;
@@ -1145,6 +1149,7 @@ fn copy_text(app: tauri::AppHandle, text: String) -> Result<bool, String> {
 
 /// Curated Windows processes for per-app routing (exe name + label).
 /// The engine matches by process name/path; whole-PC stays the default.
+#[cfg(windows)]
 #[tauri::command]
 async fn tunnel_apps() -> Result<String, String> {
     // Live list: whatever Windows is actually running right now, one row
@@ -1196,6 +1201,60 @@ async fn tunnel_apps() -> Result<String, String> {
         .map(|(pkg, label)| serde_json::json!({ "pkg": pkg, "label": label }))
         .collect();
     serde_json::to_string(&v).map_err(|e| e.to_string())
+}
+
+
+/// The routing list on Linux: whatever is actually running. sing-box matches
+/// on the executable path, so the path is the value and the file name is the
+/// label. Kernel threads have no exe and are skipped; our own process is not
+/// a thing anyone routes through itself.
+#[cfg(not(windows))]
+#[tauri::command]
+async fn tunnel_apps() -> Result<String, String> {
+    let mut seen = std::collections::BTreeSet::<String>::new();
+    let mut rows: Vec<(String, String)> = Vec::new();
+    let me = std::env::current_exe()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_default();
+    if let Ok(dir) = std::fs::read_dir("/proc") {
+        for entry in dir.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if !name.chars().all(|c| c.is_ascii_digit()) {
+                continue;
+            }
+            let exe = match std::fs::read_link(format!("/proc/{name}/exe")) {
+                Ok(p) => p.to_string_lossy().to_string(),
+                Err(_) => continue,
+            };
+            if exe.is_empty() || exe.contains("(deleted)") || exe == me {
+                continue;
+            }
+            if exe.starts_with("/proc/") || exe.starts_with("/sys/") {
+                continue;
+            }
+            if !seen.insert(exe.clone()) {
+                continue;
+            }
+            let label = exe.rsplit('/').next().unwrap_or(&exe).to_string();
+            rows.push((exe, label));
+            if rows.len() >= 400 {
+                break;
+            }
+        }
+    }
+    rows.sort_by(|a, b| a.1.to_lowercase().cmp(&b.1.to_lowercase()));
+    let v: Vec<serde_json::Value> = rows
+        .iter()
+        .map(|(pkg, label)| serde_json::json!({ "pkg": pkg, "label": label }))
+        .collect();
+    serde_json::to_string(&v).map_err(|e| e.to_string())
+}
+
+/// Which system this build runs on, so the interface can leave out what does
+/// not exist here.
+#[tauri::command]
+fn platform() -> String {
+    std::env::consts::OS.to_string()
 }
 
 /// Resolve the server name to its numeric IP for display (the UI shows the
@@ -1760,6 +1819,7 @@ fn lan_protect(mac: String, on: bool, state: tauri::State<State>) -> Result<bool
     Ok(true)
 }
 
+#[cfg(windows)]
 /// Whether this address is off limits, and why, in words the window can show.
 fn protected_reason(ip: &str, mac: &str, cfg: &AppConfig) -> Option<String> {
     if let Some(w) = quotacards::lan_ctrl::wire() {
@@ -2525,13 +2585,16 @@ fn set_webview_memory_low(app: &tauri::AppHandle, low: bool) {
     });
 }
 
+#[cfg(windows)]
 /// A logged-in router, kept for the session so the device list can ask it for
 /// names without logging in again on every scan.
 pub struct RouterState(pub tokio::sync::Mutex<Option<router_huawei::Session>>);
 
+#[cfg(windows)]
 /// The one redirection that may be active at a time.
 pub struct LanState(pub std::sync::Mutex<Option<quotacards::lan_ctrl::Session>>);
 
+#[cfg(windows)]
 /// The whole-network watcher, separate from the one-device session above:
 /// watching does not drop or pace anything, and it covers every device at once.
 pub struct MonitorState(pub std::sync::Mutex<Option<quotacards::lan_ctrl::MonitorSession>>);
@@ -2549,6 +2612,7 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         setup_helper,
         get_state,
         probe_server,
+        platform,
         generate_card,
         import_card,
         revoke_card,
