@@ -357,6 +357,18 @@ pub fn write_tun_config(
     wg: Option<(&str, &str, &str, &str)>,
 ) -> Result<PathBuf, String> {
     let mut excludes = resolve_server_ips(host)?;
+    // The kill switch needs to know which addresses the tunnel itself is
+    // allowed to reach, and it runs as root without the card in hand.
+    #[cfg(target_os = "linux")]
+    {
+        let bare: Vec<String> = excludes
+            .iter()
+            .map(|c| c.split('/').next().unwrap_or(c).to_string())
+            .collect();
+        let _ = std::fs::create_dir_all(engine_dir());
+        let _ = std::fs::write(engine_dir().join("server-ips.txt"), bare.join("
+"));
+    }
     for ip in [PROXY_DOH_IP, DIRECT_DNS] {
         let cidr = format!("{ip}/32");
         if !excludes.contains(&cidr) {
@@ -2377,6 +2389,11 @@ pub fn run_engine_headless() {
             }
         }
         Err(e) => {
+            // The block went on before the spawn. Nothing is carrying the
+            // traffic it was holding back, so lifting it is the honest state.
+            if guarding {
+                block_traffic(false);
+            }
             app_log(&format!("engine failed to start: {e}"));
         }
     }

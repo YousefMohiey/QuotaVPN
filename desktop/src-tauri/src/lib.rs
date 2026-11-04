@@ -187,6 +187,7 @@ async fn probe_server(state: tauri::State<'_, State>) -> Result<CmdResult, Strin
 /// JS timers throttled to a crawl, so a JS interval only ever fires while
 /// the user is looking at the app - which read as "the voice helper only
 /// works from the Valorant page". A plain OS thread cannot be throttled.
+#[cfg(windows)]
 fn spawn_game_watch(app: tauri::AppHandle) {
     std::thread::spawn(move || {
         let mut up = false;
@@ -2781,6 +2782,7 @@ pub fn run() {
         }
         return;
     }
+#[cfg(windows)]
     // Print the wire the app would use, without touching the network.
     if std::env::args().any(|a| a == "--lan-wire") {
         match quotacards::lan_ctrl::wire() {
@@ -3126,6 +3128,7 @@ pub fn run() {
             // Closing the app must hand the network back. Without this, a
             // blocked device stays cut off until its router entry expires.
             if let tauri::RunEvent::Exit = event {
+                #[cfg(windows)]
                 if let Some(state) = app.try_state::<LanState>() {
                     if let Ok(mut guard) = state.0.lock() {
                         if let Some(session) = guard.take() {
