@@ -47,6 +47,16 @@
         "installMode": "currentUser",
         "installerHooks": "./windows/nsis-hooks.nsh"
       }
+    },
+    "linux": {
+      "deb": {
+        "depends": [
+          "curl",
+          "pkexec",
+          "libwebkit2gtk-4.1-0"
+        ]
+      },
+      "appimage": {}
     }
   },
   "plugins": {
