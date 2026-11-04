@@ -48,7 +48,9 @@ jobs:
 
       - name: Build the app and its packages
         working-directory: desktop
-        run: npx --yes @tauri-apps/cli@2 build --bundles deb,appimage
+        run: |
+          npx --yes @tauri-apps/cli@2 build --bundles deb,appimage \
+            --config '{"bundle":{"createUpdaterArtifacts":false}}'
 
       - name: Keep the artifacts
         uses: actions/upload-artifact@v4
