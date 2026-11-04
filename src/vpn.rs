@@ -345,6 +345,35 @@ fn session_secret() -> String {
 /// `voice` adds the VALORANT voice rules: only the voice networks and the
 /// Riot-scoped STUN/Vivox hedges ride the tunnel, everything else (the
 /// game's own traffic included) stays direct.
+
+/// The resolvers this machine actually asks. On Windows the tunnel's adapter
+/// arrives with a DNS server of its own; on Linux the system keeps pointing
+/// at the router, and a kill switch that drops the LAN would take DNS with
+/// it. Routing those resolvers into the tunnel means their queries are
+/// hijacked and answered over the proxy instead of being dropped or leaked.
+#[cfg(target_os = "linux")]
+fn system_dns_addresses() -> Vec<String> {
+    let text = std::fs::read_to_string("/etc/resolv.conf").unwrap_or_default();
+    let mut out = Vec::new();
+    for line in text.lines() {
+        let line = line.trim();
+        if let Some(rest) = line.strip_prefix("nameserver") {
+            let ip = rest.trim();
+            if ip.parse::<std::net::IpAddr>().is_ok() {
+                let cidr = if ip.contains(':') {
+                    format!("{ip}/128")
+                } else {
+                    format!("{ip}/32")
+                };
+                if !out.contains(&cidr) {
+                    out.push(cidr);
+                }
+            }
+        }
+    }
+    out
+}
+
 pub fn write_tun_config(
     uuid: &str,
     host: &str,
@@ -397,6 +426,12 @@ pub fn write_tun_config(
     // per-app routing matches by process, which needs the userspace stack
     // on Windows; whole-PC mode keeps the fast mixed stack.
     let tun_stack = if per_app { "gvisor" } else { "mixed" };
+    // Only Linux needs the resolvers pulled into the tunnel; on Windows the
+    // adapter already carries its own and nothing is gained by the extra route.
+    #[cfg(target_os = "linux")]
+    let dns_routes: Vec<String> = system_dns_addresses();
+    #[cfg(not(target_os = "linux"))]
+    let dns_routes: Vec<String> = Vec::new();
     let dns_final = if apps_only { "direct-dns" } else { "proxy-dns" };
     let route_final = if apps_only { "direct" } else { "proxy" };
     let mut route_rules = serde_json::json!([
@@ -603,7 +638,8 @@ pub fn write_tun_config(
             "auto_route": true,
             "strict_route": true,
             "stack": tun_stack,
-            "route_exclude_address": excludes
+            "route_exclude_address": excludes,
+            "route_address": dns_routes
         }],
         "outbounds": outbounds,
         "route": {
