@@ -3062,6 +3062,7 @@ pub fn run() {
             // when the user connects.
             spawn_launch_refresh(app.handle().clone());
             // The Valorant watcher: an OS thread, never a webview timer.
+            #[cfg(windows)]
             spawn_game_watch(app.handle().clone());
             // Window-state reconciler: an undecorated window no longer reports
             // a 0x0 size while minimized, and hide/show/minimize events arrive
