@@ -3,7 +3,9 @@ import { ArrowDownToLine, Gauge, History as HistoryIcon, Home as HomeIcon, Setti
 import type { ComponentType } from "react"
 import { ValorantMark } from "@/components/ValorantMark"
 import { cn } from "@/lib/utils"
+import { useEffect, useState } from "react"
 import { useI18n, type StrKey } from "@/lib/i18n"
+import { api } from "@/lib/ipc"
 import { useApp } from "@/state/app"
 
 export type Tab = "home" | "speed" | "voice" | "history" | "result" | "apps" | "network" | "settings"
@@ -23,9 +25,21 @@ const PRIMARY: Array<{ id: Tab; icon: ComponentType<{ className?: string; stroke
 export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
   const { t } = useI18n()
   const { version, update, updateState } = useApp()
+  // The tunnel exists on Linux; the network scanner, the speed test and the
+  // voice helper do not. Leave their doors out rather than open them onto
+  // a page that cannot work.
+  const [plat, setPlat] = useState("")
+  useEffect(() => {
+    void api
+      .platform()
+      .then((p) => setPlat(p))
+      .catch(() => setPlat(""))
+  }, [])
+  const HIDDEN = plat === "linux" ? new Set<Tab>(["voice", "network", "speed"]) : new Set<Tab>()
+  const visible = PRIMARY.filter((p) => !HIDDEN.has(p.id))
 
   const rows = [
-    ...PRIMARY.map((p) => ({ ...p, active: tab === p.id || (p.id === "home" && tab === "apps") || (p.id === "history" && tab === "result") })),
+    ...visible.map((p) => ({ ...p, active: tab === p.id || (p.id === "home" && tab === "apps") || (p.id === "history" && tab === "result") })),
     { id: "settings" as Tab, icon: SettingsIcon as typeof SettingsIcon, key: "tabSettings" as StrKey, active: tab === "settings" },
   ]
 

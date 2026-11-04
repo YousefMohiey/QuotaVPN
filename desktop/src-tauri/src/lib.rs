@@ -2718,12 +2718,15 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
 pub fn run() {
     // Undo any redirection a previous run failed to clean up: a killed app
     // leaves the router believing this machine is the device it blocked.
+    #[cfg(windows)]
     std::thread::spawn(|| {
         quotacards::lan_ctrl::repair();
     });
     // Names arrive when devices join, so listen for them in the background.
+    #[cfg(windows)]
     quotacards::dhcp_names::start_background();
     // Watch for anyone doing to this machine what this app does to others.
+    #[cfg(windows)]
     quotacards::lan_ctrl::start_guard();
 
     // Headless self-test for the WE quota flow, and a diagnostic the owner
@@ -2731,6 +2734,7 @@ pub fn run() {
     // QuotaVPN.exe --we-probe. Prints units and PROBE_GREEN, exits nonzero
     // on any failure. Runs before the single-instance plugin on purpose.
     // Headless redirect, for proving the engine works without the UI.
+    #[cfg(windows)]
     if let Some(i) = std::env::args().position(|a| a == "--lan-test") {
         let ip = std::env::args().nth(i + 1).unwrap_or_default();
         let secs: u64 = std::env::args()
@@ -2782,6 +2786,7 @@ pub fn run() {
         return;
     }
     // Ask one device its name, on the wire.
+#[cfg(windows)]
     if let Some(i) = std::env::args().position(|a| a == "--lan-ask") {
         let ip = std::env::args().nth(i + 1).unwrap_or_default();
         let mac = std::env::args().nth(i + 2).unwrap_or_default();
@@ -2790,6 +2795,7 @@ pub fn run() {
         return;
     }
     // Listen for devices announcing their names.
+#[cfg(windows)]
     if let Some(i) = std::env::args().position(|a| a == "--lan-listen") {
         let secs: u64 = std::env::args()
             .nth(i + 1)
@@ -2804,6 +2810,7 @@ pub fn run() {
         return;
     }
     // Does the packet driver load, and what does it see?
+#[cfg(windows)]
     if std::env::args().any(|a| a == "--lan-driver") {
         let ok = quotacards::wpcap::ready();
         println!("driver_loaded={ok}");
@@ -2817,6 +2824,7 @@ pub fn run() {
         return;
     }
     // Headless device scan, for checking the network layer without the UI.
+#[cfg(windows)]
     if std::env::args().any(|a| a == "--lan-probe") {
         let started = std::time::Instant::now();
         let devices = quotacards::lan::scan();

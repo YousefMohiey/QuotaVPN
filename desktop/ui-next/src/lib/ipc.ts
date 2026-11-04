@@ -219,6 +219,7 @@ export const api = {
   setCardSni: (uuid: string, sni: string) => call<CmdResult>("set_card_sni", { uuid, sni }),
   copyCard: (uuid: string) => call<CmdResult>("copy_card", { uuid }),
   copyToClipboard: (text: string) => call<boolean>("copy_text", { text }),
+  platform: () => call<string>("platform"),
   killSwitchState: () => call<{ armed: boolean; blocked: boolean }>("kill_switch_state"),
   killSwitchSet: (on: boolean) => call<boolean>("kill_switch_set", { on }),
   killSwitchRelease: () => call<boolean>("kill_switch_release"),
