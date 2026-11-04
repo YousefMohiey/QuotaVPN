@@ -637,24 +637,67 @@ mod autostart_reg {
 #[tauri::command]
 fn autostart_get() -> Result<bool, String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    Ok(autostart_reg::read().as_deref() == Some(exe.display().to_string().as_str()))
+    #[cfg(windows)]
+    {
+        Ok(autostart_reg::read().as_deref() == Some(exe.display().to_string().as_str()))
+    }
+    #[cfg(not(windows))]
+    {
+        let entry = desktop_entry_path();
+        Ok(std::fs::read_to_string(entry)
+            .map(|t| t.contains(&exe.display().to_string()))
+            .unwrap_or(false))
+    }
 }
 
 #[tauri::command]
 fn autostart_set(on: bool) -> Result<(), String> {
-    if on {
-        let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-        autostart_reg::write(&exe.display().to_string())
-    } else {
-        autostart_reg::remove().or_else(|e| {
-            // Removing a value that is not there is success, not an error.
-            if autostart_reg::read().is_none() {
-                Ok(())
-            } else {
-                Err(e)
-            }
-        })
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    #[cfg(windows)]
+    {
+        if on {
+            autostart_reg::write(&exe.display().to_string())
+        } else {
+            autostart_reg::remove().or_else(|e| {
+                if autostart_reg::read().is_none() { Ok(()) } else { Err(e) }
+            })
+        }
     }
+    #[cfg(not(windows))]
+    {
+        let entry = desktop_entry_path();
+        if on {
+            if let Some(dir) = entry.parent() {
+                std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+            }
+            let body = format!(
+                "[Desktop Entry]
+Type=Application
+Name=QuotaVPN
+Exec={}
+X-GNOME-Autostart-enabled=true
+",
+                exe.display()
+            );
+            std::fs::write(&entry, body).map_err(|e| e.to_string())
+        } else {
+            match std::fs::remove_file(&entry) {
+                Ok(()) => Ok(()),
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+                Err(e) => Err(e.to_string()),
+            }
+        }
+    }
+}
+
+/// Where a desktop session looks for things to start with it.
+#[cfg(not(windows))]
+fn desktop_entry_path() -> std::path::PathBuf {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    std::path::PathBuf::from(home)
+        .join(".config")
+        .join("autostart")
+        .join("quotavpn.desktop")
 }
 
 #[tauri::command]
