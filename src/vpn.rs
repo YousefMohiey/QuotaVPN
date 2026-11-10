@@ -429,7 +429,16 @@ pub fn write_tun_config(
     // Only Linux needs the resolvers pulled into the tunnel; on Windows the
     // adapter already carries its own and nothing is gained by the extra route.
     #[cfg(target_os = "linux")]
-    let dns_routes: Vec<String> = system_dns_addresses();
+    let dns_routes: Vec<String> = {
+        // route_address REPLACES the routes sing-box would otherwise install
+        // for auto_route. Listing only the resolvers therefore left the tun
+        // with no IPv4 default at all: the engine ran, the app said connected,
+        // and every packet still left through the LAN. Carry the whole IPv4
+        // space as two halves and append the resolvers to them.
+        let mut routes = vec!["0.0.0.0/1".to_string(), "128.0.0.0/1".to_string()];
+        routes.extend(system_dns_addresses());
+        routes
+    };
     #[cfg(not(target_os = "linux"))]
     let dns_routes: Vec<String> = Vec::new();
     let dns_final = if apps_only { "direct-dns" } else { "proxy-dns" };
