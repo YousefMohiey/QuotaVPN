@@ -36,6 +36,15 @@ struct State(Mutex<AppConfig>);
 /// Live engine PID. None means no tunnel (or one we no longer track).
 struct Engine(Mutex<Option<u32>>);
 
+/// What this session's tunnel is carrying, per (process, host). In memory only:
+/// no table, no file, nothing that survives the process.
+struct Dests(Mutex<vpn::DestTracker>);
+
+/// How often the engine's connection list is read. Two seconds is slow enough
+/// to cost nothing and fast enough that a screen opened at random is current.
+const DEST_POLL: std::time::Duration = std::time::Duration::from_secs(2);
+
+
 /// One in-app install at a time. The updater plugin does not serialize
 /// downloads, so a second press used to start a whole second transfer and
 /// both slowed to a crawl (the user read that as a dead button).
@@ -181,26 +190,59 @@ async fn probe_server(state: tauri::State<'_, State>) -> Result<CmdResult, Strin
     Ok(CmdResult { ok: true, msg: "Connected - server ready".into() })
 }
 
+/// The executables that mean the game is up. The shipping build is the first
+/// name; some installs and the game's own launcher expose the plain one, and
+/// watching only the shipping name missed those, which read as "it does not
+/// notice the game".
+#[cfg(windows)]
+const GAME_EXES: [&str; 2] = ["VALORANT-Win64-Shipping.exe", "VALORANT.exe"];
+
+/// How many extra ticks the transition is repeated for after it happens. The
+/// window spends its life in the tray, so its webview is suspended, and
+/// resuming it is asynchronous: an event sent a moment before the page is
+/// running again is delivered to nothing and lost. The page's own fallback
+/// timer cannot cover this either, because a suspended webview runs no timers.
+/// Six ticks at three seconds covers any realistic resume and then stops.
+#[cfg(windows)]
+const GAME_RESEND_TICKS: u8 = 6;
+
+#[cfg(windows)]
+fn game_is_running() -> bool {
+    GAME_EXES.iter().any(|n| process_running((*n).to_string()))
+}
+
+#[cfg(windows)]
+fn emit_game_state(app: &tauri::AppHandle, running: bool) {
+    let _ = app.emit("game-state", serde_json::json!({ "running": running }));
+}
+
 /// Watches for the game while the app runs and emits `game-state` on every
 /// transition. This lives here, not in the webview: the window spends most
 /// of its life minimized or hidden in the tray, and a hidden webview has its
 /// JS timers throttled to a crawl, so a JS interval only ever fires while
 /// the user is looking at the app - which read as "the voice helper only
 /// works from the Valorant page". A plain OS thread cannot be throttled.
+///
+/// The transition is repeated for a few ticks rather than sent once. The
+/// single send was the auto-connect bug: it went out the moment the game
+/// appeared, before the asynchronous webview resume had landed, so the page
+/// never saw it and starting the game armed nothing.
 #[cfg(windows)]
 fn spawn_game_watch(app: tauri::AppHandle) {
     std::thread::spawn(move || {
         let mut up = false;
+        let mut resend: u8 = 0;
         loop {
-            let now = process_running("VALORANT-Win64-Shipping.exe".into());
+            let now = game_is_running();
             if now != up {
                 up = now;
-                // The webview is suspended while the window sits in the tray,
-                // and a suspended page runs no script at all, so an event sent
-                // to it would be read by nobody. Wake it for the transition,
-                // let it arm or stand down the helper, then let it sleep again.
+                resend = GAME_RESEND_TICKS;
                 wake_for_game(&app);
-                let _ = app.emit("game-state", serde_json::json!({ "running": now }));
+                emit_game_state(&app, now);
+            } else if resend > 0 {
+                resend -= 1;
+                wake_for_game(&app);
+                emit_game_state(&app, up);
             }
             std::thread::sleep(std::time::Duration::from_secs(3));
         }
@@ -211,6 +253,11 @@ fn spawn_game_watch(app: tauri::AppHandle) {
 /// start can wait on a cold engine, so this covers the whole run plus the
 /// retry that follows a slow first report.
 const GAME_WAKE_SECS: u64 = 90;
+
+/// True while a re-suspend timer is already pending. The watcher wakes the
+/// page on every repeat tick now, and one timer per wake would stack a
+/// suspend request for each.
+static WAKE_ARMED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 /// Resume a hidden or minimized window's webview just long enough for the
 /// game event to be acted on, then suspend it again if it is still hidden.
@@ -223,9 +270,13 @@ fn wake_for_game(app: &tauri::AppHandle) {
         return;
     }
     set_webview_memory_low(app, false);
+    if WAKE_ARMED.swap(true, std::sync::atomic::Ordering::SeqCst) {
+        return;
+    }
     let handle = app.clone();
     std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_secs(GAME_WAKE_SECS));
+        WAKE_ARMED.store(false, std::sync::atomic::Ordering::SeqCst);
         if let Some(w) = handle.get_webview_window("main") {
             let hidden = !w.is_visible().unwrap_or(true) || w.is_minimized().unwrap_or(false);
             if hidden {
@@ -863,6 +914,10 @@ async fn tunnel_start(
         vpn::app_log("leftover tun adapter, clearing it first");
         vpn::reset_tun_adapter();
     }
+    // A session-scoped number must not carry the previous tunnel's bytes.
+    if let Ok(mut t) = app.state::<Dests>().0.lock() {
+        t.clear();
+    }
     let mut pid = vpn::start_engine().map_err(|e| e)?;
     *engine.0.lock().unwrap() = Some(pid);
     // Wait for the tun to actually carry traffic. A cold wintun adapter can
@@ -898,6 +953,12 @@ async fn tunnel_start(
         pid = vpn::start_engine().map_err(|e| e)?;
         *engine.0.lock().unwrap() = Some(pid);
     }
+    // One destination poller per session, following the pid this call settled
+    // on. It exits by itself when the state stops owning that pid, so a stop, a
+    // reconnect or a crash needs no bookkeeping here.
+    if let Some(live) = engine.0.lock().ok().and_then(|g| *g) {
+        spawn_dest_poll(app.clone(), live);
+    }
     if up {
         // Clear whatever the warmup window cached, failed lookups included,
         // so the checks right after connect get fresh answers.
@@ -917,6 +978,7 @@ async fn tunnel_start(
         // the poll will bring the UI in line either way.
         if let Some(live) = vpn::task_engine_pid() {
             *engine.0.lock().unwrap() = Some(live);
+            spawn_dest_poll(app.clone(), live);
             if vpn::tun_routes_present() {
                 flush_dns_cache();
                 return Ok(CmdResult {
@@ -1099,6 +1161,75 @@ async fn tunnel_health() -> Result<i64, String> {
         }
         Err(_) => Ok(-1),
     }
+}
+
+/// What this session has carried, per (process, host), heaviest first. Five
+/// rows, in memory only. The list is replaced when the next session starts and
+/// dies with the process, so a stopped tunnel keeps showing the session it just
+/// described but nothing is written down. An empty list is a normal answer: no
+/// tunnel yet, nothing moved yet, or an engine that does not report
+/// connections.
+#[tauri::command]
+fn tunnel_destinations(dests: tauri::State<'_, Dests>) -> Vec<vpn::Destination> {
+    match dests.0.lock() {
+        Ok(t) => t.top(5),
+        Err(_) => Vec::new(),
+    }
+}
+
+/// Read the engine's Clash `/connections` list while `pid` is the session's
+/// engine, and fold each poll into the in-memory totals.
+///
+/// It polls because the engine offers no stream, and it exits on its own the
+/// moment the state stops owning `pid`: no task outlives the tunnel it
+/// describes, so a stop path does not have to remember to cancel it.
+///
+/// Every failure here is silent on purpose. A missing endpoint is what a tunnel
+/// that is still starting looks like, and it must never become an error on a
+/// screen that is only trying to say where the bytes went.
+fn spawn_dest_poll(app: tauri::AppHandle, pid: u32) {
+    tauri::async_runtime::spawn(async move {
+        let ctl = vpn::engine_dir().join("clash-ctl.txt");
+        let client = match reqwest::Client::builder().timeout(DEST_POLL).build() {
+            Ok(c) => c,
+            Err(_) => return,
+        };
+        loop {
+            // The same ownership test the rest of the backend uses. A new
+            // connect, a stop, or a crashed engine all clear this pid.
+            let owned = match app.state::<Engine>().0.lock() {
+                Ok(g) => *g == Some(pid),
+                Err(_) => false,
+            };
+            if !owned {
+                return;
+            }
+            // Re-read every tick: a reconnect rewrites this file with a fresh
+            // port and secret, and an old poller must not keep dialling.
+            let coords = std::fs::read_to_string(&ctl).ok().and_then(|raw| {
+                let mut lines = raw.lines();
+                let port = lines.next()?.trim().parse::<u16>().ok()?;
+                let secret = lines.next().unwrap_or("").trim().to_string();
+                Some((port, secret))
+            });
+            if let Some((port, secret)) = coords {
+                let url = format!("http://127.0.0.1:{port}/connections");
+                let sent = client
+                    .get(url)
+                    .header("Authorization", format!("Bearer {secret}"))
+                    .send()
+                    .await;
+                if let Ok(r) = sent {
+                    if let Ok(body) = r.json::<serde_json::Value>().await {
+                        if let Ok(mut t) = app.state::<Dests>().0.lock() {
+                            t.observe(&body);
+                        }
+                    }
+                }
+            }
+            tokio::time::sleep(DEST_POLL).await;
+        }
+    });
 }
 
 /// Session counts for the tunnel itself: the TUN adapter's own byte
@@ -1980,8 +2111,10 @@ async fn lan_devices(
             for d in list.iter_mut() {
                 if let Some(name) = names.get(&d.ip) {
                     if !name.is_empty() {
-                        d.name = name.clone();
-                        d.source = String::from("router");
+                        // Routed through the same rank check as the rest of the
+                        // scan, so a router name fills a gap without replacing
+                        // a name the device gave itself.
+                        quotacards::lan::offer_name(d, name, "router");
                         if !d.mac.is_empty() {
                             learned.push((d.mac.clone(), name.clone()));
                         }
@@ -2078,7 +2211,12 @@ fn lan_traffic(state: tauri::State<'_, MonitorState>) -> Result<Vec<TrafficRow>,
     Ok(session
         .snapshot()
         .into_iter()
-        .map(|(ip, up, down)| TrafficRow { ip, up, down })
+        .map(|c| TrafficRow {
+            mac: c.mac,
+            ip: c.ip,
+            up: c.up,
+            down: c.down,
+        })
         .collect())
 }
 
@@ -2098,9 +2236,9 @@ fn kill_switch_set(on: bool) -> Result<bool, String> {
     Ok(true)
 }
 
-/// Lift a block that is in place without starting a tunnel. Elevates once.
-#[tauri::command]
-fn kill_switch_release() -> Result<bool, String> {
+/// Lift a block that is in place without starting a tunnel, through the one
+/// elevated pass (`--killswitch off`). Elevates once.
+fn release_block_elevated() -> Result<(), String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     #[cfg(windows)]
     {
@@ -2122,6 +2260,13 @@ fn kill_switch_release() -> Result<bool, String> {
             .spawn()
             .map_err(|e| format!("pkexec: {e}"))?;
     }
+    Ok(())
+}
+
+/// Lift a block that is in place without starting a tunnel.
+#[tauri::command]
+fn kill_switch_release() -> Result<bool, String> {
+    release_block_elevated()?;
     Ok(true)
 }
 
@@ -2676,9 +2821,66 @@ pub struct MonitorState(pub std::sync::Mutex<Option<quotacards::lan_ctrl::Monito
 #[derive(serde::Serialize)]
 #[cfg(windows)]
 pub struct TrafficRow {
+    /// Hardware address, lower case and `:` separated. Empty when the watch
+    /// could not resolve one: that bucket is keyed by its address instead.
+    pub mac: String,
     pub ip: String,
     pub up: u64,
     pub down: u64,
+}
+
+/// Everything the Network screen polls, in one payload.
+///
+/// The screen used to make four to six separate calls per tick (`lan_guard`,
+/// `npcap_ready`, `router_status`, `lan_monitor_active`, `lan_traffic`), which
+/// is why the interval could not be slowed down: each call had its own state,
+/// so the roster and the rail could disagree and a rename could race a rate
+/// sample. One snapshot makes them one reading, taken at one moment.
+#[derive(serde::Serialize)]
+#[cfg(windows)]
+pub struct NetworkSnapshot {
+    /// Whether anyone is trying to stand between this machine and the router.
+    pub guard: quotacards::lan_ctrl::Guard,
+    /// Whether the packet driver the control layer needs is installed.
+    pub driver_ready: bool,
+    /// Whether the router is signed in, so its names are available.
+    pub router_linked: bool,
+    /// Whether the whole network is being watched right now.
+    pub watching: bool,
+    /// Bytes seen per device since the watch began, empty when not watching.
+    pub traffic: Vec<TrafficRow>,
+    /// When this snapshot was taken, milliseconds since the Unix epoch.
+    pub ts: u64,
+}
+
+/// One snapshot of the whole network surface: the guard, the driver, the
+/// router session, the watch flag and every device's counters.
+///
+/// It is composed from the same functions the single purpose commands use, not
+/// a second implementation of them, so the two can never drift.
+#[tauri::command]
+#[cfg(windows)]
+async fn network_snapshot(
+    monitor: tauri::State<'_, MonitorState>,
+    router: tauri::State<'_, RouterState>,
+) -> Result<NetworkSnapshot, String> {
+    let guard = lan_guard();
+    let driver_ready = npcap_ready().await;
+    let router_linked = router_status(router).await?;
+    let watching = lan_monitor_active(monitor.clone())?;
+    let traffic = lan_traffic(monitor)?;
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+    Ok(NetworkSnapshot {
+        guard,
+        driver_ready,
+        router_linked,
+        watching,
+        traffic,
+        ts,
+    })
 }
 
 #[cfg(windows)]
@@ -2697,6 +2899,7 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         tunnel_stop,
         tunnel_status,
         tunnel_health,
+        tunnel_destinations,
         tunnel_traffic,
         tunnel_log,
         tunnel_copy_log,
@@ -2719,6 +2922,7 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         lan_protect,
         lan_traffic,
         lan_monitor_active,
+        network_snapshot,
         lan_monitor_stop,
         lan_monitor_start,
         router_link,
@@ -2765,6 +2969,7 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         tunnel_stop,
         tunnel_status,
         tunnel_health,
+        tunnel_destinations,
         tunnel_traffic,
         tunnel_log,
         tunnel_copy_log,
@@ -2981,7 +3186,12 @@ pub fn run() {
             .and_then(|i| args.get(i + 1))
             .cloned()
             .unwrap_or_default();
-        vpn::block_traffic(mode == "on");
+        // This pass runs elevated and hidden, so its exit code is the only
+        // report anyone gets. Non-zero when the state did not actually change.
+        if let Err(e) = vpn::block_traffic(mode == "on") {
+            eprintln!("killswitch: {e}");
+            std::process::exit(1);
+        }
         return;
     }
     if std::env::args().any(|a| a == "--run-engine") {
@@ -3050,8 +3260,34 @@ pub fn run() {
         )
         .manage(State(Mutex::new(AppConfig::default())))
         .manage(Engine(Mutex::new(None)))
+        .manage(Dests(Mutex::new(vpn::DestTracker::new())))
         .manage(we_quota::WeQuota::new())
         .setup(|app| {
+            // A block rule outlives a crash by design: it lives in Windows, not
+            // in this process. Start-up is therefore the one moment a leftover
+            // block can be found before the user is left staring at a machine
+            // with no internet and no obvious cause. Runs inline, before any
+            // state is managed, so nothing can read the switch state while a
+            // stale block is still in place.
+            //
+            // Try in-process first: a build that happens to hold an
+            // administrator token lifts the rule without a prompt. It usually
+            // does not, and deleting a firewall rule needs one, so when the
+            // rule survives that attempt, ask for elevation through the same
+            // one-shot pass the release button uses. A crashed session must not
+            // leave the machine offline until the user finds that button.
+            //
+            // It has to sit inside THIS closure: Tauri holds a single setup
+            // slot, and a second .setup() silently replaces the whole closure
+            // (see the memory-thread note further down).
+            #[cfg(windows)]
+            {
+                if vpn::reconcile_kill_switch() == vpn::Reconcile::Release
+                    && vpn::traffic_blocked()
+                {
+                    let _ = release_block_elevated();
+                }
+            }
             #[cfg(windows)]
             {
                 app.manage(LanState(std::sync::Mutex::new(None)));

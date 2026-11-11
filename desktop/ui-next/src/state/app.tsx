@@ -559,7 +559,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         gameWasUp.current = true
         return
       }
-      if (!cardUuidRef.current || voiceBusyRef.current) return
+      if (voiceBusyRef.current) return
+      if (!cardUuidRef.current) {
+        // Nothing to dial with. Say so instead of returning in silence, which
+        // is what made the auto-connect look like it never noticed the game.
+        // Same string every tick, so this does not flicker.
+        setVoiceMsg(tRef.current("needCard"))
+        return
+      }
       const armed = await voiceHelperRef.current(true)
       if (!armed) return
       gameWasUp.current = true

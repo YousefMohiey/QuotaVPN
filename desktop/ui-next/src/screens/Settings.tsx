@@ -130,6 +130,10 @@ function WeQuotaRows() {
 export function Settings() {
   const [killArmed, setKillArmed] = useState(false)
   const [killBlocked, setKillBlocked] = useState(false)
+  // The command now reports when the firewall rule did not move, instead of
+  // logging success for a block that never landed. Without this the toggle
+  // would just appear dead: an unhandled rejection leaves it where it is.
+  const [killMsg, setKillMsg] = useState("")
   const refreshKill = () => {
     void api
       .killSwitchState()
@@ -261,12 +265,18 @@ export function Settings() {
               ) : null}
             </span>
           }
+          note={killMsg ? <span className="text-[var(--red)]">{killMsg}</span> : null}
           control={
             <span className="flex items-center gap-2">
               {killBlocked ? (
                 <button
                   type="button"
-                  onClick={() => void api.killSwitchRelease().then(() => window.setTimeout(refreshKill, 2500))}
+                  onClick={() =>
+                    void api
+                      .killSwitchRelease()
+                      .then(() => window.setTimeout(refreshKill, 2500))
+                      .catch(() => setKillMsg(t("killFail")))
+                  }
                   className="press h-8 rounded-[8px] border border-[var(--red-line)] bg-[var(--red-bg)] px-2.5 text-[12px] text-[var(--red)]"
                 >
                   {t("killRelease")}
@@ -275,7 +285,14 @@ export function Settings() {
               <Toggle
                 on={killArmed}
                 busy={false}
-                onFlip={() => void api.killSwitchSet(!killArmed).then(() => setKillArmed(!killArmed))}
+                onFlip={() => {
+                  const next = !killArmed
+                  setKillMsg("")
+                  void api
+                    .killSwitchSet(next)
+                    .then(() => setKillArmed(next))
+                    .catch(() => setKillMsg(t("killFail")))
+                }}
                 label={t("killTitle")}
               />
             </span>

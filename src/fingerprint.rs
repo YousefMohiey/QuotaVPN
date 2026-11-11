@@ -120,12 +120,20 @@ fn tidy(name: &str) -> String {
 }
 
 /// True when the address was made up by the device, which is what phones do.
+///
+/// The local bit alone is not enough. The register carries 148 blocks in
+/// locally-administered space that real hardware was issued long before phones
+/// started randomising, so 3COM (02:60:8C), Intel (02:A0:C9), Racal and BBN
+/// cards all set the bit and all are genuine. A randomised address is one that
+/// sets the bit AND resolves to nobody.
 pub fn private_address(mac: &str) -> bool {
-    mac.split(':')
+    let local = mac
+        .split(':')
         .next()
         .and_then(|b| u8::from_str_radix(b, 16).ok())
         .map(|b| b & 0x02 != 0)
-        .unwrap_or(false)
+        .unwrap_or(false);
+    local && vendor(mac).is_none()
 }
 
 fn open(ip: &str, port: u16) -> bool {
@@ -215,5 +223,17 @@ mod tests {
         assert!(vendor("42:D5:2A:0C:BC:0A").is_none());
         assert!(private_address("42:D5:2A:0C:BC:0A"));
         assert!(!private_address("04:7C:16:7D:E7:02"));
+    }
+
+    /// The register carries 148 blocks in locally-administered space, because
+    /// real hardware was issued there long before phones randomised anything.
+    /// Testing the bit alone called a genuine 3COM a privacy address, and the
+    /// list then printed "Private address" over it.
+    #[test]
+    fn a_real_card_in_local_space_is_not_a_privacy_address() {
+        assert!(vendor("02:60:8C:00:00:01").is_some(), "the 3COM block must resolve");
+        assert!(!private_address("02:60:8C:00:00:01"));
+        // The bit is still the first test, so a made-up address stays private.
+        assert!(private_address("42:D5:2A:0C:BC:0A"));
     }
 }

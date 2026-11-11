@@ -74,20 +74,27 @@ export function Voice() {
   const shownOn = shown
   const working = busy && shown
   const healthy = shownOn && health === "ok"
+  // A card is the credential the helper dials with, so without one nothing can
+  // start. The plate used to be `disabled` in that state, which made it look
+  // broken: a dead control that also stays silent. It stays pressable and the
+  // line under the headline says what is missing.
+  const noCard = !card
   // One direction, read from the same state the plate shows. Before this the
   // headline said CONNECTING while the line under it said Disconnecting,
   // because one used the pressed state and the other the running one.
   const stateWord = working
     ? t("voiceConnecting")
-    : busy
-      ? t("voiceOffSub")
-      : on
-        ? health === "ok"
-          ? t("voiceConnected")
-          : health === "bad"
-            ? t("voiceUnhealthy")
-            : t("voiceChecking")
-        : t("voiceOffSub")
+    : noCard
+      ? t("needCard")
+      : busy
+        ? t("voiceOffSub")
+        : on
+          ? health === "ok"
+            ? t("voiceConnected")
+            : health === "bad"
+              ? t("voiceUnhealthy")
+              : t("voiceChecking")
+          : t("voiceOffSub")
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1180px] flex-col">
@@ -178,7 +185,7 @@ export function Voice() {
                     setShown(next)
                     void setHelper(next)
                   }}
-                  disabled={!card}
+                  aria-disabled={noCard || undefined}
                   aria-pressed={shownOn}
                   aria-label={shownOn ? t("voiceDisconnect") : t("voiceRowTitle")}
                   whileTap={working ? undefined : { scale: 0.93 }}

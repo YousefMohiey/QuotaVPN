@@ -995,36 +995,177 @@ pub fn set_kill_switch(on: bool) -> Result<(), String> {
     }
     std::fs::write(&path, if on { "1" } else { "0" }).map_err(|e| e.to_string())?;
     if !on {
-        block_traffic(false);
+        // Disarming is a promise that the block is off. If the rule is still
+        // there, the caller has to hear about it: the switch is not off.
+        block_traffic(false)?;
     }
     Ok(())
 }
 
 /// True when the block rule is in the firewall right now.
+///
+/// The exit code alone is not enough. "No rules match the specified criteria"
+/// is printed on stdout and, depending on the Windows build, comes back with
+/// exit 0 or exit 1, so a status-only test can call a machine blocked when it
+/// is not, or the reverse. The rule's own name is echoed only when a rule
+/// actually matched, so that string is the test. NUL bytes are stripped first:
+/// netsh can answer in UTF-16 once its stdout is a pipe, which would otherwise
+/// split every character and hide the name.
 #[cfg(windows)]
 pub fn traffic_blocked() -> bool {
-    let out = run_hidden("netsh", &["advfirewall", "firewall", "show", "rule", &format!("name={KILL_RULE}")]);
-    matches!(out, Ok(o) if o.status.success())
+    let out = run_hidden(
+        "netsh",
+        &["advfirewall", "firewall", "show", "rule", &format!("name={KILL_RULE}")],
+    );
+    match out {
+        Ok(o) => String::from_utf8_lossy(&o.stdout)
+            .replace('\0', "")
+            .contains(KILL_RULE),
+        Err(_) => false,
+    }
 }
 
-/// Add or remove the block. Both need elevation; the engine helper runs with
-/// it, and the app reaches the same code through `--killswitch`.
+/// Where the intention record lives: beside the switch flag, in the same
+/// `%LOCALAPPDATA%/quotacards` directory.
 #[cfg(windows)]
-pub fn block_traffic(block: bool) {
+fn kill_intent_path() -> std::path::PathBuf {
+    kill_flag_path().with_file_name("killswitch.intent")
+}
+
+/// True when a previous run wrote the intention record and never cleared it.
+#[cfg(windows)]
+fn kill_intent_present() -> bool {
+    kill_intent_path().exists()
+}
+
+/// One short note about a command result, for the log line. Never the whole
+/// output: netsh can print a page.
+#[cfg(windows)]
+fn note(out: &Result<std::process::Output, String>) -> String {
+    match out {
+        Ok(o) => match o.status.code() {
+            Some(c) => format!("exit={c}"),
+            None => "killed".to_string(),
+        },
+        Err(e) => format!("spawn: {e}"),
+    }
+}
+
+/// Add or remove the block, and report only what actually happened.
+///
+/// Both operations need elevation: the engine helper runs with it, and the app
+/// reaches the same code through `--killswitch`.
+///
+/// The order is the point. The intention record is written BEFORE the rule is
+/// added, so a rule that outlives this process is always one a later start
+/// knows about, and is removed only after a delete that was verified. A rule
+/// left behind is not a leak, it is a machine with no internet and no obvious
+/// way back, so nothing here may report success it did not see.
+#[cfg(windows)]
+pub fn block_traffic(block: bool) -> Result<(), String> {
     if block {
-        let _ = run_hidden(
+        // Already on: adding again would stack a second rule with the same
+        // name, and a delete would then take only one of them off.
+        if traffic_blocked() {
+            return Ok(());
+        }
+        let intent = kill_intent_path();
+        if let Some(dir) = intent.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        if let Err(e) = std::fs::write(&intent, "1") {
+            // Without the record, a crash leaves a block nothing can trace.
+            // Not blocking is the lesser failure, and it is said out loud.
+            app_log(&format!("killswitch: not blocking, no intention record: {e}"));
+            return Err(format!("killswitch: cannot record intent: {e}"));
+        }
+        let out = run_hidden(
             "netsh",
             &["advfirewall", "firewall", "add", "rule", &format!("name={KILL_RULE}"),
               "dir=out", "action=block", "enable=yes", "profile=any"],
         );
-        app_log("killswitch: outbound blocked");
+        if traffic_blocked() {
+            app_log("killswitch: outbound blocked");
+            return Ok(());
+        }
+        app_log(&format!(
+            "killswitch: block FAILED, outbound is not blocked ({})",
+            note(&out)
+        ));
+        Err("killswitch: the block rule did not take".to_string())
     } else {
-        let _ = run_hidden(
+        let out = run_hidden(
             "netsh",
             &["advfirewall", "firewall", "delete", "rule", &format!("name={KILL_RULE}")],
         );
+        if traffic_blocked() {
+            app_log(&format!(
+                "killswitch: release FAILED, block still in place ({})",
+                note(&out)
+            ));
+            return Err("killswitch: the block rule is still in place".to_string());
+        }
+        // Verified gone, so the record has done its job. A delete that found
+        // nothing is a success too: the state asked for is the state on disk.
+        let _ = std::fs::remove_file(kill_intent_path());
         app_log("killswitch: outbound released");
+        Ok(())
     }
+}
+
+/// What a start-up pass should do about the block rule.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Reconcile {
+    /// Neither a rule nor an intention record: nothing was left behind.
+    Nothing,
+    /// A record without a rule: the add never landed, or the delete did.
+    /// Drop the record, touch nothing else.
+    Forget,
+    /// A rule with no session behind it: take it off.
+    Release,
+}
+
+/// Decide what to do with a block found outside a live session.
+///
+/// Pure on purpose: the answer is a policy, and it can be tested without a
+/// firewall. A rule that is present is always released. Whether the intention
+/// record is there does not change that: a record means we applied it and died,
+/// and no record means an older build, a hand edit, or a record already cleared.
+/// Neither of those is a session that is holding the block on purpose, and a
+/// machine held offline by accident is the failure this exists to undo.
+pub fn reconcile_action(rule_present: bool, marker_present: bool) -> Reconcile {
+    match (rule_present, marker_present) {
+        (true, _) => Reconcile::Release,
+        (false, true) => Reconcile::Forget,
+        (false, false) => Reconcile::Nothing,
+    }
+}
+
+/// Undo a block left behind by a previous run. Called once when the app starts
+/// and again when a tunnel session starts, because neither an app that has not
+/// connected nor a fresh engine can justify holding the machine offline.
+///
+/// Returns what it decided so a caller that is not elevated can finish the job:
+/// this app runs as an ordinary user, and deleting a firewall rule needs more
+/// than that. The rule surviving the attempt is visible through
+/// `traffic_blocked()`, which stays true.
+#[cfg(windows)]
+pub fn reconcile_kill_switch() -> Reconcile {
+    let action = reconcile_action(traffic_blocked(), kill_intent_present());
+    match action {
+        Reconcile::Nothing => {}
+        Reconcile::Forget => {
+            let _ = std::fs::remove_file(kill_intent_path());
+            app_log("killswitch: dropped an intention record with no rule behind it");
+        }
+        Reconcile::Release => {
+            app_log("killswitch: leftover block with no session, releasing");
+            if let Err(e) = block_traffic(false) {
+                app_log(&format!("killswitch: leftover block NOT released: {e}"));
+            }
+        }
+    }
+    action
 }
 
 #[cfg(windows)]
@@ -1052,11 +1193,13 @@ pub fn run_engine_headless() {
     let _ = std::fs::remove_file(&pid_path);
     let _ = std::fs::remove_file(&stop_path);
     // A block left from the last death is lifted the moment a session starts,
-    // because the tunnel is about to carry the traffic it was protecting.
+    // because the tunnel is about to carry the traffic it was protecting. It is
+    // lifted whether or not the switch is armed: an armed switch guards a
+    // running session, and there is no session yet. A rule still in place here
+    // keeps the tunnel from carrying anything, which is the same offline
+    // machine reached by a different route.
+    reconcile_kill_switch();
     let guarding = kill_switch_on();
-    if guarding && traffic_blocked() {
-        block_traffic(false);
-    }
 
     let mut cmd = cmd_hidden(&singbox_path().to_string_lossy());
     cmd.args(["run", "-c", &cfg.to_string_lossy()]);
@@ -1085,12 +1228,14 @@ pub fn run_engine_headless() {
     }
     let _ = std::fs::remove_file(&pid_path);
     // Asked to stop: the user is closing the tunnel, so nothing should be
-    // held. Died on its own: hold everything until they are back.
+    // held. Died on its own: hold everything until they are back. Either way
+    // the result is logged truthfully by block_traffic; there is nobody left
+    // in this process to hand an error to.
     if guarding {
         if stop_path.exists() {
-            block_traffic(false);
+            let _ = block_traffic(false);
         } else {
-            block_traffic(true);
+            let _ = block_traffic(true);
         }
     }
 }
@@ -1700,12 +1845,329 @@ fn engine_orphan_sweep(keep: Option<u32>) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// What the tunnel is carrying, not just how much
+// ---------------------------------------------------------------------------
+// Conntrack, which is how the Linux gateway names its flows, is not available
+// on Windows at a price worth paying. The engine we already run can answer for
+// each live flow instead: its Clash-compatible API reports the sniffed host,
+// the process and the byte counters. Reaching that endpoint needs an HTTP
+// client and the per-run secret, so it lives in the desktop crate; this module
+// keeps only the arithmetic, where it can be tested without a tunnel.
+
+/// Most (process, host) pairs kept for one session. The screen shows five; a
+/// browser with a tab farm can open thousands of flows in minutes, and the
+/// point of the cap is that a long session costs the same memory as a short one.
+pub const MAX_DEST_PAIRS: usize = 256;
+
+/// Most live flows remembered between two polls. Active flows are the natural
+/// bound; this is the hard one, for a confused or hostile engine.
+pub const MAX_TRACKED_CONNS: usize = 4096;
+
+/// One destination row. `process` is empty when the engine named none, which is
+/// the normal case unless process finding is on. `host` is the sniffed name
+/// when the engine saw one, otherwise the raw destination address: a guessed
+/// service name is never put here.
+#[derive(Clone, serde::Serialize)]
+pub struct Destination {
+    pub process: String,
+    pub host: String,
+    pub up: u64,
+    pub down: u64,
+}
+
+/// Session totals per (process, host), built by diffing the engine's per-flow
+/// counters between polls.
+///
+/// The counters the API reports are cumulative for the life of a flow, so
+/// adding them on every poll would multiply the traffic by the number of polls.
+/// The map below is what keeps the sum honest: each poll adds only the growth
+/// since the previous one, and a flow that disappears takes its baseline with
+/// it. The cost of that choice is that traffic a flow carries in its final poll
+/// interval is never seen. That is a bounded undercount, which is the direction
+/// an accounting number should err in.
+#[derive(Default)]
+pub struct DestTracker {
+    /// connection id -> (up, down) as of the last poll.
+    seen: std::collections::HashMap<String, (u64, u64)>,
+    /// (process, host) -> session totals.
+    pairs: std::collections::HashMap<(String, String), (u64, u64)>,
+    /// Pairs and flows refused because a cap was reached.
+    dropped: u64,
+}
+
+impl DestTracker {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Start a new session at zero, so two tunnels never share one total.
+    pub fn clear(&mut self) {
+        self.seen.clear();
+        self.pairs.clear();
+        self.dropped = 0;
+    }
+
+    /// Fold one `/connections` reply in.
+    ///
+    /// Everything unexpected is ignored on purpose. A missing endpoint, a
+    /// renamed field, a truncated body and an engine that is still starting all
+    /// look the same from here, and none of them is worth a panic or an error
+    /// on a VPN screen.
+    pub fn observe(&mut self, body: &serde_json::Value) {
+        let conns = match body.get("connections").and_then(|v| v.as_array()) {
+            Some(c) => c,
+            None => return,
+        };
+        let mut live: std::collections::HashSet<String> = std::collections::HashSet::new();
+        for c in conns.iter().take(MAX_TRACKED_CONNS) {
+            let id = match c.get("id").and_then(|v| v.as_str()) {
+                Some(s) if !s.is_empty() => s,
+                _ => continue,
+            };
+            let up = c.get("upload").and_then(|v| v.as_u64()).unwrap_or(0);
+            let down = c.get("download").and_then(|v| v.as_u64()).unwrap_or(0);
+            // Written out three times rather than through a helper closure: a
+            // closure returning a borrowed &str here is a lifetime puzzle with
+            // no payoff on a path this short.
+            let meta = c.get("metadata");
+            let process = meta
+                .and_then(|m| m.get("process"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim();
+            let named = meta
+                .and_then(|m| m.get("host"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim();
+            let address = meta
+                .and_then(|m| m.get("destinationIP"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim();
+            // A host is present only when the engine sniffed one. When it did
+            // not, the destination address is the truth and the row says so.
+            let host = if named.is_empty() { address } else { named };
+            // Nothing to attribute these bytes to: skip the flow rather than
+            // invent a label for it.
+            if host.is_empty() {
+                continue;
+            }
+            // A flow seen for the first time is worth its whole counter. A flow
+            // we cannot track is worth nothing: re-counting it on every poll
+            // would be worse than missing it.
+            let fresh;
+            if let Some(&(pu, pd)) = self.seen.get(id) {
+                fresh = (up.saturating_sub(pu), down.saturating_sub(pd));
+            } else if self.seen.len() >= MAX_TRACKED_CONNS {
+                self.dropped = self.dropped.saturating_add(1);
+                continue;
+            } else {
+                fresh = (up, down);
+            }
+            self.seen.insert(id.to_string(), (up, down));
+            live.insert(id.to_string());
+            if fresh.0 == 0 && fresh.1 == 0 {
+                continue;
+            }
+            let key = (process.to_string(), host.to_string());
+            if let Some(t) = self.pairs.get_mut(&key) {
+                t.0 = t.0.saturating_add(fresh.0);
+                t.1 = t.1.saturating_add(fresh.1);
+            } else if self.pairs.len() >= MAX_DEST_PAIRS {
+                self.dropped = self.dropped.saturating_add(1);
+            } else {
+                self.pairs.insert(key, fresh);
+            }
+        }
+        // A closed flow's baseline is dead weight, and keeping it would make a
+        // reused id look like it had already sent what it now sends.
+        self.seen.retain(|id, _| live.contains(id));
+    }
+
+    /// The heaviest `n` pairs, ordered by total bytes, so a caller can draw rows
+    /// without sorting anything.
+    pub fn top(&self, n: usize) -> Vec<Destination> {
+        let mut rows: Vec<Destination> = self
+            .pairs
+            .iter()
+            .map(|((process, host), &(up, down))| Destination {
+                process: process.clone(),
+                host: host.clone(),
+                up,
+                down,
+            })
+            .collect();
+        // Total first; the labels break ties so the order does not jitter
+        // between two polls that saw the same traffic.
+        rows.sort_by(|a, b| {
+            b.up
+                .saturating_add(b.down)
+                .cmp(&a.up.saturating_add(a.down))
+                .then_with(|| a.host.cmp(&b.host))
+                .then_with(|| a.process.cmp(&b.process))
+        });
+        rows.truncate(n);
+        rows
+    }
+
+    /// Count of pairs and flows refused because a cap was reached. Zero in any
+    /// normal session; non-zero means the session carried more than is shown.
+    pub fn dropped(&self) -> u64 {
+        self.dropped
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    // The three tests rewrite one engine config file; serialize them.
+    // Destinations: the arithmetic the screen depends on. No HTTP, no engine,
+    // no clock, so these run anywhere.
+
+    fn conn(id: &str, process: &str, host: &str, up: u64, down: u64) -> serde_json::Value {
+        serde_json::json!({
+            "id": id,
+            "upload": up,
+            "download": down,
+            "metadata": {
+                "process": process,
+                "host": host,
+                "destinationIP": "203.0.113.9"
+            }
+        })
+    }
+
+    fn reply(conns: Vec<serde_json::Value>) -> serde_json::Value {
+        serde_json::json!({ "connections": conns })
+    }
+
+    #[test]
+    fn a_flow_is_counted_once_not_once_per_poll() {
+        let mut t = DestTracker::new();
+        // One flow, counters growing: only the growth may be added.
+        t.observe(&reply(vec![conn("a", "chrome.exe", "example.com", 100, 200)]));
+        t.observe(&reply(vec![conn("a", "chrome.exe", "example.com", 150, 260)]));
+        let top = t.top(5);
+        assert_eq!(top.len(), 1);
+        assert_eq!(
+            (top[0].up, top[0].down),
+            (150, 260),
+            "cumulative counters must be diffed, not summed"
+        );
+    }
+
+    #[test]
+    fn a_flow_that_closes_keeps_what_it_already_sent() {
+        let mut t = DestTracker::new();
+        t.observe(&reply(vec![conn("a", "curl.exe", "example.com", 10, 20)]));
+        t.observe(&reply(vec![]));
+        let top = t.top(5);
+        assert_eq!(top.len(), 1);
+        assert_eq!(
+            (top[0].up, top[0].down),
+            (10, 20),
+            "a closed flow must not erase its bytes"
+        );
+        // A reused id starts from zero instead of inheriting old counters.
+        t.observe(&reply(vec![conn("a", "curl.exe", "example.com", 5, 5)]));
+        let top = t.top(5);
+        assert_eq!((top[0].up, top[0].down), (15, 25));
+    }
+
+    #[test]
+    fn the_address_is_shown_when_no_host_was_sniffed() {
+        let mut t = DestTracker::new();
+        t.observe(&reply(vec![conn("a", "app.exe", "", 1, 2)]));
+        let top = t.top(5);
+        assert_eq!(top.len(), 1);
+        assert_eq!(
+            top[0].host, "203.0.113.9",
+            "fall back to the address, never to a guessed name"
+        );
+    }
+
+    #[test]
+    fn only_the_five_heaviest_come_back() {
+        let mut t = DestTracker::new();
+        for i in 0..8u64 {
+            let n = i + 1;
+            t.observe(&reply(vec![conn(
+                &format!("c{i}"),
+                "p.exe",
+                &format!("h{n}.test"),
+                n,
+                n,
+            )]));
+        }
+        let top = t.top(5);
+        assert_eq!(top.len(), 5);
+        assert_eq!(top[0].host, "h8.test");
+        assert_eq!(top[4].host, "h4.test");
+    }
+
+    #[test]
+    fn the_session_map_stays_bounded() {
+        let mut t = DestTracker::new();
+        for i in 0..(MAX_DEST_PAIRS + 40) {
+            t.observe(&reply(vec![conn(
+                &format!("c{i}"),
+                "p.exe",
+                &format!("h{i}.test"),
+                1,
+                1,
+            )]));
+        }
+        assert!(
+            t.pairs.len() <= MAX_DEST_PAIRS,
+            "the map must not grow with the flow count"
+        );
+        assert!(
+            t.dropped() >= 40,
+            "refused pairs are counted, not silently dropped"
+        );
+        assert_eq!(t.top(5).len(), 5);
+    }
+
+    // The three tests below rewrite one engine config file; serialize them.
     static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    // The kill switch decision, tested as the policy it is: no firewall, no
+    // netsh, no elevation. The property that matters is that a rule which is
+    // present is never left alone, because that is the machine with no internet.
+
+    #[test]
+    fn a_present_block_rule_is_always_released() {
+        for &marker in &[false, true] {
+            assert_eq!(
+                reconcile_action(true, marker),
+                Reconcile::Release,
+                "a block rule with no session behind it must be released (marker={marker})"
+            );
+        }
+    }
+
+    #[test]
+    fn a_crashed_block_is_released_and_not_just_forgotten() {
+        // Armed, applied, process died: record and rule are both there.
+        // Clearing the record while leaving the rule is the exact bug.
+        assert_eq!(reconcile_action(true, true), Reconcile::Release);
+        assert_ne!(reconcile_action(true, true), Reconcile::Forget);
+    }
+
+    #[test]
+    fn an_intention_record_on_its_own_is_only_cleared() {
+        // The add never landed, or the delete did: nothing to take off the
+        // firewall, but the record must not survive to confuse a later run.
+        assert_eq!(reconcile_action(false, true), Reconcile::Forget);
+    }
+
+    #[test]
+    fn a_clean_machine_is_left_alone() {
+        // No rule, no record: the pass must not run netsh at all.
+        assert_eq!(reconcile_action(false, false), Reconcile::Nothing);
+    }
 
     fn cfg(mode: &str, apps: &[&str]) -> serde_json::Value {
         let list: Vec<String> = apps.iter().map(|s| s.to_string()).collect();
@@ -1905,12 +2367,27 @@ mod tests {
         // allow-mode finals stay: everything else direct
         assert_eq!(v["route"]["final"], "direct");
         // merged sessions keep the full capture: per-app matching has to see
-        // every connection, so no route_address narrowing here
-        assert!(v["inbounds"][0].get("route_address").is_none());
+        // every connection, so the voice narrowing must not be applied.
+        // route_address is always present in the shape (empty on Windows, the
+        // DNS halves on Linux), so assert the absence of the voice networks
+        // rather than the absence of the key.
+        let ra = v["inbounds"][0]["route_address"]
+            .as_array()
+            .expect("route_address is part of the tun shape");
+        assert!(
+            !ra.iter().any(|x| x.as_str() == Some("74.201.0.0/16")),
+            "a merged session must not be narrowed to the voice networks"
+        );
         // whole-device session plus the helper: everything rides the tunnel
         let v2 = cfg_voice("all", &[], true);
         assert_eq!(v2["route"]["final"], "proxy");
-        assert!(v2["inbounds"][0].get("route_address").is_none());
+        let ra2 = v2["inbounds"][0]["route_address"]
+            .as_array()
+            .expect("route_address is part of the tun shape");
+        assert!(
+            !ra2.iter().any(|x| x.as_str() == Some("74.201.0.0/16")),
+            "a whole-device session must not be narrowed to the voice networks"
+        );
         assert!(v2["route"]["rules"].as_array().unwrap().iter().any(|r| r["port_range"][0] == "3478:3480"));
         if engine_dir().join("sing-box.exe").exists() {
             check_config().expect("engine accepts the merged config");
@@ -2264,7 +2741,7 @@ pub fn tun_routes_present() -> bool {
 /// already exist. Applied before the engine starts, so a tunnel that dies
 /// leaves the block in place instead of the bare internet.
 #[cfg(target_os = "linux")]
-pub fn block_traffic(block: bool) {
+pub fn block_traffic(block: bool) -> Result<(), String> {
     if block {
         let _ = run_hidden("nft", &["delete", "table", "inet", "quotavpn"]);
         let _ = run_hidden("nft", &["add", "table", "inet", "quotavpn"]);
@@ -2293,10 +2770,23 @@ pub fn block_traffic(block: bool) {
                   cidr.split('/').next().unwrap_or(cidr.as_str()), "accept"],
             );
         }
-        app_log("killswitch: outbound allowed through the tunnel only");
+        // Same rule as the Windows side: say what was seen, not what was run.
+        if traffic_blocked() {
+            app_log("killswitch: outbound allowed through the tunnel only");
+            Ok(())
+        } else {
+            app_log("killswitch: block FAILED, outbound is not restricted");
+            Err("killswitch: the drop table did not take".to_string())
+        }
     } else {
         let _ = run_hidden("nft", &["delete", "table", "inet", "quotavpn"]);
-        app_log("killswitch: released");
+        if traffic_blocked() {
+            app_log("killswitch: release FAILED, drop table still in place");
+            Err("killswitch: the drop table is still in place".to_string())
+        } else {
+            app_log("killswitch: released");
+            Ok(())
+        }
     }
 }
 
@@ -2390,7 +2880,7 @@ pub fn stop_engine() {
     }
     let _ = std::fs::remove_file(engine_dir().join("engine.stop"));
     let _ = std::fs::remove_file(engine_dir().join("engine.pid"));
-    block_traffic(false);
+    let _ = block_traffic(false);
     engine_cleanup_keep(None);
 }
 
@@ -2406,7 +2896,7 @@ pub fn run_engine_headless() {
     let _ = std::fs::remove_file(&stop_path);
     let guarding = kill_switch_on();
     if guarding {
-        block_traffic(true);
+        let _ = block_traffic(true);
     }
     let mut cmd = cmd_hidden(&singbox_path().to_string_lossy());
     cmd.args(["run", "-c", &cfg.to_string_lossy()]);
@@ -2437,7 +2927,7 @@ pub fn run_engine_headless() {
             // The block went on before the spawn. Nothing is carrying the
             // traffic it was holding back, so lifting it is the honest state.
             if guarding {
-                block_traffic(false);
+                let _ = block_traffic(false);
             }
             app_log(&format!("engine failed to start: {e}"));
         }
@@ -2445,9 +2935,9 @@ pub fn run_engine_headless() {
     let _ = std::fs::remove_file(&pid_path);
     if guarding {
         if stop_path.exists() {
-            block_traffic(false);
+            let _ = block_traffic(false);
         } else {
-            block_traffic(true);
+            let _ = block_traffic(true);
         }
     }
 }

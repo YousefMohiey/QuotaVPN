@@ -71,6 +71,8 @@ export type LanDevice = {
   source: string
   protected: boolean
   protected_always: boolean
+  /** Proven in the latest sample. False means seen a moment ago, not gone. */
+  live?: boolean
 }
 
 /** Who is on this network. Scans the subnet and reads the neighbour table. */
@@ -122,8 +124,46 @@ export const lanDevices = (): Promise<LanDevice[]> => call<LanDevice[]>("lan_dev
 export const lanMonitorStart = (): Promise<boolean> => call<boolean>("lan_monitor_start")
 export const lanMonitorStop = (): Promise<boolean> => call<boolean>("lan_monitor_stop")
 export const lanMonitorActive = (): Promise<boolean> => call<boolean>("lan_monitor_active")
-export type LanTraffic = { ip: string; up: number; down: number }
+/** One device's counters since the watch began. Keyed by MAC, because an
+    address moves and a hardware address does not; `mac` is empty for a device
+    the neighbour table never resolved, and that bucket is keyed by `ip`. */
+export type LanTraffic = { mac: string; ip: string; up: number; down: number }
 export const lanTraffic = (): Promise<LanTraffic[]> => call<LanTraffic[]>("lan_traffic")
+
+/** Everything the Network screen polls, in one payload, so its tick is one
+    round trip and the roster and the rates cannot disagree. */
+export type NetworkSnapshot = {
+  guard: LanGuard
+  driver_ready: boolean
+  router_linked: boolean
+  watching: boolean
+  traffic: LanTraffic[]
+  ts: number
+}
+
+export const networkSnapshot = async (): Promise<NetworkSnapshot> => {
+  if (isTauri()) return invoke<NetworkSnapshot>("network_snapshot")
+  // The browser demo has no backend, so compose the same shape from the mocks:
+  // the screen still makes one call, and the demo shows the same payload.
+  const [guard, driver_ready, router_linked, watching, traffic] = await Promise.all([
+    call<LanGuard>("lan_guard"),
+    call<boolean>("npcap_ready"),
+    call<boolean>("router_status"),
+    call<boolean>("lan_monitor_active"),
+    call<LanTraffic[]>("lan_traffic"),
+  ])
+  return { guard, driver_ready, router_linked, watching, traffic, ts: Date.now() }
+}
+
+/** What the tunnel is carrying, heaviest first. Session scoped and in memory:
+    the backend refreshes it every two seconds and it resets on reconnect, so
+    poll it no faster than the screen needs and never present it as history. */
+export type Destination = { process: string; host: string; up: number; down: number }
+
+export const tunnelDestinations = async (): Promise<Destination[]> => {
+  if (isTauri()) return invoke<Destination[]>("tunnel_destinations")
+  return []
+}
 
 /** Really stop a measurement: kills the cli and ends the built-in loops. */
 export const speedCancel = (): Promise<boolean> => call<boolean>("speed_cancel")
@@ -199,6 +239,8 @@ export const api = {
   lanMonitorStop: (): Promise<boolean> => call<boolean>("lan_monitor_stop"),
   lanMonitorActive: (): Promise<boolean> => call<boolean>("lan_monitor_active"),
   lanTraffic: (): Promise<LanTraffic[]> => call<LanTraffic[]>("lan_traffic"),
+  networkSnapshot: (): Promise<NetworkSnapshot> => networkSnapshot(),
+  tunnelDestinations: (): Promise<Destination[]> => tunnelDestinations(),
   lanStatus: (): Promise<LanStatus | null> => call<LanStatus | null>("lan_status"),
   lanGuard: (): Promise<LanGuard> => call<LanGuard>("lan_guard"),
   openPage: (url: string): Promise<boolean> => call<boolean>("open_page", { url }),

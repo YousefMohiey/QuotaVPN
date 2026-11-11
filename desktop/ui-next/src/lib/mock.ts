@@ -64,7 +64,15 @@ function demoTraffic() {
     c.up += Math.round(up * dt)
     demoCounters[d.ip] = c
   }
-  return DEMO_DEVICES.map((d) => ({ ip: d.ip, up: demoCounters[d.ip].up, down: demoCounters[d.ip].down }))
+  // The counters carry the hardware address, because that is what the screen
+  // joins on: a row keyed only by address stops matching the moment the lease
+  // moves, and the demo would show dashes for every device.
+  return DEMO_DEVICES.map((d) => ({
+    mac: d.mac,
+    ip: d.ip,
+    up: demoCounters[d.ip].up,
+    down: demoCounters[d.ip].down,
+  }))
 }
 
 export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {

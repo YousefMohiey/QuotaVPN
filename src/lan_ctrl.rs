@@ -558,6 +558,108 @@ pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> 
     })
 }
 
+/// A hardware address as a key, whatever form it arrived in: `AA-BB-CC-DD-EE-01`,
+/// `aa:bb:cc:dd:ee:01` and `aabbccddee01` all become `aa:bb:cc:dd:ee:01`.
+///
+/// `None` when it is not six octets. A string that is not a hardware address
+/// must never become a key, or one look at a broken neighbour entry would split
+/// a device in two.
+fn mac_key(raw: &str) -> Option<String> {
+    let hex: String = raw.chars().filter(|c| c.is_ascii_hexdigit()).collect();
+    if hex.len() != 12 {
+        return None;
+    }
+    let mut out = String::with_capacity(17);
+    for i in 0..6 {
+        if i > 0 {
+            out.push(':');
+        }
+        out.push_str(&hex[i * 2..i * 2 + 2].to_ascii_lowercase());
+    }
+    Some(out)
+}
+
+/// One device the watch knows about, and the two things the capture needs to
+/// attribute a frame to it: what it is called on the wire, and the address it
+/// holds.
+///
+/// [Peer::key] is what the counters are filed under. It is the hardware address
+/// whenever there is one, because that is the device: an address is only
+/// borrowed until the lease renews, so two pairs that share a hardware address
+/// are one device and a device that changed address keeps counting into the
+/// same bucket. A pair the neighbour table never resolved a hardware address for
+/// is filed under its address, which is the only name it has.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Peer {
+    /// Lower case, `:` separated. Empty when the neighbour table had none.
+    pub mac: String,
+    /// The address the caller last saw it at.
+    pub ip: String,
+    /// What the counters are filed under: [Peer::mac] when it is known,
+    /// otherwise [Peer::ip]. Never empty.
+    pub key: String,
+}
+
+/// Turn the caller's (address, hardware address) pairs into peers.
+///
+/// Pure, so the identity rule is testable without a network. One device is one
+/// bucket: a second pair carrying a hardware address already in the list is the
+/// same machine at another address, so it keeps that key and its bytes join the
+/// device's. A pair with no usable hardware address still becomes a peer, filed
+/// under its address, so a device is never dropped for a missing lookup.
+pub fn plan_peers(targets: &[(String, String)]) -> Vec<Peer> {
+    let mut out: Vec<Peer> = Vec::with_capacity(targets.len());
+    for (ip, mac) in targets {
+        let ip = ip.trim();
+        if ip.is_empty() {
+            continue;
+        }
+        let mac = mac_key(mac).unwrap_or_default();
+        let key = if mac.is_empty() { ip.to_string() } else { mac.clone() };
+        if out.iter().any(|p| p.key == key && p.ip.as_str() == ip) {
+            continue;
+        }
+        out.push(Peer { mac, ip: ip.to_string(), key });
+    }
+    out
+}
+
+/// One counter bucket: the device it belongs to, and the address to report it
+/// with.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Bucket {
+    key: String,
+    mac: String,
+    ip: String,
+}
+
+/// One bucket per device, in the order the caller listed them. The first address
+/// seen for a hardware address is the one reported with it.
+fn buckets_for(peers: &[Peer]) -> Vec<Bucket> {
+    let mut out: Vec<Bucket> = Vec::with_capacity(peers.len());
+    for p in peers {
+        if out.iter().any(|b| b.key == p.key) {
+            continue;
+        }
+        out.push(Bucket { key: p.key.clone(), mac: p.mac.clone(), ip: p.ip.clone() });
+    }
+    out
+}
+
+/// What one device has moved since the watch began.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
+pub struct Counter {
+    /// Hardware address, lower case and `:` separated. Empty for a row the
+    /// neighbour table never resolved: its bucket is `ip`.
+    pub mac: String,
+    /// The address the device held when the watch began.
+    pub ip: String,
+    /// Bytes the device sent.
+    pub up: u64,
+    /// Bytes it received.
+    pub down: u64,
+}
+
 /// Undo anything a previous run left behind. Called once at startup: if the
 /// app was killed mid-block, the router still believes this machine is the
 /// device, and that device has no internet until the entry expires.
@@ -571,8 +673,12 @@ pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> 
 /// connectivity.
 pub struct MonitorSession {
     pub stop: Arc<AtomicBool>,
-    /// Bytes out and in per device address, as they pass.
+    /// Bytes sent and received per device, as they pass, filed under
+    /// [Peer::key]: the hardware address when the capture knows one, otherwise
+    /// the address.
     pub bytes: Arc<Mutex<HashMap<String, (u64, u64)>>>,
+    /// What each bucket is, so a snapshot can name the device it belongs to.
+    buckets: Vec<Bucket>,
     handle: Option<std::thread::JoinHandle<()>>,
 }
 
@@ -584,11 +690,27 @@ impl MonitorSession {
         }
     }
 
-    pub fn snapshot(&self) -> Vec<(String, u64, u64)> {
+    /// Bytes per device, one row per device, sorted by hardware address and
+    /// then by address.
+    ///
+    /// The hardware address is the key, so two roster rows that turn out to be
+    /// one machine come back as one counter, and a device that renewed its lease
+    /// cannot split its history. `ip` is the address the device held when the
+    /// watch began, the only one this session can vouch for. A row with no
+    /// hardware address comes back with an empty `mac` and its address in `ip`:
+    /// it is kept, but a device that cannot be addressed on the wire cannot be
+    /// put in the middle of either, so its bucket stays at zero.
+    pub fn snapshot(&self) -> Vec<Counter> {
         let map = self.bytes.lock().unwrap();
-        let mut out: Vec<(String, u64, u64)> =
-            map.iter().map(|(ip, (up, down))| (ip.clone(), *up, *down)).collect();
-        out.sort_by(|a, b| a.0.cmp(&b.0));
+        let mut out: Vec<Counter> = self
+            .buckets
+            .iter()
+            .map(|b| {
+                let (up, down) = map.get(&b.key).copied().unwrap_or((0, 0));
+                Counter { mac: b.mac.clone(), ip: b.ip.clone(), up, down }
+            })
+            .collect();
+        out.sort_by(|a, b| a.mac.cmp(&b.mac).then_with(|| a.ip.cmp(&b.ip)));
         out
     }
 }
@@ -600,30 +722,38 @@ pub fn start_monitor(targets: Vec<(String, String)>) -> Result<MonitorSession, S
     let w = wire().ok_or("no wire")?;
     // The router and this machine are never watched: their traffic either does
     // not pass here or would take the network down if it did.
-    let list: Vec<(String, String)> = targets
+    let targets: Vec<(String, String)> = targets
         .into_iter()
-        .filter(|(ip, mac)| !mac.is_empty() && ip != &w.ip && ip != &w.gateway_ip)
+        .filter(|(ip, _)| ip != &w.ip && ip != &w.gateway_ip)
         .collect();
-    if list.is_empty() {
+    // One device, one bucket. The pairs the roster hands over are the mapping
+    // the capture works from, so nothing has to be looked up again here.
+    let peers = plan_peers(&targets);
+    // Only a device with a hardware address can be put in the middle of: the
+    // capture finds it by what it sends from and hands frames back to it. A row
+    // without one keeps its bucket below and reads zero.
+    if !peers.iter().any(|p| !p.mac.is_empty()) {
         return Err("nothing to watch".into());
     }
+    let buckets = buckets_for(&peers);
 
     let stop = Arc::new(AtomicBool::new(false));
     let bytes: Arc<Mutex<HashMap<String, (u64, u64)>>> = Arc::new(Mutex::new(HashMap::new()));
     {
         let mut map = bytes.lock().unwrap();
-        for (ip, _) in &list {
-            map.insert(ip.clone(), (0, 0));
+        for b in &buckets {
+            map.insert(b.key.clone(), (0, 0));
         }
     }
 
-    // Every pair in the journal, so a crash is undone on the next launch.
-    let journal: Vec<String> = list
+    // Every pair the capture can address goes in the journal, so a crash is
+    // undone on the next launch: a restore frame needs a hardware address.
+    let journal: Vec<String> = peers
         .iter()
-        .map(|(ip, mac)| format!("{ip}|{mac}|{}|{}", w.gateway_ip, w.gateway_mac))
+        .filter(|p| !p.mac.is_empty())
+        .map(|p| format!("{}|{}|{}|{}", p.ip, p.mac, w.gateway_ip, w.gateway_mac))
         .collect();
-    write_journal(&journal.join("
-"));
+    write_journal(&journal.join("\n"));
 
     let w2 = w.clone();
     let stop2 = Arc::clone(&stop);
@@ -636,14 +766,14 @@ pub fn start_monitor(targets: Vec<(String, String)>) -> Result<MonitorSession, S
         let gw = mac_bytes(&w2.gateway_mac).unwrap_or([0xff; 6]);
         let Some(gip) = ip4(&w2.gateway_ip) else { return };
 
-        // mac, address, and the string the counters are keyed by
-        let mut peers: Vec<([u8; 6], [u8; 4], String)> = Vec::new();
-        for (ip, mac) in &list {
-            if let (Some(m), Some(a)) = (mac_bytes(mac), ip4(ip)) {
-                peers.push((m, a, ip.clone()));
+        // hardware address, address, and the bucket the counters are filed in
+        let mut wire: Vec<([u8; 6], [u8; 4], String)> = Vec::new();
+        for p in &peers {
+            if let (Some(m), Some(a)) = (mac_bytes(&p.mac), ip4(&p.ip)) {
+                wire.push((m, a, p.key.clone()));
             }
         }
-        if peers.is_empty() {
+        if wire.is_empty() {
             return;
         }
 
@@ -651,7 +781,7 @@ pub fn start_monitor(targets: Vec<(String, String)>) -> Result<MonitorSession, S
         while !stop2.load(Ordering::Relaxed) {
             if last_poison.elapsed() > Duration::from_millis(900) {
                 last_poison = Instant::now();
-                for (tm, tip, _) in &peers {
+                for (tm, tip, _) in &wire {
                     let _ = cap.send(&arp_reply(*tm, our, gip, *tm, *tip));
                     let _ = cap.send(&arp_reply(gw, our, *tip, gw, gip));
                 }
@@ -671,7 +801,7 @@ pub fn start_monitor(targets: Vec<(String, String)>) -> Result<MonitorSession, S
             let mut out = frame.clone();
 
             // Out: a device we are watching sent it.
-            if let Some((_, _, key)) = peers.iter().find(|(m, _, _)| m == src) {
+            if let Some((_, _, key)) = wire.iter().find(|(m, _, _)| m == src) {
                 out[0..6].copy_from_slice(&gw);
                 out[6..12].copy_from_slice(&our);
                 if cap.send(&out) {
@@ -684,7 +814,7 @@ pub fn start_monitor(targets: Vec<(String, String)>) -> Result<MonitorSession, S
 
             // In: addressed to one of them, which is why it came to us.
             let dst_ip = [frame[30], frame[31], frame[32], frame[33]];
-            if let Some((tm, _, key)) = peers.iter().find(|(_, a, _)| a == &dst_ip) {
+            if let Some((tm, _, key)) = wire.iter().find(|(_, a, _)| a == &dst_ip) {
                 out[0..6].copy_from_slice(tm);
                 out[6..12].copy_from_slice(&our);
                 if cap.send(&out) {
@@ -697,7 +827,7 @@ pub fn start_monitor(targets: Vec<(String, String)>) -> Result<MonitorSession, S
 
         // Hand every table back the way it was found.
         for _ in 0..4 {
-            for (tm, tip, _) in &peers {
+            for (tm, tip, _) in &wire {
                 let _ = cap.send(&arp_reply(*tm, gw, gip, *tm, *tip));
                 let _ = cap.send(&arp_reply(gw, *tm, *tip, gw, gip));
             }
@@ -706,7 +836,7 @@ pub fn start_monitor(targets: Vec<(String, String)>) -> Result<MonitorSession, S
         clear_journal();
     });
 
-    Ok(MonitorSession { stop, bytes, handle: Some(handle) })
+    Ok(MonitorSession { stop, bytes, buckets, handle: Some(handle) })
 }
 
 pub fn repair() -> bool {
@@ -789,6 +919,55 @@ mod tests {
             }
         }
         assert!(dropped > 0, "a slow cap must start dropping, dropped {dropped}");
+    }
+
+    /// One device is one row: a phone that renews its lease comes back at a new
+    /// address with the same hardware address, so its bytes are one bucket and
+    /// both addresses still reach it.
+    #[test]
+    fn a_renewed_lease_keeps_one_bucket() {
+        let targets = vec![
+            (String::from("192.168.1.5"), String::from("aa:bb:cc:dd:ee:01")),
+            (String::from("192.168.1.9"), String::from("AA-BB-CC-DD-EE-01")),
+        ];
+        let plan = plan_peers(&targets);
+        assert_eq!(plan.len(), 2, "both addresses are still watched");
+        assert_eq!(plan[0].key, plan[1].key, "one device, one bucket");
+        assert_eq!(plan[0].key, "aa:bb:cc:dd:ee:01");
+        assert_eq!(buckets_for(&plan).len(), 1, "one row, not two");
+    }
+
+    /// A row the neighbour table never resolved a hardware address for is still
+    /// counted, on the only name it has.
+    #[test]
+    fn a_row_without_a_hardware_address_is_filed_under_its_address() {
+        let plan = plan_peers(&[(String::from("192.168.1.7"), String::new())]);
+        assert_eq!(plan.len(), 1);
+        assert_eq!(plan[0].key, "192.168.1.7");
+        assert!(plan[0].mac.is_empty());
+        assert_eq!(buckets_for(&plan).len(), 1);
+    }
+
+    /// Two devices stay two devices. An address is not a bucket key unless the
+    /// hardware address is unknown, or a re-leased address would merge two
+    /// machines into one.
+    #[test]
+    fn two_hardware_addresses_are_two_devices() {
+        let plan = plan_peers(&[
+            (String::from("192.168.1.5"), String::from("aa:bb:cc:dd:ee:01")),
+            (String::from("192.168.1.5"), String::from("aa:bb:cc:dd:ee:02")),
+        ]);
+        assert_eq!(buckets_for(&plan).len(), 2);
+    }
+
+    /// A key that is not a hardware address is not a hardware address: the row
+    /// falls back to its address instead of sharing a bucket with junk.
+    #[test]
+    fn a_broken_hardware_address_falls_back_to_the_address() {
+        let plan = plan_peers(&[(String::from("192.168.1.8"), String::from("nonsense"))]);
+        assert_eq!(plan.len(), 1);
+        assert!(plan[0].mac.is_empty());
+        assert_eq!(plan[0].key, "192.168.1.8");
     }
 
     /// Zero means no cap at all: no waiting, no dropping.

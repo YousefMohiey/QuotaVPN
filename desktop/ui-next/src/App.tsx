@@ -16,7 +16,7 @@ import { Settings } from "@/screens/Settings"
 import { Apps } from "@/screens/Apps"
 
 const EASE_OUT = [0.1, 0.9, 0.2, 1] as const
-const TABS: Tab[] = ["home", "speed", "voice", "history", "result", "apps", "settings"]
+const TABS: Tab[] = ["home", "speed", "voice", "network", "history", "result", "apps", "settings"]
 
 export default function App() {
   // The hash is the router: #speed, #settings, #apps. Small, but it

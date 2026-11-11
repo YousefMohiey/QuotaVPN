@@ -81,9 +81,21 @@ frozen, so measure geometry numerically rather than trusting a screenshot.
 
 ## Current state
 
-v0.3.2 is the latest release (installer, APK, `latest.json`): the installer now leaves exactly
-one desktop shortcut, named QuotaVPN, removing leftovers from older installs everywhere
-(user and shared desktops, both start menus) on install and update, and the finish page no
-longer asks about creating a shortcut. The app is unchanged from 0.3.1 (AmneziaWG WireGuard,
-disconnect fix, live speed test, stripped binary). Windows UI is the React app in
-`desktop/ui-next`; the phone still runs the vanilla UI. `notes/STATUS.md` has the details.
+**The latest published stable release is v0.5.0.** Everything after it (v0.5.1 through v0.5.7, plus the
+v0.5.7-linux preview) went out as **pre-releases**, and `releases/latest` skips those, so the in-app
+updater still points at v0.5.0 and an installed app will not see anything newer. That is worth knowing
+before assuming a 0.5.x build is in the field. This section previously claimed v0.3.2 was latest, which
+had been stale for months.
+
+What the shipping builds are: Windows is the React app in `desktop/ui-next`; the phone still runs the
+vanilla UI in `android/tauri-app/ui`. All three transports ship on both platforms, the desktop's
+WireGuard being AmneziaWG. `notes/STATUS.md` has the Sept 2026 detail and `notes/linux.md` covers the
+Linux port.
+
+The four version files are aligned at 0.5.7 in this tree. They were not before: the Android
+`tauri.conf.json` said 0.4.0 and the Android `Cargo.toml` said 0.3.3, against the rule above.
+
+The working tree also carries uncommitted work: a Network screen rebuild, presence with a second-sweep
+guard, MAC-keyed traffic identity, a single `network_snapshot` per tick, top destinations from the
+engine's Clash API, name provenance, and a recoverable kill switch. `cargo test --lib` is green
+(47 passed) on Windows and `cargo check` passes for both crates.

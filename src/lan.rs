@@ -23,9 +23,12 @@ pub struct Device {
     /// True for the machine the app is running on, so its row can be labelled
     /// instead of leaving the user to work it out.
     pub self_pc: bool,
-    /// Where the name came from: "self", "router", "device" (it announced
-    /// itself) or "vendor" (read from the hardware address).
-    pub source: String,
+    /// Where the name came from, ranked by [name_rank]. The strongest source
+    /// wins whatever order the passes run in, so a later lookup can fill a gap
+    /// but can never replace a name a better source already gave. Serialised
+    /// as "source" so the shape the screen reads does not move.
+    #[serde(rename = "source")]
+    pub name_source: String,
     /// Protected devices are never capped or blocked: the router, this PC,
     /// and anything the user marked.
     #[serde(default)]
@@ -34,6 +37,56 @@ pub struct Device {
     /// router stay safe whatever the screen says.
     #[serde(default)]
     pub protected_always: bool,
+    /// True when the last completed sweep proved this device is here: it
+    /// answered, or the neighbour table resolved its hardware address during
+    /// the burst. Presence is not a lease and it is not permanent: a row that
+    /// is kept past one miss comes back with this false and stays on screen
+    /// quiet, so a sleepy phone does not blink out and a device that really
+    /// left is not kept forever. The screen decides how a quiet row looks; it
+    /// is never deleted to say "gone".
+    #[serde(default)]
+    pub live: bool,
+}
+
+/// How much a name is worth, by where it came from. Higher wins, and an equal
+/// rank never overwrites: a later pass can fill a gap but cannot undo an
+/// equally good answer, so the order the passes happen to run in stops
+/// deciding what the row is called.
+///
+/// admin (a name somebody set on purpose) beats the hostname a device puts in
+/// its DHCP request, which beats what the device answers on the wire (mDNS,
+/// then NetBIOS). The router's own lease table is an indirect copy of those
+/// answers, so it ranks below them: it names the devices that answer nothing,
+/// and never argues with one that named itself. A hardware fingerprint is the
+/// last resort before an address with no name at all.
+pub fn name_rank(source: &str) -> u8 {
+    match source {
+        "self" => 100,
+        "admin" => 60,
+        "dhcp" => 50,
+        "mdns" => 40,
+        "netbios" => 30,
+        "router" => 25,
+        "ping" => 20,
+        // Written before the source was recorded: the old code stamped every
+        // resolved name "device", so it is real but unattributable, and it
+        // ranks below every source this build can actually name.
+        "device" => 15,
+        "vendor" => 10,
+        _ => 0,
+    }
+}
+
+/// Take a name only when its source outranks the one already on the row.
+pub fn offer_name(d: &mut Device, name: &str, source: &str) {
+    let name = name.trim();
+    if name.is_empty() || name == "-" {
+        return;
+    }
+    if name_rank(source) > name_rank(&d.name_source) {
+        d.name = name.to_string();
+        d.name_source = source.to_string();
+    }
 }
 
 #[cfg(windows)]
@@ -227,14 +280,18 @@ fn save_known(list: &[Device]) {
         .iter()
         .map(|d| {
             format!(
-                "{}|{}|{}|{}|{}|{}|{}",
+                "{}|{}|{}|{}|{}|{}|{}|{}",
                 d.ip,
                 d.mac,
                 d.name,
-                d.source,
+                d.name_source,
                 if d.self_pc { 1 } else { 0 },
                 if d.protected { 1 } else { 0 },
-                if d.protected_always { 1 } else { 0 }
+                if d.protected_always { 1 } else { 0 },
+                // The liveness verdict as of this save. Kept so the first paint
+                // after a restart is the last thing the sweep knew rather than a
+                // table of grey rows waiting for the first scan to finish.
+                if d.live { 1 } else { 0 }
             )
         })
         .collect::<Vec<_>>()
@@ -258,11 +315,14 @@ fn cached_devices() -> Vec<Device> {
             mac: parts[1].to_string(),
             name: parts[2].to_string(),
             self_pc: parts[4] == "1",
-            source: parts[3].to_string(),
+            name_source: parts[3].to_string(),
             protected: parts.get(5).is_some_and(|v| *v == "1"),
             // Older cache lines carry no protection flags; the live scan fills
             // them, and the router keeps its chip either way.
             protected_always: parts.get(6).is_some_and(|v| *v == "1"),
+            // A cache written before this field existed has no liveness to
+            // report, and false is the honest answer for "not proven".
+            live: parts.get(7).is_some_and(|v| *v == "1"),
         });
     }
     out
@@ -277,23 +337,31 @@ pub fn known() -> Vec<Device> {
             continue;
         }
         match out.iter_mut().find(|d| d.ip == ip) {
-            Some(d) => d.mac = mac,
+            Some(d) => {
+                d.mac = mac;
+                // The neighbour table produced its hardware address, which
+                // means this machine resolved it without being asked to: the
+                // same evidence a sweep counts as presence.
+                d.live = true;
+            }
             None => out.push(Device {
                 ip,
                 mac,
                 name: String::from("-"),
                 self_pc: false,
-                source: String::new(),
+                name_source: String::new(),
                 protected: false,
                 protected_always: false,
+                live: true,
             }),
         }
     }
     let named = router_names();
     for d in out.iter_mut() {
         if let Some(name) = named.get(&d.mac.to_ascii_lowercase()) {
-            d.name = name.clone();
-            d.source = String::from("router");
+            // The router's table is an indirect copy: it fills a row that has
+            // no name, and never replaces one the device gave itself.
+            offer_name(d, name, "router");
         }
     }
     sort_devices(&mut out);
@@ -318,34 +386,53 @@ fn probe_cache_path() -> std::path::PathBuf {
     base.join("quotavpn").join("lan_probe_names.txt")
 }
 
-fn probe_cache() -> HashMap<String, String> {
+fn probe_cache() -> HashMap<String, (String, String)> {
     let mut out = HashMap::new();
     if let Ok(text) = std::fs::read_to_string(probe_cache_path()) {
         for line in text.lines() {
-            if let Some((ip, name)) = line.split_once('|') {
-                out.insert(ip.to_string(), name.to_string());
+            let mut parts = line.splitn(3, '|');
+            if let (Some(ip), Some(name)) = (parts.next(), parts.next()) {
+                // A line written before the source was recorded carries the
+                // old ambiguous "device" label, at its historical rank.
+                let source = parts.next().unwrap_or("device");
+                out.insert(ip.to_string(), (name.to_string(), source.to_string()));
             }
         }
     }
     out
 }
 
-fn remember_probe(ip: &str, name: &str) {
-    if name.is_empty() {
-        return;
-    }
-    let mut all = probe_cache();
-    if all.get(ip).map(|n| n == name).unwrap_or(false) {
-        return;
-    }
-    all.insert(ip.to_string(), name.to_string());
+fn write_probe_cache(all: &HashMap<String, (String, String)>) {
     let path = probe_cache_path();
     if let Some(dir) = path.parent() {
         let _ = std::fs::create_dir_all(dir);
     }
-    let body: String = all.iter().map(|(ip, n)| format!("{ip}|{n}
-")).collect();
+    let body: String = all
+        .iter()
+        .map(|(ip, (name, source))| format!("{ip}|{name}|{source}"))
+        .collect::<Vec<_>>()
+        .join("\n");
     let _ = std::fs::write(path, body);
+}
+
+/// Keep a name with the source that produced it. A weaker source never
+/// overwrites a stronger one already on file, so a probe pass that runs late
+/// cannot undo an answer that arrived early.
+fn remember_probe(ip: &str, name: &str, source: &str) {
+    if name.is_empty() || source.is_empty() {
+        return;
+    }
+    let mut all = probe_cache();
+    if let Some((old_name, old_source)) = all.get(ip) {
+        if old_name.as_str() == name && old_source.as_str() == source {
+            return;
+        }
+        if name_rank(old_source) > name_rank(source) {
+            return;
+        }
+    }
+    all.insert(ip.to_string(), (name.to_string(), source.to_string()));
+    write_probe_cache(&all);
 }
 
 /// A name has to look like a name. Reverse lookups return things such as
@@ -367,35 +454,139 @@ fn usable_name(name: &str) -> bool {
 }
 
 /// Take a batch of names learned passively and keep the ones that are new.
+/// Its only caller is the mDNS half of the DHCP capture, so every name here
+/// came from a device announcing itself.
 pub fn remember_probed(found: &HashMap<String, String>) {
     let mut all = probe_cache();
-    let before = all.len();
+    let mut changed = false;
     for (ip, name) in found {
-        all.insert(ip.clone(), name.clone());
+        if name.is_empty() {
+            continue;
+        }
+        let take = match all.get(ip) {
+            Some((old_name, old_source)) => {
+                name_rank("mdns") >= name_rank(old_source)
+                    && !(old_name.as_str() == name.as_str() && old_source.as_str() == "mdns")
+            }
+            None => true,
+        };
+        if take {
+            all.insert(ip.to_string(), (name.to_string(), String::from("mdns")));
+            changed = true;
+        }
     }
-    if all.len() == before {
-        return;
+    if changed {
+        write_probe_cache(&all);
     }
-    let path = probe_cache_path();
-    if let Some(dir) = path.parent() {
-        let _ = std::fs::create_dir_all(dir);
-    }
-    let body: String = all.iter().map(|(ip, n)| format!("{ip}|{n}
-")).collect();
-    let _ = std::fs::write(path, body);
 }
 
 fn sort_devices(list: &mut [Device]) {
     // This machine first, then by address: the row a person cares about most is
     // the one they are sitting at.
-    list.sort_by_key(|d| {
-        let addr = d
-            .ip
-            .split('.')
-            .filter_map(|p| p.parse::<u32>().ok())
-            .fold(0u32, |acc, n| (acc << 8) | n);
-        (if d.self_pc { 0u8 } else { 1 }, addr)
-    });
+    list.sort_by_key(|d| (if d.self_pc { 0u8 } else { 1 }, addr_value(&d.ip)));
+}
+
+/// An address as a number, so rows can be ordered by it and two of them
+/// compared without parsing twice. Anything that is not four octets sorts as
+/// zero instead of panicking: an address is data, not a promise.
+fn addr_value(ip: &str) -> u32 {
+    ip.split('.')
+        .filter_map(|p| p.parse::<u32>().ok())
+        .fold(0u32, |acc, n| (acc << 8) | (n & 0xff))
+}
+
+
+/// Which of two rows for one device is the row to keep.
+///
+/// Identity first: a row that knows the hardware address describes the device
+/// better than one that does not. Then presence, then the better name, then the
+/// steadier address, so the outcome never depends on the order a sweep happened
+/// to produce.
+fn keep_first(a: &Device, b: &Device) -> bool {
+    let a_mac = !a.mac.trim().is_empty();
+    let b_mac = !b.mac.trim().is_empty();
+    if a.self_pc != b.self_pc {
+        return a.self_pc;
+    }
+    if a_mac != b_mac {
+        return a_mac;
+    }
+    if a.live != b.live {
+        return a.live;
+    }
+    let (ra, rb) = (name_rank(&a.name_source), name_rank(&b.name_source));
+    if ra != rb {
+        return ra > rb;
+    }
+    addr_value(&a.ip) <= addr_value(&b.ip)
+}
+
+/// Fold `extra` into `keep`: one device, one row, and nothing either row knew is
+/// thrown away. The address and the hardware address stay the keeper's; the
+/// flags are unioned because they describe the device, not the address it
+/// happens to hold; and the name from the stronger source wins, which is the
+/// same rule the passes already use when they offer a name.
+fn absorb(keep: &mut Device, extra: &Device) {
+    keep.self_pc |= extra.self_pc;
+    keep.protected |= extra.protected;
+    keep.protected_always |= extra.protected_always;
+    keep.live |= extra.live;
+    offer_name(keep, &extra.name, &extra.name_source);
+}
+
+/// One device is one row.
+///
+/// The hardware address is the identity: a phone that renews its lease is the
+/// same device at a new address, so its two rows are one, and a stale row still
+/// pointing at the old address cannot start a second history. An address joins
+/// two rows only when a hardware address cannot tell them apart, because an
+/// address is borrowed and can be handed to another machine; when both rows
+/// carry different hardware addresses they are two devices and both stay.
+///
+/// A row that matches nothing is still a device that is here. It is kept: a miss
+/// on the join is not evidence that anything left.
+fn identity_pass(list: Vec<Device>) -> Vec<Device> {
+    let mut out: Vec<Device> = Vec::with_capacity(list.len());
+    let mut at_mac: HashMap<String, usize> = HashMap::new();
+    let mut at_ip: HashMap<String, usize> = HashMap::new();
+    for mut dev in list {
+        // One form for the hardware address, because it is the key the screen
+        // joins its counters on and a difference in case or separator would
+        // miss the join.
+        let mac = dev.mac.trim().to_ascii_lowercase().replace('-', ":");
+        dev.mac = mac.clone();
+        let same_mac = if mac.is_empty() { None } else { at_mac.get(&mac).copied() };
+        let same_ip = at_ip.get(&dev.ip).copied().filter(|&at| {
+            let other = out[at].mac.trim().to_ascii_lowercase().replace('-', ":");
+            other.is_empty() || mac.is_empty() || other == mac
+        });
+        match same_mac.or(same_ip) {
+            Some(at) => {
+                if keep_first(&dev, &out[at]) {
+                    let loser = std::mem::replace(&mut out[at], dev);
+                    absorb(&mut out[at], &loser);
+                } else {
+                    absorb(&mut out[at], &dev);
+                }
+                // Both names now point at the row that survived, so the next
+                // row sharing either one joins it instead of starting a third
+                // row for the same device.
+                let kept = out[at].mac.clone();
+                if !kept.is_empty() {
+                    at_mac.insert(kept, at);
+                }
+                at_ip.insert(out[at].ip.clone(), at);
+            }
+            None => {
+                if !mac.is_empty() {
+                    at_mac.insert(mac, out.len());
+                }
+                at_ip.insert(dev.ip.clone(), out.len());
+                out.push(dev);
+            }
+        }
+    }
+    out
 }
 
 /// Every device on this subnet, sorted by address.
@@ -474,6 +665,88 @@ fn own_mac(ip: &str) -> String {
     String::new()
 }
 
+/// How many sweeps in a row an address may miss before its row is dropped.
+///
+/// One miss is a sample, not a verdict: a phone asleep in a pocket answers no
+/// ping, Windows ages a neighbour entry out, and a burst can simply be unlucky.
+/// Two in a row is a device that is not there.
+const MISS_LIMIT: u32 = 2;
+
+/// What a sweep that did not see an address says about it. A row this sweep
+/// did see never asks: it is live and its streak is back to zero.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Fate {
+    /// Missing once: keep the row, quietly, with one more chance.
+    Quiet,
+    /// Missing [MISS_LIMIT] times in a row: it left.
+    Gone,
+}
+
+/// The rule on its own, so it can be tested without a network. `misses` is the
+/// streak stored before this sweep, not counting it.
+fn fate(misses: u32) -> Fate {
+    if misses + 1 >= MISS_LIMIT {
+        Fate::Gone
+    } else {
+        Fate::Quiet
+    }
+}
+
+/// One remembered row, and how many sweeps in a row have missed it.
+struct Remembered {
+    dev: Device,
+    misses: u32,
+}
+
+/// The last row for every address, behind a mutex because a Refresh can land
+/// while the previous scan is still running. This is the memory that turns a
+/// single sample into presence.
+static PRESENCE: Mutex<Option<HashMap<String, Remembered>>> = Mutex::new(None);
+
+/// Fold this sweep into the remembered map, and return the rows to show.
+///
+/// The map is seeded from the list the last run saved, so an empty first sample
+/// after a restart does not wipe the page either. An empty sweep needs no case
+/// of its own: every remembered address misses once, and the second empty sweep
+/// in a row drops the lot, which is the reference rule written as two cases
+/// instead of one.
+fn merge_presence(fresh: Vec<Device>) -> Vec<Device> {
+    let seen: HashMap<String, Device> = fresh.into_iter().map(|d| (d.ip.clone(), d)).collect();
+    let mut guard = PRESENCE.lock().unwrap_or_else(|e| e.into_inner());
+    let remembered = guard.get_or_insert_with(|| {
+        cached_devices()
+            .into_iter()
+            .filter(|d| !d.self_pc)
+            .map(|d| (d.ip.clone(), Remembered { dev: d, misses: 0 }))
+            .collect()
+    });
+    let mut out: Vec<Device> = Vec::with_capacity(seen.len() + remembered.len());
+    let mut seen_ips: std::collections::HashSet<String> =
+        std::collections::HashSet::with_capacity(seen.len());
+    for (ip, mut dev) in seen {
+        dev.live = true;
+        seen_ips.insert(ip.clone());
+        remembered.insert(ip, Remembered { dev: dev.clone(), misses: 0 });
+        out.push(dev);
+    }
+    // Everything else earns a miss. One is still worth showing, quietly.
+    remembered.retain(|ip, r| {
+        if seen_ips.contains(ip) || r.dev.self_pc {
+            return true;
+        }
+        match fate(r.misses) {
+            Fate::Quiet => {
+                r.misses += 1;
+                r.dev.live = false;
+                out.push(r.dev.clone());
+                true
+            }
+            Fate::Gone => false,
+        }
+    });
+    out
+}
+
 pub fn scan() -> Vec<Device> {
     let Some(local) = local_ipv4() else {
         return Vec::new();
@@ -541,32 +814,44 @@ pub fn scan() -> Vec<Device> {
         if !alive && mac.is_empty() {
             continue;
         }
-        let resolved = probed
+        // Where the name came from travels with the name: a probe answer knows
+        // which protocol answered it, and the router's DHCP cache is a source
+        // of its own. Dropping that here is what made every row claim "device".
+        let resolved: Option<(String, &str)> = probed
             .get(&ip)
-            .cloned()
-            .filter(|n| !n.is_empty())
-            .or_else(|| announced_by_mac.get(&mac).cloned())
-            .unwrap_or_default();
+            .filter(|pair| !pair.0.is_empty())
+            .map(|pair| (pair.0.clone(), pair.1.as_str()))
+            .or_else(|| {
+                announced_by_mac
+                    .get(&mac)
+                    .filter(|name| !name.is_empty())
+                    .map(|name| (name.to_string(), "dhcp" as &str))
+            });
         // A name if one exists, otherwise the most useful true thing: who made
         // it, and (from the background pass) what kind of device it is.
         let ttl: u32 = ttl.parse().unwrap_or(0);
-        let (label, source) = if usable_name(&resolved) {
-            let from_router = false;
-            let _ = from_router;
-            (resolved, String::from("device"))
-        } else {
-            (crate::fingerprint::describe_ttl(&mac, ttl), String::from("vendor"))
+        let (label, source) = match resolved {
+            Some((name, src)) if usable_name(&name) => (name, src.to_string()),
+            _ => (crate::fingerprint::describe_ttl(&mac, ttl), String::from("vendor")),
         };
         out.push(Device {
             ip,
             mac,
             name: label,
             self_pc: false,
-            source,
+            name_source: source,
             protected: false,
             protected_always: false,
+            // Answered the sweep, or its hardware address resolved: either is
+            // evidence that it is here now.
+            live: true,
         });
     }
+
+    // One sweep is a sample, not a verdict. Folding it into the memory is what
+    // stops a Refresh during a quiet moment from returning an empty table, and
+    // what drops a device that really left on its second miss in a row.
+    let mut out = merge_presence(out);
 
     // This machine is always in the list and always labelled.
     let me_mac = table
@@ -582,27 +867,43 @@ pub fn scan() -> Vec<Device> {
         mac: me_mac,
         name: host,
         self_pc: true,
-        source: String::from("self"),
+        name_source: String::from("self"),
         protected: false,
         protected_always: false,
+        // The machine drawing the list is, by definition, present.
+        live: true,
     });
 
-    // Names come from strangers: keep the readable part, and fall back to the
-    // maker when nothing readable is left.
+    // Names come from strangers: keep the readable part, and when nothing
+    // readable is left let the fingerprint module say the most useful true
+    // thing (who made it, then what it is). The word "private" used to be
+    // stamped on every unnamed row, which was both a guess and, for a real
+    // card in locally-administered space, simply wrong: 148 register blocks
+    // live there, so a genuine 3COM read as "Private address".
     for d in out.iter_mut() {
         if d.self_pc {
             continue;
         }
         let cleaned = clean_name(&d.name);
-        if cleaned.is_empty() && d.name != "-" {
-            d.name = String::from("private");
-        } else if !cleaned.is_empty() {
+        if !cleaned.is_empty() {
             d.name = cleaned;
+            continue;
+        }
+        if d.name == "-" {
+            continue;
+        }
+        let label = crate::fingerprint::describe(&d.mac, &d.ip, "", None);
+        d.name = label.clone();
+        if label != "-" {
+            d.name_source = String::from("vendor");
         }
     }
 
+    // One device is one row, decided by hardware address, before anything is
+    // written down or shown: the roster and the counters then agree on what a
+    // device is.
+    let mut out = identity_pass(out);
     sort_devices(&mut out);
-    out.dedup_by(|a, b| a.ip == b.ip);
     save_known(&out);
 
     // A hardware address belongs to exactly one machine. A stale row can point
@@ -612,8 +913,10 @@ pub fn scan() -> Vec<Device> {
     let named = router_names();
     for d in out.iter_mut() {
         if let Some(name) = named.get(&d.mac.to_ascii_lowercase()) {
-            d.name = name.clone();
-            d.source = String::from("router");
+            // The router's table is an indirect copy: it names the devices
+            // that answer nothing, and never replaces a name a device gave
+            // itself.
+            offer_name(d, name, "router");
         }
     }
 
@@ -622,8 +925,6 @@ pub fn scan() -> Vec<Device> {
     out.retain(|d| {
         d.self_pc || !mine.contains(&d.mac.to_ascii_lowercase().replace('-', ":"))
     });
-    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
-    out.retain(|d| d.self_pc || d.mac.is_empty() || seen.insert(d.mac.to_ascii_lowercase()));
     sort_devices(&mut out);
     out
 }
@@ -652,12 +953,19 @@ pub fn enrich_names(list: Vec<Device>) {
         let ip = d.ip.clone();
         let mac = d.mac.clone();
         handles.push(thread::spawn(move || {
+            // The strongest answer wins, not the last one. Every probe records
+            // which protocol produced its name, so a late reverse-name lookup
+            // can no longer overwrite what the device said about itself.
             let mut found = String::new();
+            let mut found_src: &str = "";
             // Ask on the wire first: a socket has to get past the firewall,
             // a frame addressed to the device does not.
             if !mac.is_empty() {
                 if let Some(n) = crate::lan_ask::mdns_ask(&ip, &mac, std::time::Duration::from_millis(900)) {
-                    found = n;
+                    if name_rank("mdns") > name_rank(found_src) {
+                        found = n;
+                        found_src = "mdns";
+                    }
                 }
             }
             if let Ok(o) = hidden("ping").args(["-a", "-n", "1", "-w", "600", &ip]).output() {
@@ -668,7 +976,10 @@ pub fn enrich_names(list: Vec<Device>) {
                         let head = rest.split(" with ").next().unwrap_or("");
                         let head = head.split(" [").next().unwrap_or("").trim();
                         if !head.is_empty() && head != ip && head.split('.').count() != 4 {
-                            found = head.to_string();
+                            if name_rank("ping") > name_rank(found_src) {
+                                found = head.to_string();
+                                found_src = "ping";
+                            }
                         }
                         break;
                     }
@@ -679,24 +990,137 @@ pub fn enrich_names(list: Vec<Device>) {
                     let wait = std::time::Duration::from_millis(700);
                     if let Some(n) = crate::lan_names::netbios(v4, wait) {
                         found = n;
+                        found_src = "netbios";
                     } else if let Some(n) = crate::lan_names::mdns(v4, wait) {
                         found = n;
+                        found_src = "mdns";
                     }
                 }
             }
             if usable_name(&found) {
-                remember_probe(&ip, &found);
+                remember_probe(&ip, &found, found_src);
             } else {
                 // No name to be had, so say what the device is instead.
                 let kind = crate::fingerprint::kind(&ip);
                 let label = crate::fingerprint::describe(&mac, &ip, "", kind);
                 if label != "-" {
-                    remember_probe(&ip, &label);
+                    remember_probe(&ip, &label, "vendor");
                 }
             }
         }));
     }
     for h in handles {
         let _ = h.join();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Presence is a policy, and the policy is pure: the numbers below are
+    // sweeps, not seconds, and no network is involved. The guard exists for the
+    // sleepy phone, so what it must never do is drop a row on the first miss.
+    #[test]
+    fn one_miss_is_not_a_verdict() {
+        assert_eq!(fate(0), Fate::Quiet);
+        assert_ne!(fate(0), Fate::Gone);
+    }
+
+    #[test]
+    fn the_second_miss_in_a_row_drops_the_row() {
+        assert_eq!(fate(1), Fate::Gone);
+        assert_eq!(fate(MISS_LIMIT - 1), Fate::Gone);
+    }
+
+    #[test]
+    fn a_device_that_really_left_does_not_stay_forever() {
+        // Every streak past the limit is still a verdict: the map cannot keep a
+        // row alive by holding a large counter.
+        assert_eq!(fate(MISS_LIMIT), Fate::Gone);
+        assert_eq!(fate(99), Fate::Gone);
+    }
+
+    fn row(ip: &str, mac: &str, live: bool) -> Device {
+        Device {
+            ip: ip.to_string(),
+            mac: mac.to_string(),
+            name: String::from("-"),
+            self_pc: false,
+            name_source: String::new(),
+            protected: false,
+            protected_always: false,
+            live,
+        }
+    }
+
+    /// One device is one row: a phone that renews its lease comes back at a new
+    /// address with the same hardware address, and the row it leaves behind is
+    /// the same row at the live address.
+    #[test]
+    fn a_renewed_lease_is_one_row() {
+        let out = identity_pass(vec![
+            row("192.168.1.5", "aa:bb:cc:dd:ee:01", false),
+            row("192.168.1.9", "AA-BB-CC-DD-EE-01", true),
+        ]);
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].ip, "192.168.1.9", "the live address wins the row");
+        assert_eq!(out[0].mac, "aa:bb:cc:dd:ee:01", "one form for the key");
+        assert!(out[0].live);
+    }
+
+    /// Nothing is merged away on a guess: a row with no hardware address cannot
+    /// be proven equal to anything, so it keeps its own row.
+    #[test]
+    fn a_row_without_a_hardware_address_is_kept() {
+        let out = identity_pass(vec![
+            row("192.168.1.5", "aa:bb:cc:dd:ee:01", true),
+            row("192.168.1.7", "", true),
+        ]);
+        assert_eq!(out.len(), 2);
+    }
+
+    /// The same address held by two machines is two devices, not one: an address
+    /// is borrowed and can be handed on, and the hardware address is what tells
+    /// them apart.
+    #[test]
+    fn one_address_two_hardware_addresses_is_two_rows() {
+        let out = identity_pass(vec![
+            row("192.168.1.5", "aa:bb:cc:dd:ee:01", true),
+            row("192.168.1.5", "aa:bb:cc:dd:ee:02", true),
+        ]);
+        assert_eq!(out.len(), 2);
+    }
+
+    /// A row that arrived without its hardware address still joins the device
+    /// that has one, and presence is unioned rather than lost.
+    #[test]
+    fn a_row_without_a_hardware_address_joins_on_the_address() {
+        let out = identity_pass(vec![
+            row("192.168.1.5", "aa:bb:cc:dd:ee:01", false),
+            row("192.168.1.5", "", true),
+        ]);
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].mac, "aa:bb:cc:dd:ee:01");
+        assert!(out[0].live, "presence is unioned, not lost");
+    }
+
+    /// A merge keeps the name from the stronger source and the flags of both,
+    /// whichever row came first.
+    #[test]
+    fn a_merge_keeps_the_better_name_and_unions_the_flags() {
+        let mut a = row("192.168.1.5", "aa:bb:cc:dd:ee:01", true);
+        a.name = String::from("acme");
+        a.name_source = String::from("vendor");
+        let mut b = row("192.168.1.9", "aa:bb:cc:dd:ee:01", false);
+        b.name = String::from("yousef-phone");
+        b.name_source = String::from("mdns");
+        b.protected = true;
+        for out in [identity_pass(vec![a.clone(), b.clone()]), identity_pass(vec![b, a])] {
+            assert_eq!(out.len(), 1);
+            assert_eq!(out[0].name, "yousef-phone");
+            assert_eq!(out[0].name_source, "mdns");
+            assert!(out[0].protected, "protection belongs to the device");
+        }
     }
 }
