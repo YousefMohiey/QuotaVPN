@@ -241,7 +241,20 @@ pub fn adapter() -> Result<Adapter, String> {
     Ok(Adapter { ip, gateway, if_index, mac })
 }
 
-// ---------------------------------------------------------------- npcap
+// ---------------------------------------------------------------- npcap, loaded at runtime
+
+// Npcap is loaded when it is needed, never linked.
+///
+/// The first version linked `wpcap` into the binary, which made the DLL a startup
+/// dependency: on any PC without Npcap installed the app died with
+/// "The code execution cannot proceed because wpcap.dll was not found" before it could draw a
+/// window. A packet driver is needed by one optional feature, so its absence has to cost that
+/// feature and nothing else.
+#[link(name = "kernel32")]
+unsafe extern "system" {
+    fn LoadLibraryW(name: *const u16) -> *mut std::ffi::c_void;
+    fn GetProcAddress(module: *mut std::ffi::c_void, name: *const u8) -> *mut std::ffi::c_void;
+}
 
 #[repr(C)]
 struct PcapIf {
@@ -267,24 +280,105 @@ struct Sockaddr {
     data: [u8; 14],
 }
 
-unsafe extern "C" {
-    fn pcap_findalldevs(alldevs: *mut *mut PcapIf, errbuf: *mut std::os::raw::c_char) -> i32;
-    fn pcap_freealldevs(alldevs: *mut PcapIf);
-    fn pcap_open_live(
-        device: *const std::os::raw::c_char,
-        snaplen: i32,
-        promisc: i32,
-        to_ms: i32,
-        errbuf: *mut std::os::raw::c_char,
-    ) -> *mut std::ffi::c_void;
-    fn pcap_sendpacket(p: *mut std::ffi::c_void, buf: *const u8, size: i32) -> i32;
-    fn pcap_close(p: *mut std::ffi::c_void);
-    fn pcap_geterr(p: *mut std::ffi::c_void) -> *mut std::os::raw::c_char;
+#[repr(C)]
+struct PcapPkthdr {
+    // Windows `struct timeval` is two 32-bit longs, not two 64-bit ones.
+    ts_sec: i32,
+    ts_usec: i32,
+    caplen: u32,
+    len: u32,
+}
+
+type FindAllDevs = unsafe extern "C" fn(*mut *mut PcapIf, *mut std::os::raw::c_char) -> i32;
+type FreeAllDevs = unsafe extern "C" fn(*mut PcapIf);
+type OpenLive = unsafe extern "C" fn(
+    *const std::os::raw::c_char,
+    i32,
+    i32,
+    i32,
+    *mut std::os::raw::c_char,
+) -> *mut std::ffi::c_void;
+type SendPacket = unsafe extern "C" fn(*mut std::ffi::c_void, *const u8, i32) -> i32;
+type CloseFn = unsafe extern "C" fn(*mut std::ffi::c_void);
+type GetErr = unsafe extern "C" fn(*mut std::ffi::c_void) -> *mut std::os::raw::c_char;
+type NextEx = unsafe extern "C" fn(
+    *mut std::ffi::c_void,
+    *mut *mut PcapPkthdr,
+    *mut *const u8,
+) -> i32;
+
+struct Npcap {
+    findalldevs: FindAllDevs,
+    freealldevs: FreeAllDevs,
+    open_live: OpenLive,
+    sendpacket: SendPacket,
+    close: CloseFn,
+    geterr: GetErr,
+    next_ex: NextEx,
+}
+
+static NPCAP: std::sync::OnceLock<Option<Npcap>> = std::sync::OnceLock::new();
+
+fn npcap() -> Option<&'static Npcap> {
+    NPCAP.get_or_init(load_npcap).as_ref()
+}
+
+/// Look for the driver where Npcap actually installs it, then on PATH.
+///
+/// Npcap puts `wpcap.dll` in `System32\Npcap`, which is not on PATH, so relying on the
+/// loader's search alone would fail on machines where it is installed.
+fn load_npcap() -> Option<Npcap> {
+    const CANDIDATES: [&str; 2] = [
+        r"C:\Windows\System32\Npcap\wpcap.dll",
+        r"wpcap.dll",
+    ];
+    for candidate in CANDIDATES {
+        let wide: Vec<u16> = candidate.encode_utf16().chain(std::iter::once(0)).collect();
+        let module = unsafe { LoadLibraryW(wide.as_ptr()) };
+        if module.is_null() {
+            continue;
+        }
+        // SAFETY: the names are NUL-terminated and the symbols are the documented C API.
+        unsafe {
+            let sym = |name: &[u8]| GetProcAddress(module, name.as_ptr());
+            let findalldevs = sym(b"pcap_findalldevs\0");
+            let freealldevs = sym(b"pcap_freealldevs\0");
+            let open_live = sym(b"pcap_open_live\0");
+            let sendpacket = sym(b"pcap_sendpacket\0");
+            let close = sym(b"pcap_close\0");
+            let geterr = sym(b"pcap_geterr\0");
+            let next_ex = sym(b"pcap_next_ex\0");
+            if [
+                findalldevs, freealldevs, open_live, sendpacket, close, geterr, next_ex,
+            ]
+            .iter()
+            .any(|p| p.is_null())
+            {
+                continue;
+            }
+            return Some(Npcap {
+                findalldevs: std::mem::transmute::<*mut std::ffi::c_void, FindAllDevs>(findalldevs),
+                freealldevs: std::mem::transmute::<*mut std::ffi::c_void, FreeAllDevs>(freealldevs),
+                open_live: std::mem::transmute::<*mut std::ffi::c_void, OpenLive>(open_live),
+                sendpacket: std::mem::transmute::<*mut std::ffi::c_void, SendPacket>(sendpacket),
+                close: std::mem::transmute::<*mut std::ffi::c_void, CloseFn>(close),
+                geterr: std::mem::transmute::<*mut std::ffi::c_void, GetErr>(geterr),
+                next_ex: std::mem::transmute::<*mut std::ffi::c_void, NextEx>(next_ex),
+            });
+        }
+    }
+    None
+}
+
+/// Is the packet driver available on this machine? Cheap, and it never panics.
+pub fn npcap_ready() -> bool {
+    npcap().is_some()
 }
 
 /// A packet socket on the interface that owns `ip`.
 pub struct Socket {
     handle: *mut std::ffi::c_void,
+    api: &'static Npcap,
 }
 
 // The handle is only used behind the claim lock, one call at a time.
@@ -292,9 +386,14 @@ unsafe impl Send for Socket {}
 
 impl Socket {
     pub fn open_for(ip: Ipv4Addr) -> Result<Socket, String> {
+        let api = npcap().ok_or_else(|| {
+            "Npcap is not installed, so this PC cannot route a device. Install Npcap from \
+             npcap.com and try again; nothing else about QuotaVPN is affected."
+                .to_string()
+        })?;
         let mut errbuf = [0i8; 256];
         let mut devs: *mut PcapIf = std::ptr::null_mut();
-        if unsafe { pcap_findalldevs(&mut devs, errbuf.as_mut_ptr()) } != 0 {
+        if unsafe { (api.findalldevs)(&mut devs, errbuf.as_mut_ptr()) } != 0 {
             return Err(format!("pcap_findalldevs: {}", cstr(&errbuf)));
         }
         let mut chosen: Option<String> = None;
@@ -322,22 +421,22 @@ impl Socket {
             }
             cur = d.next;
         }
-        unsafe { pcap_freealldevs(devs) };
+        unsafe { (api.freealldevs)(devs) };
         let name = chosen.ok_or_else(|| format!("no interface owns {ip}"))?;
 
         let cname = std::ffi::CString::new(name.clone()).map_err(|e| e.to_string())?;
-        let handle = unsafe { pcap_open_live(cname.as_ptr(), 65536, 0, 100, errbuf.as_mut_ptr()) };
+        let handle = unsafe { (api.open_live)(cname.as_ptr(), 65536, 0, 100, errbuf.as_mut_ptr()) };
         if handle.is_null() {
             return Err(format!("pcap_open_live {name}: {}", cstr(&errbuf)));
         }
-        Ok(Socket { handle })
+        Ok(Socket { handle, api })
     }
 
     pub fn send(&self, frame: &[u8]) -> Result<(), String> {
-        let rc = unsafe { pcap_sendpacket(self.handle, frame.as_ptr(), frame.len() as i32) };
+        let rc = unsafe { (self.api.sendpacket)(self.handle, frame.as_ptr(), frame.len() as i32) };
         if rc != 0 {
             let msg = unsafe {
-                let p = pcap_geterr(self.handle);
+                let p = (self.api.geterr)(self.handle);
                 if p.is_null() {
                     "unknown".to_string()
                 } else {
@@ -348,12 +447,41 @@ impl Socket {
         }
         Ok(())
     }
+
+    /// Count frames arriving from `sender_mac` within `secs`.
+    ///
+    /// This is the only honest way to answer "did the claim work": if the device now
+    /// believes we are its gateway, its frames start arriving addressed to our MAC.
+    /// Only the 14-byte Ethernet header is read, so a misread header length cannot
+    /// walk off the buffer into a claim about data we never saw.
+    pub fn count_frames_from(&self, sender_mac: &str, secs: u64) -> usize {
+        let want = mac_bytes(sender_mac);
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(secs);
+        let mut seen = 0;
+        while std::time::Instant::now() < deadline {
+            let mut hdr: *mut PcapPkthdr = std::ptr::null_mut();
+            let mut data: *const u8 = std::ptr::null();
+            let rc = unsafe { (self.api.next_ex)(self.handle, &mut hdr, &mut data) };
+            if rc <= 0 || hdr.is_null() || data.is_null() {
+                continue;
+            }
+            let caplen = unsafe { (*hdr).caplen };
+            if caplen < 14 {
+                continue;
+            }
+            let src = unsafe { std::slice::from_raw_parts(data.add(6), 6) };
+            if Some([src[0], src[1], src[2], src[3], src[4], src[5]]) == want {
+                seen += 1;
+            }
+        }
+        seen
+    }
 }
 
 impl Drop for Socket {
     fn drop(&mut self) {
         if !self.handle.is_null() {
-            unsafe { pcap_close(self.handle) };
+            unsafe { (self.api.close)(self.handle) };
         }
     }
 }
@@ -627,54 +755,6 @@ pub fn recover() -> Option<String> {
 }
 
 // ---------------------------------------------------------------- live proof
-
-#[repr(C)]
-struct PcapPkthdr {
-    // Windows `struct timeval` is two 32-bit longs, not two 64-bit ones.
-    ts_sec: i32,
-    ts_usec: i32,
-    caplen: u32,
-    len: u32,
-}
-
-unsafe extern "C" {
-    fn pcap_next_ex(
-        p: *mut std::ffi::c_void,
-        hdr: *mut *mut PcapPkthdr,
-        data: *mut *const u8,
-    ) -> i32;
-}
-
-impl Socket {
-    /// Count frames arriving from `sender_mac` within `secs`.
-    ///
-    /// This is the only honest way to answer "did the claim work": if the device now
-    /// believes we are its gateway, its frames start arriving addressed to our MAC.
-    /// Only the 14-byte Ethernet header is read, so a misread header length cannot
-    /// walk off the buffer into a claim about data we never saw.
-    pub fn count_frames_from(&self, sender_mac: &str, secs: u64) -> usize {
-        let want = mac_bytes(sender_mac);
-        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(secs);
-        let mut seen = 0;
-        while std::time::Instant::now() < deadline {
-            let mut hdr: *mut PcapPkthdr = std::ptr::null_mut();
-            let mut data: *const u8 = std::ptr::null();
-            let rc = unsafe { pcap_next_ex(self.handle, &mut hdr, &mut data) };
-            if rc <= 0 || hdr.is_null() || data.is_null() {
-                continue;
-            }
-            let caplen = unsafe { (*hdr).caplen };
-            if caplen < 14 {
-                continue;
-            }
-            let src = unsafe { std::slice::from_raw_parts(data.add(6), 6) };
-            if Some([src[0], src[1], src[2], src[3], src[4], src[5]]) == want {
-                seen += 1;
-            }
-        }
-        seen
-    }
-}
 
 /// A claim that undoes itself, so a panic or an early return cannot leave a device
 /// pointed at a machine that stopped forwarding.

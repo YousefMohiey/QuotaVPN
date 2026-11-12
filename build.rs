@@ -1,17 +1,11 @@
-//! Build glue for the Windows-only clientless routing.
+//! Build glue: the embedded device key and the build id.
 //!
-//! Sending a forged ARP frame needs Npcap's `wpcap.dll`. The build host has the Npcap
-//! runtime but not its SDK, and it builds with the GNU toolchain, which cannot consume
-//! an MSVC `.lib`. So the import library is generated here from a committed `.def` with
-//! MinGW's `dlltool`, which is already on PATH. No SDK download, no binary committed.
-//!
-//! The earlier version ran `gendef` at build time. That was not deterministic: when it
-//! produced nothing the build silently linked against whatever happened to be lying
-//! around, and one call site failed to resolve while the rest appeared fine. A committed
-//! `.def` is reviewable and identical on every machine.
-//!
-//! If `dlltool` or the `.def` is missing the build **fails**, with a message naming the
-//! cause. A green build with device routing silently absent is the trap this replaced.
+//! It used to generate an import library for Npcap's `wpcap.dll` and link it, which made the
+//! DLL a startup dependency: any PC without Npcap died with "wpcap.dll was not found" before
+//! the window appeared. Npcap is loaded at runtime now (`lan_route::npcap()`), so the build
+//! needs no packet driver at all and a missing one costs one feature.
+
+
 
 fn main() {
     let manifest = std::path::PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default());
@@ -45,49 +39,4 @@ fn main() {
         .unwrap_or_else(|| "dev".to_string());
     println!("cargo:rustc-env=QUOTACARDS_BUILD={build_id}");
     println!("cargo:rerun-if-changed=.git/HEAD");
-
-    let target = std::env::var("TARGET").unwrap_or_default();
-    if !target.contains("windows") {
-        return;
-    }
-
-    let manifest = std::path::PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default());
-    let def = manifest.join("native").join("wpcap.def");
-    let out = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap_or_default());
-    let lib = out.join("libwpcap.a");
-
-    println!("cargo:rerun-if-changed={}", def.display());
-
-    if !def.exists() {
-        // Same argument as the assembler below, and it has to hold for both: a build that
-        // compiles with the feature quietly missing is worse than a build that stops.
-        panic!(
-            "native/wpcap.def is missing, so libwpcap.a cannot be built and device routing \
-             would be silently unavailable. Restore it: git checkout native/wpcap.def"
-        );
-    }
-
-    let built = std::process::Command::new("dlltool")
-        .arg("-d")
-        .arg(&def)
-        .arg("-l")
-        .arg(&lib)
-        .status();
-
-    if !matches!(built, Ok(s) if s.success()) || !lib.exists() {
-        // Fail rather than warn. A silent "device routing is unavailable" is the same trap as
-        // the strip step: the build looks green and the feature is simply missing at runtime.
-        // The commonest cause is not Npcap at all: without a mingw64 bin on PATH, dlltool
-        // cannot find `as.exe` and dies with "CreateProcess", and the rustup self-contained
-        // folder ships gcc and ld but no assembler.
-        panic!(
-            "dlltool could not build libwpcap.a from native/wpcap.def.\
-             \n  Commonest cause: no mingw64 bin on PATH, so dlltool cannot find as.exe.\
-             \n  On the build host: prepend /c/Tools/mingw_extract/mingw64/bin (or the rustup-launcher \
-             mingw64\\bin) before running cargo."
-        );
-    }
-
-    println!("cargo:rustc-link-search=native={}", out.display());
-    println!("cargo:rustc-link-lib=static=wpcap");
 }
