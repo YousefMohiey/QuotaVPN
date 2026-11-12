@@ -21,6 +21,7 @@ Exit codes: 0 ok, 1 packaging is unsafe, 2 strip failed to remove symbols.
 import hashlib
 import os
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -59,6 +60,47 @@ def digest(path):
     return h.hexdigest()
 
 
+def data_offsets(path):
+    """filename -> absolute offset of the entry data, read from the LOCAL header.
+
+    Not the central directory: zipalign pads the local header's extra field, and the
+    two copies of that length diverge after it runs. Reading the central directory
+    reports everything as misaligned, which is a false alarm, not a finding.
+    """
+    offsets = {}
+    with zipfile.ZipFile(path) as z, open(path, "rb") as f:
+        for info in z.infolist():
+            f.seek(info.header_offset)
+            hdr = f.read(30)
+            if len(hdr) < 30 or hdr[:4] != b"PK\x03\x04":
+                continue
+            name_len, extra_len = struct.unpack_from("<HH", hdr, 26)
+            offsets[info.filename] = info.header_offset + 30 + name_len + extra_len
+    return offsets
+
+
+def alignment_problems(path):
+    """Stored entries must satisfy the alignment Android needs with extractNativeLibs=false.
+
+    resources.arsc and other stored entries need 4-byte alignment; native libraries are
+    dlopen'd straight out of the archive and need page alignment. Nothing else in the
+    pipeline would notice a missing or misplaced zipalign, so this is checked here.
+    """
+    problems = []
+    offsets = data_offsets(path)
+    with zipfile.ZipFile(path) as z:
+        for info in z.infolist():
+            if info.compress_type != zipfile.ZIP_STORED:
+                continue
+            offset = offsets.get(info.filename)
+            if offset is None:
+                continue
+            need = 4096 if (info.filename.startswith("lib/") and info.filename.endswith(".so")) else 4
+            if offset % need:
+                problems.append(f"{info.filename} at {offset} (needs {need}-byte alignment)")
+    return problems
+
+
 def has_symtab(path):
     with open(path, "rb") as f:
         return b".symtab\x00" in f.read()
@@ -79,7 +121,11 @@ def main():
         bad = check_stored(apk)
         if bad:
             fail(1, "these entries are compressed and must be stored: " + ", ".join(bad))
-        print("apk-strip: stored requirements hold")
+        bad = alignment_problems(apk)
+        if bad:
+            fail(1, "alignment is wrong, so the package would not load its libraries: "
+                 + "; ".join(bad[:4]))
+        print("apk-strip: stored and alignment requirements hold")
         return
 
     if not stripper:
@@ -115,8 +161,11 @@ def main():
                 fail(2, f"llvm-strip failed on {name}: {res.stderr.strip()}")
             after = os.path.getsize(path)
             hash_after = digest(path)
-            if after >= before and has_symtab(path):
-                fail(2, f"{name} still carries .symtab after stripping, so the step did nothing")
+            # Not gated on size: a strip can shrink a file and leave .symtab in it, and
+            # then the "did it work" question is answered wrongly by the very number
+            # that got smaller.
+            if has_symtab(path):
+                fail(2, f"{name} still carries .symtab after stripping")
             saved += before - after
             print(f"apk-strip: {name}: {before} -> {after}")
             # Content, not size: a strip that drops .symtab without changing the
@@ -160,7 +209,10 @@ def main():
             fail(1, "these entries are compressed and must be stored: " + ", ".join(bad))
 
         os.replace(tmp_out, apk)
-        print(f"apk-strip: saved {saved} bytes, archive still installable")
+        print(f"apk-strip: saved {saved} bytes, stored requirements hold")
+        # tmp_out no longer exists: it was renamed over the apk just above.
+        if alignment_problems(apk):
+            print("apk-strip: alignment is not restored yet, zipalign still has to run")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

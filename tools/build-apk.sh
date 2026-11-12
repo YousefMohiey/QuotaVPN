@@ -77,10 +77,6 @@ if [ -x "$STRIP" ] && [ -n "$PYTHON_BIN" ]; then
     echo "PACKAGING FAILED: could not strip the native libraries safely" >&2
     exit 1
   }
-  "$PYTHON_BIN" "$ROOT/tools/apk-strip.py" "$(cygpath -w "$UNSIGNED")" --verify-only || {
-    echo "PACKAGING FAILED: the archive is not installable" >&2
-    exit 1
-  }
 else
   echo "   llvm-strip or python missing (strip=$STRIP python=$PYTHON_BIN), packaging unstripped" >&2
 fi
@@ -95,6 +91,17 @@ KS="C:/Tools/qc-release.keystore"
 ALIAS="$("$JAVA_HOME/bin/keytool.exe" -list -keystore "$KS" -storepass "$KEYSTORE_PASS" | grep -i privatekeyentry | head -1 | cut -d, -f1)"
 
 "$BT/zipalign.exe" -f -p 4 "$UNSIGNED_W" "$ALIGNED_W"
+
+# Stored and alignment are checked here, after zipalign and before signing, because
+# this is the first moment both are true. Without this the pipeline would sign an
+# archive that cannot dlopen its libraries, and only a manual check would notice.
+if [ -n "$PYTHON_BIN" ]; then
+  "$PYTHON_BIN" "$ROOT/tools/apk-strip.py" "$ALIGNED_W" --verify-only || {
+    echo "PACKAGING FAILED: the archive is not installable" >&2
+    exit 1
+  }
+fi
+
 "$BT/apksigner.bat" sign --ks "$KS" --ks-pass "pass:$KEYSTORE_PASS" --ks-key-alias "$ALIAS" \
   --out "$OUT_W" "$ALIGNED_W"
 rm -f "$ROOT/android/app-aligned.apk"
