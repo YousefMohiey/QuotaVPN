@@ -608,7 +608,10 @@
    through the releases page. Cached for ten minutes. */
 (function(){
   var TTL = 10 * 60 * 1000;
-  var FALLBACK = 'https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.4.7/QuotaVPN_0.4.7_x64-setup.exe';
+  // Only used when the API has not answered and nothing is cached, so it must never
+  // name a version: a versioned link here silently served 0.4.7 long after that was
+  // ancient. The release page always resolves to whatever is current.
+  var FALLBACK = 'https://github.com/YousefMohiey/QuotaVPN/releases/latest';
   function mb(n){ return Math.round(n / 1048576) + ' MB'; }
   // The two buttons serve two different downloads with two different sizes, so the
   // line under them states both. It fills in as each size arrives and never quotes

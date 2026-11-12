@@ -27,6 +27,9 @@ permissions:
 
 jobs:
   build:
+    # A hung build must not sit in progress for hours. The v0.6.1 run was still in its
+    # Build step long after the release was published by hand, and nothing stopped it.
+    timeout-minutes: 45
     runs-on: windows-latest
     # The secret has to sit in env, because the secrets context is not allowed
     # inside a step condition.
