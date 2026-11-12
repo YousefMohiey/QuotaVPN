@@ -29,3 +29,10 @@ pub mod updater;
 // reason no APK has been produced since v0.3.8.
 #[cfg(any(windows, target_os = "linux"))]
 pub mod vpn;
+
+// One LAN device through the tunnel with nothing installed on it. Windows only: it
+// works by taking over that device's idea of the gateway, which needs Npcap to send
+// the ARP frame and per-interface forwarding to be on. The phone has a real
+// VpnService, and Linux has the gateway design in workspace/gateway/.
+#[cfg(windows)]
+pub mod lan_route;
