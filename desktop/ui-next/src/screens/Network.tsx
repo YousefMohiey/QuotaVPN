@@ -443,10 +443,12 @@ export function Network() {
     : routed?.ip ?? ""
   const routedLive = routed ? live[rateKey(routed)] : undefined
 
-  // Devices the backend can put through the tunnel. This machine and the
-  // gateway are refused by the engine, so the invitation never points at them.
+  // Devices the engine can actually take through the tunnel. This machine and
+  // the gateway are refused by identity, and a device that is not live has no
+  // traffic to route, so the invitation never points at any of them and stays
+  // absent when nothing here qualifies.
   const routable = useMemo(
-    () => shown.filter((d) => !d.self_pc && !d.protected_always),
+    () => shown.filter((d) => !d.self_pc && !d.protected_always && d.live !== false),
     [shown],
   )
 
@@ -830,6 +832,17 @@ export function Network() {
                 const protectedRow = d.protected || d.protected_always
                 const isRouted = !!routed && routed.ip === d.ip
                 const src = NAME_SOURCE[d.source]
+                // A routed device keeps its control whatever its presence says:
+                // handing it back must never depend on it still answering.
+                const cannotRoute = isRouted
+                  ? ""
+                  : d.self_pc
+                    ? t("netCannotSelf")
+                    : d.protected_always
+                      ? t("netCannotRouter")
+                      : d.live === false
+                        ? t("netCannotOffline")
+                        : ""
                 const [dn, dnu] = fresh ? splitRate(fresh.down) : ["-", ""]
                 const [un, unu] = fresh ? splitRate(fresh.up) : ["-", ""]
                 return (
@@ -917,6 +930,22 @@ export function Network() {
                     {/* The one control this screen exists for, in its own column
                         under a title that says what it does. */}
                     <span className="flex justify-center">
+                      {cannotRoute ? (
+                        // No control here, because pressing one could only fail:
+                        // the reason is on the mark, for the pointer and for the
+                        // keyboard, instead of an error after the fact.
+                        <Tip text={cannotRoute}>
+                          <span
+                            role="img"
+                            tabIndex={0}
+                            aria-label={cannotRoute}
+                            style={actionStyle}
+                            className="grid place-items-center rounded-[9px] text-txt3 opacity-40 outline-none focus-visible:opacity-70 focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--line-strong)]"
+                          >
+                            <Route className="size-4" aria-hidden />
+                          </span>
+                        </Tip>
+                      ) : (
                       <Tip text={isRouted ? t("netUnroute") : t("netRoute")}>
                         <button
                           type="button"
@@ -942,6 +971,7 @@ export function Network() {
                           )}
                         </button>
                       </Tip>
+                      )}
                     </span>
 
                     <span className="flex items-baseline justify-end gap-1">
