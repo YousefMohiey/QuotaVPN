@@ -244,8 +244,8 @@ pub fn adapter() -> Result<Adapter, String> {
 // ---------------------------------------------------------------- npcap, loaded at runtime
 
 // Npcap is loaded when it is needed, never linked.
-///
-/// The first version linked `wpcap` into the binary, which made the DLL a startup
+//
+// The first version linked `wpcap` into the binary, which made the DLL a startup
 /// dependency: on any PC without Npcap installed the app died with
 /// "The code execution cannot proceed because wpcap.dll was not found" before it could draw a
 /// window. A packet driver is needed by one optional feature, so its absence has to cost that
@@ -317,10 +317,79 @@ struct Npcap {
     next_ex: NextEx,
 }
 
-static NPCAP: std::sync::OnceLock<Option<Npcap>> = std::sync::OnceLock::new();
+// Only a success is cached. Caching the failure would mean an install that happens while the
+// app is running is not noticed until the next restart, which is exactly when the user has just
+// clicked "install it".
+static NPCAP: std::sync::OnceLock<Npcap> = std::sync::OnceLock::new();
 
 fn npcap() -> Option<&'static Npcap> {
-    NPCAP.get_or_init(load_npcap).as_ref()
+    if let Some(loaded) = NPCAP.get() {
+        return Some(loaded);
+    }
+    match load_npcap() {
+        Some(found) => {
+            let _ = NPCAP.set(found);
+            NPCAP.get()
+        }
+        None => None,
+    }
+}
+
+/// Is the driver installed on this machine? Reads the disk, so it notices an install that
+/// happened a moment ago.
+pub fn npcap_installed() -> bool {
+    npcap().is_some()
+}
+
+/// Where the vendor publishes the installer. Npcap does not permit a product to ship its
+/// installer inside another one without an OEM licence, so this downloads it from the vendor
+/// and runs it: the user's machine fetches it, we do not redistribute it.
+const NPCAP_URL: &str = "https://npcap.com/dist/npcap-1.90.exe";
+
+/// Download and install Npcap silently, then report whether it actually works.
+///
+/// This is the only way to get a feature that sends a raw ARP frame: an Ethernet frame cannot
+/// be sent from user mode on Windows without a packet driver. Writing our own driver instead
+/// would mean an EV certificate and Microsoft attestation for a single feature.
+pub fn install_npcap() -> Result<String, String> {
+    if npcap().is_some() {
+        return Ok("Npcap is already installed".into());
+    }
+    let dest = std::env::temp_dir().join("npcap-1.90.exe");
+    let _ = std::fs::remove_file(&dest);
+    let script = format!(
+        "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri '{}' -OutFile '{}' -UseBasicParsing",
+        NPCAP_URL,
+        dest.display()
+    );
+    let out = crate::lan::hidden("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+        .output()
+        .map_err(|e| e.to_string())?;
+    if !out.status.success() || !dest.exists() {
+        return Err(format!(
+            "could not download the Npcap installer: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+
+    // /S is the vendor's silent switch. The app already runs elevated, which the driver needs.
+    let run = crate::lan::hidden(&dest.to_string_lossy())
+        .arg("/S")
+        .arg("/winpcap_mode=yes")
+        .status()
+        .map_err(|e| format!("could not run the Npcap installer: {e}"))?;
+    let _ = std::fs::remove_file(&dest);
+    if !run.success() {
+        return Err("the Npcap installer did not finish successfully".into());
+    }
+
+    // Trust the disk, not the exit code: the installer can finish and leave no driver.
+    if npcap().is_some() {
+        Ok("Npcap installed, device routing is ready".into())
+    } else {
+        Err("the installer finished but wpcap.dll is still missing; a reboot may be needed".into())
+    }
 }
 
 /// Look for the driver where Npcap actually installs it, then on PATH.

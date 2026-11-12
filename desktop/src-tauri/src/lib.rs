@@ -2928,6 +2928,22 @@ async fn lan_unroute_device() -> Result<bool, String> {
         .map_err(|e| e.to_string())?
 }
 
+/// Can this PC route a device at all? False means the packet driver is missing.
+#[cfg(windows)]
+#[tauri::command]
+fn lan_npcap_ready() -> bool {
+    quotacards::lan_route::npcap_installed()
+}
+
+/// Download and install the packet driver on demand, then say whether it worked.
+#[cfg(windows)]
+#[tauri::command]
+async fn lan_install_npcap() -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(quotacards::lan_route::install_npcap)
+        .await
+        .map_err(|e| e.to_string())?
+}
+
 /// Which device is currently routed, if any, from the intention record.
 #[tauri::command]
 #[cfg(windows)]
@@ -2990,6 +3006,8 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         lan_route_device,
         lan_unroute_device,
         lan_routed_device,
+        lan_npcap_ready,
+        lan_install_npcap,
         lan_devices,
         speed_cancel,
         speed_latency,
