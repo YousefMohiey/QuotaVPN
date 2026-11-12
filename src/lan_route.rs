@@ -170,7 +170,7 @@ pub fn forwarding_enabled(interface: &str) -> Result<bool, String> {
 
 pub fn set_forwarding(interface: &str, on: bool) -> Result<(), String> {
     let state = if on { "enabled" } else { "disabled" };
-    let out = std::process::Command::new("netsh")
+    let out = crate::lan::hidden("netsh")
         // One argument: netsh rejects "forwarding enabled" as two, and answers
         // "The parameter is incorrect", which reads like a permissions problem and is not.
         .args([
@@ -381,12 +381,17 @@ pub fn claim(target_ip: Ipv4Addr, target_mac: &str) -> Result<Adapter, String> {
     if crate::vpn::task_engine_pid().is_none() {
         return Err("connect the VPN first: the engine is not running".into());
     }
+    // Alive is not the same as carrying traffic: a sing-box that started and did not
+    // bring a tun up would take the claim and have nowhere to put the packets.
+    if !crate::vpn::tun_adapter_present() {
+        return Err("connect the VPN first: the tunnel interface is not up".into());
+    }
 
     let router_mac = crate::lan::mac_for(&ad.gateway.to_string())
         .ok_or_else(|| format!("no MAC known for the gateway {}", ad.gateway))?;
     if router_mac.eq_ignore_ascii_case(&ad.mac) {
         return Err(format!(
-            "the neighbour table says we are the gateway ({}); refusing to build a restore              that would name ourselves. Release the previous claim, or let the entry expire.",
+            "the neighbour table says we are the gateway ({}); refusing to build a restore that would name ourselves. Release the previous claim, or let the entry expire.",
             ad.gateway
         ));
     }
@@ -443,85 +448,131 @@ pub fn claim(target_ip: Ipv4Addr, target_mac: &str) -> Result<Adapter, String> {
     Ok(ad)
 }
 
-fn rule_name(target_ip: Ipv4Addr) -> String {
+fn outbound_rule(target_ip: Ipv4Addr) -> String {
     format!("QuotaVPN lan-route {target_ip}")
 }
 
-/// Let the device's traffic be forwarded. Enabling IPv4 forwarding is not enough on
-/// Windows: the filtering platform drops forwarded packets unless a rule permits them,
-/// which is why the claim alone moved nothing.
-/// Is the permit really there, and does it say what we think?
-///
-/// Trusting the exit code of `netsh add` is the same mistake the kill switch made: the
-/// command can succeed and the rule not be what was asked for. `block_traffic` calls
-/// `traffic_blocked()` right after its add for the same reason.
-fn firewall_present(target_ip: Ipv4Addr) -> Result<bool, String> {
-    let out = crate::lan::hidden("netsh")
-        .args([
-            "advfirewall",
-            "firewall",
-            "show",
-            "rule",
-            &format!("name={}", rule_name(target_ip)),
-        ])
-        .output()
-        .map_err(|e| e.to_string())?;
-    let text = String::from_utf8_lossy(&out.stdout).to_lowercase();
-    if text.contains("no rules match") {
-        return Ok(false);
-    }
-    Ok(text.contains("action:")
-        && text.contains("allow")
-        && (text.contains(&format!("{target_ip}/32")) || text.contains(&target_ip.to_string())))
+fn return_rule(target_ip: Ipv4Addr) -> String {
+    format!("QuotaVPN lan-route return {target_ip}")
 }
 
+#[derive(Default, Debug)]
+struct RuleFacts {
+    direction: String,
+    local: String,
+    remote: String,
+    action: String,
+}
+
+/// Read one rule back as facts, not as a substring.
+///
+/// The old check accepted the address appearing anywhere in the output, and the rule name
+/// itself contains it, so `RemoteIP: Any` passed. Parse the fields that matter.
+fn rule_facts(name: &str) -> Result<Option<RuleFacts>, String> {
+    let out = crate::lan::hidden("netsh")
+        .args(["advfirewall", "firewall", "show", "rule", &format!("name={name}")])
+        .output()
+        .map_err(|e| e.to_string())?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    if text.to_lowercase().contains("no rules match") {
+        return Ok(None);
+    }
+    let mut facts = RuleFacts::default();
+    for line in text.lines() {
+        let Some((k, v)) = line.split_once(':') else { continue };
+        let value = v.trim().to_string();
+        match k.trim().to_ascii_lowercase().as_str() {
+            "direction" => facts.direction = value,
+            "localip" => facts.local = value,
+            "remoteip" => facts.remote = value,
+            "action" => facts.action = value,
+            _ => {}
+        }
+    }
+    if facts.direction.is_empty() && facts.action.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(facts))
+}
+
+fn matches_ip(value: &str, ip: Ipv4Addr) -> bool {
+    value.split(',').any(|part| {
+        let part = part.trim();
+        part.eq_ignore_ascii_case("any") || part == ip.to_string() || part == format!("{ip}/32")
+    })
+}
+
+/// Let both legs through.
+///
+/// Two rules, because one cannot do both jobs. `dir=in remoteip=<device>` matches only
+/// packets whose source is the device: the leg going out. Replies from the internet come
+/// back on the tunnel with a public source, which that shape can never match, so the
+/// return leg is scoped by destination instead: `dir=in localip=<device> remoteip=any`.
 fn open_firewall(target_ip: Ipv4Addr) -> Result<(), String> {
-    let name = rule_name(target_ip);
-    let _ = close_firewall(target_ip); // idempotent: a stale rule would stack up otherwise
+    let _ = close_firewall(target_ip); // idempotent: stale rules would otherwise stack
+
+    let out_rule = outbound_rule(target_ip);
     let out = crate::lan::hidden("netsh")
         .args([
-            "advfirewall",
-            "firewall",
-            "add",
-            "rule",
-            &format!("name={name}"),
-            "dir=in",
-            "action=allow",
-            &format!("remoteip={target_ip}"),
-            "profile=any",
+            "advfirewall", "firewall", "add", "rule",
+            &format!("name={out_rule}"), "dir=in", "action=allow",
+            &format!("remoteip={target_ip}"), "profile=any",
         ])
         .output()
         .map_err(|e| e.to_string())?;
     if !out.status.success() {
-        return Err(format!(
-            "could not add the firewall rule: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
-        ));
+        return Err(format!("could not add the outbound rule: {}", String::from_utf8_lossy(&out.stderr).trim()));
     }
-    if !firewall_present(target_ip)? {
-        return Err("the firewall rule was accepted but is not there, so the device would be cut off".into());
+
+    let ret_rule = return_rule(target_ip);
+    let out = crate::lan::hidden("netsh")
+        .args([
+            "advfirewall", "firewall", "add", "rule",
+            &format!("name={ret_rule}"), "dir=in", "action=allow",
+            &format!("localip={target_ip}"), "remoteip=any", "profile=any",
+        ])
+        .output()
+        .map_err(|e| e.to_string())?;
+    if !out.status.success() {
+        let _ = close_firewall(target_ip);
+        return Err(format!("could not add the return rule: {}", String::from_utf8_lossy(&out.stderr).trim()));
+    }
+
+    // Both legs verified, by field and not by substring.
+    match rule_facts(&out_rule)? {
+        Some(f) if f.direction.eq_ignore_ascii_case("in")
+            && f.action.eq_ignore_ascii_case("allow")
+            && matches_ip(&f.remote, target_ip)
+            && !f.remote.eq_ignore_ascii_case("any") => {}
+        other => {
+            let _ = close_firewall(target_ip);
+            return Err(format!("the outbound rule is not what was asked for: {other:?}"));
+        }
+    }
+    match rule_facts(&ret_rule)? {
+        Some(f) if f.direction.eq_ignore_ascii_case("in")
+            && f.action.eq_ignore_ascii_case("allow")
+            && matches_ip(&f.local, target_ip) => {}
+        other => {
+            let _ = close_firewall(target_ip);
+            return Err(format!("the return rule is not what was asked for: {other:?}"));
+        }
     }
     Ok(())
 }
 
 fn close_firewall(target_ip: Ipv4Addr) -> Result<(), String> {
-    let out = crate::lan::hidden("netsh")
-        .args([
-            "advfirewall",
-            "firewall",
-            "delete",
-            "rule",
-            &format!("name={}", rule_name(target_ip)),
-        ])
-        .output()
-        .map_err(|e| e.to_string())?;
-    // A missing rule is not an error: the first call has none to delete. A rule that
-    // survives its own deletion is: this is an inbound allow on every profile.
-    let _ = out;
-    if firewall_present(target_ip)? {
-        return Err(format!(
-            "the firewall rule for {target_ip} survived its deletion"
-        ));
+    for name in [outbound_rule(target_ip), return_rule(target_ip)] {
+        let _ = crate::lan::hidden("netsh")
+            .args(["advfirewall", "firewall", "delete", "rule", &format!("name={name}")])
+            .output()
+            .map_err(|e| e.to_string())?;
+    }
+    // Absence has to be proven: these are inbound allows on every profile.
+    for name in [outbound_rule(target_ip), return_rule(target_ip)] {
+        if rule_facts(&name)?.is_some() {
+            return Err(format!("the firewall rule {name} survived its deletion"));
+        }
     }
     Ok(())
 }
@@ -554,7 +605,9 @@ pub fn release() -> Result<(), String> {
         std::thread::sleep(std::time::Duration::from_millis(120));
     }
     set_forwarding(&intent.interface, false)?;
-    let _ = close_firewall(target_ip);
+    // If the rule will not go, the record stays so start-up tries again. An inbound
+    // allow that outlives its release is worse than a failed release.
+    close_firewall(target_ip)?;
     forget_intent();
     Ok(())
 }
