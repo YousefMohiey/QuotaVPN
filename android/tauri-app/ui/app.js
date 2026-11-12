@@ -753,12 +753,12 @@ paintBg();
 // Updates: check GitHub releases; install downloads the APK and opens the
 // system installer (Android always asks one confirmation tap).
 let appVersion = "";
-// About card: the build and the server, the two facts a settings page owes.
+// About card: the build, which is the one fact a settings page owes.
+// The server moved out of Settings; it lives in the route chip on Home, where the
+// choice is made, rather than being repeated as a read-only line here.
 function paintAbout() {
   const v = $("set-version");
   if (v) v.textContent = appVersion || "-";
-  const s = $("set-server");
-  if (s) s.textContent = serverHost ? maskHost(serverHost) : "-";
 }
 let updApk = "", updBusy = false;
 async function runUpdateCheck() {
