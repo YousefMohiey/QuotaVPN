@@ -386,7 +386,7 @@
           Android 0.5.8 APK
         </a>
       </div>
-      <p class="meta rise" id="dlMeta"><b>Free and open source.</b> Windows 10 and 11, and Android.&nbsp;17&nbsp;MB.</p>
+      <p class="meta rise" id="dlMeta"><b>Free and open source.</b> Windows 10 and 11, 9 MB. Android 0.5.8, 97 MB.</p>
     </div>
 
     <figure class="frame shot rise">
@@ -610,6 +610,21 @@
   var TTL = 10 * 60 * 1000;
   var FALLBACK = 'https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.4.7/QuotaVPN_0.4.7_x64-setup.exe';
   function mb(n){ return Math.round(n / 1048576) + ' MB'; }
+  // The two buttons serve two different downloads with two different sizes, so the
+  // line under them states both. It fills in as each size arrives and never quotes
+  // one number as though it covered both.
+  var exeBytes = null, apkBytes = null;
+  function paintMeta(){
+    var meta = document.getElementById('dlMeta');
+    if(!meta) return;
+    // Both numbers are always stated. The measured sizes replace these defaults
+    // when the API answers; a failed fetch must not leave the line claiming one
+    // size as if it covered both buttons.
+    var win = exeBytes ? mb(exeBytes) : '9 MB';
+    var droid = apkBytes ? mb(apkBytes) : '97 MB';
+    meta.innerHTML = '<b>Free and open source.</b> Windows 10 and 11, '
+      + win.replace(' ', ' ') + '. Android 0.5.8, ' + droid.replace(' ', ' ') + '.';
+  }
   function apply(d){
     var tag = d && d.tag_name ? 'v' + String(d.tag_name).replace(/^v/i, '') : null;
     if(tag){
@@ -626,12 +641,36 @@
     if(exe){
       document.querySelectorAll('.dl-win').forEach(function(el){ el.setAttribute('href', exe.browser_download_url); });
       var meta = document.getElementById('dlMeta');
-      if(meta) meta.innerHTML = '<b>Free and open source.</b> Windows 10 and 11, and Android. ' + mb(exe.size).replace(' ', ' ') + '.';
+      exeBytes = exe.size;
+      paintMeta();
     }
     if(apk){
       document.querySelectorAll('.dl-apk').forEach(function(el){ el.setAttribute('href', apk.browser_download_url); });
     }
     headerCta(apk ? apk.browser_download_url : null);
+  }
+  // releases/latest is a Windows release and carries no APK, so the Android size
+  // comes from its own versioned release.
+  var APK_RELEASE = 'https://api.github.com/repos/YousefMohiey/QuotaVPN/releases/tags/v0.5.8-android';
+  function loadApkSize(){
+    try{
+      var raw = localStorage.getItem('qvApk');
+      if(raw){
+        var o = JSON.parse(raw);
+        if(o && o.size && (Date.now() - (o.t || 0)) < TTL){ apkBytes = o.size; paintMeta(); return; }
+      }
+    }catch(e){}
+    fetch(APK_RELEASE, {cache: 'no-store'})
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        var a0 = null;
+        (d && d.assets ? d.assets : []).forEach(function(a){ if(/\.apk$/i.test(a.name)) a0 = a; });
+        if(!a0) return;
+        apkBytes = a0.size;
+        paintMeta();
+        try{ localStorage.setItem('qvApk', JSON.stringify({size: a0.size, t: Date.now()})); }catch(e){}
+      })
+      .catch(function(){});
   }
   var phone = false;
   try{ phone = matchMedia('(max-width:760px)').matches; }catch(e){}
@@ -665,6 +704,10 @@
       apply(d);
       try{ localStorage.setItem('qvRel', JSON.stringify({ d: d, t: Date.now() })); }catch(e){}
     })['catch'](function(){});
+
+  /* The Android size travels with its own release, so ask for it every load
+     (cached for the same ten minutes as the Windows side). */
+  loadApkSize();
 
   /* The header earns its border once the page moves. */
   var hdr = document.getElementById('hdr');
