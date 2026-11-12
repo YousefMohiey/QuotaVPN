@@ -344,7 +344,48 @@ pub fn npcap_installed() -> bool {
 /// Where the vendor publishes the installer. Npcap does not permit a product to ship its
 /// installer inside another one without an OEM licence, so this downloads it from the vendor
 /// and runs it: the user's machine fetches it, we do not redistribute it.
-const NPCAP_URL: &str = "https://npcap.com/dist/npcap-1.90.exe";
+/// Known good releases, newest first. The vendor removes old files, so a hardcoded single URL
+/// eventually turns into "download failed" instead of "that version is gone".
+const NPCAP_VERSIONS: [&str; 3] = ["1.90", "1.89", "1.80"];
+
+fn npcap_url(version: &str) -> String {
+    format!("https://npcap.com/dist/npcap-{version}.exe")
+}
+
+/// Is this file signed by the vendor, and does the signature verify?
+///
+/// The app is elevated, so whatever this installs runs as administrator. A downloaded binary is
+/// the one place in this program where trusting the network would be a privilege escalation.
+fn verify_vendor_signature(path: &std::path::Path) -> Result<(), String> {
+    let script = format!(
+        "$s = Get-AuthenticodeSignature -LiteralPath '{}';          [pscustomobject]@{{ status = [string]$s.Status; subject = [string]$s.SignerCertificate.Subject }}          | ConvertTo-Json -Compress",
+        path.display()
+    );
+    let out = crate::lan::hidden("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+        .output()
+        .map_err(|e| e.to_string())?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    let value: serde_json::Value =
+        serde_json::from_str(text.trim()).map_err(|_| "could not read the installer's signature".to_string())?;
+    let status = value["status"].as_str().unwrap_or("").to_ascii_lowercase();
+    let subject = value["subject"].as_str().unwrap_or("").to_ascii_lowercase();
+    if status != "valid" {
+        return Err(format!(
+            "the downloaded installer's signature is not valid ({status}), so it was not run"
+        ));
+    }
+    // The real signer, read off npcap-1.90.exe on 2026-11-12:
+    //   CN=Nmap Software LLC, O=Nmap Software LLC, Beaverton, Oregon, US
+    // Matched on the organisation rather than on a bare "nmap" so a similarly named
+    // certificate cannot pass.
+    if !subject.contains("nmap software") {
+        return Err(format!(
+            "the downloaded installer is signed by somebody else ({subject}), so it was not run"
+        ));
+    }
+    Ok(())
+}
 
 /// Download and install Npcap silently, then report whether it actually works.
 ///
@@ -355,22 +396,39 @@ pub fn install_npcap() -> Result<String, String> {
     if npcap().is_some() {
         return Ok("Npcap is already installed".into());
     }
-    let dest = std::env::temp_dir().join("npcap-1.90.exe");
+    let dest = std::env::temp_dir().join("npcap-installer.exe");
     let _ = std::fs::remove_file(&dest);
-    let script = format!(
-        "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri '{}' -OutFile '{}' -UseBasicParsing",
-        NPCAP_URL,
-        dest.display()
-    );
-    let out = crate::lan::hidden("powershell")
-        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
-        .output()
-        .map_err(|e| e.to_string())?;
-    if !out.status.success() || !dest.exists() {
+
+    let mut fetched = None;
+    for version in NPCAP_VERSIONS {
+        let url = npcap_url(version);
+        let script = format!(
+            "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri '{url}' -OutFile '{}' -UseBasicParsing",
+            dest.display()
+        );
+        let out = crate::lan::hidden("powershell")
+            .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+            .output()
+            .map_err(|e| e.to_string())?;
+        if out.status.success() && dest.exists() {
+            fetched = Some(version);
+            break;
+        }
+        let _ = std::fs::remove_file(&dest);
+    }
+    let Some(version) = fetched else {
         return Err(format!(
-            "could not download the Npcap installer: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
+            "could not download the Npcap installer from npcap.com (tried {}). The vendor may \
+             have moved it; install it by hand from npcap.com and press retry.",
+            NPCAP_VERSIONS.join(", ")
         ));
+    };
+
+    // The app runs elevated, so the installer it executes would run elevated too. Never execute
+    // a downloaded binary without checking who signed it.
+    if let Err(e) = verify_vendor_signature(&dest) {
+        let _ = std::fs::remove_file(&dest);
+        return Err(e);
     }
 
     // /S is the vendor's silent switch. The app already runs elevated, which the driver needs.
@@ -386,7 +444,7 @@ pub fn install_npcap() -> Result<String, String> {
 
     // Trust the disk, not the exit code: the installer can finish and leave no driver.
     if npcap().is_some() {
-        Ok("Npcap installed, device routing is ready".into())
+        Ok(format!("Npcap {version} installed, device routing is ready"))
     } else {
         Err("the installer finished but wpcap.dll is still missing; a reboot may be needed".into())
     }

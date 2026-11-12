@@ -50,6 +50,19 @@ const DEMO_RATE: Record<string, [number, number]> = {
   "192.168.1.46": [64_000, 3_000],
 }
 
+// The packet driver's state in the demo: installed unless the page asks for
+// ?npcap=0 (missing, so the install path is visible), ?npcap=instfail (missing
+// and the install refuses) or ?npcap=unknown (the readiness read fails, which
+// must leave the screen without a prompt).
+const NPCAP_MODE = (() => {
+  try {
+    return new URLSearchParams(window.location.search).get("npcap") || "on"
+  } catch (e) {
+    return "on"
+  }
+})()
+let npcapInstalled = NPCAP_MODE === "on" || NPCAP_MODE === "claimfail"
+
 // The one routed device, so the stage and the per row control have something
 // real to show. A claim on the router or on this machine is refused with the
 // kind of message the engine sends, so the failure path is visible too.
@@ -103,7 +116,20 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
       return null as T
     case "lan_guard":
       return { watching: true, attacker_mac: "" } as T
+    case "lan_npcap_ready":
+      if (NPCAP_MODE === "unknown") throw new Error("the driver state could not be read")
+      return npcapInstalled as T
+    case "lan_install_npcap":
+      if (NPCAP_MODE === "instfail")
+        throw new Error("the vendor download was refused (HTTP 403)")
+      await new Promise((r) => setTimeout(r, 1600))
+      npcapInstalled = true
+      return "Npcap is installed. Routing works now." as T
     case "lan_route_device": {
+      // The state says the driver is there and the claim still refuses for it:
+      // this is the case the alert has to answer with the install.
+      if (NPCAP_MODE === "claimfail")
+        throw new Error("Npcap is not installed, so this device cannot be routed")
       const ip = String(args?.ip || "")
       const mac = String(args?.mac || "")
       const dev = DEMO_DEVICES.find((d) => d.ip === ip)

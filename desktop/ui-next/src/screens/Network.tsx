@@ -3,7 +3,6 @@ import {
   Ban,
   Check,
   Gauge,
-  Info,
   Loader2,
   RefreshCw,
   Route,
@@ -124,6 +123,11 @@ export function Network() {
   // The column the invitation points at, lit for a moment so the eye lands on
   // the header that names the control.
   const [hintCol, setHintCol] = useState(false)
+  // Whether this PC can route a device at all. true and false are readings from
+  // the backend; null is unknown, and unknown never shows the install prompt.
+  const [npcap, setNpcap] = useState<boolean | null>(null)
+  const [installing, setInstalling] = useState(false)
+  const [installNote, setInstallNote] = useState("")
   const [routeErr, setRouteErr] = useState("")
   const [err, setErr] = useState("")
   const [dests, setDests] = useState<Destination[]>([])
@@ -137,6 +141,17 @@ export function Network() {
 
   // The claim survives a screen change, so the first paint asks who holds it
   // rather than drawing every row as unrouted until something is tapped.
+  useEffect(() => {
+    // A failed readiness read leaves the answer unknown rather than guessing,
+    // so the install prompt only ever appears on a real false.
+    void api
+      .lanNpcapReady()
+      .then((on) => {
+        if (typeof on === "boolean") setNpcap(on)
+      })
+      .catch(() => undefined)
+  }, [])
+
   useEffect(() => {
     void api
       .lanRoutedDevice()
@@ -300,6 +315,30 @@ export function Network() {
     cell?.scrollIntoView({ block: "nearest", behavior: "smooth" })
   }
 
+  /** Install the packet driver, then trust only a fresh reading of it. Takes up
+      to a minute, so the control reports that it is working the whole time. */
+  const installNpcap = async () => {
+    if (installing) return
+    setInstalling(true)
+    setInstallNote("")
+    try {
+      const done = await api.lanInstallNpcap()
+      const on = await api.lanNpcapReady().catch(() => null)
+      if (on === true) {
+        setNpcap(true)
+        setRouteErr("")
+        setErr("")
+        if (typeof done === "string" && done.trim()) setInstallNote(done.trim())
+      } else if (typeof on === "boolean") {
+        setNpcap(on)
+      }
+    } catch (e) {
+      setErr(String(e))
+    } finally {
+      setInstalling(false)
+    }
+  }
+
   const toggleProtect = async (d: LanDevice) => {
     setErr("")
     try {
@@ -448,8 +487,11 @@ export function Network() {
   // traffic to route, so the invitation never points at any of them and stays
   // absent when nothing here qualifies.
   const routable = useMemo(
-    () => shown.filter((d) => !d.self_pc && !d.protected_always && d.live !== false),
-    [shown],
+    () =>
+      npcap === false
+        ? []
+        : shown.filter((d) => !d.self_pc && !d.protected_always && d.live !== false),
+    [shown, npcap],
   )
 
   const message = routeErr || err
@@ -554,6 +596,30 @@ export function Network() {
                   )}
                 </button>
               </div>
+            ) : npcap === false ? (
+              // No driver, so no claim can work. The roster stays; the one thing
+              // offered here is the install that makes routing possible.
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--brand-bg)] text-brand-strong">
+                  <Route className="size-[18px]" aria-hidden />
+                </span>
+                <div className="flex min-w-0 flex-col items-start gap-1.5">
+                  <div className="text-[15px] font-semibold text-txt">{t("netRoute")}</div>
+                  <p className="max-w-[54ch] text-[12px] leading-snug text-txt2">
+                    {t("netNpcapNeeds")}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void installNpcap()}
+                    disabled={installing}
+                    style={{ height: ALLOWED_MIN }}
+                    className="press mt-0.5 flex shrink-0 items-center gap-2 rounded-[9px] bg-[var(--brand)] px-3.5 text-[12.5px] font-medium text-white transition-colors enabled:hover:brightness-110 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {installing ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : null}
+                    {installing ? t("netNpcapBusy") : t("netNpcapInstall")}
+                  </button>
+                </div>
+              </div>
             ) : (
               <div className="flex min-w-0 items-center gap-3">
                 <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--brand-bg)] text-brand-strong">
@@ -577,6 +643,11 @@ export function Network() {
                       {t("netPickDevice")}
                     </button>
                   ) : null}
+                  {installNote ? (
+                    <p className="text-[11.5px] leading-snug text-brand-strong" dir="auto">
+                      {installNote}
+                    </p>
+                  ) : null}
                 </div>
               </div>
             )}
@@ -591,6 +662,18 @@ export function Network() {
                 <span className="min-w-0 flex-1 break-words" dir="auto">
                   {message}
                 </span>
+                {/npcap/i.test(message) ? (
+                  <button
+                    type="button"
+                    onClick={() => void installNpcap()}
+                    disabled={installing}
+                    style={{ height: ALLOWED_MIN }}
+                    className="press flex shrink-0 items-center gap-1.5 rounded-[8px] bg-[var(--brand-bg)] px-2.5 text-[12px] font-medium text-brand-strong transition-colors enabled:hover:bg-[rgb(44_95_216/0.2)] disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {installing ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : null}
+                    {installing ? t("netNpcapBusy") : t("netNpcapInstall")}
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => {
@@ -647,23 +730,6 @@ export function Network() {
           </div>
         </div>
       </section>
-
-      {driverReady === false ? (
-        <div className="flex shrink-0 items-center gap-2.5 rounded-[10px] bg-[var(--brand-bg)] px-3 py-1.5">
-          <Info className="size-4 shrink-0 text-brand-strong" aria-hidden />
-          <span className="min-w-0 flex-1 text-[12px] leading-snug text-txt2" dir="auto">
-            {t("netDriverBody")}
-          </span>
-          <button
-            type="button"
-            onClick={() => void api.openPage("https://npcap.com/#download")}
-            style={{ minHeight: ALLOWED_MIN }}
-            className="press shrink-0 rounded-[8px] px-2.5 text-[12px] font-medium text-brand-strong transition-colors hover:bg-white/[0.06]"
-          >
-            {t("netDriverGet")}
-          </button>
-        </div>
-      ) : null}
 
       {active ? (
         <div className="flex shrink-0 items-center gap-2.5 rounded-[10px] bg-[var(--brand-bg)] px-3 py-1.5">
@@ -842,7 +908,9 @@ export function Network() {
                       ? t("netCannotRouter")
                       : d.live === false
                         ? t("netCannotOffline")
-                        : ""
+                        : npcap === false
+                          ? t("netCannotNpcap")
+                          : ""
                 const [dn, dnu] = fresh ? splitRate(fresh.down) : ["-", ""]
                 const [un, unu] = fresh ? splitRate(fresh.up) : ["-", ""]
                 return (
@@ -998,7 +1066,10 @@ export function Network() {
                     </span>
 
                     <div className="flex items-center justify-end gap-0.5">
-                      <Tip text={t("netLimit")} align="end">
+                      <Tip
+                        text={driverReady === false ? t("netCannotNpcap") : t("netLimit")}
+                        align="end"
+                      >
                         <button
                           type="button"
                           onClick={() => setLimitFor(d)}
@@ -1014,7 +1085,16 @@ export function Network() {
                           <Gauge className="size-4" aria-hidden />
                         </button>
                       </Tip>
-                      <Tip text={state === "blocked" ? t("netUnblock") : t("netBlock")} align="end">
+                      <Tip
+                        text={
+                          driverReady === false
+                            ? t("netCannotNpcap")
+                            : state === "blocked"
+                              ? t("netUnblock")
+                              : t("netBlock")
+                        }
+                        align="end"
+                      >
                         <button
                           type="button"
                           onClick={() => void toggleBlock(d)}
