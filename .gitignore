@@ -32,3 +32,6 @@ driver/certs/
 # driver build output
 driver/QuotaVpnPkt/obj/
 driver/QuotaVpnPkt/*.sys
+
+# Local typography preview. Never deploy: these are before/after copies, not pages.
+docs/preview/
