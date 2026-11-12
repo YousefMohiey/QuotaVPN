@@ -26,43 +26,44 @@
 }
 :root {
   color-scheme: dark;
-  /* surfaces, same ladder as the desktop */
-  --bg0: #141a25;
-  --bg1: #172032;
-  --panel: #151d2e;
-  --panel-hover: #1b2539;
-  --card: #151d2e;
-  --field: #202b45;
+  /* surfaces, same ladder as the desktop at 0.5.8: near-black window,
+     one step up per layer, structure carried by hairlines */
+  --bg0: #08090a;
+  --bg1: #0b0c0e;
+  --panel: #0f1113;
+  --panel-hover: #14171a;
+  --card: #0f1113;
+  --field: #14171a;
   /* The one shared material, same tokens as the desktop: flat dark frosted
      fill, lit edge, inner thickness, outer float. */
-  --glass-fill: rgb(21 29 46 / 0.62);
+  --glass-fill: rgb(16 20 28 / 0.55);
   --glass-line: rgb(255 255 255 / 0.12);
   --glass-blur: blur(20px) saturate(150%);
   /* lines */
-  --line: rgb(255 255 255 / 0.08);
-  --line-strong: rgb(255 255 255 / 0.14);
+  --line: rgb(255 255 255 / 0.07);
+  --line-strong: rgb(255 255 255 / 0.13);
   --line-top: rgb(255 255 255 / 0.10);
   /* text */
-  --txt: #eef1f6;
-  --txt2: #a7b0bf;
-  --txt3: #8b95a6;
+  --txt: #f3f5f7;
+  --txt2: #a3aab3;
+  --txt3: #858c97;
   /* one accent + muted semantics */
-  --accent: #1f59b6;
-  --accent-hi: #2870d1;
-  --accent-strong: #5b8def;
-  --accent-bg: rgb(31 89 182 / 0.14);
-  --accent-line: rgb(31 89 182 / 0.40);
-  --green: #5cb28e;
-  --green-bg: rgb(92 178 142 / 0.12);
-  --green-line: rgb(92 178 142 / 0.36);
-  --amber: #c49a58;
-  --amber-bg: rgb(196 154 88 / 0.12);
-  --amber-line: rgb(196 154 88 / 0.36);
-  --red: #cf7078;
-  --red-bg: rgb(207 112 120 / 0.12);
-  --red-line: rgb(207 112 120 / 0.36);
-  --gamerz: #a7b0bf;
-  --streamerz: #a7b0bf;
+  --accent: #2c5fd8;
+  --accent-hi: #3d7bff;
+  --accent-strong: #7fa6ff;
+  --accent-bg: rgb(44 95 216 / 0.13);
+  --accent-line: rgb(44 95 216 / 0.38);
+  --green: #5fb08c;
+  --green-bg: rgb(95 176 140 / 0.12);
+  --green-line: rgb(95 176 140 / 0.34);
+  --amber: #c99b5c;
+  --amber-bg: rgb(201 155 92 / 0.12);
+  --amber-line: rgb(201 155 92 / 0.34);
+  --red: #d0797f;
+  --red-bg: rgb(208 121 127 / 0.12);
+  --red-line: rgb(208 121 127 / 0.34);
+  --gamerz: #a3aab3;
+  --streamerz: #a3aab3;
   /* shape, as on the desktop */
   --r-lg: 20px;
   --r-card: 16px;
@@ -70,7 +71,7 @@
   --r-in: 8px;
   --r-ctl: 10px;
   --pad-sec: 12px;
-  --sh-panel: 0 18px 44px rgb(0 0 0 / 0.38);
+  --sh-panel: 0 18px 44px rgb(0 0 0 / 0.5);
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; }
@@ -336,7 +337,7 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: rgb(21 29 46 / 0.92);
+  background: rgb(15 17 19 / 0.92);
   backdrop-filter: blur(30px) saturate(150%);
   -webkit-backdrop-filter: blur(30px) saturate(150%);
   border: 1px solid var(--glass-line);
@@ -419,7 +420,7 @@ main { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 0; display: flex
   display: flex;
   gap: 4px;
   padding: 6px;
-  background: rgb(23 32 50 / 0.8);
+  background: rgb(11 12 14 / 0.8);
   backdrop-filter: blur(26px) saturate(150%);
   -webkit-backdrop-filter: blur(26px) saturate(150%);
   border: 1px solid var(--glass-line);
@@ -684,9 +685,9 @@ button:disabled { opacity: 0.45; }
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
-  .sec, .hero, .card { background: rgb(21 29 46 / 0.96); }
-  .tabbar { background: rgb(23 32 50 / 0.98); }
-  .sheet { background: rgb(21 29 46 / 0.98); }
+  .sec, .hero, .card { background: rgb(15 17 19 / 0.96); }
+  .tabbar { background: rgb(11 12 14 / 0.98); }
+  .sheet { background: rgb(15 17 19 / 0.98); }
 }
 
 /* Settings: a header, then one card per setting - icon chip, title, one
@@ -716,7 +717,7 @@ button.setting { width: 100%; text-align: start; display: flex; align-items: cen
 /* Speed history: the entry row on the speed page, and the full page behind
    it. Same log the desktop keeps, grouped by day with the best numbers. */
 .sechistory{display:flex; align-items:center; gap:10px; width:100%; text-align:start; padding:11px 12px;
-  border-radius:var(--r-card); border:1px solid var(--line); background:rgb(21 29 46 / 0.62); color:var(--txt)}
+  border-radius:var(--r-card); border:1px solid var(--line); background:rgb(16 20 28 / 0.55); color:var(--txt)}
 .sechistory:active{background:rgb(255 255 255 / 0.05)}
 .sh-ico{width:34px; height:34px; flex:none; display:grid; place-items:center; border:1px solid var(--line); border-radius:10px; background:rgb(255 255 255 / 0.03); color:var(--accent-strong)}
 .sh-ico svg{width:16px; height:16px}
@@ -739,7 +740,7 @@ button.setting { width: 100%; text-align: start; display: flex; align-items: cen
 .hb i{font-style:normal; font-size:10.5px; color:var(--txt3)}
 .hist-list{flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding-bottom:4px}
 .hist-day{padding:8px 2px 6px; font-size:10.5px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:var(--txt3)}
-.hist-card{display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:14px; background:rgb(21 29 46 / 0.62); padding:10px 12px; margin-bottom:8px}
+.hist-card{display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:14px; background:rgb(16 20 28 / 0.55); padding:10px 12px; margin-bottom:8px}
 .hc-main{flex:1; min-width:0}
 .hc-top{display:flex; align-items:baseline; justify-content:space-between; gap:10px}
 .hc-time{font-size:11px; color:var(--txt3); font-variant-numeric:tabular-nums; flex:none}
