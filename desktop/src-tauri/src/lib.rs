@@ -3294,7 +3294,9 @@ pub fn run() {
         return;
     }
     // A record on disk means a previous run owed a restore: a device may still believe
-    // this machine is its gateway, so unwind that before the UI can ask anything.
+    // this machine is its gateway, so unwind that before the UI can ask anything. Windows
+    // only, because the module it lives in does not exist anywhere else.
+    #[cfg(windows)]
     if let Some(msg) = quotacards::lan_route::recover() {
         println!("lan_route: {msg}");
     }
