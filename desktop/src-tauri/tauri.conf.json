@@ -8,7 +8,7 @@
     "frontendDist": "../ui-next/dist",
     "devUrl": "http://localhost:1420",
     "beforeDevCommand": "",
-    "beforeBuildCommand": "npm --prefix ui-next run build"
+    "beforeBuildCommand": "npm --prefix ui-next run build || npm --prefix ../ui-next run build"
   },
   "app": {
     "windows": [
