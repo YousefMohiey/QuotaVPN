@@ -2883,9 +2883,9 @@ async fn network_snapshot(
     })
 }
 
-#[cfg(windows)]
 /// One device routed through the tunnel with nothing installed on it.
 #[derive(serde::Serialize, Clone)]
+#[cfg(windows)]
 struct RoutedDevice {
     ip: String,
     mac: String,
@@ -2893,6 +2893,7 @@ struct RoutedDevice {
     interface: String,
 }
 
+#[cfg(windows)]
 impl From<quotacards::lan_route::Intent> for RoutedDevice {
     fn from(i: quotacards::lan_route::Intent) -> RoutedDevice {
         RoutedDevice { ip: i.target_ip, mac: i.target_mac, gateway: i.gateway_ip, interface: i.interface }
@@ -2902,6 +2903,7 @@ impl From<quotacards::lan_route::Intent> for RoutedDevice {
 /// Take one device over. Returns only once the claim frame is on the wire and forwarding
 /// is confirmed, so a success here means its traffic is coming to this machine now.
 #[tauri::command]
+#[cfg(windows)]
 async fn lan_route_device(ip: String, mac: String) -> Result<RoutedDevice, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let target: std::net::Ipv4Addr = ip.parse().map_err(|_| format!("not an address: {ip}"))?;
@@ -2919,6 +2921,7 @@ async fn lan_route_device(ip: String, mac: String) -> Result<RoutedDevice, Strin
 
 /// Hand it back to the router. Safe to call when nothing is routed.
 #[tauri::command]
+#[cfg(windows)]
 async fn lan_unroute_device() -> Result<bool, String> {
     tauri::async_runtime::spawn_blocking(|| quotacards::lan_route::release().map(|_| true))
         .await
@@ -2927,10 +2930,12 @@ async fn lan_unroute_device() -> Result<bool, String> {
 
 /// Which device is currently routed, if any, from the intention record.
 #[tauri::command]
+#[cfg(windows)]
 fn lan_routed_device() -> Option<RoutedDevice> {
     quotacards::lan_route::read_intent().map(RoutedDevice::from)
 }
 
+#[cfg(windows)]
 fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync + 'static {
     tauri::generate_handler![
         setup_helper,
