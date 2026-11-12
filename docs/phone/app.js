@@ -112,7 +112,9 @@ const STR = {
     needCard: "Generate a card first, then connect", stopping: "Stopping",
     secTraffic: "Traffic and routing", routing: "App routing", back: "Back", cancel: "Cancel",
     addCard: "+ New", connecting: "Connecting", ping: "Ping",
-    sheetSearch: "Search domains",
+    sheetSearch: "Search domains", dismiss: "Dismiss", connTitle: "Connection",
+    packageLbl: "Package", transportLbl: "Transport", routeAria: "Change the connection",
+    histSub: "Last runs", appsSub: "Which apps ride the tunnel",
   },
   ar: {
     cardForVpn: "السيرفر", route: "البوابة", protected: "الحماية", wholeDevice: "الجهاز بالكامل",
@@ -175,7 +177,9 @@ const STR = {
     needCard: "أنشئ بطاقة أولاً ثم اتصل", stopping: "جارٍ الإيقاف",
     secTraffic: "الترافيك والتوجيه", routing: "توجيه التطبيقات", back: "رجوع", cancel: "إلغاء",
     addCard: "+ جديد", connecting: "جارٍ الاتصال", ping: "البينج",
-    sheetSearch: "ابحث عن دومين",
+    sheetSearch: "ابحث عن دومين", dismiss: "إغلاق", connTitle: "الاتصال",
+    packageLbl: "الباقة", transportLbl: "طريقة النقل", routeAria: "تغيير الاتصال",
+    histSub: "آخر القياسات", appsSub: "التطبيقات التي تمر عبر النفق",
   },
 };
 let lang = localStorage.getItem("qc-lang") || "en";
@@ -198,26 +202,17 @@ function applyLang(l) {
   document.documentElement.dir = "ltr"; // Layout never mirrors: icons keep the same place in both languages.
   document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll("[data-i18n-ph]").forEach((el) => { el.placeholder = t(el.dataset.i18nPh); });
+  document.querySelectorAll("[data-i18n-aria]").forEach((el) => { el.setAttribute("aria-label", t(el.dataset.i18nAria)); });
   const as = $("apps-search"); if (as) as.setAttribute("aria-label", t("appsSearch"));
   const cs = $("card-sni"); if (cs) cs.setAttribute("aria-label", t("customDomain"));
   document.querySelectorAll("#lang-seg button").forEach((x) =>
     x.classList.toggle("on", x.dataset.lang === lang));
   fillSniSelect();
   paintAppsSeg();
-  paintTransport();
+  paintRoute();
   renderAppsList($("apps-search") ? $("apps-search").value : "");
-  paintActiveCard();
   paintHero();
-  paintPresets();
   paintDomain();
-  document.querySelectorAll("#cards .cardrow").forEach((row) => {
-    const btns = row.querySelectorAll("button");
-    if (btns[0]) btns[0].textContent = t("copy");
-    if (btns[1]) btns[1].textContent = t("revoke");
-    const sniEl = row.querySelector(".sni");
-    const raw = sniEl.dataset.raw;
-    if (raw) sniEl.textContent = kindName(raw);
-  });
   // Dynamic regions (empty state, profile picker) only rebuild in refresh.
   refresh();
   // Labels the speed screen owns live further down the file; repaint them
@@ -266,24 +261,41 @@ function labelFor(sni) {
   }
   return sni;
 }
-function paintPresets() {
-  const kindNow = activeKind();
-  document.querySelectorAll("#presets .preset").forEach((b) => {
-    const k = b.dataset.kind;
-    const mine = cardsCache.find((c) => c.card_type === k);
-    const on = kindNow === k;
-    b.classList.toggle("on", on);
-    b.setAttribute("aria-pressed", on ? "true" : "false");
-    b.disabled = busy;
-    const el = b.querySelector(".preset-sni");
-    if (el) el.textContent = (mine && mine.sni) || DEFAULT_SNI[k];
-  });
+// The route line is the one place the current choice is stated: package, the
+// server domain it rides, and how it carries the traffic. Tapping it opens the
+// one sheet that changes all three.
+function paintRoute() {
+  const el = $("route-pkg");
+  if (el) el.textContent = kindName(activeKind());
+  paintDomain();
+  paintTransport();
 }
 function paintDomain() {
   const c = activeCard();
   const sni = (c && c.sni) || DEFAULT_SNI[activeKind()];
-  const lab = labelFor(sni);
-  $("tunnel-card-name").textContent = lab === sni ? sni : lab + " \u00b7 " + sni;
+  const el = $("route-dom");
+  if (!el) return;
+  el.textContent = labelFor(sni);
+  el.title = sni;
+  el.dir = "auto";
+}
+function paintTransport() {
+  const el = $("route-tr");
+  if (!el) return;
+  const note = transport === "hy2" ? t("hyWarnT") : transport === "wg" ? t("wgWarnT") : "";
+  el.textContent = transport === "hy2" ? "Hysteria2" : transport === "wg" ? t("trWg") : t("trStandard");
+  el.classList.toggle("warn", transport !== "vless");
+  el.title = note;
+}
+// A transport that spends from the general quota is a caveat, not a failure:
+// it is stated where the choice is made and marked amber on the stage.
+function pickTransport(id) {
+  if (transport === id) return;
+  transport = id;
+  localStorage.setItem("qc-transport", transport);
+  paintTransport();
+  if (transport === "wg") bar(false, t("wgWarnT"));
+  else if (transport === "hy2") bar(false, t("hyWarnT"));
 }
 // One tap on a package: select its card, or create it first (no connection
 // needed), exactly like the desktop preset pair.
@@ -295,7 +307,7 @@ async function pickPreset(k) {
     const sel = $("tunnel-card");
     sel.value = mine.uuid;
     try { sel.onchange(); } catch (e) {}
-    paintPresets();
+    paintRoute();
     paintDomain();
     paintHero();
     return;
@@ -312,7 +324,7 @@ async function pickPreset(k) {
         const sel = $("tunnel-card");
         sel.value = made.uuid;
         try { sel.onchange(); } catch (e) {}
-        paintPresets();
+        paintRoute();
         paintDomain();
         paintHero();
       }
@@ -355,7 +367,7 @@ function bar(ok, text) {
   if (ok) return;
   const el = $("infobar");
   el.hidden = false;
-  el.className = "bar" + (ok ? "ok" : "err");
+  el.className = "toast" + (ok ? " ok" : " err");
   $("infobar-icon").textContent = ok ? "✓" : "⚠";
   $("infobar-text").textContent = localizeRust(text);
   clearTimeout(barTimer);
@@ -370,7 +382,7 @@ let tabHist = ["connect"];
 function goTab(name, push) {
   // Sub-pages (apps, history) belong to the tab they were opened from, so
   // the bar keeps that tab lit instead of going blank.
-  const isTab = ["connect", "speed", "settings"].includes(name);
+  const isTab = ["connect", "speed", "apps", "settings"].includes(name);
   document.querySelectorAll(".tabbar button").forEach((x) => {
     if (isTab) x.classList.toggle("on", x.dataset.tab === name);
   });
@@ -397,64 +409,56 @@ try { history.replaceState({ tab: "connect" }, ""); } catch (e) {}
 
 function paintHero() {
   const hero = $("hero");
-  hero.classList.toggle("idle", !vpnOn && !connected);
-  hero.classList.toggle("connecting", busy);
-  // The facts strip: the same three facts in every state. The IP shows the
-  // address the world sees while the tunnel is up, a dash when it is not.
-  $("home-ip").textContent = vpnOn ? maskHost(serverIp || serverHost) : "-";
+  // Three states carry colour: live is green, working is amber, a failure is
+  // red. At rest the stage is graphite, never green.
+  const live = !!vpnOn && !busy;
+  const failed = !busy && !vpnOn && !!vpnError;
+  hero.classList.toggle("live", live);
+  hero.classList.toggle("busy", !!busy);
+  hero.classList.toggle("fail", failed);
+  const state = busy ? t("working") : vpnOn ? t("vpnConnected") : t("notConnected");
+  setTxt("hero-state", state);
+  // The caption names the action, so it is not a second copy of the state: it
+  // stands down while a tap is still working.
+  const label = vpnOn ? t("disconnect") : t("connect");
+  setTxt("btn-label", label);
+  const cap = $("btn-label");
+  if (cap) cap.hidden = !!busy;
+  const btn = $("btn-connect");
+  if (btn) btn.setAttribute("aria-label", label);
+  paintExitLine();
   $("session-line").hidden = !vpnOn;
-  paintFactStatus();
-  if (busy) {
-    setTxt("hero-state", t("working"));
-    $("hero-sub").textContent = t("talking");
-    return;
+  const note = $("hero-sub");
+  if (note) {
+    const txt = busy ? t("talking") : failed ? localizeRust(vpnError) : "";
+    note.textContent = txt;
+    note.hidden = !txt;
   }
-  if (vpnOn) {
-    hero.classList.remove("ready");
-    hero.classList.add("connected");
-    setTxt("hero-state", t("vpnConnected"));
-    // bdi isolates the Latin card name so nothing jumps sides. Arabic takes
-    // no trailing period; English keeps its full stop.
-    $("hero-sub").textContent = "";
-    $("btn-label").textContent = t("disconnect");
-    tickSession();
-  } else if (connected) {
-    hero.classList.add("ready");
-    hero.classList.remove("connected");
-    setTxt("hero-state", t("ready"));
-    $("hero-sub").textContent = "";
-    $("btn-label").textContent = t("connect");
-  } else {
-    hero.classList.add("ready");
-    hero.classList.remove("connected");
-    setTxt("hero-state", t("notConnected"));
-    $("hero-sub").textContent = "";
-    $("btn-label").textContent = t("connect");
-  }
+  if (live) tickSession();
 }
 
-// One status line for the facts strip, driven by the same flags as the dial.
 function setTxt(id, v) {
   const el = $(id);
   if (el) el.textContent = v;
 }
-function paintFactStatus() {
-  const txt = busy ? t("working") : vpnOn ? t("vpnConnected") : t("notConnected");
-  const el = $("fact-status");
-  if (el) el.textContent = txt;
-  const line = $("hl-txt");
-  if (line) line.textContent = vpnOn && !busy ? "" : txt;
-  const dot = $("fact-dot");
-  if (dot) dot.classList.toggle("on", !!vpnOn && !busy);
-}
-// The server's location, remembered across sessions like the desktop's.
-function paintFactPlace() {
+// Where the exit sits, remembered across sessions like the desktop's. The IP
+// beside it is the address the world sees; this is the city it comes from.
+// The exit line: the address the world sees, and where it sits. Both only
+// mean something while the tunnel is up, so at rest the line says one dash
+// instead of a dash next to a stranger's city.
+function paintExitLine() {
+  const ip = $("home-ip");
+  if (ip) ip.textContent = vpnOn ? maskHost(serverIp || serverHost) : "-";
   let place = "";
   try { place = localStorage.getItem("qc-srv-place") || ""; } catch (e) {}
+  const show = !!vpnOn && !!place;
   const el = $("fact-place");
-  if (el) el.textContent = place || "-";
-  const chip = $("ah-place-txt");
-  if (chip) chip.textContent = place || "-";
+  if (el) {
+    el.textContent = place;
+    el.hidden = !show;
+  }
+  const sep = $("exit-sep");
+  if (sep) sep.hidden = !show;
 }
 
 let busyWatch = 0;
@@ -472,16 +476,15 @@ function setBusy(b) {
           busy = false;
           for (const id of ["btn-connect"]) $(id).disabled = false;
           paintHero();
-          paintPresets();
+          paintRoute();
           bar(false, t("noReply"));
         }
       }, 20000);
     } catch (e) {}
   }
-  // The package buttons mirror the busy state too: without this they stay
-  // disabled after any work that runs through refresh() (the load probe did
-  // exactly that, and taps on them went nowhere).
-  paintPresets();
+  // The route line follows the same flags, so a tap that never lands cannot
+  // leave it reading stale.
+  paintRoute();
 }
 
 function selectedSni() {
@@ -510,11 +513,9 @@ function fillSniSelect() {
   sel.append(custom);
   sel.value = DEFAULT_SNI[kind];
   $("card-sni").hidden = true;
-  updateSniBtn();
 }
 $("card-sni-select").onchange = () => {
   $("card-sni").hidden = $("card-sni-select").value !== "__custom";
-  updateSniBtn();
   if (!$("card-sni").hidden) $("card-sni").focus();
 };
 
@@ -530,18 +531,13 @@ async function refresh() {
   paintHero();
   cardsCache = st.cards;
   fillTunnelCards(st.cards);
-  paintPresets();
-  paintDomain();
+  paintRoute();
   // Slow DNS last: the list is already painted, the IP fills in after.
   if (serverHost && /[a-zA-Z]/.test(serverHost)) {
     try { serverIp = await call("resolve_host", { host: serverHost }); } catch (e) { serverIp = ""; }
     paintHero();
   }
 }
-
-document.querySelectorAll("#presets .preset").forEach((b) => {
-  b.onclick = () => pickPreset(b.dataset.kind);
-});
 
 // Probe + diagnostics run silently now: no user-facing server tools.
 async function doProbe(owned) {
@@ -569,8 +565,6 @@ function fillTunnelCards(cards) {
     // Empty state must never keep showing a removed card's name.
     localStorage.removeItem("qc-tunnel-card");
     vpnCardName = "";
-    paintActiveCard();
-    updateCardBtn();
     paintHero();
     return;
   }
@@ -585,33 +579,11 @@ function fillTunnelCards(cards) {
   else { sel.selectedIndex = 0; localStorage.setItem("qc-tunnel-card", sel.value); }
   vpnCardName = sel.options[sel.selectedIndex]
     ? sel.options[sel.selectedIndex].textContent : "";
-  paintActiveCard();
-  updateCardBtn();
   paintHero();
 }
 // Transport: vless (standard) / hy2 (game) / wg (wireguard). Persisted, sent on connect.
 let transport = localStorage.getItem("qc-transport") || "vless";
 if (!["vless", "hy2", "wg"].includes(transport)) transport = "vless";
-function paintTransport() {
-  document.querySelectorAll("#transport-seg button").forEach((x) =>
-    x.classList.toggle("on", x.dataset.transport === transport));
-  const note = $("transport-note");
-  // One line always: the quota warning folds into the note so Home never grows.
-  if (note) {
-    note.textContent = t(transport === "hy2" ? "hyWarnT" : transport === "wg" ? "wgWarnT" : "trNoteVless");
-    note.classList.toggle("warn-note", transport !== "vless");
-  }
-}
-document.querySelectorAll("#transport-seg button").forEach((b) => {
-  b.onclick = () => {
-    transport = b.dataset.transport;
-    localStorage.setItem("qc-transport", transport);
-    paintTransport();
-    if (transport === "wg") bar(false, t("wgWarnT"));
-    else if (transport === "hy2") bar(false, t("hyWarnT"));
-    else if (vpnOn) bar(true, t("appsPicked"));
-  };
-});
 // Per-app VPN: mode + picked packages, persisted locally, sent on connect.
 let appsMode = localStorage.getItem("qc-apps-mode") || "all";
 let appsPicked = [];
@@ -699,7 +671,7 @@ function renderAppsList(filter) {
   if (!items.length) {
     const p = document.createElement("p");
     p.className = "empty";
-    p.textContent = appsCache.length ? t("appsEmpty") : t("appsLoading");
+    p.textContent = appsLoaded ? t("appsEmpty") : t("appsLoading");
     list.append(p);
     return;
   }
@@ -724,6 +696,7 @@ function renderAppsList(filter) {
     list.append(row);
   }
 }
+let appsLoaded = false;
 async function loadApps() {
   try {
     const raw = await call("tunnel_apps");
@@ -731,6 +704,7 @@ async function loadApps() {
     appsCache = arr.filter((a) => a && a.pkg).sort((x, y) =>
       String(x.label || x.pkg).localeCompare(String(y.label || y.pkg)));
   } catch (e) { appsCache = []; }
+  appsLoaded = true;
   // Drop picked packages that no longer exist.
   const have = new Set(appsCache.map((a) => a.pkg));
   appsPicked = appsPicked.filter((p) => have.has(p));
@@ -845,7 +819,7 @@ async function autoUpdateCheck() {
 function updateBanner(latest) {
   const el = $("infobar");
   el.hidden = false;
-  el.className = "bar updb";
+  el.className = "toast updb";
   $("infobar-icon").textContent = "\u2191";
   $("infobar-text").textContent = t("updOut").replace("{v}", latest);
   clearTimeout(barTimer);
@@ -854,19 +828,10 @@ function updateBanner(latest) {
     $("btn-get-upd").click();
   };
 }
-function paintActiveCard() {
-  const uuid = $("tunnel-card").value;
-  document.querySelectorAll("#cards .cardrow").forEach((row) => {
-    const on = !!uuid && row.dataset.uuid === uuid;
-    row.classList.toggle("active", on);
-    row.querySelector(".use").textContent = on ? t("inUse") : "";
-  });
-}
 $("tunnel-card").onchange = () => {
   localStorage.setItem("qc-tunnel-card", $("tunnel-card").value);
   vpnCardName = $("tunnel-card").options[$("tunnel-card").selectedIndex].textContent;
-  paintActiveCard();
-  updateCardBtn();
+  paintRoute();
   paintHero();
 };
 
@@ -877,19 +842,7 @@ function currentTab() {
   const v = document.querySelector(".view.on");
   return v ? v.id.replace("view-", "") : "connect";
 }
-function updateCardBtn() {
-  const sel = $("tunnel-card");
-  const opt = sel.options[sel.selectedIndex];
-  $("tunnel-card-name").textContent = (opt && opt.value) ? opt.textContent : t("noCardsOpt");
-}
-function updateSniBtn() {
-  // The domain picker is a sheet now; the old inline button is gone.
-  const el = $("card-sni-name");
-  if (!el) return;
-  const sel = $("card-sni-select");
-  const opt = sel.options[sel.selectedIndex];
-  el.textContent = opt ? opt.textContent : "-";
-}
+
 function optRow(main, sub, selected, onclick) {
   const b = document.createElement("button");
   b.className = "opt";
@@ -951,29 +904,62 @@ function openSheet(which) {
         spPaintTarget();
       }));
     }
-    $("sheet-search").hidden = true;
-    const spb = $("sheet-primary");
-    if (spb) spb.hidden = true;
-    // Un-hide before the class lands: a hidden dialog never opens, which is
-    // what made the server picker look dead on the phone.
-    $("sheet-back").hidden = false;
-    $("sheet").hidden = false;
-    requestAnimationFrame(() => requestAnimationFrame(() => $("sheet").classList.add("open")));
-    try { history.pushState({ qcSheet: true }, ""); } catch (e) {}
+    showSheet(false);
     return;
   }
-  $("sheet-title").textContent = t("cardForVpn");
+  buildConnectionSheet(list);
+  showSheet(true);
+}
+
+// The one sheet that holds the connection: package, then the server domain for
+// that package, then the transport. Three controls, one place, one tap from the
+// route line on Home.
+function groupLabel(text) {
+  const d = document.createElement("div");
+  d.className = "grp";
+  d.textContent = text;
+  return d;
+}
+function buildConnectionSheet(list) {
+  $("sheet-title").textContent = t("connTitle");
+  list.append(groupLabel(t("packageLbl")));
   const kindNow = activeKind();
+  for (const k of ["Gamerz", "Streamerz"]) {
+    list.append(optRow(kindName(k), DEFAULT_SNI[k], kindNow === k, () => {
+      closeSheet();
+      void pickPreset(k);
+    }));
+  }
+  list.append(groupLabel(t("cardForVpn")));
   const cur = (activeCard() && activeCard().sni) || DEFAULT_SNI[kindNow];
   SNIS[kindNow].forEach(([label, domain]) => {
-    list.append(optRow(label + " ·" + domain, "", domain === cur, () => { closeSheet(); void applyDomain(domain); }));
+    const row = optRow(label, domain, domain === cur, () => { closeSheet(); void applyDomain(domain); });
+    row.dataset.filter = "1";
+    list.append(row);
   });
-  list.append(optRow(t("customDomainOpt"), "", false, () => { closeSheet(); openCustomDomain(); }));
-  $("tunnel-card-btn").setAttribute("aria-expanded", "true");
-  list.scrollTop = 0;
+  const custom = optRow(t("customDomainOpt"), "", false, () => { closeSheet(); openCustomDomain(); });
+  custom.dataset.filter = "1";
+  list.append(custom);
+  list.append(groupLabel(t("transportLbl")));
+  for (const id of ["vless", "hy2", "wg"]) {
+    const label = id === "hy2" ? "Hysteria2" : id === "wg" ? t("trWg") : t("trStandard");
+    const note = t(id === "hy2" ? "hyWarnT" : id === "wg" ? "wgWarnT" : "trNoteVless");
+    list.append(optRow(label, note, transport === id, () => { closeSheet(); pickTransport(id); }));
+  }
+}
+
+// Un-hide before the class lands: a hidden dialog never opens.
+function showSheet(withSearch) {
+  const wrap = $("sheet-search-wrap");
   const ss = $("sheet-search");
-  ss.hidden = false;
-  ss.value = "";
+  if (wrap) wrap.hidden = !withSearch;
+  if (ss) {
+    ss.hidden = !withSearch;
+    ss.value = "";
+    ss.setAttribute("placeholder", t("sheetSearch"));
+  }
+  const btn = $("conn-btn");
+  if (btn) btn.setAttribute("aria-expanded", "true");
   $("sheet-back").hidden = false;
   const sh = $("sheet");
   sh.hidden = false;
@@ -1009,48 +995,41 @@ function openCustomDomain() {
   inp.onkeydown = (e) => { if (e.key === "Enter") btn.click(); };
   wrap.append(inp, btn);
   list.append(wrap);
-  $("tunnel-card-btn").setAttribute("aria-expanded", "true");
-  const ss = $("sheet-search");
-  ss.hidden = true;
-  ss.value = "";
-  $("sheet-back").hidden = false;
-  const sh = $("sheet");
-  sh.hidden = false;
-  requestAnimationFrame(() => requestAnimationFrame(() => sh.classList.add("open")));
-  setTimeout(() => inp.focus(), 220);
-  try { history.pushState({ tab: currentTab(), sheet: 1 }, ""); } catch (e) {}
+  showSheet(false);
+  setTimeout(() => inp.focus(), 240);
 }
 function closeSheet() {
   sheetFor = null;
   $("sheet-search").hidden = true;
   $("sheet-search").value = "";
-  $("tunnel-card-btn").setAttribute("aria-expanded", "false");
+  const sw = $("sheet-search-wrap");
+  if (sw) sw.hidden = true;
+  const cb = $("conn-btn");
+  if (cb) cb.setAttribute("aria-expanded", "false");
   const sh = $("sheet");
   sh.classList.remove("open");
   sheetHideT = setTimeout(() => { sh.hidden = true; $("sheet-back").hidden = true; }, 200);
 }
-$("tunnel-card-btn").onclick = () => openSheet("sni");
+const connBtn = $("conn-btn");
+if (connBtn) {
+  connBtn.onclick = () => openSheet("connection");
+  connBtn.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openSheet("connection"); } };
+}
 $("sheet-back").onclick = closeSheet;
+$("sheet-close").onclick = closeSheet;
+// The search narrows the domain list only: the package and transport rows are
+// always visible, so the sheet cannot lose the choice that is already made.
 $("sheet-search").oninput = (e) => {
   const q = e.target.value.trim().toLowerCase();
   document.querySelectorAll("#sheet-list > *").forEach((el) => {
     if (el.classList.contains("grp")) { el.style.display = q ? "none" : ""; return; }
+    if (!el.dataset.filter) return;
     el.style.display = (!q || el.textContent.toLowerCase().includes(q)) ? "" : "none";
   });
 };
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && sheetFor) closeSheet(); });
-// Settings rows: routing opens the apps view, which is a full screen now.
+// Settings row: routing is the Apps tab now, opened in place.
 $("row-routing").onclick = () => goTab("apps");
-const rowHomeRouting = $("row-home-routing");
-if (rowHomeRouting) {
-  rowHomeRouting.onclick = () => goTab("apps");
-  rowHomeRouting.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); goTab("apps"); } };
-}
-const tunnelCardBtn = $("tunnel-card-btn");
-if (tunnelCardBtn) tunnelCardBtn.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openSheet("sni"); } };
-// Back goes where the view was opened from: the routing row lives on Home
-// and in Settings, and the Android back gesture already behaves this way.
-$("btn-apps-back").onclick = () => goTab(tabHist.length > 1 ? tabHist[tabHist.length - 2] : "settings");
 
 
 async function pollTunnel() {
@@ -1161,9 +1140,6 @@ $("btn-connect").onclick = async () => {
 document.querySelectorAll("#lang-seg button").forEach((b) => {
   b.onclick = () => applyLang(b.dataset.lang);
 });
-// Tap the home net rows to see the full host (toast overlay, layout never grows).
-$("ah-place").onclick = () => { const row = $("tunnel-card-btn"); if (row) row.click(); };
-$("ip-row").onclick = () => { if (serverHost) bar(true, serverIp && serverIp !== serverHost ? serverIp + " ·" + serverHost : serverHost); };
 fillSniSelect();
 applyLang(lang);
 // Decorative icons stay out of the accessibility tree; state lives in text.
@@ -1207,8 +1183,7 @@ document.querySelectorAll("svg").forEach((s) => s.setAttribute("aria-hidden", "t
 const SP_HIST = "qc-speed-history";
 const SP_PING_PROBES = 8;
 const SP_PHASE_SECONDS = 9;
-const SP_NARROW = (() => { try { return matchMedia("(max-width:760px)").matches; } catch (e) { return false; } })();
-const SP_BARS = SP_NARROW ? 28 : 48;
+const SP_BARS = 48; // samples kept for the live reading
 const SP_SAMPLE_MS = 90;
 let spCtl = null;
 let spSamples = [];
@@ -1399,33 +1374,6 @@ function spNum(v, unit) {
 const spMeanAbsDelta = (xs) =>
   xs.length < 2 ? 0 : xs.slice(1).reduce((a, v, i) => a + Math.abs(v - xs[i]), 0) / (xs.length - 1);
 
-// One thin bar per sample, the run filling from the left. Idle the row is a
-// flat set of stubs on its hairline; during a run it is alive; when the run
-// ends it stays put as the fingerprint of that connection.
-function spPaintBars() {
-  const box = $("sp-bars");
-  if (!box) return;
-  while (box.childElementCount < SP_BARS) {
-    const b = document.createElement("span");
-    b.style.height = "2px";
-    box.append(b);
-  }
-  const tail = spSamples.slice(-SP_BARS);
-  const view = tail.length >= SP_BARS ? tail : tail.concat(new Array(SP_BARS - tail.length).fill(0));
-  const max = Math.max(1, spPeak, ...view);
-  const accent = spPhase === "upload" ? "var(--green)" : spPhase === "ping" ? "var(--amber)" : "var(--accent)";
-  if (box._accent !== accent) {
-    box._accent = accent;
-    for (let i = 0; i < SP_BARS; i++) box.children[i].style.background = accent;
-  }
-  for (let i = 0; i < SP_BARS; i++) {
-    const v = view[i] || 0;
-    const q = v / max;
-    const bar = box.children[i];
-    bar.style.height = v === 0 ? "2px" : Math.max(8, q * 100) + "%";
-    bar.style.opacity = v === 0 ? "0.28" : (spCtl && i === SP_BARS - 1) ? "1" : (0.55 + q * 0.4).toFixed(2);
-  }
-}
 function spPaintTiles() {
   const live = spSamples.length ? spSamples[spSamples.length - 1] : null;
   const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
@@ -1457,7 +1405,6 @@ function spPaintNow() {
       pk.textContent = t("peak") + " " + spNum(spPeak, u) + " " + t(u);
     }
   }
-  spPaintBars();
   spPaintTiles();
 }
 function spPush(v, force) {
@@ -1518,7 +1465,7 @@ function paintNet(n) {
   if (n && n.place) {
     try { localStorage.setItem("qc-srv-place", n.place); } catch (e) {}
   }
-  paintFactPlace();
+  paintExitLine();
 }
 // Same two resolvers the desktop falls back to, and only if the native one
 // came back empty (a rate limit on the exit address, usually).
@@ -1631,57 +1578,48 @@ function paintHistButton() {
   const sub = $("hist-sub");
   if (sub) sub.textContent = n ? n + " " + t("runs") : t("spNone");
 }
+// One run is one row: when and where, the download figure, and the rest of the
+// reading as one quiet line under it. No table, no chart.
 function histCard(r) {
-  const card = document.createElement("div");
-  card.className = "hist-card";
+  const row = document.createElement("div");
+  row.className = "hrow";
   const main = document.createElement("div");
-  main.className = "hc-main";
+  main.className = "h-main";
   const top = document.createElement("div");
-  top.className = "hc-top";
+  top.className = "h-top";
   const when = document.createElement("span");
-  when.className = "hc-time";
+  when.className = "h-time";
   const d = new Date(r.at || Date.now());
   when.textContent = d.toLocaleTimeString(lang === "ar" ? "ar-EG" : "en-GB", { hour: "2-digit", minute: "2-digit" });
   const tgt = document.createElement("span");
-  tgt.className = "hc-target";
+  tgt.className = "h-tgt";
   tgt.dir = "auto";
   tgt.textContent = r.target || t("targetServer");
   top.append(when, tgt);
-  const big = document.createElement("div");
-  big.className = "hc-big";
-  big.innerHTML = DOWN_SVG;
+  const fig = document.createElement("div");
+  fig.className = "h-fig";
   const dn = document.createElement("b");
   dn.textContent = histNum(r.down);
   const un = document.createElement("i");
   un.textContent = t("mbps");
-  big.append(dn, un);
-  const stats = document.createElement("div");
-  stats.className = "hc-stats";
-  const s1 = document.createElement("span");
-  const b1 = document.createElement("b");
-  b1.textContent = histNum(r.up);
-  s1.append("\u2191 ", b1, " " + t("mbps"));
-  const s2 = document.createElement("span");
-  const b2 = document.createElement("b");
-  b2.textContent = histNum(r.ping, true);
-  s2.append(t("pingTitle") + " ", b2, " " + t("ms"));
-  const s3 = document.createElement("span");
-  const b3 = document.createElement("b");
-  b3.textContent = histNum(r.jitter, true);
-  s3.append(t("jitter") + " ", b3, " " + t("ms"));
-  stats.append(s1, s2, s3);
-  main.append(top, big, stats);
+  fig.append(dn, un);
+  const sub = document.createElement("div");
+  sub.className = "h-sub";
+  sub.textContent = "\u2191 " + histNum(r.up) + " " + t("mbps")
+    + " \u00b7 " + t("pingTitle") + " " + histNum(r.ping, true) + " " + t("ms")
+    + " \u00b7 " + t("jitter") + " " + histNum(r.jitter, true) + " " + t("ms");
+  main.append(top, fig, sub);
   const del = document.createElement("button");
   del.type = "button";
-  del.className = "hc-del";
+  del.className = "h-del";
   del.setAttribute("aria-label", t("delete"));
   del.innerHTML = TRASH_SVG;
   del.onclick = () => armThen(del, () => {
     histSave(spLoad().filter((x) => x.at !== r.at));
     paintHistory();
   });
-  card.append(main, del);
-  return card;
+  row.append(main, del);
+  return row;
 }
 function paintHistory() {
   paintHistButton();
@@ -1930,7 +1868,7 @@ spPaintTarget();
 spPaintReadout();
 spPaintHistory();
 spPaintRunState();
-paintFactPlace();
+paintExitLine();
 
 // Repaint the screen whenever its tab comes up, and resolve the exit network
 // the first time it is opened (values may have changed while it was hidden).

@@ -6,257 +6,260 @@
 <meta name="theme-color" content="#08090a" />
 <title>QuotaVPN</title>
 <link rel="stylesheet" href="style.css" />
-<script src="demo-bridge.js?v=3"></script>
 <script src="app.js" defer></script>
+<script src="demo-bridge.js?v=3"></script>
 </head>
 <body>
 <main>
-  <section class="bar" id="infobar" aria-live="polite" hidden>
-    <span class="bar-icon" id="infobar-icon"></span>
-    <span class="bar-text" id="infobar-text"></span>
-    <button class="bar-x" id="infobar-x" aria-label="Dismiss">×</button>
+
+  <div class="toast" id="infobar" hidden>
+    <span class="toast-i" id="infobar-icon"></span>
+    <span class="toast-t" id="infobar-text"></span>
+    <button type="button" class="toast-x" id="infobar-x" data-i18n-aria="dismiss" aria-label="Dismiss">×</button>
+  </div>
+
+  <!-- Home: one stage. The state, the route it rides, and the one control. -->
+  <section class="view on" id="view-connect">
+    <header class="head">
+      <img class="mark" src="logo.png" alt="" />
+      <span class="wordmark">QuotaVPN</span>
+      <span class="ver" id="ah-ver">v0.4.0</span>
+    </header>
+
+    <div class="stage" id="hero">
+      <div class="stage-top">
+        <p class="state" id="hero-state">Not connected</p>
+        <button type="button" class="route" id="conn-btn" aria-haspopup="dialog" aria-expanded="false">
+          <span class="r-pkg" id="route-pkg">Gamerz</span>
+          <span class="r-sep" aria-hidden="true"></span>
+          <span class="r-dom" id="route-dom" dir="auto">ea.com</span>
+          <span class="r-sep" aria-hidden="true"></span>
+          <span class="r-tr" id="route-tr">Standard</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+        <p class="session" id="session-line" hidden>
+          <span class="s-time" id="sess-time">00:00</span>
+          <span class="s-sep" aria-hidden="true"></span>
+          <span class="s-v"><i aria-hidden="true">↓</i> <span id="sess-rx">0 B</span></span>
+          <span class="s-sep" aria-hidden="true"></span>
+          <span class="s-v"><i aria-hidden="true">↑</i> <span id="sess-tx">0 B</span></span>
+        </p>
+        <p class="note" id="hero-sub" hidden></p>
+      </div>
+
+      <div class="dial">
+        <button type="button" class="dial-btn" id="btn-connect" aria-label="Connect">
+          <svg class="dw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3.5v8"/><path d="M6.6 6.6a8 8 0 1 0 10.8 0"/></svg>
+        </button>
+        <span class="dial-cap" id="btn-label">Connect</span>
+      </div>
+
+      <div class="exit" id="exit-line">
+        <span class="exit-k" data-i18n="yourIp">Your IP</span>
+        <span class="exit-v"><b id="home-ip" dir="ltr">-</b><span class="exit-sep" id="exit-sep" aria-hidden="true" hidden>·</span><span class="exit-p" id="fact-place" dir="auto"></span></span>
+      </div>
+    </div>
   </section>
 
-  <section class="view on" id="view-connect">
-    <header class="app-head">
-      <img class="ah-logo" src="logo.png" alt="" />
-      <span class="ah-txt"><b>QuotaVPN</b><i id="ah-ver">v0.4.15</i></span>
-      <button type="button" class="ah-chip" id="ah-place" aria-haspopup="listbox">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
-        <span id="ah-place-txt">-</span>
-        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+  <!-- Speed: one reading, four controls, one destination. -->
+  <section class="view" id="view-speed">
+    <header class="head">
+      <h1 class="title" data-i18n="tabSpeed">Speed</h1>
+      <p class="sub" id="sp-sub"></p>
+      <button type="button" class="icon-btn" id="sp-refresh" data-i18n-aria="refresh" aria-label="Refresh">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.63-6.36"/><path d="M21 3v6h-6"/></svg>
       </button>
     </header>
-    <div class="hero ready" id="hero">
-      <button class="hero-btn" id="btn-connect" aria-label="Toggle VPN">
-        <svg class="power" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.34 6.34a8 8 0 1 0 11.32 0"/></svg>
+
+    <div class="body sp-body">
+      <div class="read">
+        <div class="read-num"><b id="sp-value">0.0</b><span id="sp-unit">Mbps</span></div>
+        <p class="read-cap" id="sp-cap">idle</p>
+        <p class="read-peak" id="sp-peak" hidden></p>
+      </div>
+
+      <button type="button" class="dest" id="sp-server-panel" aria-haspopup="dialog">
+        <span class="k" data-i18n="targetServer">Server</span>
+        <span class="v"><b id="sp-target">-</b><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
+        <span class="s" id="sp-host" dir="ltr"></span>
+        <span class="s" id="sp-note"></span>
       </button>
-      <div class="btn-action" id="btn-label">Connect</div>
-      <div class="hero-line" id="hero-line">
-        <span class="hl-dot" id="hl-dot"></span>
-        <span id="hl-txt">Not connected</span>
-        <span class="session" id="session-line" hidden>
-          <span id="sess-time">00:00</span>
-          <span class="sep"></span>
-          <span>↓ <span id="sess-rx">0 B</span></span>
-          <span class="sep"></span>
-          <span>↑ <span id="sess-tx">0 B</span></span>
-        </span>
-      </div>
-      <div class="hero-sub" id="hero-sub">Pick a card and connect.</div>
-    </div>
 
-    <div class="sec facts-panel" id="conn-facts">
-      <div class="fact">
-        <span class="fact-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01"/><path d="M7 16.5h.01"/></svg></span>
-        <span class="fact-txt"><i data-i18n="srvLocation">Server location</i><b id="fact-place" dir="auto">-</b></span>
+      <div class="dest flat">
+        <span class="k" data-i18n="yourConn">Your connection</span>
+        <b class="v" id="sp-isp">-</b>
+        <span class="s" id="sp-ip" dir="ltr"></span>
+        <span class="s" id="sp-place"></span>
       </div>
-      <div class="fact" id="ip-row" role="button" tabindex="0">
-        <span class="fact-ico" aria-hidden="true"><b class="ip-mark">IP</b></span>
-        <span class="fact-txt"><i data-i18n="yourIp">Your IP</i><b id="home-ip" dir="ltr">-</b></span>
-      </div>
-      <div class="fact">
-        <span class="fact-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19v-5"/><path d="M10 19V9"/><path d="M15 19v-7"/><path d="M20 19V5"/></svg></span>
-        <span class="fact-txt"><i data-i18n="statusLbl">Status</i><b class="fact-status"><span class="fact-dot" id="fact-dot"></span><span id="fact-status">Not connected</span></b></span>
-      </div>
-    </div>
 
-    <div class="card" id="setup-card">
-      <h2 data-i18n="setupTitle">Connection setup</h2>
-      <p class="setup-sub" data-i18n="setupSub">Choose a preset or configure your connection.</p>
-      <div class="presets" id="presets">
-        <button type="button" class="preset" data-kind="Gamerz" aria-pressed="false">
-          <span class="preset-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 11h4M8 9v4"/><path d="M15.5 12h.01M17.5 10h.01"/><rect x="2" y="6" width="20" height="12" rx="4"/></svg></span>
-          <span class="preset-txt"><span class="preset-name"><span data-i18n="kindGamerz">Gamerz</span></span><span class="preset-sni" dir="ltr"></span></span>
-          <span class="preset-radio" aria-hidden="true"><span class="preset-dot"></span></span>
-        </button>
-        <button type="button" class="preset" data-kind="Streamerz" aria-pressed="false">
-          <span class="preset-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M8 3l4 4 4-4"/></svg></span>
-          <span class="preset-txt"><span class="preset-name"><span data-i18n="kindStreamerz">Streamerz</span></span><span class="preset-sni" dir="ltr"></span></span>
-          <span class="preset-radio" aria-hidden="true"><span class="preset-dot"></span></span>
-        </button>
+      <div class="cells">
+        <button type="button" class="sstat" data-which="ping"><i data-i18n="pingTitle">Ping</i><b id="sp-ping">-</b><span data-i18n="ms">ms</span></button>
+        <button type="button" class="sstat" data-which="ping2"><i data-i18n="jitter">Jitter</i><b id="sp-jit">-</b><span data-i18n="ms">ms</span></button>
+        <button type="button" class="sstat" data-which="down"><i data-i18n="chDown">Down</i><b id="sp-down">-</b><span data-i18n="mbps">Mbps</span></button>
+        <button type="button" class="sstat" data-which="up"><i data-i18n="chUp">Up</i><b id="sp-up">-</b><span data-i18n="mbps">Mbps</span></button>
       </div>
-      <div class="homenet" id="home-rows">
-        <div class="homenet-row" id="tunnel-card-btn" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
-          <span class="row-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01"/><path d="M7 16.5h.01"/></svg></span>
-          <span class="homenet-label" data-i18n="cardForVpn">Server</span><b id="tunnel-card-name" dir="ltr">-</b>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-        </div>
-        <div class="homenet-row" id="row-home-routing" role="button" tabindex="0">
-          <span class="row-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.6"/><rect x="14" y="3" width="7" height="7" rx="1.6"/><rect x="3" y="14" width="7" height="7" rx="1.6"/><rect x="14" y="14" width="7" height="7" rx="1.6"/></svg></span>
-          <span class="homenet-label" data-i18n="routing">App routing</span><b id="home-routing-sub" dir="ltr"></b>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-        </div>
+
+      <p class="hint" id="sp-hint"></p>
+
+      <div class="run">
+        <button type="button" class="primary" id="sp-run"><span id="sp-run-label" data-i18n="startTest">Start test</span></button>
+        <button type="button" class="second" id="sp-stop" hidden data-i18n="stop">Stop</button>
       </div>
-      <span class="ct-head"><label data-i18n="transport" id="transport-label">Connection type</label><span class="info-i" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.5h.01"/></svg></span></span>
-      <div class="seg" id="transport-seg"><button data-transport="vless" class="on" data-i18n="trStandard">Standard</button><button data-transport="hy2" data-i18n="trGame">Hysteria2</button><button data-transport="wg" data-i18n="trWg">WireGuard</button></div>
-      <select id="tunnel-card" hidden></select>
-      <select id="card-sni-select" hidden></select>
-      <input id="card-sni" hidden autocomplete="off" />
+
+      <button type="button" class="rowlink" id="btn-speed-history">
+        <span class="rl-t" data-i18n="history">History</span>
+        <span class="rl-s" id="hist-sub">No runs yet.</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
     </div>
   </section>
 
-  <section class="view" id="view-speed">
-    <div class="sec speed-sec">
-      <div class="speed-top">
-        <div class="min0">
-          <div class="speed-title" data-i18n="tabSpeed">Speed</div>
-          <div class="speed-sub" id="sp-sub">-</div>
-        </div>
-        <button type="button" class="iconbtn" id="sp-refresh" aria-label="Refresh">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.63-6.36"/><path d="M21 3v6h-6"/></svg>
-        </button>
-      </div>
-      <div class="speed-net">
-        <div class="speed-netcol">
-          
-          <div class="speed-lab" data-i18n="yourConn">Your connection</div>
-          <div class="speed-b" id="sp-isp">-</div>
-          <div class="speed-s" id="sp-ip" dir="ltr"></div>
-          <div class="speed-s3" id="sp-place"></div>
-        </div>
-        <button type="button" class="speed-netcol tap" id="sp-server-panel" aria-haspopup="dialog">
-          
-          <span class="speed-lab"><span data-i18n="targetServer">Server</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
-          <span class="speed-b" id="sp-target">-</span>
-          <span class="speed-s" id="sp-host" dir="ltr"></span>
-          <span class="speed-s3" id="sp-note" data-i18n="srvOwnNote">Through your server</span>
-        </button>
-      </div>
-      <div class="speed-read">
-        <div class="min0">
-          <div class="speed-big"><b id="sp-value">0.0</b><span id="sp-unit">Mbps</span></div>
-          <div class="speed-cap" id="sp-cap">idle</div>
-        </div>
-        <div class="speed-peak" id="sp-peak" hidden></div>
-      </div>
-      <div class="speed-bars" id="sp-bars" aria-hidden="true"></div>
-      <div class="speed-hint2" id="sp-hint"></div>
-      <div class="speed-stats">
-        <button type="button" class="sstat" data-which="ping"><span data-i18n="pingTitle">Ping</span><b id="sp-ping">-</b><i data-i18n="ms">ms</i></button>
-        <button type="button" class="sstat" data-which="ping2"><span data-i18n="jitter">Jitter</span><b id="sp-jit">-</b><i data-i18n="ms">ms</i></button>
-        <button type="button" class="sstat" data-which="down"><span data-i18n="chDown">Down</span><b id="sp-down">-</b><i data-i18n="mbps">Mbps</i></button>
-        <button type="button" class="sstat" data-which="up"><span data-i18n="chUp">Up</span><b id="sp-up">-</b><i data-i18n="mbps">Mbps</i></button>
-      </div>
-      <div class="speed-runrow">
-        <button type="button" id="sp-run"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span id="sp-run-label" data-i18n="startTest">Start test</span></button>
-        <button type="button" id="sp-stop" hidden data-i18n="stop">Stop</button>
-      </div>
-    </div>
-    <button type="button" class="sechistory" id="btn-speed-history">
-      <span class="sh-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5l3.2 1.9"/></svg></span>
-      <span class="sh-txt"><b data-i18n="history">History</b><i id="hist-sub">No runs yet.</i></span>
-      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-    </button>
-  </section>
-
+  <!-- Runs: a list, one number per row. -->
   <section class="view" id="view-history">
-    <div class="sec hist-sec">
-      <button class="backrow" id="btn-hist-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><span data-i18n="back">Back</span></button>
-      <div class="hist-head">
-        <h2 data-i18n="history">History</h2>
-        <button type="button" class="hist-clear" id="btn-hist-clear" data-i18n="clearAll">Clear all</button>
-      </div>
-      <div class="hist-best" id="hist-best">
-        <div class="hb"><span data-i18n="bestDown">Best down</span><b id="hb-down">-</b><i data-i18n="mbps">Mbps</i></div>
-        <div class="hb"><span data-i18n="bestUp">Best up</span><b id="hb-up">-</b><i data-i18n="mbps">Mbps</i></div>
-        <div class="hb"><span data-i18n="bestPing">Best ping</span><b id="hb-ping">-</b><i data-i18n="ms">ms</i></div>
+    <header class="head">
+      <button type="button" class="icon-btn" id="btn-hist-back" data-i18n-aria="back" aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <h1 class="title" data-i18n="history">History</h1>
+      <button type="button" class="text-btn" id="btn-hist-clear" data-i18n="clearAll">Clear all</button>
+    </header>
+
+    <div class="body">
+      <div class="best" id="hist-best">
+        <div class="b"><span data-i18n="bestDown">Best down</span><b id="hb-down">-</b><i data-i18n="mbps">Mbps</i></div>
+        <div class="b"><span data-i18n="bestUp">Best up</span><b id="hb-up">-</b><i data-i18n="mbps">Mbps</i></div>
+        <div class="b"><span data-i18n="bestPing">Best ping</span><b id="hb-ping">-</b><i data-i18n="ms">ms</i></div>
       </div>
       <div class="hist-list" id="hist-list"></div>
     </div>
   </section>
 
+  <!-- Apps: a first class tab now, not a detour through Settings. -->
   <section class="view" id="view-apps">
-    <div class="sec apps-sec">
-      <button class="backrow" id="btn-apps-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><span data-i18n="back">Back</span></button>
-      <h2 data-i18n="vpnFor">VPN for</h2>
+    <header class="head">
+      <h1 class="title" data-i18n="tabApps">Apps</h1>
+    </header>
+
+    <div class="body apps-body">
       <div class="seg" id="apps-seg">
-        <button data-appsmode="all" class="on" data-i18n="appsAll">All apps</button>
-        <button data-appsmode="allow" data-i18n="appsOnly">Only these</button>
-        <button data-appsmode="block" data-i18n="appsExcept">All but these</button>
+        <button type="button" data-appsmode="all" class="on" data-i18n="appsAll">All apps</button>
+        <button type="button" data-appsmode="allow" data-i18n="appsOnly">Only these</button>
+        <button type="button" data-appsmode="block" data-i18n="appsExcept">All but these</button>
       </div>
-      <p class="appsstatus" id="apps-status"></p>
-      <div class="searchwrap apps"><span class="sw-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span><input id="apps-search" data-i18n-ph="appsSearch" placeholder="Search apps…" autocomplete="off" /></div>
+      <p class="apps-line" id="apps-status"></p>
+      <div class="search">
+        <svg class="s-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="apps-search" data-i18n-ph="appsSearch" placeholder="Search apps" autocomplete="off" />
+      </div>
       <div id="apps-list" class="apps-list"></div>
     </div>
   </section>
 
+  <!-- Settings: one list of rows, grouped by what they change. -->
   <section class="view" id="view-settings">
-    <div class="set-head">
-      <h1 data-i18n="tabSettings">Settings</h1>
-      <p data-i18n="settingsSub">Customize your QuotaVPN experience.</p>
-    </div>
+    <header class="head">
+      <h1 class="title" data-i18n="tabSettings">Settings</h1>
+    </header>
 
-    <button class="sec setting" id="row-routing">
-      <span class="set-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9"/><path d="M17 6h3"/><path d="M4 12h3"/><path d="M11 12h9"/><path d="M4 18h7"/><path d="M15 18h5"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="13" cy="18" r="2"/></svg></span>
-      <span class="set-txt"><b data-i18n="routing">App routing</b><i id="routing-sub"></i></span>
-      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-    </button>
+    <div class="body set-body">
+      <section class="group">
+        <div class="row">
+          <span class="row-k">
+            <b data-i18n="language">Language</b>
+            <i data-i18n="languageBody">Choose your preferred language.</i>
+          </span>
+          <div class="seg small" id="lang-seg"><button type="button" data-lang="en" class="on">EN</button><button type="button" data-lang="ar">عربي</button></div>
+        </div>
+      </section>
 
-    <div class="sec setting">
-      <div class="set-row">
-        <span class="set-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.6 3.8 5.6 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg></span>
-        <span class="set-txt"><b data-i18n="language">Language</b><i data-i18n="languageBody">Choose your preferred language.</i></span>
-        <div class="seg langseg" id="lang-seg"><button data-lang="en" class="on">EN</button><button data-lang="ar">عربي</button></div>
-      </div>
-    </div>
+      <section class="group">
+        <button type="button" class="row tap" id="row-routing">
+          <span class="row-k">
+            <b data-i18n="routing">App routing</b>
+            <i id="routing-sub"></i>
+          </span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+        <div class="row">
+          <span class="row-k">
+            <b data-i18n="ksTitle">Kill switch</b>
+            <i data-i18n="ksHint">Turn on Always-on VPN in system settings so a drop never leaks</i>
+          </span>
+          <button type="button" class="chip" id="btn-vpn-settings" data-i18n="openVpnSettings">Open</button>
+        </div>
+        <div class="row">
+          <span class="row-k">
+            <b data-i18n="bgTitle">Background running</b>
+            <i id="bg-hint" data-i18n="bgHint">Keep the VPN on when you swipe the app away</i>
+          </span>
+          <button type="button" class="chip" id="btn-bg" data-i18n="bgBtnAllow">Allow</button>
+        </div>
+      </section>
 
-    <div class="sec setting">
-      <div class="set-row">
-        <span class="set-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z"/><path d="M9.5 12l1.8 1.8L15 10"/></svg></span>
-        <span class="set-txt"><b data-i18n="ksTitle">Kill switch</b><i data-i18n="ksHint">Kill switch: turn on Always-on VPN in the system settings. If the VPN drops, internet stops instead of leaking.</i></span>
-        <button id="btn-vpn-settings" class="chip" data-i18n="openVpnSettings">Open</button>
-      </div>
-      <div class="set-row">
-        <span class="set-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 5.5h2"/><path d="M12 18.5h.01"/></svg></span>
-        <span class="set-txt"><b data-i18n="bgTitle">Background running</b><i id="bg-hint" data-i18n="bgHint">Keep the VPN on when you swipe the app away.</i></span>
-        <button id="btn-bg" class="chip" data-i18n="bgBtnAllow">Allow</button>
-      </div>
-    </div>
+      <section class="group">
+        <div class="row">
+          <span class="row-k">
+            <b data-i18n="updTitle">Updates</b>
+            <i id="upd-state" data-i18n="updIdle">Not checked yet</i>
+          </span>
+          <button type="button" class="chip" id="btn-check-upd" data-i18n="updCheck">Check</button>
+          <button type="button" class="chip brand" id="btn-get-upd" data-i18n="updGet" hidden>Install</button>
+        </div>
+      </section>
 
-    <div class="sec setting">
-      <div class="set-row">
-        <span class="set-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.63-6.36"/><path d="M21 3v6h-6"/></svg></span>
-        <span class="set-txt"><b data-i18n="updTitle">Updates</b><i id="upd-state" data-i18n="updIdle">Not checked yet.</i></span>
-        <button id="btn-check-upd" class="chip" data-i18n="updCheck">Check</button>
-        <button id="btn-get-upd" class="chip brand" data-i18n="updGet" hidden>Install</button>
-      </div>
-    </div>
-
-    <div class="sec setting about">
-      <div class="set-row">
-        <span class="set-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.5h.01"/></svg></span>
-        <span class="set-txt"><b data-i18n="aboutTitle">About</b><i data-i18n="aboutBody">The build you are running and the server it rides.</i></span>
-      </div>
-      <div class="srvrow"><span data-i18n="versionLbl">Version</span><b id="set-version" dir="ltr">-</b></div>
-      <div class="srvrow"><span data-i18n="cardForVpn">Server</span><b id="set-server" dir="ltr">-</b></div>
+      <section class="group">
+        <div class="row">
+          <span class="row-k">
+            <b data-i18n="aboutTitle">About</b>
+            <i data-i18n="aboutBody">The build you are running and the server it rides</i>
+          </span>
+        </div>
+        <div class="row flat"><span data-i18n="versionLbl">Version</span><b id="set-version" dir="ltr">-</b></div>
+        <div class="row flat"><span data-i18n="cardForVpn">Server</span><b id="set-server" dir="ltr">-</b></div>
+      </section>
     </div>
   </section>
 
 </main>
 
-
-<nav class="tabbar">
-  <button data-tab="connect" class="on">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+<nav class="tabbar" aria-label="Main">
+  <button type="button" data-tab="connect" class="on">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5L12 4l8 6.5"/><path d="M6.5 10v9h11v-9"/></svg>
     <span data-i18n="tabHome">Home</span>
   </button>
-  <button data-tab="speed">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14 16 10"/><path d="M3.3 19a10 10 0 1 1 17.4 0"/></svg>
+  <button type="button" data-tab="speed">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13.5l4-4.5"/><path d="M3.5 19a9.5 9.5 0 1 1 17 0"/></svg>
     <span data-i18n="tabSpeed">Speed</span>
   </button>
-  <button data-tab="settings">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h10M18 8h2M4 16h2M10 16h10"/><circle cx="16" cy="8" r="2"/><circle cx="8" cy="16" r="2"/></svg>
+  <button type="button" data-tab="apps">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/></svg>
+    <span data-i18n="tabApps">Apps</span>
+  </button>
+  <button type="button" data-tab="settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h9"/><path d="M17 8h3"/><path d="M4 16h4"/><path d="M12 16h8"/><circle cx="15" cy="8" r="2"/><circle cx="10" cy="16" r="2"/></svg>
     <span data-i18n="tabSettings">Settings</span>
   </button>
 </nav>
 
 <div class="sheet-back" id="sheet-back" hidden></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" hidden>
-  <div class="sheet-title" id="sheet-title"></div>
-  <div class="searchwrap"><span class="sw-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span><input id="sheet-search" data-i18n-ph="sheetSearch" placeholder="Search domains…" autocomplete="off" hidden /></div>
+  <div class="sheet-grip" aria-hidden="true"></div>
+  <div class="sheet-head">
+    <div class="sheet-title" id="sheet-title"></div>
+    <button type="button" class="icon-btn" id="sheet-close" data-i18n-aria="cancel" aria-label="Cancel">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="search sheet-search" id="sheet-search-wrap" hidden>
+    <svg class="s-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <input id="sheet-search" data-i18n-ph="sheetSearch" placeholder="Search domains" autocomplete="off" hidden />
+  </div>
   <div class="sheet-list" id="sheet-list" role="listbox"></div>
 </div>
+
+<select id="tunnel-card" hidden></select>
+<select id="card-sni-select" hidden></select>
+<input id="card-sni" hidden autocomplete="off" />
 
 </body>
 </html>
