@@ -49,8 +49,12 @@ jobs:
       - name: Build the app and its packages
         working-directory: desktop
         run: |
+          # The interface is already built above, and the config's
+          # beforeBuildCommand resolves against the frontend directory here,
+          # where "npm --prefix ui-next" doubles the path and fails. Clear it
+          # for this build only instead of changing what local builds do.
           npx --yes @tauri-apps/cli@2 build --bundles deb,appimage \
-            --config '{"bundle":{"createUpdaterArtifacts":false}}'
+            --config '{"bundle":{"createUpdaterArtifacts":false},"build":{"beforeBuildCommand":""}}'
 
       - name: Keep the artifacts
         uses: actions/upload-artifact@v4
