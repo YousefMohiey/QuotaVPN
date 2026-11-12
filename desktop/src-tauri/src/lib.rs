@@ -2884,6 +2884,53 @@ async fn network_snapshot(
 }
 
 #[cfg(windows)]
+/// One device routed through the tunnel with nothing installed on it.
+#[derive(serde::Serialize, Clone)]
+struct RoutedDevice {
+    ip: String,
+    mac: String,
+    gateway: String,
+    interface: String,
+}
+
+impl From<quotacards::lan_route::Intent> for RoutedDevice {
+    fn from(i: quotacards::lan_route::Intent) -> RoutedDevice {
+        RoutedDevice { ip: i.target_ip, mac: i.target_mac, gateway: i.gateway_ip, interface: i.interface }
+    }
+}
+
+/// Take one device over. Returns only once the claim frame is on the wire and forwarding
+/// is confirmed, so a success here means its traffic is coming to this machine now.
+#[tauri::command]
+async fn lan_route_device(ip: String, mac: String) -> Result<RoutedDevice, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let target: std::net::Ipv4Addr = ip.parse().map_err(|_| format!("not an address: {ip}"))?;
+        let adapter = quotacards::lan_route::claim(target, &mac)?;
+        Ok(RoutedDevice {
+            ip,
+            mac,
+            gateway: adapter.gateway.to_string(),
+            interface: adapter.if_index.to_string(),
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Hand it back to the router. Safe to call when nothing is routed.
+#[tauri::command]
+async fn lan_unroute_device() -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(|| quotacards::lan_route::release().map(|_| true))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+/// Which device is currently routed, if any, from the intention record.
+#[tauri::command]
+fn lan_routed_device() -> Option<RoutedDevice> {
+    quotacards::lan_route::read_intent().map(RoutedDevice::from)
+}
+
 fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync + 'static {
     tauri::generate_handler![
         setup_helper,
@@ -2935,6 +2982,9 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         kill_switch_state,
         kill_switch_set,
         kill_switch_release,
+        lan_route_device,
+        lan_unroute_device,
+        lan_routed_device,
         lan_devices,
         speed_cancel,
         speed_latency,
@@ -3238,6 +3288,12 @@ pub fn run() {
         }
         return;
     }
+    // A record on disk means a previous run owed a restore: a device may still believe
+    // this machine is its gateway, so unwind that before the UI can ask anything.
+    if let Some(msg) = quotacards::lan_route::recover() {
+        println!("lan_route: {msg}");
+    }
+
     tauri::Builder::default()
         // Single instance: a second launch brings the running app forward
         // instead of starting a twin. Must be the first plugin registered.
