@@ -77,7 +77,7 @@ if [ -x "$STRIP" ] && [ -n "$PYTHON_BIN" ]; then
     echo "PACKAGING FAILED: could not strip the native libraries safely" >&2
     exit 1
   }
-  "$PYTHON_BIN" "$ROOT/tools/apk-strip.py" "$(cygpath -w "$UNSIGNED")" x --verify-only || {
+  "$PYTHON_BIN" "$ROOT/tools/apk-strip.py" "$(cygpath -w "$UNSIGNED")" --verify-only || {
     echo "PACKAGING FAILED: the archive is not installable" >&2
     exit 1
   }

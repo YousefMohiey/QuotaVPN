@@ -18,6 +18,7 @@ Usage:
 
 Exit codes: 0 ok, 1 packaging is unsafe, 2 strip failed to remove symbols.
 """
+import hashlib
 import os
 import shutil
 import subprocess
@@ -50,16 +51,26 @@ def check_stored(path):
     return bad
 
 
+def digest(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 def has_symtab(path):
     with open(path, "rb") as f:
         return b".symtab\x00" in f.read()
 
 
 def main():
-    if len(sys.argv) < 3:
-        fail(1, "usage: apk-strip.py <apk> <llvm-strip> [--verify-only]")
-    apk, stripper = sys.argv[1], sys.argv[2]
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
     verify_only = "--verify-only" in sys.argv
+    if not args:
+        fail(1, "usage: apk-strip.py <apk> <llvm-strip> | apk-strip.py <apk> --verify-only")
+    apk = args[0]
+    stripper = args[1] if len(args) > 1 else None
 
     if not os.path.isfile(apk):
         fail(1, f"no such apk: {apk}")
@@ -71,6 +82,8 @@ def main():
         print("apk-strip: stored requirements hold")
         return
 
+    if not stripper:
+        fail(1, "no llvm-strip given; pass it as the second argument")
     if not os.path.isfile(stripper):
         fail(1, f"llvm-strip not found at {stripper}")
 
@@ -92,16 +105,23 @@ def main():
         saved = 0
         for name, path in staged.items():
             before = os.path.getsize(path)
-            res = subprocess.run([stripper, "--strip-unneeded", path],
-                                 capture_output=True, text=True)
-            after = os.path.getsize(path)
+            hash_before = digest(path)
+            try:
+                res = subprocess.run([stripper, "--strip-unneeded", path],
+                                     capture_output=True, text=True)
+            except OSError as e:
+                fail(2, f"could not run the stripper at {stripper}: {e}")
             if res.returncode != 0:
                 fail(2, f"llvm-strip failed on {name}: {res.stderr.strip()}")
+            after = os.path.getsize(path)
+            hash_after = digest(path)
             if after >= before and has_symtab(path):
                 fail(2, f"{name} still carries .symtab after stripping, so the step did nothing")
             saved += before - after
             print(f"apk-strip: {name}: {before} -> {after}")
-            if after != before:
+            # Content, not size: a strip that drops .symtab without changing the
+            # length still has to be written back, or the APK keeps the symbols.
+            if hash_after != hash_before:
                 with open(path, "rb") as f:
                     replacements[name] = f.read()
 
