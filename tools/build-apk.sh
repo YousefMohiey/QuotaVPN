@@ -31,6 +31,9 @@ if [ -z "${ANDROID_NDK_HOME:-}" ]; then
 fi
 export ANDROID_NDK_HOME
 export ANDROID_NDK_ROOT="$ANDROID_NDK_HOME"
+# One name, used below for the toolchain paths and for llvm-strip. The old script
+# referenced an unset $NDK, so the strip silently never ran.
+NDK="$ANDROID_NDK_HOME"
 
 # Any installed JDK, newest by name: the Android Gradle plugin wants 17 or newer.
 if [ -z "${JAVA_HOME:-}" ]; then
@@ -57,33 +60,29 @@ UNSIGNED="$ROOT/android/tauri-app/src-tauri/gen/android/app/build/outputs/apk/un
 
 # Strip symbol tables out of the native libraries before signing.
 #
-# Measured on this build, not assumed: libbox.so is already stripped (llvm-strip
-# changes nothing, 0 KiB), while libquotacards_tauri.so carries a full .symtab and
-# loses 5807 KiB. There is no debug info in either, so this is the whole of what
-# stripping can win: about 5.7 MB of a 101.6 MB package. The size is dominated by
-# the prebuilt engine, and only a reduced engine build moves that.
+# Measured on the built artifact: libbox.so is already stripped (llvm-strip changes
+# nothing), while libquotacards_tauri.so carries a full .symtab and loses 5.67 MB.
+# No debug info in either. Worth about 5.7 MB of a 101.6 MB package; the size is the
+# prebuilt engine and only a reduced engine build moves it.
+#
+# The archive is edited in place by tools/apk-strip.py, never rebuilt: a rebuild
+# deflates resources.arsc (rejected from targetSdk 30) and the libraries, which must
+# stay stored because extractNativeLibs=false loads them straight out of the APK.
+# The tool verifies both conditions and exits non-zero rather than writing a package
+# Android would refuse.
 STRIP="$NDK/toolchains/llvm/prebuilt/windows-x86_64/bin/llvm-strip.exe"
-if [ -x "$STRIP" ]; then
-  WORK="$ROOT/android/apk-work"
-  rm -rf "$WORK"; mkdir -p "$WORK"
-  unzip -q "$UNSIGNED" -d "$WORK"
-  total_before=0; total_after=0
-  for so in "$WORK"/lib/*/*.so; do
-    [ -f "$so" ] || continue
-    b=$(wc -c < "$so")
-    cp "$so" "$so.bak"
-    "$STRIP" --strip-unneeded "$so" 2>/dev/null || cp "$so.bak" "$so"
-    rm -f "$so.bak"
-    a=$(wc -c < "$so")
-    total_before=$((total_before + b)); total_after=$((total_after + a))
-    echo "   stripped $(basename "$so"): $b -> $a"
-  done
-  echo "   native libraries: $total_before -> $total_after bytes"
-  ( cd "$WORK" && zip -q -r -X "$ROOT/android/app-stripped.apk" . )
-  rm -rf "$WORK"
-  UNSIGNED="$ROOT/android/app-stripped.apk"
+PYTHON_BIN="$(command -v python || command -v python3 || true)"
+if [ -x "$STRIP" ] && [ -n "$PYTHON_BIN" ]; then
+  "$PYTHON_BIN" "$ROOT/tools/apk-strip.py" "$(cygpath -w "$UNSIGNED")" "$STRIP" || {
+    echo "PACKAGING FAILED: could not strip the native libraries safely" >&2
+    exit 1
+  }
+  "$PYTHON_BIN" "$ROOT/tools/apk-strip.py" "$(cygpath -w "$UNSIGNED")" x --verify-only || {
+    echo "PACKAGING FAILED: the archive is not installable" >&2
+    exit 1
+  }
 else
-  echo "   llvm-strip not found, packaging unstripped"
+  echo "   llvm-strip or python missing (strip=$STRIP python=$PYTHON_BIN), packaging unstripped" >&2
 fi
 
 # Native .exe tools cannot read MSYS /c/... paths; hand them Windows paths.
