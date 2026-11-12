@@ -71,8 +71,17 @@ fn main() {
         .status();
 
     if !matches!(built, Ok(s) if s.success()) || !lib.exists() {
-        println!("cargo:warning=dlltool could not build libwpcap.a; device routing will report itself unavailable");
-        return;
+        // Fail rather than warn. A silent "device routing is unavailable" is the same trap as
+        // the strip step: the build looks green and the feature is simply missing at runtime.
+        // The commonest cause is not Npcap at all: without a mingw64 bin on PATH, dlltool
+        // cannot find `as.exe` and dies with "CreateProcess", and the rustup self-contained
+        // folder ships gcc and ld but no assembler.
+        panic!(
+            "dlltool could not build libwpcap.a from native/wpcap.def.\
+             \n  Commonest cause: no mingw64 bin on PATH, so dlltool cannot find as.exe.\
+             \n  On the build host: prepend /c/Tools/mingw_extract/mingw64/bin (or the rustup-launcher \
+             mingw64\\bin) before running cargo."
+        );
     }
 
     println!("cargo:rustc-link-search=native={}", out.display());
