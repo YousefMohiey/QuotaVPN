@@ -375,11 +375,11 @@ pub fn claim(target_ip: Ipv4Addr, target_mac: &str) -> Result<Adapter, String> {
     // Captured before the first frame. If the table already says we are the gateway,
     // something else ran this feature and did not restore, and guessing is not an
     // option: a restore that names our own MAC restores nothing.
-    // Routing a device is only meaningful while the tunnel is up: forwarding sends its
-    // traffic into the tun, and with no tun there is nowhere for it to go. Saying so is
-    // better than a claim that silently does nothing.
-    if !crate::vpn::tun_adapter_present() {
-        return Err("connect the VPN first: there is no tunnel for this device's traffic to use".into());
+    // A live engine, not merely a tun adapter: `tun_adapter_present` is a name match, so an
+    // adapter left behind by a killed run satisfies it, which is exactly why
+    // `reset_tun_adapter` exists. `task_engine_pid` verifies a real sing-box.
+    if crate::vpn::task_engine_pid().is_none() {
+        return Err("connect the VPN first: the engine is not running".into());
     }
 
     let router_mac = crate::lan::mac_for(&ad.gateway.to_string())
@@ -401,13 +401,23 @@ pub fn claim(target_ip: Ipv4Addr, target_mac: &str) -> Result<Adapter, String> {
     // frames, start-up still knows a device may be pointing at us.
     remember_intent(&intent)?;
 
-    let sock = Socket::open_for(ad.ip)?;
-    let frame = arp_reply(&ad.mac, ad.gateway, target_mac, target_ip)
-        .ok_or_else(|| "could not build the claim frame".to_string())?;
-    sock.send(&frame)?;
-
-    set_forwarding(&ad.if_index.to_string(), true)?;
-    open_firewall(target_ip)?;
+    // Order matters and it is not cosmetic: the permit goes in first, because a device
+    // pointed at a machine with forwarding on and no rule is a device with no internet.
+    // Anything that fails from here unwinds through `release`, which sends the restore
+    // frame, turns forwarding off, removes the rule and forgets the record.
+    let armed = (|| -> Result<(), String> {
+        open_firewall(target_ip)?;
+        set_forwarding(&ad.if_index.to_string(), true)?;
+        let sock = Socket::open_for(ad.ip)?;
+        let frame = arp_reply(&ad.mac, ad.gateway, target_mac, target_ip)
+            .ok_or_else(|| "could not build the claim frame".to_string())?;
+        sock.send(&frame)?;
+        Ok(())
+    })();
+    if let Err(e) = armed {
+        let _ = release();
+        return Err(e);
+    }
 
     MAINTAINING.store(true, std::sync::atomic::Ordering::SeqCst);
     let mac = ad.mac.clone();
@@ -440,6 +450,31 @@ fn rule_name(target_ip: Ipv4Addr) -> String {
 /// Let the device's traffic be forwarded. Enabling IPv4 forwarding is not enough on
 /// Windows: the filtering platform drops forwarded packets unless a rule permits them,
 /// which is why the claim alone moved nothing.
+/// Is the permit really there, and does it say what we think?
+///
+/// Trusting the exit code of `netsh add` is the same mistake the kill switch made: the
+/// command can succeed and the rule not be what was asked for. `block_traffic` calls
+/// `traffic_blocked()` right after its add for the same reason.
+fn firewall_present(target_ip: Ipv4Addr) -> Result<bool, String> {
+    let out = crate::lan::hidden("netsh")
+        .args([
+            "advfirewall",
+            "firewall",
+            "show",
+            "rule",
+            &format!("name={}", rule_name(target_ip)),
+        ])
+        .output()
+        .map_err(|e| e.to_string())?;
+    let text = String::from_utf8_lossy(&out.stdout).to_lowercase();
+    if text.contains("no rules match") {
+        return Ok(false);
+    }
+    Ok(text.contains("action:")
+        && text.contains("allow")
+        && (text.contains(&format!("{target_ip}/32")) || text.contains(&target_ip.to_string())))
+}
+
 fn open_firewall(target_ip: Ipv4Addr) -> Result<(), String> {
     let name = rule_name(target_ip);
     let _ = close_firewall(target_ip); // idempotent: a stale rule would stack up otherwise
@@ -463,6 +498,9 @@ fn open_firewall(target_ip: Ipv4Addr) -> Result<(), String> {
             String::from_utf8_lossy(&out.stderr).trim()
         ));
     }
+    if !firewall_present(target_ip)? {
+        return Err("the firewall rule was accepted but is not there, so the device would be cut off".into());
+    }
     Ok(())
 }
 
@@ -477,8 +515,14 @@ fn close_firewall(target_ip: Ipv4Addr) -> Result<(), String> {
         ])
         .output()
         .map_err(|e| e.to_string())?;
-    // A missing rule is not an error: the first call always has one to delete.
+    // A missing rule is not an error: the first call has none to delete. A rule that
+    // survives its own deletion is: this is an inbound allow on every profile.
     let _ = out;
+    if firewall_present(target_ip)? {
+        return Err(format!(
+            "the firewall rule for {target_ip} survived its deletion"
+        ));
+    }
     Ok(())
 }
 
@@ -710,8 +754,8 @@ mod tests {
             eprintln!("skipped: set LAN_ROUTE_TEST_TARGET and LAN_ROUTE_TEST_MAC");
             return;
         };
-        if !crate::vpn::tun_adapter_present() {
-            eprintln!("skipped: connect the tunnel first, there is nothing to forward into");
+        if crate::vpn::task_engine_pid().is_none() {
+            eprintln!("skipped: connect the tunnel first, the engine is not running");
             return;
         }
         let target: Ipv4Addr = target.parse().expect("target ip");
