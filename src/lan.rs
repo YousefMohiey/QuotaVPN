@@ -264,6 +264,14 @@ pub fn save_router_names(pairs: Vec<(String, String)>) {
 "));
 }
 
+/// The hardware address the neighbour table currently has for an address.
+///
+/// Used to hand a device back to its real router: a restore frame has to name the
+/// router's MAC, and a guessed one would be worse than refusing.
+pub fn mac_for(ip: &str) -> Option<String> {
+    arp_table().get(ip).cloned().filter(|m| !m.is_empty())
+}
+
 pub fn known() -> Vec<Device> {
     // What the last scan saw, with anything the table reports right now folded
     // in. The page paints this at once and the live scan corrects it.

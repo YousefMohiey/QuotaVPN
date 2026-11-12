@@ -1,36 +1,48 @@
-//! Build script: bakes the device key in when present.
+//! Build glue for the Windows-only clientless routing.
 //!
-//! - `embed/quotacards-embed.pem` exists  → auto-connect mode (fresh devices
-//!   work with zero setup against the owner's server, via the restricted
-//!   `qc-agent` forced command — the key cannot open a shell).
-//! - missing → manual mode (user connects their own server in the Server tab).
-//! The private key file is gitignored and never committed.
-use std::{env, fs, path::PathBuf};
+//! Sending a forged ARP frame needs Npcap's `wpcap.dll`. The build host has the Npcap
+//! runtime but not its SDK, and it builds with the GNU toolchain, which cannot consume
+//! an MSVC `.lib`. So the import library is generated here from a committed `.def` with
+//! MinGW's `dlltool`, which is already on PATH. No SDK download, no binary committed.
+//!
+//! The earlier version ran `gendef` at build time. That was not deterministic: when it
+//! produced nothing the build silently linked against whatever happened to be lying
+//! around, and one call site failed to resolve while the rest appeared fine. A committed
+//! `.def` is reviewable and identical on every machine.
+//!
+//! If `dlltool` or the `.def` is missing the build still succeeds, and the module
+//! reports that device routing is unavailable instead of failing to compile the app.
 
 fn main() {
-    let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let out = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let pem_path = manifest.join("embed").join("quotacards-embed.pem");
-    let body = match fs::read_to_string(&pem_path) {
-        Ok(pem) if !pem.trim().is_empty() => {
-            let esc = pem.replace('\\', "\\\\").replace('"', "\\\"").replace('\n', "\\n");
-            format!("pub const EMBED_KEY: Option<&str> = Some(\"{esc}\");\n")
-        }
-        _ => "pub const EMBED_KEY: Option<&str> = None;\n".to_string(),
-    };
-    fs::write(out.join("embed.rs"), body).unwrap();
-    println!("cargo:rerun-if-changed=embed/quotacards-embed.pem");
+    let target = std::env::var("TARGET").unwrap_or_default();
+    if !target.contains("windows") {
+        return;
+    }
 
-    // short git hash baked in so "which build are you on" is answerable
-    let build_id = std::process::Command::new("git")
-        .args(["rev-parse", "--short", "HEAD"])
-        .current_dir(&manifest)
-        .output()
-        .ok()
-        .and_then(|o| String::from_utf8(o.stdout).ok())
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| "dev".to_string());
-    println!("cargo:rustc-env=QUOTACARDS_BUILD={build_id}");
-    println!("cargo:rerun-if-changed=.git/HEAD");
+    let manifest = std::path::PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default());
+    let def = manifest.join("native").join("wpcap.def");
+    let out = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap_or_default());
+    let lib = out.join("libwpcap.a");
+
+    println!("cargo:rerun-if-changed={}", def.display());
+
+    if !def.exists() {
+        println!("cargo:warning=native/wpcap.def is missing; device routing will report itself unavailable");
+        return;
+    }
+
+    let built = std::process::Command::new("dlltool")
+        .arg("-d")
+        .arg(&def)
+        .arg("-l")
+        .arg(&lib)
+        .status();
+
+    if !matches!(built, Ok(s) if s.success()) || !lib.exists() {
+        println!("cargo:warning=dlltool could not build libwpcap.a; device routing will report itself unavailable");
+        return;
+    }
+
+    println!("cargo:rustc-link-search=native={}", out.display());
+    println!("cargo:rustc-link-lib=static=wpcap");
 }
