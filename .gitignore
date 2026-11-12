@@ -35,3 +35,7 @@ driver/QuotaVpnPkt/*.sys
 
 # Local typography preview. Never deploy: these are before/after copies, not pages.
 docs/preview/
+
+# A pnpm install ran on this host; the repo is npm (package-lock.json, npm run build).
+# Untracked so a lockfile from the wrong manager cannot enter the tree.
+desktop/ui-next/pnpm-lock.yaml

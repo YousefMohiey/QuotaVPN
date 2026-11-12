@@ -495,10 +495,16 @@ fn rule_facts(name: &str) -> Result<Option<RuleFacts>, String> {
     Ok(Some(facts))
 }
 
+/// Is this field exactly the address we asked for?
+///
+/// Deliberately not permissive. Accepting "any" made the return rule's verification vacuous:
+/// a rule scoped to nothing passed as a rule scoped to the device, which is the same hole the
+/// substring check had, moved into a helper. Only the address, or the address with a /32, is
+/// a match. Where "any" is legitimate it is checked by the caller as its own condition.
 fn matches_ip(value: &str, ip: Ipv4Addr) -> bool {
     value.split(',').any(|part| {
         let part = part.trim();
-        part.eq_ignore_ascii_case("any") || part == ip.to_string() || part == format!("{ip}/32")
+        part == ip.to_string() || part == format!("{ip}/32")
     })
 }
 
@@ -542,8 +548,7 @@ fn open_firewall(target_ip: Ipv4Addr) -> Result<(), String> {
     match rule_facts(&out_rule)? {
         Some(f) if f.direction.eq_ignore_ascii_case("in")
             && f.action.eq_ignore_ascii_case("allow")
-            && matches_ip(&f.remote, target_ip)
-            && !f.remote.eq_ignore_ascii_case("any") => {}
+            && matches_ip(&f.remote, target_ip) => {}
         other => {
             let _ = close_firewall(target_ip);
             return Err(format!("the outbound rule is not what was asked for: {other:?}"));
@@ -854,6 +859,24 @@ mod tests {
         );
         assert!(restored.is_some(), "the restore frame must build");
         println!("released; forwarding off, record cleared");
+    }
+
+    // The rule read-back decides whether a permit is real. It is pure, so it is tested here
+    // rather than only in the field, and the case that matters is the permissive one: a rule
+    // scoped to nothing must never pass as a rule scoped to the device.
+    #[test]
+    fn the_address_check_is_exact() {
+        let ip: Ipv4Addr = "192.168.1.55".parse().unwrap();
+        assert!(matches_ip("192.168.1.55", ip));
+        assert!(matches_ip("192.168.1.55/32", ip));
+        assert!(matches_ip("10.0.0.1, 192.168.1.55/32", ip), "a list containing it is scoped to it");
+
+        assert!(!matches_ip("Any", ip), "a rule scoped to nothing is not scoped to the device");
+        assert!(!matches_ip("any", ip));
+        assert!(!matches_ip("Any, 10.0.0.1", ip), "the any check must be per part, not whole value");
+        assert!(!matches_ip("10.0.0.1", ip));
+        assert!(!matches_ip("192.168.1.5", ip), "a neighbour is not the device");
+        assert!(!matches_ip("192.168.1.55/24", ip), "a subnet is not the device");
     }
 
     #[test]
