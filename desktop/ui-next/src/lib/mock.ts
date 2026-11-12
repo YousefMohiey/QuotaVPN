@@ -27,17 +27,17 @@ const APPS = [
 const SLOW = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("slow") === "1"
 
 
-// The network screen in the dev render: a handful of devices and counters that
-// keep climbing, so the traffic bars can be judged without touching a real
-// network. Nothing here ships.
+// The network screen in the dev render: a handful of devices, a live verdict
+// and counters that keep climbing, so the roster and its rates can be judged
+// without touching a real network. Nothing here ships.
 const DEMO_DEVICES = [
-  { ip: "192.168.1.2", mac: "9c:69:d3:4c:30:c8", name: "win-studio", self_pc: true, source: "self", protected: true, protected_always: false },
-  { ip: "192.168.1.1", mac: "f0:a9:51:c1:eb:da", name: "Huawei device", self_pc: false, source: "vendor", protected: true, protected_always: true },
-  { ip: "192.168.1.3", mac: "04:7c:16:7d:e7:02", name: "Micro-star intl", self_pc: false, source: "vendor", protected: false, protected_always: false },
-  { ip: "192.168.1.6", mac: "18:1d:ea:e0:56:ff", name: "Ei", self_pc: false, source: "device", protected: false, protected_always: false },
-  { ip: "192.168.1.23", mac: "b2:8c:39:3a:0e:91", name: "Private address", self_pc: false, source: "vendor", protected: false, protected_always: false },
-  { ip: "192.168.1.35", mac: "1e:92:58:2f:e9:4f", name: "Private address", self_pc: false, source: "vendor", protected: false, protected_always: false },
-  { ip: "192.168.1.46", mac: "82:d0:c2:a6:fe:c8", name: "private device", self_pc: false, source: "vendor", protected: false, protected_always: false },
+  { ip: "192.168.1.2", mac: "9c:69:d3:4c:30:c8", name: "win-studio", self_pc: true, source: "self", protected: true, protected_always: false, live: true },
+  { ip: "192.168.1.1", mac: "f0:a9:51:c1:eb:da", name: "Huawei device", self_pc: false, source: "router", protected: true, protected_always: true, live: true },
+  { ip: "192.168.1.3", mac: "04:7c:16:7d:e7:02", name: "Micro-star intl", self_pc: false, source: "vendor", protected: false, protected_always: false, live: true },
+  { ip: "192.168.1.6", mac: "18:1d:ea:e0:56:ff", name: "Ei", self_pc: false, source: "dhcp", protected: false, protected_always: false, live: true },
+  { ip: "192.168.1.23", mac: "b2:8c:39:3a:0e:91", name: "Private address", self_pc: false, source: "mdns", protected: false, protected_always: false, live: true },
+  { ip: "192.168.1.35", mac: "1e:92:58:2f:e9:4f", name: "Private address", self_pc: false, source: "vendor", protected: false, protected_always: false, live: false },
+  { ip: "192.168.1.46", mac: "82:d0:c2:a6:fe:c8", name: "private device", self_pc: false, source: "vendor", protected: false, protected_always: false, live: true },
 ]
 
 const DEMO_RATE: Record<string, [number, number]> = {
@@ -49,6 +49,17 @@ const DEMO_RATE: Record<string, [number, number]> = {
   "192.168.1.35": [0, 0],
   "192.168.1.46": [64_000, 3_000],
 }
+
+// The one routed device, so the stage and the per row control have something
+// real to show. A claim on the router or on this machine is refused with the
+// kind of message the engine sends, so the failure path is visible too.
+let routedDevice: { ip: string; mac: string } | null = null
+
+const DEMO_DESTINATIONS = [
+  { process: "VALORANT", host: "162.249.72.1", up: 412_000, down: 8_640_000 },
+  { process: "Discord", host: "cloudfront.net", up: 96_000, down: 1_240_000 },
+  { process: "Google Chrome", host: "youtube.com", up: 48_000, down: 940_000 },
+]
 
 const demoCounters: Record<string, { up: number; down: number }> = {}
 let demoAt = Date.now()
@@ -92,6 +103,24 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
       return null as T
     case "lan_guard":
       return { watching: true, attacker_mac: "" } as T
+    case "lan_route_device": {
+      const ip = String(args?.ip || "")
+      const mac = String(args?.mac || "")
+      const dev = DEMO_DEVICES.find((d) => d.ip === ip)
+      if (!dev) throw new Error("that device is no longer on the network")
+      if (dev.self_pc) throw new Error("this machine cannot be routed through itself")
+      if (dev.protected_always)
+        throw new Error("the router cannot be routed: its hardware address holds the gateway")
+      routedDevice = { ip, mac: mac || dev.mac }
+      return true as T
+    }
+    case "lan_unroute_device":
+      routedDevice = null
+      return true as T
+    case "lan_routed_device":
+      return routedDevice as T
+    case "tunnel_destinations":
+      return DEMO_DESTINATIONS as T
     case "npcap_ready":
       return true as T
     case "router_status":

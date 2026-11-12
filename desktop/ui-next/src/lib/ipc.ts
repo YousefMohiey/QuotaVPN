@@ -173,7 +173,9 @@ export type Destination = { process: string; host: string; up: number; down: num
 
 export const tunnelDestinations = async (): Promise<Destination[]> => {
   if (isTauri()) return invoke<Destination[]>("tunnel_destinations")
-  return []
+  // The browser demo has no engine, so it answers from the mock like every
+  // other call: one path, one shape, and the screen renders the same.
+  return call<Destination[]>("tunnel_destinations")
 }
 
 /** Really stop a measurement: kills the cli and ends the built-in loops. */
