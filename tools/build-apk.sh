@@ -5,12 +5,41 @@
 set -e
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-export PATH="/c/Tools/mingw_extract/mingw64/bin:/c/Tools/dllshim:/c/Users/Administrator/AppData/Local/hermes/node:$HOME/.cargo/bin:$PATH"
-export ANDROID_HOME="${ANDROID_HOME:-C:/Android/Sdk}"
+# Toolchain discovery. Every value below is still an override; each falls back to a
+# search rather than to one machine's layout. This script used to hardcode
+# C:/Android/Sdk, a jdk-23 that is not installed on the build host, and a hermes/node
+# directory, so a fresh machine needed four exported variables just to start.
+for p in "/c/Tools/mingw_extract/mingw64/bin" "/c/Tools/dllshim" "/c/Tools/node" \
+         "/c/Users/Administrator/AppData/Local/hermes/node" "$HOME/.cargo/bin"; do
+  [ -d "$p" ] && PATH="$p:$PATH"
+done
+export PATH
+
+if [ -z "${ANDROID_HOME:-}" ]; then
+  for c in "C:/Android/Sdk" "C:/Android" "$HOME/Android/Sdk"; do
+    [ -d "$c" ] && { ANDROID_HOME="$c"; break; }
+  done
+fi
+export ANDROID_HOME="${ANDROID_HOME:?Android SDK not found; set ANDROID_HOME}"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
-NDK="${ANDROID_NDK_HOME:-C:/Android/Sdk/ndk/28.2.13676358}"
-export ANDROID_NDK_HOME="$NDK" ANDROID_NDK_ROOT="$NDK"
-export JAVA_HOME="${JAVA_HOME:-C:/Program Files/Java/jdk-23}"
+
+# The NDK version this project pins, or the newest one installed.
+if [ -z "${ANDROID_NDK_HOME:-}" ]; then
+  NDK_DIR="$ANDROID_HOME/ndk/28.2.13676358"
+  [ -d "$NDK_DIR" ] || NDK_DIR="$(ls -d "$ANDROID_HOME"/ndk/* 2>/dev/null | sort -V | tail -1)"
+  ANDROID_NDK_HOME="$NDK_DIR"
+fi
+export ANDROID_NDK_HOME
+export ANDROID_NDK_ROOT="$ANDROID_NDK_HOME"
+
+# Any installed JDK, newest by name: the Android Gradle plugin wants 17 or newer.
+if [ -z "${JAVA_HOME:-}" ]; then
+  for j in "/c/Program Files/Microsoft"/jdk-* "/c/Program Files/Java"/jdk-* \
+           "/c/Program Files/Eclipse Adoptium"/jdk-*; do
+    [ -d "$j" ] && JAVA_HOME="$(cygpath -m "$j")"
+  done
+fi
+export JAVA_HOME="${JAVA_HOME:?JDK not found; set JAVA_HOME}"
 BT="$ANDROID_HOME/build-tools/35.0.0"
 TARGET=aarch64
 
