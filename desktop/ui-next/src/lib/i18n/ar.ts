@@ -248,6 +248,7 @@ export const ar = {
   "netProtect": "حماية",
   "netMonitor": "مراقبة",
   "netRoute": "تمرير عبر الشبكة الخاصة",
+  "netPickDevice": "اختر جهازاً",
   "netUnroute": "إيقاف التمرير",
   "netViaTunnel": "عبر الشبكة الخاصة",
   "netViaTunnelHint": "تمرير بيانات هذا الجهاز عبر النفق دون تثبيت أي شيء عليه",

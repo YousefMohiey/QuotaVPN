@@ -245,6 +245,7 @@ export const en = {
   "netProtect": "Protect",
   "netMonitor": "Monitor",
   "netRoute": "Route via VPN",
+  "netPickDevice": "Pick a device",
   "netUnroute": "Stop routing",
   "netViaTunnel": "Via VPN",
   "netViaTunnelHint": "Send this device's traffic through the tunnel without installing anything on it",

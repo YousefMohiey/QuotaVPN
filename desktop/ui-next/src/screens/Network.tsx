@@ -118,6 +118,12 @@ export function Network() {
   // a claim can be refused and the badge must not lie about it.
   const [routed, setRouted] = useState<{ ip: string; mac: string } | null>(null)
   const [routingIp, setRoutingIp] = useState<string | null>(null)
+  // The row the invitation just pointed at, so the control it names is visible
+  // for a moment instead of being named and left to be found.
+  const [hintIp, setHintIp] = useState<string | null>(null)
+  // The column the invitation points at, lit for a moment so the eye lands on
+  // the header that names the control.
+  const [hintCol, setHintCol] = useState(false)
   const [routeErr, setRouteErr] = useState("")
   const [err, setErr] = useState("")
   const [dests, setDests] = useState<Destination[]>([])
@@ -274,6 +280,26 @@ export function Network() {
     }
   }
 
+  /** The invitation is an action, not a caption: it points at the column where
+      routing happens and focuses the first device in it that the engine can
+      actually take, so the next press works. It never routes anything itself,
+      and it stays absent when no device on screen can be routed. */
+  const pointAtRoster = () => {
+    const first = routable[0]
+    if (!first) return
+    setHintIp(first.ip)
+    setHintCol(true)
+    window.setTimeout(() => {
+      setHintIp((cur) => (cur === first.ip ? null : cur))
+      setHintCol(false)
+    }, 2600)
+    const cell = [...document.querySelectorAll<HTMLButtonElement>("[data-route]")].find(
+      (b) => b.dataset.route === first.ip,
+    )
+    cell?.focus({ preventScroll: true })
+    cell?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+  }
+
   const toggleProtect = async (d: LanDevice) => {
     setErr("")
     try {
@@ -417,6 +443,13 @@ export function Network() {
     : routed?.ip ?? ""
   const routedLive = routed ? live[rateKey(routed)] : undefined
 
+  // Devices the backend can put through the tunnel. This machine and the
+  // gateway are refused by the engine, so the invitation never points at them.
+  const routable = useMemo(
+    () => shown.filter((d) => !d.self_pc && !d.protected_always),
+    [shown],
+  )
+
   const message = routeErr || err
   const filters: { id: Filter; label: StrKey; n: number }[] = [
     { id: "all", label: "netAllDevices", n: counts.all },
@@ -524,11 +557,24 @@ export function Network() {
                 <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--brand-bg)] text-brand-strong">
                   <Route className="size-[18px]" aria-hidden />
                 </span>
-                <div className="min-w-0">
+                <div className="flex min-w-0 flex-col items-start gap-1.5">
                   <div className="text-[15px] font-semibold text-txt">{t("netRoute")}</div>
-                  <p className="mt-0.5 max-w-[54ch] text-[12px] leading-snug text-txt2">
+                  <p className="max-w-[54ch] text-[12px] leading-snug text-txt2">
                     {t("netViaTunnelHint")}
                   </p>
+                  {/* No device is picked yet, so the route action itself is
+                      absent: the only thing offered is the way to pick one,
+                      and it is offered only when one can be taken. */}
+                  {routable.length ? (
+                    <button
+                      type="button"
+                      onClick={pointAtRoster}
+                      style={{ height: ALLOWED_MIN }}
+                      className="press mt-0.5 shrink-0 rounded-[9px] bg-[var(--brand)] px-3.5 text-[12.5px] font-medium text-white transition-colors hover:brightness-110"
+                    >
+                      {t("netPickDevice")}
+                    </button>
+                  ) : null}
                 </div>
               </div>
             )}
@@ -725,7 +771,14 @@ export function Network() {
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className={cn(COLS, "shrink-0 border-b border-line px-4 pb-2 text-[11px] text-txt3")}>
           <span className="truncate">{t("netColDevice")}</span>
-          <span className="truncate text-center">{t("netViaTunnel")}</span>
+          <span
+            className={cn(
+              "truncate rounded-[6px] text-center transition-colors",
+              hintCol && "bg-[var(--brand-bg)] py-0.5 text-brand-strong",
+            )}
+          >
+            {t("netViaTunnel")}
+          </span>
           <span className="truncate text-end">{t("netDownload")}</span>
           <span className="truncate text-end">{t("netUpload")}</span>
           <span className="truncate text-end">{t("netColActions")}</span>
@@ -784,10 +837,12 @@ export function Network() {
                     key={d.ip}
                     className={cn(
                       COLS,
-                      "net-row relative min-h-[56px] max-h-[74px] flex-1 border-b border-line px-4 py-1.5 last:border-b-0 hover:bg-white/[0.02]",
+                      "net-row relative flex-1 border-b border-line px-4 py-1.5 last:border-b-0 hover:bg-white/[0.02]",
+                        "min-h-[76px] max-h-[92px] xl:min-h-[56px] xl:max-h-[74px]",
                     )}
                   >
-                    <div className="flex min-w-0 items-center gap-2">
+                    <div className="flex min-w-0 flex-col gap-0.5 xl:flex-row xl:items-center xl:gap-2">
+                      <span className="flex min-w-0 items-center gap-2">
                       <span
                         role="img"
                         aria-label={quiet ? t("netQuiet") : d.name}
@@ -814,6 +869,7 @@ export function Network() {
                           {t("netStateCapped")}
                         </span>
                       ) : null}
+                      </span>
                       <span className="flex min-w-0 items-center gap-1">
                         <button
                           type="button"
@@ -864,6 +920,7 @@ export function Network() {
                       <Tip text={isRouted ? t("netUnroute") : t("netRoute")}>
                         <button
                           type="button"
+                          data-route={d.ip}
                           onClick={() => void toggleRoute(d)}
                           disabled={routingIp !== null}
                           aria-pressed={isRouted}
@@ -874,6 +931,7 @@ export function Network() {
                             isRouted
                               ? "bg-[var(--green-bg)] text-[var(--green)] enabled:hover:bg-[rgb(95_176_140/0.2)]"
                               : "text-txt2 enabled:hover:bg-white/[0.06] enabled:hover:text-txt",
+                            hintIp === d.ip && "ring-2 ring-inset ring-[var(--brand-line)]",
                             "disabled:cursor-wait disabled:opacity-60",
                           )}
                         >
