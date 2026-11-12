@@ -55,6 +55,37 @@ node ../../tauri-cli-npm/node_modules/@tauri-apps/cli/tauri.js android build -t 
 UNSIGNED="$ROOT/android/tauri-app/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk"
 [ -f "$UNSIGNED" ] || { echo "NO_UNSIGNED_APK"; exit 1; }
 
+# Strip symbol tables out of the native libraries before signing.
+#
+# Measured on this build, not assumed: libbox.so is already stripped (llvm-strip
+# changes nothing, 0 KiB), while libquotacards_tauri.so carries a full .symtab and
+# loses 5807 KiB. There is no debug info in either, so this is the whole of what
+# stripping can win: about 5.7 MB of a 101.6 MB package. The size is dominated by
+# the prebuilt engine, and only a reduced engine build moves that.
+STRIP="$NDK/toolchains/llvm/prebuilt/windows-x86_64/bin/llvm-strip.exe"
+if [ -x "$STRIP" ]; then
+  WORK="$ROOT/android/apk-work"
+  rm -rf "$WORK"; mkdir -p "$WORK"
+  unzip -q "$UNSIGNED" -d "$WORK"
+  total_before=0; total_after=0
+  for so in "$WORK"/lib/*/*.so; do
+    [ -f "$so" ] || continue
+    b=$(wc -c < "$so")
+    cp "$so" "$so.bak"
+    "$STRIP" --strip-unneeded "$so" 2>/dev/null || cp "$so.bak" "$so"
+    rm -f "$so.bak"
+    a=$(wc -c < "$so")
+    total_before=$((total_before + b)); total_after=$((total_after + a))
+    echo "   stripped $(basename "$so"): $b -> $a"
+  done
+  echo "   native libraries: $total_before -> $total_after bytes"
+  ( cd "$WORK" && zip -q -r -X "$ROOT/android/app-stripped.apk" . )
+  rm -rf "$WORK"
+  UNSIGNED="$ROOT/android/app-stripped.apk"
+else
+  echo "   llvm-strip not found, packaging unstripped"
+fi
+
 # Native .exe tools cannot read MSYS /c/... paths; hand them Windows paths.
 UNSIGNED_W="$(cygpath -w "$UNSIGNED")"
 ALIGNED_W="$(cygpath -w "$ROOT/android/app-aligned.apk")"
