@@ -264,7 +264,7 @@ pub fn save_router_names(pairs: Vec<(String, String)>) {
 "));
 }
 
-fn known() -> Vec<Device> {
+pub fn known() -> Vec<Device> {
     // What the last scan saw, with anything the table reports right now folded
     // in. The page paints this at once and the live scan corrects it.
     // No disk cache: the page paints what the neighbour and router tables say
