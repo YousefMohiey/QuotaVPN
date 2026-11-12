@@ -264,74 +264,13 @@ pub fn save_router_names(pairs: Vec<(String, String)>) {
 "));
 }
 
-fn devices_cache_path() -> std::path::PathBuf {
-    let base = std::env::var("LOCALAPPDATA")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|_| std::path::PathBuf::from("."));
-    base.join("quotavpn").join("lan_devices.txt")
-}
-
-fn save_known(list: &[Device]) {
-    let path = devices_cache_path();
-    if let Some(dir) = path.parent() {
-        let _ = std::fs::create_dir_all(dir);
-    }
-    let text: String = list
-        .iter()
-        .map(|d| {
-            format!(
-                "{}|{}|{}|{}|{}|{}|{}|{}",
-                d.ip,
-                d.mac,
-                d.name,
-                d.name_source,
-                if d.self_pc { 1 } else { 0 },
-                if d.protected { 1 } else { 0 },
-                if d.protected_always { 1 } else { 0 },
-                // The liveness verdict as of this save. Kept so the first paint
-                // after a restart is the last thing the sweep knew rather than a
-                // table of grey rows waiting for the first scan to finish.
-                if d.live { 1 } else { 0 }
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("
-");
-    let _ = std::fs::write(path, text);
-}
-
-fn cached_devices() -> Vec<Device> {
-    let mut out = Vec::new();
-    let Ok(text) = std::fs::read_to_string(devices_cache_path()) else {
-        return out;
-    };
-    for line in text.lines() {
-        let parts: Vec<&str> = line.split('|').collect();
-        if parts.len() < 5 {
-            continue;
-        }
-        out.push(Device {
-            ip: parts[0].to_string(),
-            mac: parts[1].to_string(),
-            name: parts[2].to_string(),
-            self_pc: parts[4] == "1",
-            name_source: parts[3].to_string(),
-            protected: parts.get(5).is_some_and(|v| *v == "1"),
-            // Older cache lines carry no protection flags; the live scan fills
-            // them, and the router keeps its chip either way.
-            protected_always: parts.get(6).is_some_and(|v| *v == "1"),
-            // A cache written before this field existed has no liveness to
-            // report, and false is the honest answer for "not proven".
-            live: parts.get(7).is_some_and(|v| *v == "1"),
-        });
-    }
-    out
-}
-
-pub fn known() -> Vec<Device> {
+fn known() -> Vec<Device> {
     // What the last scan saw, with anything the table reports right now folded
     // in. The page paints this at once and the live scan corrects it.
-    let mut out: Vec<Device> = cached_devices();
+    // No disk cache: the page paints what the neighbour and router tables say
+    // right now, which is both instant and current. Painting the last run's
+    // list is what put last night's names against this morning's addresses.
+    let mut out: Vec<Device> = Vec::new();
     for (ip, mac) in arp_table() {
         if !keep(&ip, &mac) {
             continue;
@@ -377,62 +316,39 @@ fn keep(ip: &str, mac: &str) -> bool {
     !(first == 0 || first >= 224 || ip == "255.255.255.255" || last == 255 || last == 0)
 }
 
-/// Names learned by asking devices directly, kept so the next scan is instant
-/// instead of waiting for every probe again.
-fn probe_cache_path() -> std::path::PathBuf {
-    let base = std::env::var("LOCALAPPDATA")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|_| std::path::PathBuf::from("."));
-    base.join("quotavpn").join("lan_probe_names.txt")
+/// Names learned during the sweep in flight, and nothing more.
+///
+/// This was a file keyed by IP (`lan_probe_names.txt`) so the next scan would be
+/// instant. The price was a name that outlived the device: an address handed to a
+/// different phone kept its predecessor's name, and a restart resurrected the whole
+/// set. A name is now kept only for the sweep that learned it, and cleared at the
+/// start of the next one.
+static SWEEP_NAMES: Mutex<Option<HashMap<String, (String, String)>>> = Mutex::new(None);
+
+fn clear_sweep_names() {
+    let mut guard = SWEEP_NAMES.lock().unwrap_or_else(|e| e.into_inner());
+    *guard = Some(HashMap::new());
 }
 
-fn probe_cache() -> HashMap<String, (String, String)> {
-    let mut out = HashMap::new();
-    if let Ok(text) = std::fs::read_to_string(probe_cache_path()) {
-        for line in text.lines() {
-            let mut parts = line.splitn(3, '|');
-            if let (Some(ip), Some(name)) = (parts.next(), parts.next()) {
-                // A line written before the source was recorded carries the
-                // old ambiguous "device" label, at its historical rank.
-                let source = parts.next().unwrap_or("device");
-                out.insert(ip.to_string(), (name.to_string(), source.to_string()));
-            }
-        }
-    }
-    out
+fn sweep_names() -> HashMap<String, (String, String)> {
+    let guard = SWEEP_NAMES.lock().unwrap_or_else(|e| e.into_inner());
+    guard.clone().unwrap_or_default()
 }
 
-fn write_probe_cache(all: &HashMap<String, (String, String)>) {
-    let path = probe_cache_path();
-    if let Some(dir) = path.parent() {
-        let _ = std::fs::create_dir_all(dir);
-    }
-    let body: String = all
-        .iter()
-        .map(|(ip, (name, source))| format!("{ip}|{name}|{source}"))
-        .collect::<Vec<_>>()
-        .join("\n");
-    let _ = std::fs::write(path, body);
-}
-
-/// Keep a name with the source that produced it. A weaker source never
-/// overwrites a stronger one already on file, so a probe pass that runs late
-/// cannot undo an answer that arrived early.
+/// Keep a name for this sweep, with the source that produced it. A weaker source
+/// never overwrites a stronger one, so a slow probe cannot undo a fast answer.
 fn remember_probe(ip: &str, name: &str, source: &str) {
     if name.is_empty() || source.is_empty() {
         return;
     }
-    let mut all = probe_cache();
-    if let Some((old_name, old_source)) = all.get(ip) {
-        if old_name.as_str() == name && old_source.as_str() == source {
-            return;
-        }
+    let mut guard = SWEEP_NAMES.lock().unwrap_or_else(|e| e.into_inner());
+    let all = guard.get_or_insert_with(HashMap::new);
+    if let Some((_, old_source)) = all.get(ip) {
         if name_rank(old_source) > name_rank(source) {
             return;
         }
     }
     all.insert(ip.to_string(), (name.to_string(), source.to_string()));
-    write_probe_cache(&all);
 }
 
 /// A name has to look like a name. Reverse lookups return things such as
@@ -457,26 +373,12 @@ fn usable_name(name: &str) -> bool {
 /// Its only caller is the mDNS half of the DHCP capture, so every name here
 /// came from a device announcing itself.
 pub fn remember_probed(found: &HashMap<String, String>) {
-    let mut all = probe_cache();
-    let mut changed = false;
+    // Names the DHCP capture overheard from a device announcing itself. Same
+    // lifetime as everything else learned this sweep.
     for (ip, name) in found {
-        if name.is_empty() {
-            continue;
+        if usable_name(name) {
+            remember_probe(ip, name, "mdns");
         }
-        let take = match all.get(ip) {
-            Some((old_name, old_source)) => {
-                name_rank("mdns") >= name_rank(old_source)
-                    && !(old_name.as_str() == name.as_str() && old_source.as_str() == "mdns")
-            }
-            None => true,
-        };
-        if take {
-            all.insert(ip.to_string(), (name.to_string(), String::from("mdns")));
-            changed = true;
-        }
-    }
-    if changed {
-        write_probe_cache(&all);
     }
 }
 
@@ -713,13 +615,9 @@ static PRESENCE: Mutex<Option<HashMap<String, Remembered>>> = Mutex::new(None);
 fn merge_presence(fresh: Vec<Device>) -> Vec<Device> {
     let seen: HashMap<String, Device> = fresh.into_iter().map(|d| (d.ip.clone(), d)).collect();
     let mut guard = PRESENCE.lock().unwrap_or_else(|e| e.into_inner());
-    let remembered = guard.get_or_insert_with(|| {
-        cached_devices()
-            .into_iter()
-            .filter(|d| !d.self_pc)
-            .map(|d| (d.ip.clone(), Remembered { dev: d, misses: 0 }))
-            .collect()
-    });
+    // Seeded empty on purpose. Presence is a memory for the session in front of
+    // you: a row from a previous run is not evidence about a device now.
+    let remembered = guard.get_or_insert_with(HashMap::new);
     let mut out: Vec<Device> = Vec::with_capacity(seen.len() + remembered.len());
     let mut seen_ips: std::collections::HashSet<String> =
         std::collections::HashSet::with_capacity(seen.len());
@@ -747,7 +645,26 @@ fn merge_presence(fresh: Vec<Device>) -> Vec<Device> {
     out
 }
 
+/// Older builds kept two files: a name per address and the whole last device
+/// list. Neither is read any more. Removing them is not required for
+/// correctness, but leaving them behind is how someone later believes the app
+/// still remembers names.
+fn forget_legacy_caches() {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| {
+        let base = std::env::var("LOCALAPPDATA")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|_| std::path::PathBuf::from("."));
+        for name in ["lan_probe_names.txt", "lan_devices.txt"] {
+            let _ = std::fs::remove_file(base.join("quotavpn").join(name));
+        }
+    });
+}
+
 pub fn scan() -> Vec<Device> {
+    forget_legacy_caches();
+    clear_sweep_names();
+
     let Some(local) = local_ipv4() else {
         return Vec::new();
     };
@@ -803,7 +720,7 @@ pub fn scan() -> Vec<Device> {
     // last time. Probing every device again is what made Refresh feel broken.
     let table = arp_table();
     let announced_by_mac = crate::dhcp_names::cached();
-    let probed = probe_cache();
+    let probed = sweep_names();
     let mut out: Vec<Device> = Vec::new();
     let results = found.lock().map(|g| g.clone()).unwrap_or_default();
     for (ip, alive, ttl) in results {
@@ -904,7 +821,6 @@ pub fn scan() -> Vec<Device> {
     // device is.
     let mut out = identity_pass(out);
     sort_devices(&mut out);
-    save_known(&out);
 
     // A hardware address belongs to exactly one machine. A stale row can point
     // several addresses at the same hardware, and this machine's own virtual
@@ -1021,6 +937,70 @@ mod tests {
     // Presence is a policy, and the policy is pure: the numbers below are
     // sweeps, not seconds, and no network is involved. The guard exists for the
     // sleepy phone, so what it must never do is drop a row on the first miss.
+    // A name that survives the sweep which learned it is a name that can be
+    // wrong: the address gets handed to another device and the old label stays.
+    // These two pin the new contract, including that nothing reaches the disk.
+    // These three act on one global map, so they take a lock of their own: the
+    // suite runs in parallel and each of them starts by clearing the map.
+    static NAME_TESTS: Mutex<()> = Mutex::new(());
+
+    fn name_test_guard() -> std::sync::MutexGuard<'static, ()> {
+        NAME_TESTS.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    #[test]
+    fn a_name_lives_for_one_sweep_only() {
+        let _serial = name_test_guard();
+        clear_sweep_names();
+        remember_probe("192.168.1.50", "yousef-phone", "mdns");
+        assert_eq!(
+            sweep_names().get("192.168.1.50").map(|p| p.0.as_str()),
+            Some("yousef-phone")
+        );
+        clear_sweep_names();
+        assert!(sweep_names().is_empty(), "a new sweep must start unknown");
+    }
+
+    #[test]
+    fn a_weaker_source_cannot_overwrite_a_stronger_one() {
+        let _serial = name_test_guard();
+        clear_sweep_names();
+        remember_probe("192.168.1.51", "admin-name", "admin");
+        remember_probe("192.168.1.51", "vendor-ish", "vendor");
+        assert_eq!(
+            sweep_names().get("192.168.1.51").map(|p| p.1.as_str()),
+            Some("admin"),
+            "the weaker answer won"
+        );
+        clear_sweep_names();
+    }
+
+    #[test]
+    fn a_name_never_reaches_the_disk() {
+        let _serial = name_test_guard();
+        // A machine that ran an older build still has these on disk, which is the
+        // whole reason the one-time cleanup exists. Clear them first so the test
+        // measures this code rather than the history of the machine.
+        forget_legacy_caches();
+        let base = std::env::var("LOCALAPPDATA")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|_| std::path::PathBuf::from("."));
+        for name in ["lan_probe_names.txt", "lan_devices.txt"] {
+            let _ = std::fs::remove_file(base.join("quotavpn").join(name));
+        }
+
+        clear_sweep_names();
+        remember_probe("192.168.1.52", "some-device", "netbios");
+
+        for name in ["lan_probe_names.txt", "lan_devices.txt"] {
+            assert!(
+                !base.join("quotavpn").join(name).exists(),
+                "a name cache file came back: {name}"
+            );
+        }
+        clear_sweep_names();
+    }
+
     #[test]
     fn one_miss_is_not_a_verdict() {
         assert_eq!(fate(0), Fate::Quiet);
