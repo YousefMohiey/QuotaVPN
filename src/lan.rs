@@ -90,7 +90,7 @@ pub fn offer_name(d: &mut Device, name: &str, source: &str) {
 }
 
 #[cfg(windows)]
-fn hidden(prog: &str) -> Command {
+pub(crate) fn hidden(prog: &str) -> Command {
     use std::os::windows::process::CommandExt;
     const NO_WINDOW: u32 = 0x0800_0000;
     let mut c = Command::new(prog);

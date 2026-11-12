@@ -150,7 +150,7 @@ pub fn forget_intent() {
 /// Read back whether this interface forwards. Parsing `netsh` is ugly but it is the
 /// same source of truth the user sees, and the whole feature depends on it being on.
 pub fn forwarding_enabled(interface: &str) -> Result<bool, String> {
-    let out = std::process::Command::new("netsh")
+    let out = crate::lan::hidden("netsh")
         .args(["interface", "ipv4", "show", "interface", interface])
         .output()
         .map_err(|e| e.to_string())?;
@@ -222,7 +222,9 @@ impl Adapter {
 
 pub fn adapter() -> Result<Adapter, String> {
     let script = "$c = Get-NetIPConfiguration | Where-Object { $_.IPv4DefaultGateway -and $_.NetAdapter.Status -eq 'Up' } | Select-Object -First 1;                   if (-not $c) { '' } else { [pscustomobject]@{                     ip = [string]$c.IPv4Address.IPAddress;                     gateway = [string]$c.IPv4DefaultGateway.NextHop;                     ifindex = [int]$c.NetAdapter.ifIndex;                     mac = [string]$c.NetAdapter.MacAddress } | ConvertTo-Json -Compress }";
-    let out = std::process::Command::new("powershell")
+    // Hidden: this is a GUI app, and a console flashing on every adapter lookup is
+    // the difference between a feature and a bug report.
+    let out = crate::lan::hidden("powershell")
         .args(["-NoProfile", "-NonInteractive", "-Command", script])
         .output()
         .map_err(|e| format!("powershell: {e}"))?;
@@ -373,6 +375,13 @@ pub fn claim(target_ip: Ipv4Addr, target_mac: &str) -> Result<Adapter, String> {
     // Captured before the first frame. If the table already says we are the gateway,
     // something else ran this feature and did not restore, and guessing is not an
     // option: a restore that names our own MAC restores nothing.
+    // Routing a device is only meaningful while the tunnel is up: forwarding sends its
+    // traffic into the tun, and with no tun there is nowhere for it to go. Saying so is
+    // better than a claim that silently does nothing.
+    if !crate::vpn::tun_adapter_present() {
+        return Err("connect the VPN first: there is no tunnel for this device's traffic to use".into());
+    }
+
     let router_mac = crate::lan::mac_for(&ad.gateway.to_string())
         .ok_or_else(|| format!("no MAC known for the gateway {}", ad.gateway))?;
     if router_mac.eq_ignore_ascii_case(&ad.mac) {
@@ -398,6 +407,7 @@ pub fn claim(target_ip: Ipv4Addr, target_mac: &str) -> Result<Adapter, String> {
     sock.send(&frame)?;
 
     set_forwarding(&ad.if_index.to_string(), true)?;
+    open_firewall(target_ip)?;
 
     MAINTAINING.store(true, std::sync::atomic::Ordering::SeqCst);
     let mac = ad.mac.clone();
@@ -421,6 +431,55 @@ pub fn claim(target_ip: Ipv4Addr, target_mac: &str) -> Result<Adapter, String> {
         }
     });
     Ok(ad)
+}
+
+fn rule_name(target_ip: Ipv4Addr) -> String {
+    format!("QuotaVPN lan-route {target_ip}")
+}
+
+/// Let the device's traffic be forwarded. Enabling IPv4 forwarding is not enough on
+/// Windows: the filtering platform drops forwarded packets unless a rule permits them,
+/// which is why the claim alone moved nothing.
+fn open_firewall(target_ip: Ipv4Addr) -> Result<(), String> {
+    let name = rule_name(target_ip);
+    let _ = close_firewall(target_ip); // idempotent: a stale rule would stack up otherwise
+    let out = crate::lan::hidden("netsh")
+        .args([
+            "advfirewall",
+            "firewall",
+            "add",
+            "rule",
+            &format!("name={name}"),
+            "dir=in",
+            "action=allow",
+            &format!("remoteip={target_ip}"),
+            "profile=any",
+        ])
+        .output()
+        .map_err(|e| e.to_string())?;
+    if !out.status.success() {
+        return Err(format!(
+            "could not add the firewall rule: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+    Ok(())
+}
+
+fn close_firewall(target_ip: Ipv4Addr) -> Result<(), String> {
+    let out = crate::lan::hidden("netsh")
+        .args([
+            "advfirewall",
+            "firewall",
+            "delete",
+            "rule",
+            &format!("name={}", rule_name(target_ip)),
+        ])
+        .output()
+        .map_err(|e| e.to_string())?;
+    // A missing rule is not an error: the first call always has one to delete.
+    let _ = out;
+    Ok(())
 }
 
 /// Hand everything back. Safe to call when nothing is claimed.
@@ -451,6 +510,7 @@ pub fn release() -> Result<(), String> {
         std::thread::sleep(std::time::Duration::from_millis(120));
     }
     set_forwarding(&intent.interface, false)?;
+    let _ = close_firewall(target_ip);
     forget_intent();
     Ok(())
 }
@@ -650,6 +710,10 @@ mod tests {
             eprintln!("skipped: set LAN_ROUTE_TEST_TARGET and LAN_ROUTE_TEST_MAC");
             return;
         };
+        if !crate::vpn::tun_adapter_present() {
+            eprintln!("skipped: connect the tunnel first, there is nothing to forward into");
+            return;
+        }
         let target: Ipv4Addr = target.parse().expect("target ip");
         let mac = mac.replace('-', ":").to_ascii_lowercase();
         let gateway: Ipv4Addr = std::env::var("LAN_ROUTE_TEST_GATEWAY")
