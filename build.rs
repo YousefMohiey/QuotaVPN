@@ -10,8 +10,8 @@
 //! around, and one call site failed to resolve while the rest appeared fine. A committed
 //! `.def` is reviewable and identical on every machine.
 //!
-//! If `dlltool` or the `.def` is missing the build still succeeds, and the module
-//! reports that device routing is unavailable instead of failing to compile the app.
+//! If `dlltool` or the `.def` is missing the build **fails**, with a message naming the
+//! cause. A green build with device routing silently absent is the trap this replaced.
 
 fn main() {
     let manifest = std::path::PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default());
@@ -59,8 +59,12 @@ fn main() {
     println!("cargo:rerun-if-changed={}", def.display());
 
     if !def.exists() {
-        println!("cargo:warning=native/wpcap.def is missing; device routing will report itself unavailable");
-        return;
+        // Same argument as the assembler below, and it has to hold for both: a build that
+        // compiles with the feature quietly missing is worse than a build that stops.
+        panic!(
+            "native/wpcap.def is missing, so libwpcap.a cannot be built and device routing \
+             would be silently unavailable. Restore it: git checkout native/wpcap.def"
+        );
     }
 
     let built = std::process::Command::new("dlltool")
