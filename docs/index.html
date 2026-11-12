@@ -317,10 +317,9 @@
     .hdr .cta .ico-droid{display:block}
     .feat{grid-template-columns:1fr}
     .vpaths{grid-template-columns:1fr}
-    .hero .act{flex-direction:column-reverse; align-items:stretch}
+    .hero .act{flex-direction:column; align-items:stretch}
     .hero .act .btn{width:100%}
     .hero .act .dl-win{background:rgb(255 255 255 / .03); border-color:rgb(255 255 255 / .2); color:var(--txt)}
-    .hero .act .dl-apk{background:var(--brand); border-color:transparent; color:#fff}
     .stage-win{aspect-ratio:auto; height:auto}
     .stage-win iframe{display:none}
     .stage-win .still, .stage-win.ready .still, .stage-win.solid .still{display:block; position:static; width:100%; height:auto}
@@ -333,6 +332,7 @@
     .hero{gap:clamp(26px, 5vw, 40px)}
     .hero .frame.shot .chrome{display:none}
     .phone-copy .dl-apk{display:none}
+    .btn.off{cursor:not-allowed; opacity:.6; border-style:dashed}
     .hero .meta{font-size:13px; line-height:1.5}
   }
 
@@ -380,10 +380,10 @@
           <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v7.1H3V5.5Zm0 13 7.2 1v-7H3v6Zm8.4 1.2L21 21V12.6h-9.6v7.1ZM11.4 4.3 21 3v8.6h-9.6V4.3Z"/></svg>
           Download for Windows
         </a>
-        <a class="btn line lg dl-apk" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk">
+        <span class="btn line lg off" title="The Android build is being rebuilt and returns on a future release. Nothing download-ready is published today.">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg>
-          Get the Android APK
-        </a>
+          Android build returning
+        </span>
       </div>
       <p class="meta rise" id="dlMeta"><b>Free and open source.</b> Windows 10 and 11, and Android.&nbsp;17&nbsp;MB.</p>
     </div>
@@ -477,10 +477,10 @@
           <li class="st"><b>Per-app routing and Always-on VPN,</b> and it updates itself from inside.</li>
         </ul>
         <div class="act">
-          <a class="btn line dl-apk" href="https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk">
+          <span class="btn line off" title="The Android build is being rebuilt and returns on a future release. Nothing download-ready is published today.">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 9.2h8.8c.3 0 .5.2.5.5v6.5c0 .8-.6 1.4-1.4 1.4h-.4v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-2.1v2.2a1.1 1.1 0 0 1-2.2 0v-2.2h-.4c-.8 0-1.4-.6-1.4-1.4v-6.5c0-.3.2-.5.5-.5Zm-2.3.1c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1Zm13.4 0c.6 0 1.1.5 1.1 1.1v4.2a1.1 1.1 0 0 1-2.2 0V10.4c0-.6.5-1.1 1.1-1.1ZM15.1 4.3l.9-1.6a.3.3 0 0 0-.5-.3l-.9 1.6a5.6 5.6 0 0 0-5.2 0L8.5 2.4a.3.3 0 0 0-.5.3l.9 1.6A4.6 4.6 0 0 0 6.5 8h11a4.6 4.6 0 0 0-2.4-3.7Z"/></svg>
-            Get the Android APK
-          </a>
+            Android build returning
+          </span>
           <a class="open" href="phone/index.html" target="_blank" rel="noopener">Open full screen</a>
         </div>
       </div>
@@ -632,13 +632,16 @@
     }
     headerCta(apk ? apk.browser_download_url : null);
   }
-  var APK_FALLBACK = 'https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/QuotaVPN-mobile-signed.apk';
   var phone = false;
   try{ phone = matchMedia('(max-width:760px)').matches; }catch(e){}
   function headerCta(apkUrl){
     if(!phone) return;
     var el = document.getElementById('hdrCta'); if(!el) return;
-    el.setAttribute('href', apkUrl || APK_FALLBACK);
+    // No APK asset on the latest release means the Android build is being
+    // rebuilt. A header button pointing at a URL that 404s is worse than no
+    // button, so it stands down until an APK actually exists.
+    if(!apkUrl){ el.style.display = 'none'; return; }
+    el.setAttribute('href', apkUrl);
     var lbl = el.querySelector('.lbl'); if(lbl) lbl.textContent = 'Get the APK';
   }
   function cached(){
@@ -812,7 +815,7 @@
   btn.addEventListener('click', function(){
     var phone = false;
     try{ phone = matchMedia('(max-width:760px)').matches; }catch(e){}
-    var target = document.querySelector(phone ? '.hero .dl-apk' : '.hero .dl-win')
+    var target = document.querySelector(phone ? ('.hero .dl-apk, .hero .dl-win') : '.hero .dl-win')
               || document.querySelector('.hero .dl-win');
     if(target){
       target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block:'center' });
