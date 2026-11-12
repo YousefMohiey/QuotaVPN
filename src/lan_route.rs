@@ -618,6 +618,60 @@ fn cstr(buf: &[i8]) -> String {
     String::from_utf8_lossy(&bytes).into_owned()
 }
 
+// ---------------------------------------------------------------- keeping ourselves online
+
+/// Pin our own gateway entry to the real router for the duration of a claim.
+///
+/// The forged reply goes to the device, but this machine receives it too and updates its own
+/// neighbour cache: the entry for the gateway becomes **our** MAC, our own traffic is sent to
+/// ourselves, and the PC loses the network until the entry expires. A static entry outranks
+/// the cache, so it holds until it is removed.
+fn pin_gateway(interface: &str, gateway: Ipv4Addr, router_mac: &str) -> Result<(), String> {
+    let out = crate::lan::hidden("netsh")
+        .args([
+            "interface",
+            "ipv4",
+            "set",
+            "neighbors",
+            interface,
+            &gateway.to_string(),
+            router_mac,
+        ])
+        .output()
+        .map_err(|e| e.to_string())?;
+    if !out.status.success() {
+        return Err(format!(
+            "could not pin the gateway: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+    Ok(())
+}
+
+/// Drop the pin so Windows resolves the router again on its own.
+fn unpin_gateway(interface: &str, gateway: Ipv4Addr) -> Result<(), String> {
+    let out = crate::lan::hidden("netsh")
+        .args([
+            "interface",
+            "ipv4",
+            "delete",
+            "neighbors",
+            interface,
+            &gateway.to_string(),
+        ])
+        .output()
+        .map_err(|e| e.to_string())?;
+    if !out.status.success() {
+        // A missing entry is fine: only the removal of the pin matters, and time also
+        // repairs it, so this is reported but not fatal.
+        let said = String::from_utf8_lossy(&out.stderr).trim().to_string();
+        if !said.is_empty() {
+            return Err(format!("could not unpin the gateway: {said}"));
+        }
+    }
+    Ok(())
+}
+
 // ---------------------------------------------------------------- claim and release
 
 static MAINTAINING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
@@ -668,6 +722,8 @@ pub fn claim(target_ip: Ipv4Addr, target_mac: &str) -> Result<Adapter, String> {
     let armed = (|| -> Result<(), String> {
         open_firewall(target_ip)?;
         set_forwarding(&ad.if_index.to_string(), true)?;
+        // Before the frame, because that is the moment our own cache is at risk.
+        pin_gateway(&ad.if_index.to_string(), ad.gateway, &router_mac)?;
         let sock = Socket::open_for(ad.ip)?;
         let frame = arp_reply(&ad.mac, ad.gateway, target_mac, target_ip)
             .ok_or_else(|| "could not build the claim frame".to_string())?;
@@ -864,6 +920,9 @@ pub fn release() -> Result<(), String> {
         sock.send(&frame)?;
         std::thread::sleep(std::time::Duration::from_millis(120));
     }
+    // After the restore frame, before the record is dropped: our own cache has to be
+    // released too, or the PC stays pointed at itself.
+    unpin_gateway(&intent.interface, gateway)?;
     set_forwarding(&intent.interface, false)?;
     // If the rule will not go, the record stays so start-up tries again. An inbound
     // allow that outlives its release is worse than a failed release.

@@ -157,6 +157,55 @@ pub fn tun_config_path() -> PathBuf {
     engine_dir().join("singbox-tun.json")
 }
 
+/// Is another interface publishing a default route right now?
+///
+/// Deliberately a count, not a name: any of them has the same effect on routing, and the app
+/// should not have to know about Tailscale specifically.
+#[cfg(windows)]
+fn another_default_route() -> bool {
+    let out = std::process::Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "(Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Measure-Object).Count",
+        ])
+        .creation_flags(NO_WINDOW)
+        .output();
+    match out {
+        Ok(o) => String::from_utf8_lossy(&o.stdout).trim().parse::<u32>().unwrap_or(0) > 1,
+        Err(_) => false,
+    }
+}
+
+/// Put our tun ahead of the competition once it exists.
+///
+/// Only meaningful when another default route was detected; a failed call is a warning, never
+/// a reason to refuse the connection, because the tunnel still works without it.
+#[cfg(windows)]
+fn raise_our_route() {
+    let Ok(out) = std::process::Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "Get-NetAdapter -IncludeHidden | Where-Object { $_.Name -like 'QuotaVPN*' } | Select-Object -First 1 -ExpandProperty ifIndex",
+        ])
+        .creation_flags(NO_WINDOW)
+        .output()
+    else {
+        return;
+    };
+    let idx = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if idx.is_empty() {
+        return;
+    }
+    let _ = std::process::Command::new("netsh")
+        .args(["interface", "ipv4", "set", "interface", &idx, "metric=1"])
+        .creation_flags(NO_WINDOW)
+        .output();
+}
+
 #[cfg(windows)]
 fn cmd_hidden(prog: &str) -> Command {
     let mut c = Command::new(prog);
@@ -439,8 +488,17 @@ pub fn write_tun_config(
         routes.extend(system_dns_addresses());
         routes
     };
+    // Windows: nothing is added unless something else already owns a default route. A /0
+    // beats the tun's two /1s by prefix length whatever the metric, so a running Tailscale
+    // exit node, a second NIC or a corporate VPN would quietly carry every packet and the
+    // carrier would file it as general. Holding /0 as well makes it a prefix tie, and the
+    // tie is decided by metric, which `raise_our_route` then wins.
     #[cfg(not(target_os = "linux"))]
-    let dns_routes: Vec<String> = Vec::new();
+    let dns_routes: Vec<String> = if another_default_route() {
+        vec!["0.0.0.0/0".to_string()]
+    } else {
+        Vec::new()
+    };
     let dns_final = if apps_only { "direct-dns" } else { "proxy-dns" };
     let route_final = if apps_only { "direct" } else { "proxy" };
     let mut route_rules = serde_json::json!([
@@ -1578,6 +1636,14 @@ pub fn start_engine() -> Result<u32, String> {
                 }
                 if !up && task_engine_pid().is_none() {
                     return Err(format!("tunnel-failed: {name}"));
+                }
+                if up {
+                    // The adapter exists, so the competition can be outranked. Only needed
+                    // when something else published a default route, which is why the
+                    // config carried /0 in the first place.
+                    if another_default_route() {
+                        raise_our_route();
+                    }
                 }
             }
             return Ok(pid);
