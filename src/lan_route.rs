@@ -154,21 +154,32 @@ pub fn forwarding_enabled(interface: &str) -> Result<bool, String> {
         .args(["interface", "ipv4", "show", "interface", interface])
         .output()
         .map_err(|e| e.to_string())?;
-    let text = String::from_utf8_lossy(&out.stdout).to_lowercase();
-    Ok(text.contains("forwarding") && text.contains("enabled") && !text.contains("disabled"))
+    // Read the ONE line that answers the question. Scanning the whole output for
+    // "disabled" is wrong: the same block lists Router Discovery and Directed MAC Wake
+    // up, both disabled, so the answer came back false no matter what the state was.
+    for line in String::from_utf8_lossy(&out.stdout).lines() {
+        let trimmed = line.trim();
+        let lower = trimmed.to_lowercase();
+        if let Some(rest) = lower.strip_prefix("forwarding") {
+            let value = rest.split(':').nth(1).unwrap_or("").trim();
+            return Ok(value == "enabled");
+        }
+    }
+    Err(format!("netsh printed no Forwarding line for {interface}"))
 }
 
 pub fn set_forwarding(interface: &str, on: bool) -> Result<(), String> {
     let state = if on { "enabled" } else { "disabled" };
     let out = std::process::Command::new("netsh")
+        // One argument: netsh rejects "forwarding enabled" as two, and answers
+        // "The parameter is incorrect", which reads like a permissions problem and is not.
         .args([
             "interface",
             "ipv4",
             "set",
             "interface",
             interface,
-            "forwarding",
-            state,
+            &format!("forwarding={state}"),
         ])
         .output()
         .map_err(|e| e.to_string())?;
