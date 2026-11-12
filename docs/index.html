@@ -33,7 +33,7 @@
   "url": "https://quotavpn.app/",
   "applicationCategory": "SecurityApplication",
   "operatingSystem": "Windows 10, Windows 11, Android",
-  "softwareVersion": "0.4.4",
+  "softwareVersion": "0.6.1",
   "license": "https://opensource.org/licenses/MIT",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
   "downloadUrl": "https://github.com/YousefMohiey/QuotaVPN/releases/latest",
@@ -652,9 +652,10 @@
     }
     headerCta(apk ? apk.browser_download_url : null);
   }
-  // releases/latest is a Windows release and carries no APK, so the Android size
-  // comes from its own versioned release.
-  var APK_RELEASE = 'https://api.github.com/repos/YousefMohiey/QuotaVPN/releases/tags/v0.6.1';
+  // The Android size comes from the newest release that actually carries an .apk, not
+  // from latest: a Windows-only release is a normal thing to ship, and pinning a tag here
+  // would freeze the quoted size at whatever version was current when it was written.
+  var RELEASES = 'https://api.github.com/repos/YousefMohiey/QuotaVPN/releases?per_page=15';
   function loadApkSize(){
     try{
       var raw = localStorage.getItem('qvApk');
@@ -663,21 +664,27 @@
         if(o && o.size && (Date.now() - (o.t || 0)) < TTL){ apkBytes = o.size; paintMeta(); return; }
       }
     }catch(e){}
-    fetch(APK_RELEASE, {cache: 'no-store'})
+    fetch(RELEASES, {cache: 'no-store'})
       .then(function(r){ return r.json(); })
-      .then(function(d){
-        var a0 = null;
-        (d && d.assets ? d.assets : []).forEach(function(a){ if(/\.apk$/i.test(a.name)) a0 = a; });
-        if(!a0) return;
-        apkBytes = a0.size;
-        paintMeta();
-        try{ localStorage.setItem('qvApk', JSON.stringify({size: a0.size, t: Date.now()})); }catch(e){}
+      .then(function(list){
+        if(!Array.isArray(list)) return;
+        for(var i = 0; i < list.length; i++){
+          var rel = list[i];
+          if(!rel || rel.draft) continue;
+          var a0 = null;
+          (rel.assets || []).forEach(function(a){ if(/\.apk$/i.test(a.name)) a0 = a; });
+          if(!a0) continue;
+          apkBytes = a0.size;
+          paintMeta();
+          try{ localStorage.setItem('qvApk', JSON.stringify({size: a0.size, t: Date.now()})); }catch(e){}
+          return;
+        }
       })
       .catch(function(){});
   }
   var phone = false;
   try{ phone = matchMedia('(max-width:760px)').matches; }catch(e){}
-  var APK_DIRECT = 'https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.6.1/QuotaVPN-mobile-signed.apk';
+  var APK_DIRECT = 'https://github.com/YousefMohiey/QuotaVPN/releases/latest';
   function headerCta(apkUrl){
     if(!phone) return;
     var el = document.getElementById('hdrCta'); if(!el) return;
