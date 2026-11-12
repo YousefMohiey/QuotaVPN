@@ -87,6 +87,17 @@ export const lanStart = (ip: string, mac: string, blocked: boolean): Promise<boo
 
 export const lanStop = (): Promise<boolean> => call<boolean>("lan_stop")
 
+/** Route one device through the tunnel with nothing installed on it. */
+export const lanRouteDevice = (ip: string, mac: string): Promise<unknown> =>
+  call<unknown>("lan_route_device", { ip, mac })
+
+/** Hand a routed device back to the router. */
+export const lanUnrouteDevice = (): Promise<boolean> => call<boolean>("lan_unroute_device")
+
+/** Which device is routed right now, if any. */
+export const lanRoutedDevice = (): Promise<{ ip: string; mac: string } | null> =>
+  call<{ ip: string; mac: string } | null>("lan_routed_device")
+
 /** Keep a device out of reach of the controls, or let it back in. */
 export const lanProtect = (mac: string, on: boolean): Promise<boolean> =>
   call<boolean>("lan_protect", { mac, on })
@@ -235,6 +246,9 @@ export const api = {
     call<boolean>("lan_start", { ip, mac, blocked }),
   lanStop: (): Promise<boolean> => call<boolean>("lan_stop"),
   lanProtect: (mac: string, on: boolean): Promise<boolean> => call<boolean>("lan_protect", { mac, on }),
+  lanRouteDevice: (ip: string, mac: string): Promise<unknown> => call<unknown>("lan_route_device", { ip, mac }),
+  lanUnrouteDevice: (): Promise<boolean> => call<boolean>("lan_unroute_device"),
+  lanRoutedDevice: (): Promise<{ ip: string; mac: string } | null> => call<{ ip: string; mac: string } | null>("lan_routed_device"),
   lanMonitorStart: (): Promise<boolean> => call<boolean>("lan_monitor_start"),
   lanMonitorStop: (): Promise<boolean> => call<boolean>("lan_monitor_stop"),
   lanMonitorActive: (): Promise<boolean> => call<boolean>("lan_monitor_active"),

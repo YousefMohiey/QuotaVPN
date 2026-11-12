@@ -105,6 +105,11 @@ export function Network() {
   const [routerLinked, setRouterLinked] = useState(false)
   const [driverReady, setDriverReady] = useState<boolean | null>(null)
   const [watching, setWatching] = useState(false)
+  // One device can be routed through the tunnel with nothing installed on it. The state
+  // is read back from the backend rather than assumed, because a claim can be refused
+  // (no elevation, own MAC in the neighbour table) and the button must not lie.
+  const [routed, setRouted] = useState<string | null>(null)
+  const [routing, setRouting] = useState(false)
   const [watchBusy, setWatchBusy] = useState(false)
   const [live, setLive] = useState<Record<string, Live>>({})
   // Where the bytes went, not just how many: the backend refreshes this every
@@ -116,6 +121,10 @@ export function Network() {
   const [copied, setCopied] = useState<string | null>(null)
   const prevTraffic = useRef<Record<string, { up: number; down: number; at: number }>>({})
   const polled = useRef(0)
+
+  useEffect(() => {
+    void api.lanRoutedDevice().then((r) => setRouted(r?.ip ?? null)).catch(() => {})
+  }, [])
 
   const scan = useCallback(async (quiet = false) => {
     if (!quiet) setBusy(true)
@@ -227,6 +236,30 @@ export function Network() {
       await refreshStatus()
     } catch (e) {
       setErr(String(e))
+    }
+  }
+
+  // Route one device, or hand it back. The backend returns only after forwarding is
+  // confirmed, so a success is a claim in force rather than one attempted; on failure the
+  // state is re-read so the badge cannot claim something that is not true.
+  const toggleRoute = async (d: LanDevice) => {
+    setRouting(true)
+    setErr("")
+    try {
+      if (routed === d.ip) {
+        await api.lanUnrouteDevice()
+        setRouted(null)
+      } else {
+        if (routed) await api.lanUnrouteDevice()
+        await api.lanRouteDevice(d.ip, d.mac)
+        setRouted(d.ip)
+      }
+    } catch (e) {
+      setErr(String(e))
+      const now = await api.lanRoutedDevice().catch(() => null)
+      setRouted(now?.ip ?? null)
+    } finally {
+      setRouting(false)
     }
   }
 
@@ -529,6 +562,11 @@ export function Network() {
                               {t("netThisPc")}
                             </span>
                           ) : null}
+                          {routed === d.ip ? (
+                            <span className="shrink-0 rounded-[5px] bg-[var(--green-bg)] px-1.5 py-px text-[11px] font-medium text-[var(--green)]">
+                              {t("netViaTunnel")}
+                            </span>
+                          ) : null}
                           {state === "blocked" ? (
                             <span className="shrink-0 text-[11px] font-medium text-[var(--red)]">
                               {t("netStateBlocked")}
@@ -540,6 +578,17 @@ export function Network() {
                           ) : null}
                         </span>
                         <span className="flex min-w-0 items-center gap-1">
+                          {!d.self_pc ? (
+                            <button
+                              type="button"
+                              disabled={routing}
+                              onClick={() => void toggleRoute(d)}
+                              title={t("netViaTunnelHint")}
+                              className="shrink-0 rounded-[6px] border border-line px-1.5 py-px text-[11px] font-medium text-txt2 transition-colors hover:border-[var(--brand-line)] hover:text-brand-strong disabled:opacity-50"
+                            >
+                              {routed === d.ip ? t("netUnroute") : t("netRoute")}
+                            </button>
+                          ) : null}
                           <button
                             type="button"
                             onClick={() => void copy(d.ip, `ip-${d.ip}`)}
