@@ -119,6 +119,24 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
     case "lan_npcap_ready":
       if (NPCAP_MODE === "unknown") throw new Error("the driver state could not be read")
       return npcapInstalled as T
+    case "lan_route_diagnose": {
+      await new Promise((r) => setTimeout(r, 600))
+      const ip = String(args?.ip || "")
+      const mac = String(args?.mac || "")
+      const target = ip ? `${ip} ${mac}`.trim() : "no device given"
+      return [
+        "Npcap driver: loaded, version 1.79",
+        "this machine: 192.168.1.2, hardware 9c:69:d3:4c:30:c8",
+        "gateway: 192.168.1.1, hardware f0:a9:51:c1:eb:da",
+        "neighbour table gateway: f0:a9:51:c1:eb:da, ours: no",
+        "forwarding: on, IPv4 routing enabled",
+        "engine: running, tun up at 172.19.0.1",
+        "intention: none recorded",
+        "firewall inbound rule: absent",
+        "firewall forward rule: absent",
+        `frames from ${target} in the last six seconds: 148 out, 203 in`,
+      ] as T
+    }
     case "lan_install_npcap":
       if (NPCAP_MODE === "instfail")
         throw new Error("the vendor download was refused (HTTP 403)")

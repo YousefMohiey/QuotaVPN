@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Ban,
   Check,
+  Copy,
   Gauge,
   Loader2,
   RefreshCw,
@@ -11,6 +12,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   SlidersHorizontal,
+  Stethoscope,
   X,
 } from "lucide-react"
 import { useI18n, type StrKey } from "@/lib/i18n"
@@ -128,6 +130,10 @@ export function Network() {
   const [npcap, setNpcap] = useState<boolean | null>(null)
   const [installing, setInstalling] = useState(false)
   const [installNote, setInstallNote] = useState("")
+  // The read-only report from the routing diagnostics, one line per fact, or
+  // null when it has never been asked for.
+  const [diag, setDiag] = useState<string[] | null>(null)
+  const [diagBusy, setDiagBusy] = useState(false)
   const [routeErr, setRouteErr] = useState("")
   const [err, setErr] = useState("")
   const [dests, setDests] = useState<Destination[]>([])
@@ -336,6 +342,23 @@ export function Network() {
       setErr(String(e))
     } finally {
       setInstalling(false)
+    }
+  }
+
+  /** Ask the backend what it sees. It changes nothing, and it is the honest
+      answer to "why did this not work", so it prints as it arrives. */
+  const runDiagnose = async () => {
+    if (diagBusy) return
+    setDiagBusy(true)
+    setErr("")
+    try {
+      const lines = await api.lanRouteDiagnose(routed?.ip, routed?.mac)
+      setDiag(Array.isArray(lines) ? lines : [])
+    } catch (e) {
+      setErr(String(e))
+      setDiag(null)
+    } finally {
+      setDiagBusy(false)
     }
   }
 
@@ -712,11 +735,12 @@ export function Network() {
                 <p className="mt-1 truncate text-[12px] text-txt3">{t("netDestinationsEmpty")}</p>
               )}
             </div>
+            <div className="flex min-w-0 items-center gap-1">
             <button
               type="button"
               onClick={() => setRouterOpen(true)}
               style={{ height: ALLOWED_MIN }}
-              className="press flex min-w-0 items-center gap-2 rounded-[9px] px-1 text-[11.5px] text-txt2 transition-colors hover:text-txt"
+              className="press flex min-w-0 flex-1 items-center gap-2 rounded-[9px] px-1 text-[11.5px] text-txt2 transition-colors hover:text-txt"
             >
               <Router className="size-3.5 shrink-0" aria-hidden />
               <span className="min-w-0 flex-1 truncate text-start">
@@ -727,9 +751,71 @@ export function Network() {
               ) : null}
               <Check className={cn("size-3.5 shrink-0", routerLinked ? "text-[var(--green)]" : "invisible")} aria-hidden />
             </button>
+            <Tip text={t("netDiagnose")} align="end">
+              <button
+                type="button"
+                onClick={() => void runDiagnose()}
+                disabled={diagBusy}
+                aria-label={t("netDiagnose")}
+                style={{ height: ALLOWED_MIN }}
+                className="press flex shrink-0 items-center gap-1.5 rounded-[9px] px-1.5 text-[11.5px] text-txt2 transition-colors enabled:hover:bg-white/[0.06] enabled:hover:text-txt disabled:cursor-wait disabled:opacity-60"
+              >
+                <Stethoscope className="size-3.5 shrink-0" aria-hidden />
+                <span className="truncate">{diagBusy ? t("netDiagnoseBusy") : t("netDiagnose")}</span>
+              </button>
+            </Tip>
+            </div>
           </div>
         </div>
       </section>
+
+      {diag ? (
+        <section className="flex shrink-0 flex-col overflow-hidden rounded-[10px] border border-line bg-[var(--panel)]">
+          <div className="flex shrink-0 items-center gap-1.5 border-b border-line ps-3 pe-1">
+            <Stethoscope className="size-3.5 shrink-0 text-txt2" aria-hidden />
+            <span className="truncate text-[11.5px] font-medium text-txt2">{t("netDiagnose")}</span>
+            <button
+              type="button"
+              onClick={() => void copy(diag.join("\n"), "diag")}
+              style={{ height: ALLOWED_MIN }}
+              className="press ms-auto flex shrink-0 items-center gap-1.5 rounded-[8px] px-2 text-[11.5px] text-txt2 transition-colors hover:bg-white/[0.06] hover:text-txt"
+            >
+              {copied === "diag" ? (
+                <Check className="size-3.5 text-[var(--green)]" aria-hidden />
+              ) : (
+                <Copy className="size-3.5" aria-hidden />
+              )}
+              {copied === "diag" ? t("copied") : t("netDiagnoseCopy")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDiag(null)}
+              aria-label={t("dismiss")}
+              style={actionStyle}
+              className={cn(actionCls, "shrink-0")}
+            >
+              <X className="size-3.5" aria-hidden />
+            </button>
+          </div>
+          <div className="app-scroll max-h-[140px] min-h-0 overflow-y-auto px-3 py-2">
+            {diag.length ? (
+              <ul className="flex min-w-0 flex-col gap-0.5">
+                {diag.map((line, i) => (
+                  <li
+                    key={`${i}-${line.slice(0, 10)}`}
+                    className="break-words font-mono text-[11.5px] leading-relaxed text-txt2"
+                    dir="auto"
+                  >
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-[12px] text-txt3">{t("netDiagnoseEmpty")}</p>
+            )}
+          </div>
+        </section>
+      ) : null}
 
       {active ? (
         <div className="flex shrink-0 items-center gap-2.5 rounded-[10px] bg-[var(--brand-bg)] px-3 py-1.5">
