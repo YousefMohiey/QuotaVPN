@@ -920,6 +920,10 @@ async fn tunnel_start(
     }
     let mut pid = vpn::start_engine().map_err(|e| e)?;
     *engine.0.lock().unwrap() = Some(pid);
+    // An explicit connect takes the engine over: releasing a routed device later
+    // must not stop a tunnel the user asked for.
+    #[cfg(windows)]
+    quotacards::lan_route::note_engine_adopted();
     // Wait for the tun to actually carry traffic. A cold wintun adapter can
     // take several seconds to publish its routes, and a fixed short sleep
     // made the first connect of a session fail while the engine was healthy;

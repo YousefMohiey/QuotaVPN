@@ -104,20 +104,27 @@ pub struct Intent {
     /// It must never be re-read at release time: our own claim can rewrite the local
     /// neighbour table, and then "restore" would hand the device back to us.
     pub router_mac: String,
+    /// Did this claim start the engine, or was it already carrying the PC when the
+    /// claim arrived? Release has to know: a restart started here has to be stopped,
+    /// and a restart it found has to be put back the way the user had it.
+    pub engine_started_here: bool,
 }
 
 impl Intent {
     pub fn encode(&self) -> String {
         format!(
-            "{}|{}|{}|{}|{}|{}",
+            "{}|{}|{}|{}|{}|{}|{}",
             self.target_ip, self.target_mac, self.gateway_ip, self.interface,
-            self.tun_interface, self.router_mac
+            self.tun_interface, self.router_mac, self.engine_started_here as u8
         )
     }
 
     pub fn decode(line: &str) -> Option<Intent> {
         let p: Vec<&str> = line.trim().split('|').collect();
-        if p.len() != 6 || p.iter().any(|s| s.is_empty()) {
+        // Six fields is a record written before the engine restart existed. Read it
+        // rather than drop it: dropping it loses the promise to restore the device,
+        // which is the one thing this record exists for.
+        if (p.len() != 6 && p.len() != 7) || p.iter().any(|s| s.is_empty()) {
             return None;
         }
         Some(Intent {
@@ -127,6 +134,7 @@ impl Intent {
             interface: p[3].to_string(),
             tun_interface: p[4].to_string(),
             router_mac: p[5].to_string(),
+            engine_started_here: p.get(6).map(|v| *v == "1").unwrap_or(false),
         })
     }
 }
@@ -148,6 +156,21 @@ pub fn read_intent() -> Option<Intent> {
 
 pub fn forget_intent() {
     let _ = std::fs::remove_file(intent_path());
+}
+
+/// The user asked for the tunnel explicitly, so the engine is theirs now and a
+/// later release must not stop it. Without this, routing a device, pressing
+/// connect and then un-routing the device would leave the app showing connected
+/// with nothing running.
+pub fn note_engine_adopted() {
+    let Some(mut intent) = read_intent() else {
+        return;
+    };
+    if !intent.engine_started_here {
+        return;
+    }
+    intent.engine_started_here = false;
+    let _ = remember_intent(&intent);
 }
 
 // ---------------------------------------------------------------- forwarding control
@@ -214,6 +237,10 @@ pub struct Adapter {
     pub gateway: Ipv4Addr,
     pub if_index: u32,
     pub mac: String,
+    /// The adapter's own name. The engine's outbound needs a name to bind to, not
+    /// an index, and taking it from the same probe means the two can never
+    /// disagree about which interface is the LAN.
+    pub name: String,
 }
 
 /// Ask Windows, in JSON, because `ipconfig` and `netsh` are localised and this has to
@@ -226,7 +253,7 @@ impl Adapter {
 }
 
 pub fn adapter() -> Result<Adapter, String> {
-    let script = "$c = Get-NetIPConfiguration | Where-Object { $_.IPv4DefaultGateway -and $_.NetAdapter.Status -eq 'Up' } | Select-Object -First 1;                   if (-not $c) { '' } else { [pscustomobject]@{                     ip = [string]$c.IPv4Address.IPAddress;                     gateway = [string]$c.IPv4DefaultGateway.NextHop;                     ifindex = [int]$c.NetAdapter.ifIndex;                     mac = [string]$c.NetAdapter.MacAddress } | ConvertTo-Json -Compress }";
+    let script = "$c = Get-NetIPConfiguration | Where-Object { $_.IPv4DefaultGateway -and $_.NetAdapter.Status -eq 'Up' } | Select-Object -First 1;                   if (-not $c) { '' } else { [pscustomobject]@{                     ip = [string]$c.IPv4Address.IPAddress;                     gateway = [string]$c.IPv4DefaultGateway.NextHop;                     ifindex = [int]$c.NetAdapter.ifIndex;                     mac = [string]$c.NetAdapter.MacAddress;                     name = [string]$c.NetAdapter.Name } | ConvertTo-Json -Compress }";
     // Hidden: this is a GUI app, and a console flashing on every adapter lookup is
     // the difference between a feature and a bug report.
     let out = crate::lan::hidden("powershell")
@@ -243,7 +270,8 @@ pub fn adapter() -> Result<Adapter, String> {
     let gateway: Ipv4Addr = v["gateway"].as_str().ok_or("no gateway")?.parse().map_err(|_| "bad gateway")?;
     let if_index = v["ifindex"].as_u64().ok_or("no ifindex")? as u32;
     let mac = v["mac"].as_str().ok_or("no mac")?.to_ascii_lowercase().replace('-', ":");
-    Ok(Adapter { ip, gateway, if_index, mac })
+    let name = v["name"].as_str().unwrap_or_default().to_string();
+    Ok(Adapter { ip, gateway, if_index, mac, name })
 }
 
 // ---------------------------------------------------------------- npcap, loaded at runtime
@@ -686,21 +714,15 @@ static MAINTAINING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBoo
 pub fn claim(target_ip: Ipv4Addr, target_mac: &str) -> Result<Adapter, String> {
     let ad = adapter()?;
 
+    // Whether the engine is already up decides who has to stop it at release. A live
+    // engine, not merely a tun adapter: `tun_adapter_present` is a name match, so an
+    // adapter left behind by a killed run satisfies it, which is exactly why
+    // `reset_tun_adapter` exists. `task_engine_pid` verifies a real sing-box.
+    let engine_was_running = crate::vpn::task_engine_pid().is_some();
+
     // Captured before the first frame. If the table already says we are the gateway,
     // something else ran this feature and did not restore, and guessing is not an
     // option: a restore that names our own MAC restores nothing.
-    // A live engine, not merely a tun adapter: `tun_adapter_present` is a name match, so an
-    // adapter left behind by a killed run satisfies it, which is exactly why
-    // `reset_tun_adapter` exists. `task_engine_pid` verifies a real sing-box.
-    if crate::vpn::task_engine_pid().is_none() {
-        return Err("connect the VPN first: the engine is not running".into());
-    }
-    // Alive is not the same as carrying traffic: a sing-box that started and did not
-    // bring a tun up would take the claim and have nowhere to put the packets.
-    if !crate::vpn::tun_adapter_present() {
-        return Err("connect the VPN first: the tunnel interface is not up".into());
-    }
-
     let router_mac = crate::lan::mac_for(&ad.gateway.to_string())
         .ok_or_else(|| format!("no MAC known for the gateway {}", ad.gateway))?;
     if router_mac.eq_ignore_ascii_case(&ad.mac) {
@@ -716,10 +738,30 @@ pub fn claim(target_ip: Ipv4Addr, target_mac: &str) -> Result<Adapter, String> {
         interface: ad.if_index.to_string(),
         tun_interface: tun_if_index().map(|i| i.to_string()).unwrap_or_default(),
         router_mac: router_mac.clone(),
+        engine_started_here: !engine_was_running,
     };
     // The promise comes first: if this process dies after this line and before the
     // frames, start-up still knows a device may be pointing at us.
     remember_intent(&intent)?;
+
+    // The engine has to be (re)started with the device rule in it BEFORE the first
+    // frame. sing-box reads its config once, at start, and has no runtime route
+    // editing, so a claim against a whole-PC session would otherwise deliver the
+    // device's packets to a tun with no rule for them: a black hole that looks
+    // exactly like a broken route. The intention record is already on disk, which
+    // is what makes the regenerated config device-only.
+    if !crate::vpn::device_route_ready(&target_ip.to_string()) {
+        if let Err(e) = crate::vpn::restart_for_intent() {
+            let _ = release();
+            return Err(e);
+        }
+        // A pid is not a tunnel: start_engine answers as soon as the process is
+        // there, and a claim with no adapter beneath it carries nothing.
+        if !crate::vpn::tun_adapter_present() {
+            let _ = release();
+            return Err("the tunnel interface did not come up for this claim".into());
+        }
+    }
 
     // Order matters and it is not cosmetic: the permit goes in first, because a device
     // pointed at a machine with forwarding on and no rule is a device with no internet.
@@ -958,7 +1000,25 @@ pub fn release() -> Result<(), String> {
     // If the rule will not go, the record stays so start-up tries again. An inbound
     // allow that outlives its release is worse than a failed release.
     close_firewall(target_ip)?;
+    // The record's promise is discharged here, and it has to be gone before the
+    // engine is touched: the regenerated config asks the same record whether a
+    // device is routed, and a record still on disk would rebuild this exact
+    // device-only session instead of leaving it.
     forget_intent();
+    // Now put the engine back. A restart this claim started is stopped, because
+    // nothing else was using it; one it found is restarted without the device rule,
+    // or the host would stay direct while the user believes the VPN is connected.
+    // Neither failure may fail the release: the device is already restored, and the
+    // next connect rebuilds the config anyway.
+    if crate::vpn::task_engine_pid().is_some() {
+        if intent.engine_started_here {
+            crate::vpn::stop_engine();
+        } else if let Err(e) = crate::vpn::restart_for_intent() {
+            crate::vpn::app_log(&format!(
+                "routing released, but the engine could not be put back to whole-PC mode: {e}"
+            ));
+        }
+    }
     Ok(())
 }
 
@@ -1009,6 +1069,12 @@ pub fn diagnose(target: Option<(Ipv4Addr, String)>) -> Vec<String> {
     }
 
     if let Some((target_ip, target_mac)) = target {
+        // The first stage that can be wrong and leave no trace: a claim against a
+        // config with no device rule takes the device and forwards nothing.
+        say(format!(
+            "engine carries this device: {}",
+            crate::vpn::device_route_ready(&target_ip.to_string())
+        ));
         match rule_facts(&outbound_rule(target_ip)) {
             Ok(Some(f)) => say(format!("rule outbound: {:?}", f)),
             Ok(None) => say("rule outbound: MISSING".to_string()),
@@ -1247,8 +1313,19 @@ mod tests {
             interface: "Ethernet".into(),
             tun_interface: "17".into(),
             router_mac: "f0:a9:51:c1:eb:da".into(),
+            engine_started_here: true,
         };
         assert_eq!(Intent::decode(&i.encode()), Some(i));
+    }
+
+    #[test]
+    fn a_record_from_before_the_engine_restart_is_still_a_promise() {
+        // Six fields is every record written before the engine restart existed. It
+        // has to decode, because dropping it loses the restore the device is owed.
+        let old = "192.168.1.28|aa:bb:cc:dd:ee:ff|192.168.1.1|7|17|f0:a9:51:c1:eb:da";
+        let i = Intent::decode(old).expect("an older record is still a record");
+        assert_eq!(i.target_mac, "aa:bb:cc:dd:ee:ff");
+        assert!(!i.engine_started_here, "an older record cannot claim the engine");
     }
 
     #[test]
