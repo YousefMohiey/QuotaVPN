@@ -134,7 +134,7 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
         "intention: none recorded",
         "firewall inbound rule: absent",
         "firewall forward rule: absent",
-        `frames from ${target} in the last six seconds: 148 out, 203 in`,
+        `frames from ${target} in 6s: 148`,
       ] as T
     }
     case "lan_install_npcap":
