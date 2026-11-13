@@ -94,6 +94,10 @@ export const lanRouteDevice = (ip: string, mac: string): Promise<unknown> =>
 /** Hand a routed device back to the router. */
 export const lanUnrouteDevice = (): Promise<boolean> => call<boolean>("lan_unroute_device")
 
+/** Every fact that decides whether routing a device can work, as readable lines. */
+export const lanRouteDiagnose = (ip?: string, mac?: string): Promise<string[]> =>
+  call<string[]>("lan_route_diagnose", { ip: ip ?? null, mac: mac ?? null })
+
 /** Is the packet driver present? Device routing needs it. */
 export const lanNpcapReady = (): Promise<boolean> => call<boolean>("lan_npcap_ready")
 
@@ -258,6 +262,8 @@ export const api = {
   lanUnrouteDevice: (): Promise<boolean> => call<boolean>("lan_unroute_device"),
   lanRoutedDevice: (): Promise<{ ip: string; mac: string } | null> => call<{ ip: string; mac: string } | null>("lan_routed_device"),
   lanNpcapReady: (): Promise<boolean> => call<boolean>("lan_npcap_ready"),
+  lanRouteDiagnose: (ip?: string, mac?: string): Promise<string[]> =>
+    call<string[]>("lan_route_diagnose", { ip: ip ?? null, mac: mac ?? null }),
   lanInstallNpcap: (): Promise<string> => call<string>("lan_install_npcap"),
   lanMonitorStart: (): Promise<boolean> => call<boolean>("lan_monitor_start"),
   lanMonitorStop: (): Promise<boolean> => call<boolean>("lan_monitor_stop"),

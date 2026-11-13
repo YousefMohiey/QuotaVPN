@@ -2928,6 +2928,24 @@ async fn lan_unroute_device() -> Result<bool, String> {
         .map_err(|e| e.to_string())?
 }
 
+/// Report every fact that decides whether routing a device can work.
+#[cfg(windows)]
+#[tauri::command]
+async fn lan_route_diagnose(ip: Option<String>, mac: Option<String>) -> Result<Vec<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let target = match (ip, mac) {
+            (Some(ip), Some(mac)) => {
+                let parsed = ip.parse().map_err(|_| format!("not an address: {ip}"))?;
+                Some((parsed, mac))
+            }
+            _ => None,
+        };
+        Ok::<Vec<String>, String>(quotacards::lan_route::diagnose(target))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// Can this PC route a device at all? False means the packet driver is missing.
 #[cfg(windows)]
 #[tauri::command]
@@ -3008,6 +3026,7 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         lan_routed_device,
         lan_npcap_ready,
         lan_install_npcap,
+        lan_route_diagnose,
         lan_devices,
         speed_cancel,
         speed_latency,

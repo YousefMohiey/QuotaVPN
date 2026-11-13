@@ -940,6 +940,68 @@ pub fn recover() -> Option<String> {
     })
 }
 
+// ---------------------------------------------------------------- diagnosis
+
+/// Everything that decides whether a claim can work, as lines a person can read.
+///
+/// Written because "it does not work" has five different causes in this path and guessing
+/// between them cost days. Run this with a device selected and it also counts the frames that
+/// device actually sends us, which is the one fact no amount of reading can supply.
+pub fn diagnose(target: Option<(Ipv4Addr, String)>) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    let mut say = |line: String| out.push(line);
+
+    say(format!("npcap loaded: {}", npcap().is_some()));
+    match adapter() {
+        Ok(ad) => {
+            say(format!("our address: {} | gateway: {} | ifindex {} | mac {}", ad.ip, ad.gateway, ad.if_index, ad.mac));
+            match crate::lan::mac_for(&ad.gateway.to_string()) {
+                Some(m) => say(format!(
+                    "gateway mac in the table: {m}{}",
+                    if m.eq_ignore_ascii_case(&ad.mac) { "  <-- that is US, the pin is missing or the entry is poisoned" } else { "" }
+                )),
+                None => say("gateway mac in the table: none".to_string()),
+            }
+            match forwarding_enabled(&ad.if_index.to_string()) {
+                Ok(v) => say(format!("forwarding on the LAN interface: {v}")),
+                Err(e) => say(format!("forwarding: could not read ({e})")),
+            }
+        }
+        Err(e) => say(format!("adapter lookup failed: {e}")),
+    }
+
+    say(format!("engine running: {}", crate::vpn::task_engine_pid().is_some()));
+    say(format!("tun adapter present: {}", crate::vpn::tun_adapter_present()));
+    match read_intent() {
+        Some(i) => say(format!("intent on disk: target {} | router mac {}", i.target_ip, i.router_mac)),
+        None => say("intent on disk: none".to_string()),
+    }
+
+    if let Some((target_ip, target_mac)) = target {
+        match rule_facts(&outbound_rule(target_ip)) {
+            Ok(Some(f)) => say(format!("rule outbound: {:?}", f)),
+            Ok(None) => say("rule outbound: MISSING".to_string()),
+            Err(e) => say(format!("rule outbound: could not read ({e})")),
+        }
+        match rule_facts(&return_rule(target_ip)) {
+            Ok(Some(f)) => say(format!("rule return: {:?}", f)),
+            Ok(None) => say("rule return: MISSING".to_string()),
+            Err(e) => say(format!("rule return: could not read ({e})")),
+        }
+        match Socket::open_for(Ipv4Addr::new(0, 0, 0, 0)) {
+            Ok(_) => say("packet socket: opened".to_string()),
+            Err(_) => {}
+        }
+        if let Ok(ad) = adapter() {
+            if let Ok(sock) = Socket::open_for(ad.ip) {
+                let n = sock.count_frames_from(&target_mac, 6);
+                say(format!("frames from {target_mac} in 6s: {n}{}", if n == 0 { "  <-- the device is not sending to us, so the claim never took" } else { "" }));
+            }
+        }
+    }
+    out
+}
+
 // ---------------------------------------------------------------- live proof
 
 /// A claim that undoes itself, so a panic or an early return cannot leave a device
