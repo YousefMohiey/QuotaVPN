@@ -97,6 +97,9 @@ pub struct Intent {
     pub target_mac: String,
     pub gateway_ip: String,
     pub interface: String,
+    /// The tunnel adapter's index. Forwarding has to be on for it as well, because the
+    /// return leg arrives there and Windows decides per receiving interface.
+    pub tun_interface: String,
     /// The router's real hardware address, captured before the first forged frame.
     /// It must never be re-read at release time: our own claim can rewrite the local
     /// neighbour table, and then "restore" would hand the device back to us.
@@ -106,14 +109,15 @@ pub struct Intent {
 impl Intent {
     pub fn encode(&self) -> String {
         format!(
-            "{}|{}|{}|{}|{}",
-            self.target_ip, self.target_mac, self.gateway_ip, self.interface, self.router_mac
+            "{}|{}|{}|{}|{}|{}",
+            self.target_ip, self.target_mac, self.gateway_ip, self.interface,
+            self.tun_interface, self.router_mac
         )
     }
 
     pub fn decode(line: &str) -> Option<Intent> {
         let p: Vec<&str> = line.trim().split('|').collect();
-        if p.len() != 5 || p.iter().any(|s| s.is_empty()) {
+        if p.len() != 6 || p.iter().any(|s| s.is_empty()) {
             return None;
         }
         Some(Intent {
@@ -121,7 +125,8 @@ impl Intent {
             target_mac: p[1].to_string(),
             gateway_ip: p[2].to_string(),
             interface: p[3].to_string(),
-            router_mac: p[4].to_string(),
+            tun_interface: p[4].to_string(),
+            router_mac: p[5].to_string(),
         })
     }
 }
@@ -709,6 +714,7 @@ pub fn claim(target_ip: Ipv4Addr, target_mac: &str) -> Result<Adapter, String> {
         target_mac: target_mac.to_ascii_lowercase(),
         gateway_ip: ad.gateway.to_string(),
         interface: ad.if_index.to_string(),
+        tun_interface: tun_if_index().map(|i| i.to_string()).unwrap_or_default(),
         router_mac: router_mac.clone(),
     };
     // The promise comes first: if this process dies after this line and before the
@@ -722,6 +728,11 @@ pub fn claim(target_ip: Ipv4Addr, target_mac: &str) -> Result<Adapter, String> {
     let armed = (|| -> Result<(), String> {
         open_firewall(target_ip)?;
         set_forwarding(&ad.if_index.to_string(), true)?;
+        // Both sides. With only the LAN side on, the device's packets are admitted and the
+        // replies that arrive on the tunnel are not, which looks exactly like a dead route.
+        if let Some(tun) = tun_if_index() {
+            set_forwarding(&tun.to_string(), true)?;
+        }
         // Before the frame, because that is the moment our own cache is at risk.
         pin_gateway(&ad.if_index.to_string(), ad.gateway, &router_mac)?;
         let sock = Socket::open_for(ad.ip)?;
@@ -757,6 +768,23 @@ pub fn claim(target_ip: Ipv4Addr, target_mac: &str) -> Result<Adapter, String> {
         }
     });
     Ok(ad)
+}
+
+/// The tunnel adapter's interface index, by the name the engine gives it.
+///
+/// Needed because Windows keeps forwarding per interface: the LAN side admits the device's
+/// packets, and the tunnel side is where the replies arrive.
+fn tun_if_index() -> Option<u32> {
+    let out = crate::lan::hidden("powershell")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "Get-NetAdapter -IncludeHidden | Where-Object { $_.Name -like 'QuotaVPN*' } |              Sort-Object InterfaceIndex -Descending | Select-Object -First 1 -ExpandProperty ifIndex",
+        ])
+        .output()
+        .ok()?;
+    String::from_utf8_lossy(&out.stdout).trim().parse().ok()
 }
 
 fn outbound_rule(target_ip: Ipv4Addr) -> String {
@@ -924,6 +952,9 @@ pub fn release() -> Result<(), String> {
     // released too, or the PC stays pointed at itself.
     unpin_gateway(&intent.interface, gateway)?;
     set_forwarding(&intent.interface, false)?;
+    if !intent.tun_interface.is_empty() {
+        let _ = set_forwarding(&intent.tun_interface, false);
+    }
     // If the rule will not go, the record stays so start-up tries again. An inbound
     // allow that outlives its release is worse than a failed release.
     close_firewall(target_ip)?;
@@ -1214,6 +1245,7 @@ mod tests {
             target_mac: "aa:bb:cc:dd:ee:ff".into(),
             gateway_ip: "192.168.1.1".into(),
             interface: "Ethernet".into(),
+            tun_interface: "17".into(),
             router_mac: "f0:a9:51:c1:eb:da".into(),
         };
         assert_eq!(Intent::decode(&i.encode()), Some(i));
