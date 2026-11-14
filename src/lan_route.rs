@@ -709,6 +709,17 @@ fn unpin_gateway(interface: &str, gateway: Ipv4Addr) -> Result<(), String> {
 
 static MAINTAINING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
+/// Which backend a 42-byte claim frame goes through.
+///
+/// The driver when it is installed, because forging the frame is the only way to
+/// take a device on a router nobody configured. Gateway mode when it is not:
+/// there is nothing to forge then, and the router already points the device at
+/// this machine. One decision, used by claim, release and the upkeep thread, so
+/// the three can never disagree about whether a frame went out.
+fn claim_link() -> Box<dyn crate::wpcap::ClaimLink> {
+    crate::wpcap::claim_link(&crate::lan_ctrl::wire().map(|w| w.device).unwrap_or_default())
+}
+
 /// Take one device over. Returns once the first frame is on the wire and forwarding is
 /// confirmed, so a true return means "it is working now", not "it was attempted".
 pub fn claim(target_ip: Ipv4Addr, target_mac: &str) -> Result<Adapter, String> {
@@ -777,10 +788,16 @@ pub fn claim(target_ip: Ipv4Addr, target_mac: &str) -> Result<Adapter, String> {
         }
         // Before the frame, because that is the moment our own cache is at risk.
         pin_gateway(&ad.if_index.to_string(), ad.gateway, &router_mac)?;
-        let sock = Socket::open_for(ad.ip)?;
         let frame = arp_reply(&ad.mac, ad.gateway, target_mac, target_ip)
             .ok_or_else(|| "could not build the claim frame".to_string())?;
-        sock.send(&frame)?;
+        // Under gateway mode this writes nothing and answers true: the device is
+        // already sending here, and a forged frame would only repeat it.
+        if !claim_link().send_claim(&frame) {
+            return Err(
+                "no driver to send the claim frame, and this router does not point the device at this PC"
+                    .into(),
+            );
+        }
         Ok(())
     })();
     if let Err(e) = armed {
@@ -794,18 +811,19 @@ pub fn claim(target_ip: Ipv4Addr, target_mac: &str) -> Result<Adapter, String> {
     // owned for the thread: the caller's &str does not outlive this call
     let target_mac_owned = target_mac.to_ascii_lowercase();
     let target_ip_owned = target_ip;
-    let our_ip = ad.ip;
+    let device = crate::lan_ctrl::wire().map(|w| w.device).unwrap_or_default();
     std::thread::spawn(move || {
+        // Opened on this thread: a raw capture is not `Send`, and it does not
+        // need to be. Gateway mode answers without one.
+        let link = crate::wpcap::claim_link(&device);
         // ARP entries expire; a single claim looks like a feature that stops working.
         while MAINTAINING.load(std::sync::atomic::Ordering::SeqCst) {
             std::thread::sleep(std::time::Duration::from_secs(5));
             if !MAINTAINING.load(std::sync::atomic::Ordering::SeqCst) {
                 break;
             }
-            if let Ok(s) = Socket::open_for(our_ip) {
-                if let Some(f) = arp_reply(&mac, gw, &target_mac_owned, target_ip_owned) {
-                    let _ = s.send(&f);
-                }
+            if let Some(f) = arp_reply(&mac, gw, &target_mac_owned, target_ip_owned) {
+                let _ = link.send_claim(&f);
             }
         }
     });
@@ -982,12 +1000,16 @@ pub fn release() -> Result<(), String> {
         ));
     }
 
-    let sock = Socket::open_for(ad.ip)?;
+    let link = claim_link();
     let frame = arp_release(&router_mac, gateway, &intent.target_mac, target_ip)
         .ok_or_else(|| "could not build the release frame".to_string())?;
     // three times: one frame can be lost and the device would stay pointed at us
     for _ in 0..3 {
-        sock.send(&frame)?;
+        if !link.send_claim(&frame) {
+            // Nothing to send with and no claim was ever forged, which is the
+            // gateway case: the device never pointed at this machine.
+            break;
+        }
         std::thread::sleep(std::time::Duration::from_millis(120));
     }
     // After the restore frame, before the record is dropped: our own cache has to be
@@ -1089,11 +1111,26 @@ pub fn diagnose(target: Option<(Ipv4Addr, String)>) -> Vec<String> {
             Ok(_) => say("packet socket: opened".to_string()),
             Err(_) => {}
         }
-        if let Ok(ad) = adapter() {
-            if let Ok(sock) = Socket::open_for(ad.ip) {
-                let n = sock.count_frames_from(&target_mac, 6);
-                say(format!("frames from {target_mac} in 6s: {n}{}", if n == 0 { "  <-- the device is not sending to us, so the claim never took" } else { "" }));
+        // What the device actually sent us, from the layer that is carrying it.
+        // This used to count frames on a raw capture; the forward pipeline is the
+        // same evidence without needing a second handle on the wire.
+        match crate::lan_forward::read_state() {
+            Some(state) => {
+                let ip = target_ip.to_string();
+                match state.devices.iter().find(|d| d.ip == ip) {
+                    Some(d) => say(format!(
+                        "pipeline sees {} packets for {ip} (up {} bytes, down {})",
+                        d.packets, d.up, d.down
+                    )),
+                    None => say(format!(
+                        "pipeline is not listing {ip}  <-- the device is not sending to us, so the claim never took"
+                    )),
+                }
             }
+            None => say(
+                "pipeline: no state yet  <-- the elevated pass is not running, so nothing is counting"
+                    .to_string(),
+            ),
         }
     }
     out

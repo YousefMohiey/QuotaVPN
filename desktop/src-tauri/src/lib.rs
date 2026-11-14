@@ -2950,10 +2950,26 @@ async fn lan_route_diagnose(ip: Option<String>, mac: Option<String>) -> Result<V
     .map_err(|e| e.to_string())?
 }
 
-/// Can this PC route a device at all? False means the packet driver is missing.
+/// Can this PC watch devices, cap them, block them, and route one through the
+/// tunnel?
+///
+/// That no longer depends on Npcap. The forward pipeline does all of it and it
+/// ships with the app, so the answer is whether that driver loads. Npcap is now
+/// only needed for one-click claiming on a router that does not already point
+/// its devices at this machine, and that is a separate question: it should be
+/// surfaced where claiming is offered, never as a condition for the screen.
 #[cfg(windows)]
 #[tauri::command]
 fn lan_npcap_ready() -> bool {
+    quotacards::windivert::ready() || quotacards::lan_route::npcap_installed()
+}
+
+/// Is one-click ARP claiming available? False means the router's DHCP has to
+/// point devices at this machine (gateway mode), because there is no driver to
+/// forge a claim frame with.
+#[cfg(windows)]
+#[tauri::command]
+fn lan_claim_ready() -> bool {
     quotacards::lan_route::npcap_installed()
 }
 
@@ -3029,6 +3045,7 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         lan_unroute_device,
         lan_routed_device,
         lan_npcap_ready,
+        lan_claim_ready,
         lan_install_npcap,
         lan_route_diagnose,
         lan_devices,
@@ -3183,6 +3200,21 @@ pub fn run() {
             println!("{mac} -> {name}");
         }
         println!("found {}", found.len());
+        return;
+    }
+    // The elevated half of the LAN features. `WinDivertOpen` needs Administrator
+    // and the window process deliberately runs unelevated, so the forward loop
+    // lives in this pass and the app talks to it through the policy and state
+    // files in the engine directory.
+    #[cfg(windows)]
+    if std::env::args().any(|a| a == "--lan-pipeline") {
+        match quotacards::lan_forward::run() {
+            Ok(()) => println!("lan pipeline ended"),
+            Err(e) => {
+                quotacards::vpn::app_log(&format!("lan pipeline: {e}"));
+                println!("lan pipeline: {e}");
+            }
+        }
         return;
     }
     // Does the packet driver load, and what does it see?

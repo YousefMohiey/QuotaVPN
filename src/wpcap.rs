@@ -227,6 +227,76 @@ impl Drop for Capture {
     }
 }
 
+// ---------------------------------------------------------------- claim backends
+
+/// Putting the 42-byte claim frame on the wire, with or without a driver.
+///
+/// That frame is the only thing left that needs a raw handle. Watching, capping,
+/// blocking and naming all run on the forward pipeline, so this trait is the
+/// whole of the driver's remaining job, and a machine without it keeps every
+/// feature except claiming a device on a router it does not control.
+pub trait ClaimLink {
+    /// True when the frame went out, or when there was nothing to send.
+    fn send_claim(&self, frame: &[u8]) -> bool;
+    /// Whether this backend needed a driver, for the diagnosis output and for
+    /// what the screen should offer.
+    fn needs_driver(&self) -> bool;
+}
+
+/// No driver and nothing to send: the router's DHCP already hands this machine
+/// out as the gateway, so a device's packets already arrive here.
+pub struct GatewayMode;
+
+impl ClaimLink for GatewayMode {
+    fn send_claim(&self, _frame: &[u8]) -> bool {
+        true
+    }
+    fn needs_driver(&self) -> bool {
+        false
+    }
+}
+
+/// A raw handle, opened on demand, for the router that still believes it is the
+/// gateway itself.
+pub struct NpcapClaimFallback {
+    cap: Capture,
+}
+
+impl NpcapClaimFallback {
+    /// Open the wire when the driver is installed. `None` means gateway mode is
+    /// the only option left, which is exactly the machine with no driver.
+    pub fn open(device: &str) -> Option<NpcapClaimFallback> {
+        if device.is_empty() {
+            return None;
+        }
+        Some(NpcapClaimFallback {
+            cap: with(|w| w.open(device)).flatten()?,
+        })
+    }
+}
+
+impl ClaimLink for NpcapClaimFallback {
+    fn send_claim(&self, frame: &[u8]) -> bool {
+        self.cap.send(frame)
+    }
+    fn needs_driver(&self) -> bool {
+        true
+    }
+}
+
+/// The backend for this wire.
+///
+/// The driver when it is there: a claim frame is harmless when the device
+/// already points at us and necessary when it does not. Gateway mode when it is
+/// not, which is correct exactly when the router's DHCP already points devices
+/// at this machine.
+pub fn claim_link(device: &str) -> Box<dyn ClaimLink> {
+    match NpcapClaimFallback::open(device) {
+        Some(link) => Box::new(link),
+        None => Box::new(GatewayMode),
+    }
+}
+
 /// One handle for the whole process. It used to be per thread, which meant a
 /// worker thread could report the driver missing while another thread had it
 /// loaded, and that is exactly how a working driver looked broken.

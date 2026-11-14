@@ -58,6 +58,41 @@ fn clear_journal() {
     let _ = std::fs::remove_file(journal_path());
 }
 
+/// How long one LAN session may last. A block that outlives the moment it was
+/// set is a network outage, so every session has a deadline.
+fn limit_secs() -> u64 {
+    std::env::var("QC_LAN_LIMIT_SECS")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .unwrap_or(15 * 60)
+}
+
+/// Launch the elevated pass that owns the forward loop.
+///
+/// One prompt per session: `WinDivertOpen` needs Administrator, and the window
+/// process never opens the driver itself. The pass reads the policy this side
+/// has already written, so nothing is lost if the prompt takes a moment.
+fn launch_pipeline() -> Result<(), String> {
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    #[cfg(windows)]
+    {
+        let script = format!(
+            "Start-Process -FilePath '{}' -ArgumentList '--lan-pipeline' -Verb RunAs -WindowStyle Hidden",
+            exe.display()
+        );
+        std::process::Command::new("powershell")
+            .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", &script])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = exe;
+        Err("the packet driver is Windows only".to_string())
+    }
+}
+
 fn run(cmd: &str, args: &[&str]) -> String {
     #[cfg(windows)]
     {
@@ -237,25 +272,25 @@ pub fn wire() -> Option<Wire> {
         let _ = run("ping", &["-n", "1", "-w", "600", &gateway_ip]);
         gateway_mac = mac_for(&gateway_ip).unwrap_or_default();
     }
-    let devices = wpcap::with(|w| w.devices())?;
+    // The packet driver is optional now. The forward layer is not per-adapter, so
+    // all a device name is still used for is opening a claim handle; no driver
+    // means an empty name, which the claim backend reads as gateway mode.
+    // Watching, capping, blocking and naming never touch this.
+    //
     // The pcap name for an adapter is an opaque GUID path, so the adapter's own
     // description is what ties the two lists together.
     let wanted = adapter.to_lowercase();
-    let device = devices
-        .into_iter()
-        .find(|d| {
+    let device = wpcap::with(|w| {
+        w.devices().into_iter().find(|d| {
             let desc = d.description.to_lowercase();
             !desc.contains("loopback") && (desc.contains(&wanted) || wanted.contains(&desc))
         })
-        .or_else(|| {
-            let devices = wpcap::with(|w| w.devices())?;
-            devices.into_iter().find(|d| {
-                let desc = d.description.to_lowercase();
-                desc.contains("ethernet") && !desc.contains("virtual") && !desc.contains("loopback")
-            })
-        })?;
+    })
+    .flatten()
+    .map(|d| d.name)
+    .unwrap_or_default();
     Some(Wire {
-        device: device.name,
+        device,
         adapter,
         mac,
         ip,
@@ -337,10 +372,171 @@ pub fn start(target_ip: &str, blocked: bool) -> Result<Session, String> {
 /// Asking the ARP table again is the unreliable part: a device that has been
 /// quiet is not in it, and a phone that ignores pings never fills it.
 pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> Result<Session, String> {
-    if !wpcap::ready() {
-        crate::wpcap::note_public(&format!("start_with: driver not ready for {target_ip}"));
-        return Err("driver".into());
+    let w = wire().ok_or("no wire")?;
+    // Blocking the router, this machine, or a device wearing our own address
+    // would take the whole network down instead of one device.
+    if target_ip == w.gateway_ip {
+        return Err("refuse: gateway".into());
     }
+    if target_ip == w.ip {
+        return Err("refuse: self".into());
+    }
+    // A device that has not spoken recently is not in the ARP table yet. One
+    // ping is enough to make it answer.
+    let mut target_mac = known_mac
+        .map(|m| m.replace('-', ":").to_lowercase())
+        .filter(|m| m.split(':').count() == 6 && !m.is_empty())
+        .unwrap_or_default();
+    if target_mac.is_empty() {
+        target_mac = mac_for(target_ip).unwrap_or_default();
+    }
+    if target_mac.is_empty() {
+        let _ = run("ping", &["-n", "1", "-w", "700", target_ip]);
+        std::thread::sleep(Duration::from_millis(150));
+        target_mac = mac_for(target_ip).unwrap_or_default();
+    }
+    if target_mac.is_empty() {
+        return Err("target mac unknown".into());
+    }
+    let stop = Arc::new(AtomicBool::new(false));
+    let blocked_flag = Arc::new(AtomicBool::new(blocked));
+    let down = Arc::new(std::sync::atomic::AtomicU32::new(0));
+    let up = Arc::new(std::sync::atomic::AtomicU32::new(0));
+    let seen = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let forwarded = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let bytes_up = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let bytes_down = Arc::new(std::sync::atomic::AtomicU64::new(0));
+
+    write_journal(&format!(
+        "{}|{}|{}|{}",
+        target_ip, target_mac, w.gateway_ip, w.gateway_mac
+    ));
+
+    // The pipeline forwards, caps and blocks. This side keeps the device pointing
+    // here and mirrors the page's flags across to it, which is all that is left
+    // for the window process to do.
+    let mut policy = crate::lan_forward::Policy {
+        seq: 1,
+        ips: vec![target_ip.to_string()],
+        blocked: if blocked {
+            vec![target_ip.to_string()]
+        } else {
+            Vec::new()
+        },
+        caps: HashMap::new(),
+        ttl_secs: limit_secs(),
+    };
+    crate::lan_forward::write_policy(&policy);
+    launch_pipeline()?;
+
+    let w2 = w.clone();
+    let device = w.device.clone();
+    let stop2 = Arc::clone(&stop);
+    let blocked2 = Arc::clone(&blocked_flag);
+    let target = target_ip.to_string();
+    let tmac = target_mac.clone();
+    let seen2 = Arc::clone(&seen);
+    let fwd2 = Arc::clone(&forwarded);
+    let up_bytes = Arc::clone(&bytes_up);
+    let down_bytes = Arc::clone(&bytes_down);
+    let down2 = Arc::clone(&down);
+    let up2 = Arc::clone(&up);
+
+    let handle = std::thread::spawn(move || {
+        // The claim handle is opened here, on this thread, so it never has to
+        // cross one: a raw capture is not `Send` and does not need to be.
+        let link = wpcap::claim_link(&device);
+        let our = mac_bytes(&w2.mac).unwrap_or([0; 6]);
+        let gw = mac_bytes(&w2.gateway_mac).unwrap_or([0xff; 6]);
+        let Some(tm) = mac_bytes(&tmac) else { return };
+        let Some(tip) = ip4(&target) else { return };
+        let Some(gip) = ip4(&w2.gateway_ip) else { return };
+        let mut last_poison = Instant::now() - Duration::from_secs(5);
+        let mut last_sync = Instant::now() - Duration::from_secs(5);
+        let mut last_flags = (blocked2.load(Ordering::Relaxed), 0u32, 0u32);
+        while !stop2.load(Ordering::Relaxed) {
+            // Harmless when the device already points at this machine, necessary
+            // when it does not, and a no-op with no driver at all.
+            if last_poison.elapsed() > Duration::from_millis(900) {
+                last_poison = Instant::now();
+                let _ = link.send_claim(&arp_reply(tm, our, gip, tm, tip));
+                let _ = link.send_claim(&arp_reply(gw, our, tip, gw, gip));
+            }
+            // A change of instructions is written once, not every tick: the
+            // loop re-reads the file and a rewrite is a whole file.
+            let flags = (
+                blocked2.load(Ordering::Relaxed),
+                up2.load(Ordering::Relaxed),
+                down2.load(Ordering::Relaxed),
+            );
+            if flags != last_flags {
+                last_flags = flags;
+                policy.seq += 1;
+                policy.blocked = if flags.0 { vec![target.clone()] } else { Vec::new() };
+                let mut caps = HashMap::new();
+                if flags.1 > 0 || flags.2 > 0 {
+                    caps.insert(
+                        target.clone(),
+                        crate::lan_forward::Cap {
+                            up_bps: flags.1 as u64 * 1024,
+                            down_bps: flags.2 as u64 * 1024,
+                        },
+                    );
+                }
+                policy.caps = caps;
+                crate::lan_forward::write_policy(&policy);
+            }
+            // And the counters come back the other way.
+            if last_sync.elapsed() > Duration::from_millis(400) {
+                last_sync = Instant::now();
+                if let Some(state) = crate::lan_forward::read_state() {
+                    for d in &state.devices {
+                        if d.ip == target {
+                            up_bytes.store(d.up, Ordering::Relaxed);
+                            down_bytes.store(d.down, Ordering::Relaxed);
+                        }
+                    }
+                    seen2.store(
+                        state.forwarded + state.blocked_dropped + state.capped_dropped,
+                        Ordering::Relaxed,
+                    );
+                    fwd2.store(state.forwarded, Ordering::Relaxed);
+                }
+            }
+            std::thread::sleep(Duration::from_millis(150));
+        }
+        // Hand the network back the way we found it.
+        let restore_target = arp_reply(tm, gw, gip, tm, tip);
+        let restore_gateway = arp_reply(gw, tm, tip, gw, gip);
+        for _ in 0..4 {
+            let _ = link.send_claim(&restore_target);
+            let _ = link.send_claim(&restore_gateway);
+            std::thread::sleep(Duration::from_millis(120));
+        }
+        crate::lan_forward::request_stop();
+        clear_journal();
+    });
+
+    Ok(Session {
+        stop,
+        wire: w,
+        target_ip: target_ip.to_string(),
+        target_mac,
+        blocked: blocked_flag,
+        down_kbps: down,
+        up_kbps: up,
+        seen,
+        forwarded,
+        bytes_up,
+        bytes_down,
+        handle: Some(handle),
+    })
+}
+
+/// The capture-loop implementation this replaced, kept in the file and out of
+/// the build. Delete it once the pipeline has been proven on hardware.
+#[cfg(any())]
+fn start_with_pcap(target_ip: &str, blocked: bool, known_mac: Option<String>) -> Result<Session, String> {
     let w = wire().ok_or("no wire")?;
     // Blocking the router, this machine, or a device wearing our own address
     // would take the whole network down instead of one device.
@@ -716,6 +912,113 @@ impl MonitorSession {
 }
 
 pub fn start_monitor(targets: Vec<(String, String)>) -> Result<MonitorSession, String> {
+    let w = wire().ok_or("no wire")?;
+    // The router and this machine are never watched: their traffic either does
+    // not pass here or would take the network down if it did.
+    let targets: Vec<(String, String)> = targets
+        .into_iter()
+        .filter(|(ip, _)| ip != &w.ip && ip != &w.gateway_ip)
+        .collect();
+    // One device, one bucket. The pairs the roster hands over are the mapping
+    // the capture works from, so nothing has to be looked up again here.
+    let peers = plan_peers(&targets);
+    // A row without a hardware address keeps its bucket below and reads zero.
+    if !peers.iter().any(|p| !p.mac.is_empty()) {
+        return Err("nothing to watch".into());
+    }
+    let buckets = buckets_for(&peers);
+
+    let stop = Arc::new(AtomicBool::new(false));
+    let bytes: Arc<Mutex<HashMap<String, (u64, u64)>>> = Arc::new(Mutex::new(HashMap::new()));
+    {
+        let mut map = bytes.lock().unwrap();
+        for b in &buckets {
+            map.insert(b.key.clone(), (0, 0));
+        }
+    }
+
+    // Every pair the capture can address goes in the journal, so a crash is
+    // undone on the next launch: a restore frame needs a hardware address.
+    let journal: Vec<String> = peers
+        .iter()
+        .filter(|p| !p.mac.is_empty())
+        .map(|p| format!("{}|{}|{}|{}", p.ip, p.mac, w.gateway_ip, w.gateway_mac))
+        .collect();
+    write_journal(&journal.join("\n"));
+
+    // Watching, capping and blocking all live in the pipeline now, so none of
+    // them is gated on the packet driver being installed.
+    let policy = crate::lan_forward::Policy {
+        seq: 1,
+        ips: peers.iter().map(|p| p.ip.clone()).collect(),
+        blocked: Vec::new(),
+        caps: HashMap::new(),
+        ttl_secs: limit_secs(),
+    };
+    crate::lan_forward::write_policy(&policy);
+    launch_pipeline()?;
+
+    let w2 = w.clone();
+    let device = w.device.clone();
+    let stop2 = Arc::clone(&stop);
+    let bytes2 = Arc::clone(&bytes);
+    let handle = std::thread::spawn(move || {
+        let link = wpcap::claim_link(&device);
+        let our = mac_bytes(&w2.mac).unwrap_or([0; 6]);
+        let gw = mac_bytes(&w2.gateway_mac).unwrap_or([0xff; 6]);
+        let Some(gip) = ip4(&w2.gateway_ip) else { return };
+
+        // hardware address, address, the bucket the counters are filed in, and
+        // the address the pipeline reports the device under.
+        let nodes: Vec<([u8; 6], [u8; 4], String, String)> = peers
+            .iter()
+            .filter_map(|p| Some((mac_bytes(&p.mac)?, ip4(&p.ip)?, p.key.clone(), p.ip.clone())))
+            .collect();
+        if nodes.is_empty() {
+            return;
+        }
+
+        let mut last_poison = Instant::now() - Duration::from_secs(5);
+        while !stop2.load(Ordering::Relaxed) {
+            if last_poison.elapsed() > Duration::from_millis(900) {
+                last_poison = Instant::now();
+                for (tm, tip, _, _) in &nodes {
+                    let _ = link.send_claim(&arp_reply(*tm, our, gip, *tm, *tip));
+                    let _ = link.send_claim(&arp_reply(gw, our, *tip, gw, gip));
+                }
+            }
+            // The pipeline counts; this side only files the totals under the
+            // bucket each device already has.
+            if let Some(state) = crate::lan_forward::read_state() {
+                let mut map = bytes2.lock().unwrap();
+                for d in &state.devices {
+                    if let Some((_, _, key, _)) = nodes.iter().find(|(_, _, _, ip)| ip == &d.ip) {
+                        map.insert(key.clone(), (d.up, d.down));
+                    }
+                }
+            }
+            std::thread::sleep(Duration::from_millis(400));
+        }
+
+        // Hand every table back the way it was found.
+        for _ in 0..4 {
+            for (tm, tip, _, _) in &nodes {
+                let _ = link.send_claim(&arp_reply(*tm, gw, gip, *tm, *tip));
+                let _ = link.send_claim(&arp_reply(gw, *tm, *tip, gw, gip));
+            }
+            std::thread::sleep(Duration::from_millis(120));
+        }
+        crate::lan_forward::request_stop();
+        clear_journal();
+    });
+
+    Ok(MonitorSession { stop, bytes, buckets, handle: Some(handle) })
+}
+
+/// The capture-loop implementation this replaced, kept in the file and out of
+/// the build. Delete it once the pipeline has been proven on hardware.
+#[cfg(any())]
+fn start_monitor_pcap(targets: Vec<(String, String)>) -> Result<MonitorSession, String> {
     if !wpcap::ready() {
         return Err("driver".into());
     }
