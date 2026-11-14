@@ -98,7 +98,11 @@ export const lanUnrouteDevice = (): Promise<boolean> => call<boolean>("lan_unrou
 export const lanRouteDiagnose = (ip?: string, mac?: string): Promise<string[]> =>
   call<string[]>("lan_route_diagnose", { ip: ip ?? null, mac: mac ?? null })
 
-/** Is the packet driver present? Device routing needs it. */
+/** Is Npcap present? Only one-click ARP claiming still needs it: watching,
+    limiting, blocking and routing run on the driver the app ships. */
+export const lanClaimReady = (): Promise<boolean> => call<boolean>("lan_claim_ready")
+
+/** The older name for the same question, kept for callers that still ask it. */
 export const lanNpcapReady = (): Promise<boolean> => call<boolean>("lan_npcap_ready")
 
 /** Download and install the packet driver, then report whether it worked. */
@@ -125,7 +129,7 @@ export type LanStatus = {
 export const lanStatus = (): Promise<LanStatus | null> => call<LanStatus | null>("lan_status")
 
 export const openPage = (url: string): Promise<boolean> => call<boolean>("open_page", { url })
-export const npcapReady = (): Promise<boolean> => call<boolean>("npcap_ready")
+export const pipelineReady = (): Promise<boolean> => call<boolean>("pipeline_ready")
 
 export const routerLink = (user: string, pass: string): Promise<boolean> =>
   call<boolean>("router_link", { user, pass })
@@ -156,6 +160,8 @@ export const lanTraffic = (): Promise<LanTraffic[]> => call<LanTraffic[]>("lan_t
 export type NetworkSnapshot = {
   guard: LanGuard
   driver_ready: boolean
+  /// Whether a claim frame can be forged. The one thing Npcap is still for.
+  claim_ready: boolean
   router_linked: boolean
   watching: boolean
   traffic: LanTraffic[]
@@ -166,14 +172,16 @@ export const networkSnapshot = async (): Promise<NetworkSnapshot> => {
   if (isTauri()) return invoke<NetworkSnapshot>("network_snapshot")
   // The browser demo has no backend, so compose the same shape from the mocks:
   // the screen still makes one call, and the demo shows the same payload.
-  const [guard, driver_ready, router_linked, watching, traffic] = await Promise.all([
-    call<LanGuard>("lan_guard"),
-    call<boolean>("npcap_ready"),
-    call<boolean>("router_status"),
-    call<boolean>("lan_monitor_active"),
-    call<LanTraffic[]>("lan_traffic"),
-  ])
-  return { guard, driver_ready, router_linked, watching, traffic, ts: Date.now() }
+  const [guard, driver_ready, claim_ready, router_linked, watching, traffic] =
+    await Promise.all([
+      call<LanGuard>("lan_guard"),
+      call<boolean>("pipeline_ready"),
+      call<boolean>("lan_claim_ready"),
+      call<boolean>("router_status"),
+      call<boolean>("lan_monitor_active"),
+      call<LanTraffic[]>("lan_traffic"),
+    ])
+  return { guard, driver_ready, claim_ready, router_linked, watching, traffic, ts: Date.now() }
 }
 
 /** What the tunnel is carrying, heaviest first. Session scoped and in memory:
@@ -262,6 +270,7 @@ export const api = {
   lanUnrouteDevice: (): Promise<boolean> => call<boolean>("lan_unroute_device"),
   lanRoutedDevice: (): Promise<{ ip: string; mac: string } | null> => call<{ ip: string; mac: string } | null>("lan_routed_device"),
   lanNpcapReady: (): Promise<boolean> => call<boolean>("lan_npcap_ready"),
+  lanClaimReady: (): Promise<boolean> => call<boolean>("lan_claim_ready"),
   lanRouteDiagnose: (ip?: string, mac?: string): Promise<string[]> =>
     call<string[]>("lan_route_diagnose", { ip: ip ?? null, mac: mac ?? null }),
   lanInstallNpcap: (): Promise<string> => call<string>("lan_install_npcap"),
@@ -274,7 +283,7 @@ export const api = {
   lanStatus: (): Promise<LanStatus | null> => call<LanStatus | null>("lan_status"),
   lanGuard: (): Promise<LanGuard> => call<LanGuard>("lan_guard"),
   openPage: (url: string): Promise<boolean> => call<boolean>("open_page", { url }),
-  npcapReady: (): Promise<boolean> => call<boolean>("npcap_ready"),
+  pipelineReady: (): Promise<boolean> => call<boolean>("pipeline_ready"),
   routerLink: (user: string, pass: string): Promise<boolean> => call<boolean>("router_link", { user, pass }),
   routerStatus: (): Promise<boolean> => call<boolean>("router_status"),
   routerAutoLink: (): Promise<boolean> => call<boolean>("router_autolink"),

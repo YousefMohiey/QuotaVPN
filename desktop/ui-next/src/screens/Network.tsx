@@ -125,9 +125,10 @@ export function Network() {
   // The column the invitation points at, lit for a moment so the eye lands on
   // the header that names the control.
   const [hintCol, setHintCol] = useState(false)
-  // Whether this PC can route a device at all. true and false are readings from
-  // the backend; null is unknown, and unknown never shows the install prompt.
-  const [npcap, setNpcap] = useState<boolean | null>(null)
+  // Whether this PC can forge a claim frame, which is the only thing Npcap is
+  // still for. Watching, limiting and blocking never ask. true and false are
+  // readings from the backend; null is unknown, and unknown shows no prompt.
+  const [claimReady, setClaimReady] = useState<boolean | null>(null)
   const [installing, setInstalling] = useState(false)
   const [installNote, setInstallNote] = useState("")
   // The read-only report from the routing diagnostics, one line per fact, or
@@ -151,9 +152,9 @@ export function Network() {
     // A failed readiness read leaves the answer unknown rather than guessing,
     // so the install prompt only ever appears on a real false.
     void api
-      .lanNpcapReady()
+      .lanClaimReady()
       .then((on) => {
-        if (typeof on === "boolean") setNpcap(on)
+        if (typeof on === "boolean") setClaimReady(on)
       })
       .catch(() => undefined)
   }, [])
@@ -329,14 +330,14 @@ export function Network() {
     setInstallNote("")
     try {
       const done = await api.lanInstallNpcap()
-      const on = await api.lanNpcapReady().catch(() => null)
+      const on = await api.lanClaimReady().catch(() => null)
       if (on === true) {
-        setNpcap(true)
+        setClaimReady(true)
         setRouteErr("")
         setErr("")
         if (typeof done === "string" && done.trim()) setInstallNote(done.trim())
       } else if (typeof on === "boolean") {
-        setNpcap(on)
+        setClaimReady(on)
       }
     } catch (e) {
       setErr(String(e))
@@ -509,12 +510,11 @@ export function Network() {
   // the gateway are refused by identity, and a device that is not live has no
   // traffic to route, so the invitation never points at any of them and stays
   // absent when nothing here qualifies.
+  // No driver does not empty this list. Without Npcap a claim still works when
+  // the router already points its devices at this PC, so the invitation stays.
   const routable = useMemo(
-    () =>
-      npcap === false
-        ? []
-        : shown.filter((d) => !d.self_pc && !d.protected_always && d.live !== false),
-    [shown, npcap],
+    () => shown.filter((d) => !d.self_pc && !d.protected_always && d.live !== false),
+    [shown],
   )
 
   const message = routeErr || err
@@ -619,9 +619,9 @@ export function Network() {
                   )}
                 </button>
               </div>
-            ) : npcap === false ? (
-              // No driver, so no claim can work. The roster stays; the one thing
-              // offered here is the install that makes routing possible.
+            ) : claimReady === false ? (
+              // No Npcap: claiming still works when the router points its
+              // devices here, so the install is a choice and never a condition.
               <div className="flex min-w-0 items-center gap-3">
                 <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--brand-bg)] text-brand-strong">
                   <Route className="size-[18px]" aria-hidden />
@@ -685,7 +685,7 @@ export function Network() {
                 <span className="min-w-0 flex-1 break-words" dir="auto">
                   {message}
                 </span>
-                {/npcap/i.test(message) ? (
+                {/npcap|driver/i.test(message) ? (
                   <button
                     type="button"
                     onClick={() => void installNpcap()}
@@ -994,9 +994,7 @@ export function Network() {
                       ? t("netCannotRouter")
                       : d.live === false
                         ? t("netCannotOffline")
-                        : npcap === false
-                          ? t("netCannotNpcap")
-                          : ""
+                        : ""
                 const [dn, dnu] = fresh ? splitRate(fresh.down) : ["-", ""]
                 const [un, unu] = fresh ? splitRate(fresh.up) : ["-", ""]
                 return (
@@ -1153,7 +1151,7 @@ export function Network() {
 
                     <div className="flex items-center justify-end gap-0.5">
                       <Tip
-                        text={driverReady === false ? t("netCannotNpcap") : t("netLimit")}
+                        text={driverReady === false ? t("netNoPipeline") : t("netLimit")}
                         align="end"
                       >
                         <button
@@ -1174,7 +1172,7 @@ export function Network() {
                       <Tip
                         text={
                           driverReady === false
-                            ? t("netCannotNpcap")
+                            ? t("netNoPipeline")
                             : state === "blocked"
                               ? t("netUnblock")
                               : t("netBlock")

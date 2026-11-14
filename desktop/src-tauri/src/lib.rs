@@ -1010,7 +1010,7 @@ async fn tunnel_start(
 #[tauri::command]
 async fn setup_helper() -> Result<CmdResult, String> {
     vpn::app_log("setup: asked for the one-time setup");
-    if vpn::task_installed() {
+    if vpn::task_installed() && vpn::lan_task_installed() {
         return Ok(CmdResult { ok: true, msg: "ready".into() });
     }
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
@@ -1051,6 +1051,12 @@ async fn setup_helper() -> Result<CmdResult, String> {
     // setup had failed while it was still running.
     for _ in 0..360 {
         if vpn::task_installed() {
+            // The tunnel is what the setup was for. The network pass is the
+            // second one; when it did not land, its features fall back to the
+            // prompt rather than blocking a tunnel that is ready.
+            if !vpn::lan_task_installed() {
+                vpn::app_log("setup: network helper missing, LAN features will prompt once");
+            }
             return Ok(CmdResult { ok: true, msg: "ready".into() });
         }
         // The privileged pass says what went wrong as soon as it knows. Waiting
@@ -2065,11 +2071,17 @@ fn lan_stop(state: tauri::State<'_, LanState>) -> Result<bool, String> {
     Ok(true)
 }
 
-/// Whether the packet driver the control layer needs is installed.
+/// Whether the packet driver this app ships can be opened, which is what
+/// watching, capping, blocking and routing a device need.
+///
+/// This used to ask whether Npcap was installed, because the control layer ran
+/// on it. The forward pipeline does that work now and the driver ships with the
+/// app, so Npcap is only ever a question about claiming a device on a router
+/// nobody configured: see `lan_claim_ready`.
 #[tauri::command]
 #[cfg(windows)]
-async fn npcap_ready() -> bool {
-    quotacards::lan::npcap_installed()
+async fn pipeline_ready() -> bool {
+    quotacards::windivert::ready()
 }
 
 /// The devices the machine already knows about, without sweeping.
@@ -2836,7 +2848,7 @@ pub struct TrafficRow {
 /// Everything the Network screen polls, in one payload.
 ///
 /// The screen used to make four to six separate calls per tick (`lan_guard`,
-/// `npcap_ready`, `router_status`, `lan_monitor_active`, `lan_traffic`), which
+/// `pipeline_ready`, `router_status`, `lan_monitor_active`, `lan_traffic`), which
 /// is why the interval could not be slowed down: each call had its own state,
 /// so the roster and the rail could disagree and a rename could race a rate
 /// sample. One snapshot makes them one reading, taken at one moment.
@@ -2847,6 +2859,10 @@ pub struct NetworkSnapshot {
     pub guard: quotacards::lan_ctrl::Guard,
     /// Whether the packet driver the control layer needs is installed.
     pub driver_ready: bool,
+    /// Whether a claim frame can be forged, which is the only thing Npcap is
+    /// still for. False means this machine can still watch, cap, block and route
+    /// when the router points its devices here.
+    pub claim_ready: bool,
     /// Whether the router is signed in, so its names are available.
     pub router_linked: bool,
     /// Whether the whole network is being watched right now.
@@ -2869,7 +2885,8 @@ async fn network_snapshot(
     router: tauri::State<'_, RouterState>,
 ) -> Result<NetworkSnapshot, String> {
     let guard = lan_guard();
-    let driver_ready = npcap_ready().await;
+    let driver_ready = pipeline_ready().await;
+    let claim_ready = quotacards::lan_route::npcap_installed();
     let router_linked = router_status(router).await?;
     let watching = lan_monitor_active(monitor.clone())?;
     let traffic = lan_traffic(monitor)?;
@@ -2880,6 +2897,7 @@ async fn network_snapshot(
     Ok(NetworkSnapshot {
         guard,
         driver_ready,
+        claim_ready,
         router_linked,
         watching,
         traffic,
@@ -3018,7 +3036,7 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         net_info,
         app_icons,
         speed_servers,
-        npcap_ready,
+        pipeline_ready,
         lan_wire,
         lan_start,
         lan_stop,
@@ -3294,7 +3312,10 @@ pub fn run() {
         return;
     }
     if std::env::args().any(|a| a == "--check-helper") {
-        std::process::exit(if vpn::task_installed() { 0 } else { 3 });
+        // Both passes, so an upgrade from a build that had only the tunnel one
+        // runs the setup again and registers the network pass.
+        let ready = vpn::task_installed() && vpn::lan_task_installed();
+        std::process::exit(if ready { 0 } else { 3 });
     }
     // Remove this account's helper task (called by the uninstaller while the
     // exe still exists, because the task needs the name this account owns).
@@ -3359,6 +3380,12 @@ pub fn run() {
                 vpn::app_log(&format!("setup-helper: task failed: {e}"));
                 eprintln!("helper failed: {e}");
             }
+        }
+        // The second elevated pass: the LAN pipeline. Registered here so a
+        // watch or a block never asks Windows for administrator.
+        match vpn::install_lan_task(&owner) {
+            Ok(()) => vpn::app_log("setup-helper: network task installed"),
+            Err(e) => vpn::app_log(&format!("setup-helper: network task failed: {e}")),
         }
         match vpn::ensure_engine() {
             Ok(msg) => vpn::app_log(&format!("setup-helper: engine {msg}")),
