@@ -1590,11 +1590,40 @@ pub fn run_engine_headless() {
 /// task uses the interactive token and needs no password, while `/RL HIGHEST`
 /// still runs it elevated.
 #[cfg(windows)]
+/// Install the elevated pass that carries the tunnel.
 pub fn install_task(owner: &str) -> Result<(), String> {
+    install_helper_task(
+        owner,
+        &format!("QuotaVPN Tunnel {owner}"),
+        "QuotaVPN tunnel helper",
+        "--run-engine",
+    )
+}
+
+/// Install the elevated pass that carries the LAN pipeline.
+///
+/// The same definition as the tunnel helper, and for the same reason: a task
+/// started with `schtasks /Run` runs with the logged-on user's elevated token,
+/// so opening the packet driver costs no prompt. Installed once at setup with
+/// the other one.
+pub fn install_lan_task(owner: &str) -> Result<(), String> {
+    install_helper_task(
+        owner,
+        &format!("QuotaVPN Network {owner}"),
+        "QuotaVPN network helper",
+        "--lan-pipeline",
+    )
+}
+
+fn install_helper_task(
+    owner: &str,
+    name: &str,
+    description: &str,
+    args: &str,
+) -> Result<(), String> {
     let _ = std::fs::remove_file(engine_ps_path());
     let exe = std::env::current_exe().map_err(|e| format!("exe: {e}"))?;
     let exe = exe.display().to_string();
-    let name = format!("QuotaVPN Tunnel {owner}");
     // Name first, because the elevated pass may be running as an administrator
     // on behalf of someone else. If the name cannot be mapped, the account
     // running this process is the next best answer, and it is always valid.
@@ -1611,7 +1640,7 @@ pub fn install_task(owner: &str) -> Result<(), String> {
         r#"<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo>
-    <Description>QuotaVPN tunnel helper for {owner}</Description>
+    <Description>{description} for {owner}</Description>
   </RegistrationInfo>
   <Triggers />
   <Principals>
@@ -1640,19 +1669,21 @@ pub fn install_task(owner: &str) -> Result<(), String> {
   <Actions Context="Author">
     <Exec>
       <Command>{exe}</Command>
-      <Arguments>--run-engine</Arguments>
+      <Arguments>{args}</Arguments>
     </Exec>
   </Actions>
 </Task>
 "#,
         owner = xml_escape(owner),
+        description = xml_escape(description),
+        args = xml_escape(args),
         principal = xml_escape(&principal),
         exe = xml_escape(&exe),
     );
 
     let dir = engine_dir();
     let _ = std::fs::create_dir_all(&dir);
-    let file = dir.join("helper-task.xml");
+    let file = dir.join(format!("helper-{}.xml", args.trim_start_matches('-')));
     std::fs::write(&file, xml).map_err(|e| format!("task xml: {e}"))?;
 
     let out = run_hidden(
@@ -1667,7 +1698,7 @@ pub fn install_task(owner: &str) -> Result<(), String> {
 
     // Keep the plain command line as a fallback for the rare machine where the
     // definition is refused, and report both reasons if neither works.
-    let tr = format!("\"{exe}\" --run-engine");
+    let tr = format!("\"{exe}\" {args}");
     let out2 = run_hidden(
         "schtasks",
         &[
@@ -1736,9 +1767,15 @@ fn xml_escape(raw: &str) -> String {
 
 #[cfg(windows)]
 pub fn remove_task() {
-    let deleted = run_hidden("schtasks", &["/Delete", "/TN", &task_name(), "/F"])
+    // Both passes: the tunnel helper and the network one. Leaving the second
+    // behind would keep a task on the machine that nothing uninstalls.
+    let deleted_tunnel = run_hidden("schtasks", &["/Delete", "/TN", &task_name(), "/F"])
         .map(|o| o.status.success())
         .unwrap_or(false);
+    let deleted_network = run_hidden("schtasks", &["/Delete", "/TN", &lan_task_name(), "/F"])
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    let deleted = deleted_tunnel && deleted_network;
     let adapter = tun_adapter_present();
     // Nothing left to clean and nothing to ask for.
     if deleted && !adapter {
@@ -1754,6 +1791,8 @@ pub fn remove_task() {
         "$ErrorActionPreference = 'SilentlyContinue'
          schtasks /End /TN \"{0}\" | Out-Null
          schtasks /Delete /TN \"{0}\" /F | Out-Null
+         schtasks /End /TN \"{1}\" | Out-Null
+         schtasks /Delete /TN \"{1}\" /F | Out-Null
          taskkill /IM sing-box.exe /F | Out-Null
          Get-NetAdapter -IncludeHidden | Where-Object {{ $_.Name -like 'QuotaVPN*' }} | ForEach-Object {{
            Disable-NetAdapter -InputObject $_ -Confirm:$false
@@ -1763,7 +1802,8 @@ pub fn remove_task() {
            pnputil /remove-device $_.InstanceId | Out-Null
          }}
 ",
-        task_name()
+        task_name(),
+        lan_task_name()
     );
     if std::fs::write(&script, body).is_ok() {
         // Start-Process joins an argument array with spaces and quotes
@@ -1791,6 +1831,49 @@ fn start_task() -> Result<(), String> {
 #[cfg(windows)]
 pub fn stop_task() {
     let _ = run_hidden("schtasks", &["/End", "/TN", &task_name()]);
+}
+
+/// The name of the elevated pass that carries the LAN pipeline.
+pub fn lan_task_name() -> String {
+    format!("QuotaVPN Network {}", account_name())
+}
+
+/// Is that task registered, and pointed at this binary?
+///
+/// The same two questions as [`task_installed`]: the argument it runs, and the
+/// path it runs, because a task left over from an older install names a binary
+/// that may no longer exist and starting it fails silently.
+pub fn lan_task_installed() -> bool {
+    let out = match run_hidden("schtasks", &["/Query", "/TN", &lan_task_name(), "/XML"]) {
+        Ok(o) if o.status.success() => o,
+        _ => return false,
+    };
+    let xml = String::from_utf8_lossy(&out.stdout);
+    if !xml.contains("--lan-pipeline") {
+        return false;
+    }
+    let exe = match std::env::current_exe() {
+        Ok(p) => p.display().to_string().to_lowercase(),
+        Err(_) => return true,
+    };
+    xml.to_lowercase().contains(&exe)
+}
+
+/// Start the LAN pass through its task, which costs no prompt.
+pub fn start_lan_task() -> Result<(), String> {
+    let out =
+        run_hidden("schtasks", &["/Run", "/TN", &lan_task_name()]).map_err(|e| format!("task: {e}"))?;
+    if out.status.success() {
+        Ok(())
+    } else {
+        Err(String::from_utf8_lossy(&out.stderr).trim().to_string())
+    }
+}
+
+/// End the LAN pass from outside. The loop stops itself when the stop file it
+/// watches appears, so this is the backstop for a process that will not go.
+pub fn stop_lan_task() {
+    let _ = run_hidden("schtasks", &["/End", "/TN", &lan_task_name()]);
 }
 
 /// The pid of the engine our task started: the sing-box whose command line

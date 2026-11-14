@@ -69,10 +69,42 @@ fn limit_secs() -> u64 {
 
 /// Launch the elevated pass that owns the forward loop.
 ///
-/// One prompt per session: `WinDivertOpen` needs Administrator, and the window
-/// process never opens the driver itself. The pass reads the policy this side
-/// has already written, so nothing is lost if the prompt takes a moment.
+/// Through the helper task, which is the whole point: a task started with
+/// `schtasks /Run` uses the logged-on user's elevated token, so `WinDivertOpen`
+/// succeeds with no prompt. The pass reads the policy this side has already
+/// written, so nothing is lost while it starts.
 fn launch_pipeline() -> Result<(), String> {
+    // Already carrying: the running loop re-reads the policy every half second,
+    // so writing it was the entire update and a restart would drop the session.
+    if pipeline_running() {
+        return Ok(());
+    }
+    if crate::vpn::lan_task_installed() {
+        match crate::vpn::start_lan_task() {
+            Ok(()) => return Ok(()),
+            Err(e) => crate::vpn::app_log(&format!("lan pipeline task did not start: {e}")),
+        }
+    }
+    // No task registered: an install that predates it, or setup that never ran.
+    // Ask for it the blunt way rather than refusing a feature the user pressed.
+    elevated_pipeline()
+}
+
+/// Is the loop already up?
+///
+/// The state file on its own is not enough. A process that was killed leaves
+/// `running: true` behind, so the pid has to be alive as well or the app would
+/// believe a session that no longer exists.
+fn pipeline_running() -> bool {
+    match crate::lan_forward::read_state() {
+        Some(s) => s.running && crate::vpn::engine_alive(s.pid),
+        None => false,
+    }
+}
+
+/// Launch the pass directly, with the one prompt that costs. The fallback, not
+/// the normal path.
+fn elevated_pipeline() -> Result<(), String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     #[cfg(windows)]
     {
