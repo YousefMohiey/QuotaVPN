@@ -29,6 +29,16 @@ pub mod updater;
 // reason no APK has been produced since v0.3.8.
 #[cfg(any(windows, target_os = "linux"))]
 pub mod vpn;
+// The packet driver the LAN features run on. Windows-only in practice, but the
+// parsing and pacing it does is platform-neutral and is tested on Linux too, so
+// the module is built wherever the tunnel is.
+#[cfg(any(windows, target_os = "linux"))]
+pub mod windivert;
+// The forward-layer pipeline. Its loop is Windows only (it is the part that
+// needs the driver, and the driver needs elevation); the ledger underneath it
+// is plain arithmetic and is tested everywhere.
+#[cfg(any(windows, target_os = "linux"))]
+pub mod lan_forward;
 
 // One LAN device through the tunnel with nothing installed on it. Windows only: it
 // works by taking over that device's idea of the gateway, which needs Npcap to send
