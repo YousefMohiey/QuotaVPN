@@ -1,12 +1,12 @@
 {
-  "version": "0.6.14",
-  "build": "04ee582",
-  "notes": "The helper is now registered by the installer instead of by a button on first connect, so a fresh install is ready before the app is opened. Fixes the case where an install with a key but no server address never reached the button and could never work.",
-  "pub_date": "2026-11-15T19:56:56Z",
+  "version": "0.6.15",
+  "build": "62bc191",
+  "notes": "The update check now reads its feed from a URL that answers directly instead of redirecting, keeps the release URL as a fallback, and reports the real reason when it fails instead of the canned 'Could not reach GitHub'. The helper is registered during install, so no in-app setup press is needed.",
+  "pub_date": "2026-11-15T20:41:44Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSU9XVlNJYVdxUkJxR21mRXRuMHBuRlMrMEhLUVFHSjAxWHpyR0dkZThTNzlmZjlVNE94eWlxblRoOG11YkpvdGl0WTR5SGdsUm53SUsxMlpFS25ZS3drPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NzcyMjg1CWZpbGU6UXVvdGFWUE5fMC42LjE0X3g2NC1zZXR1cC5leGUKNUp0RzBnVE5ZL3JWM08yRklNOGJxd2piZElKQXdyUWpYRDVldTdocjZXVXZHeFJxMUFYbHB4WDBjeHVhSURKMWxZbkJINHkzbC9sUXJJTVgyR1h5Qnc9PQo=",
-      "url": "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.6.14/QuotaVPN_0.6.14_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSU5jWHdMT0RvdDZnL0NHK1pKUThqL3JDUEpacXM2SEpXOUpMQWJlUUp4ZjJDeVJMZkVLQzc5MlFIaG9ST0NrbU96SG5Xc24wR09xQVd5Wm02NE1teVFBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0Nzc1MjQwCWZpbGU6UXVvdGFWUE5fMC42LjE1X3g2NC1zZXR1cC5leGUKVFo0YUxJdVJrNTVSM3hpdDhVMGFpRXB4RGY3NWlQOENlSWk0elZ5ZG53SkJpWWdjcStIRCsremxuYjZkL2N4UjJSNGpybmZSNDk4cFYrMFJ5bWVBQ3c9PQo=",
+      "url": "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.6.15/QuotaVPN_0.6.15_x64-setup.exe"
     }
   }
 }
