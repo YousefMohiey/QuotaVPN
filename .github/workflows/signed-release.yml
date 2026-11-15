@@ -68,6 +68,25 @@ jobs:
             npx --yes @tauri-apps/cli@2 build
           fi
 
+      # 0.6.6 shipped an exe with no manifest: it bound comctl32 v5, which has no
+      # TaskDialogIndirect, and died before it could draw a window. A green build
+      # is not evidence that the manifest is in the binary, so this reads the
+      # binary. The manifest has to name Common-Controls 6 for the loader to pick
+      # the v6 DLL, so its presence is the whole check.
+      - name: The exe really carries its manifest
+        shell: pwsh
+        run: |
+          $exe = "desktop/src-tauri/target/release/QuotaVPN.exe"
+          if (-not (Test-Path $exe)) { throw "no app binary at $exe" }
+          $text = [System.Text.Encoding]::UTF8.GetString([System.IO.File]::ReadAllBytes($exe))
+          if (-not $text.Contains("Microsoft.Windows.Common-Controls")) {
+            throw "the exe has no Common-Controls 6 manifest, so it will fail at load"
+          }
+          if (-not $text.Contains("requireAdministrator")) {
+            throw "the exe has no requested execution level, so the tunnel setup changes"
+          }
+          Write-Host "manifest present: Common-Controls 6 and requireAdministrator"
+
       - name: Upload the unsigned installer
         id: upload
         uses: actions/upload-artifact@v7
