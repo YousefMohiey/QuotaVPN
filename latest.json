@@ -1,0 +1,12 @@
+{
+  "version": "0.6.14",
+  "build": "04ee582",
+  "notes": "The helper is now registered by the installer instead of by a button on first connect, so a fresh install is ready before the app is opened. Fixes the case where an install with a key but no server address never reached the button and could never work.",
+  "pub_date": "2026-11-15T19:56:56Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSU9XVlNJYVdxUkJxR21mRXRuMHBuRlMrMEhLUVFHSjAxWHpyR0dkZThTNzlmZjlVNE94eWlxblRoOG11YkpvdGl0WTR5SGdsUm53SUsxMlpFS25ZS3drPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NzcyMjg1CWZpbGU6UXVvdGFWUE5fMC42LjE0X3g2NC1zZXR1cC5leGUKNUp0RzBnVE5ZL3JWM08yRklNOGJxd2piZElKQXdyUWpYRDVldTdocjZXVXZHeFJxMUFYbHB4WDBjeHVhSURKMWxZbkJINHkzbC9sUXJJTVgyR1h5Qnc9PQo=",
+      "url": "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.6.14/QuotaVPN_0.6.14_x64-setup.exe"
+    }
+  }
+}

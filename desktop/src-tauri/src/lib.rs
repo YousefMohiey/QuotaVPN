@@ -2637,7 +2637,19 @@ async fn check_update(app: tauri::AppHandle, state: tauri::State<'_, State>) -> 
         .await?
         .check()
         .await
-        .map_err(check_failed)?;
+        .map_err(|e| {
+            let msg = check_failed(e);
+            // The window shows whatever comes back, and an empty string used to
+            // fall back to "Could not reach GitHub" - a guess that hid the real
+            // reason. Every failure is logged with its cause now, and the string
+            // always carries something.
+            vpn::app_log(&format!("update: {msg}"));
+            if msg.trim().is_empty() {
+                "the update check failed without a reason".to_string()
+            } else {
+                msg
+            }
+        })?;
     match found {
         Some(u) => {
             // Only a higher version is an update. Every build of a version
