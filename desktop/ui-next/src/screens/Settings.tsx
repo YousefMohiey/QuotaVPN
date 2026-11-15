@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react"
 import { Download, Languages, Loader2, MonitorPlay, RefreshCw, ShieldOff } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { Toggle } from "@/components/Toggle"
 import { Segmented } from "@/components/Segmented"
 import { Tip } from "@/components/Tip"
@@ -224,120 +223,9 @@ export function Settings() {
   const installing = updateState === "installing"
   const offered = updateState === "available" || installing
 
-/**
- * The server this install talks to.
- *
- * It exists because the app assumes it was built with the device key baked in
- * and therefore needs no setup. A build without that key (any build from a
- * checkout, since the file is gitignored) has no server and, until this, no way
- * to give it one: Connect answered "Set up your server first" forever. The
- * address and the user are all a person needs to type; the key is generated
- * when the box is left empty.
- */
-function ServerSection() {
-  const { t } = useI18n()
-  const [host, setHost] = useState("")
-  const [user, setUser] = useState("")
-  const [port, setPort] = useState("22")
-  const [key, setKey] = useState("")
-  const [pub, setPub] = useState("")
-  const [baked, setBaked] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [note, setNote] = useState("")
-  const [bad, setBad] = useState("")
-
-  useEffect(() => {
-    void api
-      .serverInfo()
-      .then((info) => {
-        setHost(info.host)
-        setUser(info.user)
-        setPort(String(info.port || 22))
-        setPub(info.public_key)
-        setBaked(info.baked_in)
-      })
-      .catch(() => undefined)
-  }, [])
-
-  const save = async () => {
-    setBusy(true)
-    setBad("")
-    setNote("")
-    try {
-      const info = await api.setServer(host, user, Number(port) || 22, key)
-      setPub(info.public_key)
-      setHost(info.host)
-      setKey("")
-      setNote(t("setSrvSaved"))
-    } catch (e) {
-      setBad(e instanceof Error ? e.message : String(e))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const field = "h-9 w-full rounded-[7px] border border-line bg-white/[0.03] px-2.5 text-[13px] text-txt outline-none focus:border-[var(--brand-line)]"
-  return (
-    <Section label={t("setSrvGroup")}>
-      <div className="flex flex-col gap-3 py-4">
-        <p className="max-w-[70ch] text-[12.5px] leading-relaxed text-txt2">
-          {baked ? t("setSrvBaked") : t("setSrvNeeded")}
-        </p>
-        <div className="grid gap-2.5 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_90px]">
-          <label className="flex min-w-0 flex-col gap-1">
-            <span className="text-[11px] uppercase tracking-[0.12em] text-txt3">{t("setSrvHost")}</span>
-            <input className={field} value={host} onChange={(e) => setHost(e.target.value)} dir="ltr" spellCheck={false} />
-          </label>
-          <label className="flex min-w-0 flex-col gap-1">
-            <span className="text-[11px] uppercase tracking-[0.12em] text-txt3">{t("setSrvUser")}</span>
-            <input className={field} value={user} onChange={(e) => setUser(e.target.value)} dir="ltr" spellCheck={false} />
-          </label>
-          <label className="flex min-w-0 flex-col gap-1">
-            <span className="text-[11px] uppercase tracking-[0.12em] text-txt3">{t("setSrvPort")}</span>
-            <input className={field} value={port} onChange={(e) => setPort(e.target.value)} dir="ltr" inputMode="numeric" />
-          </label>
-        </div>
-        <label className="flex min-w-0 flex-col gap-1">
-          <span className="text-[11px] uppercase tracking-[0.12em] text-txt3">{t("setSrvKey")}</span>
-          <textarea
-            className="min-h-[64px] w-full resize-y rounded-[7px] border border-line bg-white/[0.03] p-2.5 font-mono text-[11.5px] leading-snug text-txt outline-none focus:border-[var(--brand-line)]"
-            value={key}
-            onChange={(e) => setKey(e.target.value)}
-            placeholder={t("setSrvKeyNote")}
-            dir="ltr"
-            spellCheck={false}
-          />
-        </label>
-        {pub ? (
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="text-[11px] uppercase tracking-[0.12em] text-txt3">{t("setSrvPub")}</span>
-            <code className="break-all rounded-[7px] border border-line bg-white/[0.02] p-2 text-[11px] leading-snug text-txt2" dir="ltr">
-              {pub}
-            </code>
-          </div>
-        ) : null}
-        <div className="flex items-center gap-3">
-          <Button
-            size="sm"
-            className="h-8 rounded-[7px] bg-[var(--brand)] px-3 text-[12px] font-medium text-white"
-            disabled={busy}
-            onClick={() => void save()}
-          >
-            {busy ? <Loader2 className="mr-1 size-3.5 animate-spin" aria-hidden /> : null}
-            {t("setSrvSave")}
-          </Button>
-          {note ? <span className="text-[12px] text-[var(--green)]">{note}</span> : null}
-          {bad ? <span className="text-[12px] text-[var(--red)]">{bad}</span> : null}
-        </div>
-      </div>
-    </Section>
-  )
-}
-
   return (
     <div className="flex w-full flex-col pb-6">
-      <ServerSection />
-      <Section label={t("setAppGroup")} gap>
+      <Section label={t("setAppGroup")}>
         <Row
           icon={Languages}
           title={t("language")}

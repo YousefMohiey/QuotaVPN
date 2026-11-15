@@ -92,101 +92,6 @@ fn gen_keypair() -> Result<(String, String), String> {
     Ok((pem, key.public_key().to_string()))
 }
 
-/// What the Settings screen needs to show and change the server.
-///
-/// The app is built to be zero-setup: a build with the device key baked in
-/// points at the owner's server and nobody types an address. A build without it
-/// (any build whose `embed/quotacards-embed.pem` was not present, which is every
-/// CI checkout, because that file is gitignored) has no server and no screen to
-/// enter one, so every connect answered "Set up your server first" and stopped
-/// there. This is that missing screen's backend.
-#[derive(serde::Serialize)]
-struct ServerInfo {
-    host: String,
-    user: String,
-    port: u16,
-    has_key: bool,
-    /// The public half, so it can be pasted into the provider's console without
-    /// hunting for a file.
-    public_key: String,
-    /// True when the server was baked in at build time rather than entered here.
-    baked_in: bool,
-}
-
-#[tauri::command]
-fn server_info(state: tauri::State<State>) -> ServerInfo {
-    let cfg = state.0.lock().unwrap();
-    ServerInfo {
-        host: cfg.server_ip.clone(),
-        user: if cfg.ssh_user.is_empty() { "ubuntu".to_string() } else { cfg.ssh_user.clone() },
-        port: if cfg.ssh_port == 0 { 22 } else { cfg.ssh_port },
-        has_key: !cfg.private_key.trim().is_empty(),
-        public_key: cfg.public_key.clone(),
-        baked_in: quotacards::config::EMBED_KEY.is_some(),
-    }
-}
-
-/// Point this install at a server, generating the device key when there is none.
-///
-/// The key matters: the server ties every card to the device that asked for it,
-/// so an install with no key cannot be provisioned at all. Generating it here
-/// means the user only ever supplies the address.
-#[tauri::command]
-fn set_server(
-    host: String,
-    user: String,
-    port: u16,
-    key: String,
-    state: tauri::State<State>,
-) -> Result<ServerInfo, String> {
-    let host = host.trim().to_string();
-    if host.is_empty() {
-        return Err("the server address cannot be empty".to_string());
-    }
-    let mut st = state.0.lock().unwrap();
-    st.server_ip = host;
-    st.ssh_user = if user.trim().is_empty() { "ubuntu".to_string() } else { user.trim().to_string() };
-    st.ssh_port = if port == 0 { 22 } else { port };
-    let typed = key.trim().to_string();
-    if !typed.is_empty() {
-        st.private_key = typed;
-    }
-    if st.private_key.trim().is_empty() {
-        let (pem, pub_line) = gen_keypair()?;
-        st.private_key = pem;
-        st.public_key = pub_line;
-    }
-    // A pasted key's public half comes from the key itself, so the two can never
-    // disagree about which device the server is talking to.
-    if !st.private_key.trim().is_empty() {
-        if let Some(pub_line) = public_line_for(&st.private_key) {
-            st.public_key = pub_line;
-        }
-    }
-    // A new server has none of the previous one's state.
-    st.synced = false;
-    st.hy2_password.clear();
-    st.wg_server_pub.clear();
-    st.awg_params.clear();
-    st.save();
-    Ok(ServerInfo {
-        host: st.server_ip.clone(),
-        user: st.ssh_user.clone(),
-        port: st.ssh_port,
-        has_key: !st.private_key.trim().is_empty(),
-        public_key: st.public_key.clone(),
-        baked_in: quotacards::config::EMBED_KEY.is_some(),
-    })
-}
-
-/// The `ssh-ed25519 ...` line for a private key, when it parses.
-fn public_line_for(private_pem: &str) -> Option<String> {
-    use ssh_key::PrivateKey;
-    PrivateKey::from_openssh(private_pem)
-        .ok()
-        .map(|k| k.public_key().to_string())
-}
-
 fn initial_config() -> AppConfig {
     let mut cfg = AppConfig::load();
     if cfg.private_key.is_empty() {
@@ -3093,8 +2998,6 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
     tauri::generate_handler![
         setup_helper,
         get_state,
-        server_info,
-        set_server,
         probe_server,
         platform,
         generate_card,
@@ -3171,8 +3074,6 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
     tauri::generate_handler![
         setup_helper,
         get_state,
-        server_info,
-        set_server,
         probe_server,
         platform,
         generate_card,
