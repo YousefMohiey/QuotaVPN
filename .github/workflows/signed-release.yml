@@ -73,9 +73,21 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: unsigned-installer
-          path: desktop/src-tauri/target/release/bundle/nsis/*.exe
+          # The `.sig` belongs beside the installer: it is what the updater feed
+          # quotes, and a build whose signature was never captured cannot be
+          # published to anybody who already has the app.
+          path: |
+            desktop/src-tauri/target/release/bundle/nsis/*.exe
+            desktop/src-tauri/target/release/bundle/nsis/*.exe.sig
           archive: false
           if-no-files-found: error
+
+      - name: The updater signature must exist
+        if: env.TAURI_SIGNING_PRIVATE_KEY != ''
+        shell: bash
+        run: |
+          set -e
+          ls -la desktop/src-tauri/target/release/bundle/nsis/*.exe.sig
 
       - name: Sign with SignPath
         id: signpath
