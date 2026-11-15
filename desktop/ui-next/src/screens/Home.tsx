@@ -20,7 +20,13 @@ import { cn } from "@/lib/utils"
 // Home, the console: the profiles are a switch on the left, the command bar and
 // the six settings cells hold the centre, the WE line takes the right column.
 // One action, one reading, no dead space.
-export function Home({ onOpenApps }: { onOpenApps: () => void }) {
+export function Home({
+  onOpenApps,
+  onOpenSettings,
+}: {
+  onOpenApps: () => void
+  onOpenSettings: () => void
+}) {
   const { t } = useI18n()
   // motion is a report on state, never a decoration: with reduced motion the
   // values still change, they just arrive instead of travelling
@@ -184,7 +190,20 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 ) : null}
               </span>
             ) : status ? (
-              <span className="mt-0.5 line-clamp-2 max-w-[280px] text-[11.5px] leading-snug text-txt2" role="status">{status}</span>
+              <span className="mt-0.5 flex max-w-[300px] flex-col items-center gap-2 text-center">
+                <span className="line-clamp-2 text-[11.5px] leading-snug text-txt2" role="status">{status}</span>
+                {/* "Set up your server first" used to be the end of the road:
+                    nothing on this screen said where to set one up. */}
+                {/server/i.test(status) ? (
+                  <Button
+                    size="sm"
+                    className="h-8 rounded-[7px] bg-[var(--brand)] px-3 text-[12px] font-medium text-white"
+                    onClick={onOpenSettings}
+                  >
+                    {t("openServerSettings")}
+                  </Button>
+                ) : null}
+              </span>
             ) : null}
           </div>
 

@@ -348,6 +348,7 @@ export const ar = {
   "setLead": "إعدادات التطبيق والاتصال والتحديثات",
   "weLinked": "مرتبط",
   "weNotLinked": "غير مرتبط",
+  "openServerSettings": "افتح إعدادات الخادم",
   "setSrvGroup": "الخادم",
   "setSrvHost": "العنوان",
   "setSrvUser": "المستخدم",
