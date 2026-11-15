@@ -107,10 +107,28 @@ fn main() {
                     println!("cargo:rustc-link-arg-tests={}", test_res.to_string_lossy());
                 }
             } else {
-                println!("cargo:warning=windres failed; building without admin manifest");
+                no_manifest("windres ran but produced nothing");
             }
         }
-        None => println!("cargo:warning=windres not found; building without admin manifest"),
+        None => no_manifest("windres is not on PATH"),
     }
     println!("cargo:rerun-if-changed=../../res/quotacards.manifest");
+}
+
+/// A Windows binary with no manifest is not a smaller build, it is a broken one:
+/// the loader binds comctl32 v5, TaskDialogIndirect does not exist there, and the
+/// process dies with "Entry Point Not Found" before it draws a window. That is
+/// exactly how 0.6.6 shipped from a CI runner without windres, so this is a
+/// failure now, not a warning. `QC_ALLOW_NO_MANIFEST=1` is for a deliberately
+/// throwaway build and nothing else.
+fn no_manifest(why: &str) {
+    if std::env::var("QC_ALLOW_NO_MANIFEST").as_deref() == Ok("1") {
+        println!("cargo:warning=no manifest: {why} (allowed by QC_ALLOW_NO_MANIFEST)");
+        return;
+    }
+    panic!(
+        "cannot embed the Windows manifest: {why}. The app needs the Common-Controls 6 \
+         dependency and the requested execution level, or it fails at load. Install \
+         mingw (windres) or set QC_ALLOW_NO_MANIFEST=1 for a throwaway build."
+    );
 }
