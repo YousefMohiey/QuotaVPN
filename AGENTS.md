@@ -111,7 +111,7 @@ frame can be forged, and only claiming should ever be gated on it.
 
 ## Current state
 
-**The latest published release is v0.6.9.** The four version files are aligned at 0.6.8 in this
+**The latest published release is v0.6.9.** The four version files are aligned at 0.6.9 in this
 tree. The Windows build is done by the `signed-release` workflow on a GitHub runner from a `v*`
 tag; SignPath is not configured, so that installer is unsigned and `latest.json` is composed by
 hand from the run's `.exe` and `.sig` artifacts. Three releases are published and broken on purpose
