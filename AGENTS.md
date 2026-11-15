@@ -97,6 +97,10 @@ and blocks on it, reading `lan/policy.json` from the engine directory and writin
 none of it raises a UAC prompt after setup. `Session` and `MonitorSession` keep their old shapes,
 so the screen reads what it always read.
 
+The WinDivert pair is fetched, not shipped: setup downloads the official release, checks the
+`.sys` Authenticode signature and keeps it in `engine_dir/windivert`, because an unsigned
+installer carrying a kernel driver is what Defender quarantines. The app looks there first.
+
 Npcap is not required for watching, capping, blocking, naming or routing. It is only the backend
 for forging the 42-byte ARP claim frame on a router that does not already point its devices at
 this PC, chosen in one place through `wpcap::claim_link`; with no driver that answers gateway
@@ -107,11 +111,12 @@ frame can be forged, and only claiming should ever be gated on it.
 
 ## Current state
 
-**The latest published release is v0.6.7.** The four version files are aligned at 0.6.7 in this
+**The latest published release is v0.6.8.** The four version files are aligned at 0.6.8 in this
 tree. The Windows build is done by the `signed-release` workflow on a GitHub runner from a `v*`
 tag; SignPath is not configured, so that installer is unsigned and `latest.json` is composed by
-hand from the run's `.exe` and `.sig` artifacts. v0.6.6 is published and broken on purpose of
-record: it had no manifest and could not start. Do not rebuild from its tag.
+hand from the run's `.exe` and `.sig` artifacts. Two releases are published and broken on purpose
+of record: v0.6.6 had no manifest and could not start, and Defender quarantined v0.6.7 because it
+carried a kernel driver. Do not rebuild from either tag.
 
 What the shipping builds are: Windows is the React app in `desktop/ui-next`; the phone still runs
 the vanilla UI in `android/tauri-app/ui`. All three transports ship on both platforms, the
