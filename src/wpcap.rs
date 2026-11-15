@@ -43,11 +43,6 @@ type FnNextEx = unsafe extern "system" fn(*mut c_void, *mut *mut pcap_pkthdr, *m
 type FnClose = unsafe extern "system" fn(*mut c_void);
 type FnGetErr = unsafe extern "system" fn(*mut c_void) -> *const c_char;
 
-/// Same note, callable from other modules.
-pub fn note_public(line: &str) {
-    note(line);
-}
-
 /// Load failures leave a note: a driver that is present but will not load is
 /// indistinguishable from a missing one otherwise.
 fn note(line: &str) {

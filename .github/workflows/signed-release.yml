@@ -73,12 +73,19 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: unsigned-installer
-          # The `.sig` belongs beside the installer: it is what the updater feed
-          # quotes, and a build whose signature was never captured cannot be
-          # published to anybody who already has the app.
-          path: |
-            desktop/src-tauri/target/release/bundle/nsis/*.exe
-            desktop/src-tauri/target/release/bundle/nsis/*.exe.sig
+          path: desktop/src-tauri/target/release/bundle/nsis/*.exe
+          archive: false
+          if-no-files-found: error
+
+      # Its own artifact, because `archive: false` takes exactly one file and the
+      # installer artifact is the one SignPath consumes. The signature is what
+      # the updater feed quotes: a build whose signature was never captured
+      # cannot be published to anybody who already has the app.
+      - name: Upload the updater signature
+        uses: actions/upload-artifact@v7
+        with:
+          name: updater-signature
+          path: desktop/src-tauri/target/release/bundle/nsis/*.exe.sig
           archive: false
           if-no-files-found: error
 

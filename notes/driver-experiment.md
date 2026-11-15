@@ -1,5 +1,10 @@
 # Packet driver experiment (parked)
 
+> Superseded. The app now ships WinDivert and runs the LAN features on its
+> forward layer, so there is no need to write a driver of our own. See "The LAN
+> stack" in `AGENTS.md`. Kept because the reasoning about NDIS filters, frame
+> rings and signing is still the right reading for anyone who tries.
+
 We tried to replace Npcap with a driver of our own so the app would carry no
 third party licence. The work is in the history, not in the tree.
 
