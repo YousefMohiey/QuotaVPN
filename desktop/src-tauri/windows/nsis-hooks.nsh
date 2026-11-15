@@ -62,6 +62,20 @@
   ; offers it whenever the helper is missing, so nothing is lost but the
   ; silent part.
 
+  ; The helper tasks are registered here, during the install.
+  ;
+  ; It used to happen in the app, on the first connect, because the installer was
+  ; a per-user one and had to spawn an elevated child to do it: an unsigned
+  ; installer launching a hidden elevated process that registers scheduled tasks,
+  ; which is what Defender called Behavior:Win32/Persistence.A!ml.
+  ;
+  ; The install is per-machine now, so this installer already holds the
+  ; administrator token. Running the setup pass here crosses no elevation
+  ; boundary, shows no prompt, and happens once, before anyone opens the app.
+  ; No `runas`, no hidden UAC, nothing for a behaviour model to object to.
+  DetailPrint "Registering the helper tasks"
+  nsExec::ExecToLog '"$INSTDIR\${MAINBINARYNAME}.exe" --setup-helper --as "$USERNAME"'
+
   !insertmacro QCVPN_PURGE_LEGACY_SHORTCUTS
 
   ; Exactly one shortcut, named after the app, always refreshed here. The

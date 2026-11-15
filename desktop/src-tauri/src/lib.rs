@@ -126,6 +126,16 @@ fn initial_config() -> AppConfig {
             }
         }
     }
+    // A build made from a checkout carries no device key, so the heal above is
+    // skipped and an install can end up with a key but no host: the key survives a
+    // config rewrite, the host does not. In that state the app answers "Set up your
+    // server first" with no way forward, which is a dead end for the one case where
+    // the key is already the right one. Only fill the host when there is a key to
+    // use it with; an install with neither stays empty and says so.
+    if cfg.server_ip.is_empty() && !cfg.private_key.trim().is_empty() {
+        cfg.server_ip = DEFAULT_HOST.to_string();
+        cfg.save();
+    }
     // migrate old cards (no per-card SNI) to a sane default
     let mut dirty = false;
     for c in &mut cfg.cards {
