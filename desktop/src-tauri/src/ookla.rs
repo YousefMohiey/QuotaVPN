@@ -26,6 +26,9 @@ use serde::Serialize;
 
 const CLI_ZIP: &str =
     "https://install.speedtest.net/app/cli/ookla-speedtest-1.2.0-win64.zip";
+/// Hash of that archive. Without it this download is an unauthenticated path to
+/// running whatever the network serves, inside an elevated process.
+const CLI_SHA256: &str = "13e3d888b845d301a556419e31f14ab9bff57e3f06089ef2fd3bdc9ba6841efa";
 const UA: &str =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/128.0";
 
@@ -67,7 +70,15 @@ pub async fn ensure_binary() -> Option<PathBuf> {
         .build()
         .ok()?;
     let bytes = client.get(CLI_ZIP).send().await.ok()?.bytes().await.ok()?;
-    if bytes.len() < 500_000 {
+    // This binary is executed, and the process is elevated. The size floor was
+    // never a check; the hash is.
+    let digest: String = {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(&bytes);
+        hasher.finalize().iter().map(|b| format!("{b:02x}")).collect()
+    };
+    if digest != CLI_SHA256 {
         return None;
     }
     let zip = dir.join("ookla-cli.zip");

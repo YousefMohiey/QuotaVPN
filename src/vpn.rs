@@ -14,6 +14,42 @@ const NO_WINDOW: u32 = 0x08000000;
 #[cfg(not(windows))]
 const NO_WINDOW: u32 = 0;
 
+// ---------------------------------------------------------------- artifact integrity
+
+/// SHA-256 of each archive this app downloads, pinned in source.
+///
+/// Every one of these is fetched over the network and then executed or loaded by
+/// an elevated process: the tunnel engine, the Wintun driver DLL, and the Ookla
+/// speed-test binary. A download that is not checked is a remote code execution
+/// primitive for whoever can serve it, and the signed installer is irrelevant to
+/// it because none of this travels through the updater. Pinning the hash here is
+/// what makes the fetch safe; bumping a pin is a deliberate, reviewable act.
+const ENGINE_SHA256: &str = "cc9e23f47cccdeb581085f56c3f71cca26ec14b5aef063b2bfcf49ee45fc45d7";
+const WINTUN_SHA256: &str = "07c256185d6ee3652e09fa55c0b673e2624b565e02c4b9091c79ca7d2f24ef51";
+
+pub fn sha256_of(path: &std::path::Path) -> Option<String> {
+    use sha2::{Digest, Sha256};
+    let bytes = std::fs::read(path).ok()?;
+    let mut hasher = Sha256::new();
+    hasher.update(&bytes);
+    Some(hasher.finalize().iter().map(|b| format!("{b:02x}")).collect())
+}
+
+/// Refuse to go on unless the downloaded file is the exact bytes this build
+/// expects. The file is removed on a mismatch so a later run cannot retry with it.
+fn verify_artifact(path: &std::path::Path, expected: &str, what: &str) -> Result<(), String> {
+    match sha256_of(path) {
+        Some(got) if got == expected => Ok(()),
+        Some(got) => {
+            let _ = std::fs::remove_file(path);
+            Err(format!(
+                "the {what} download is not the build this app expects (got {got}, want {expected})"
+            ))
+        }
+        None => Err(format!("the {what} download could not be read")),
+    }
+}
+
 /// Engine: amnezia-box (sing-box + AmneziaWG obfuscated WireGuard), hosted as
 /// a release asset so every install pulls the same pinned build.
 const ENGINE_TAG: &str = "awg-1.14.1";
@@ -264,6 +300,9 @@ pub fn ensure_engine() -> Result<String, String> {
     if !dl {
         return Err("engine download failed (check internet)".to_string());
     }
+    // Before the extract, not after: `tar` on an archive is already parsing
+    // attacker-shaped input.
+    verify_artifact(&zip, ENGINE_SHA256, "tunnel engine")?;
     run_hidden(
         "tar",
         &["-xf", &zip.to_string_lossy(), "-C", &dir.to_string_lossy()],
@@ -292,6 +331,7 @@ pub fn ensure_engine() -> Result<String, String> {
     if !dl {
         return Err("driver download failed (check internet)".to_string());
     }
+    verify_artifact(&wzip, WINTUN_SHA256, "wintun driver")?;
     run_hidden(
         "tar",
         &["-xf", &wzip.to_string_lossy(), "-C", &dir.to_string_lossy()],

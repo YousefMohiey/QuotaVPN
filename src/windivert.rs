@@ -122,6 +122,26 @@ fn note(line: &str) {
         });
 }
 
+/// The exact driver this build will load, by SHA-256.
+///
+/// WinDivert's DLL ships unsigned, so Authenticode cannot be the gate for it.
+/// A hash can. The DLL is loaded into an elevated process, and every candidate
+/// path below is writable by the logged-on user, so "first file that happens to
+/// be there" is exactly the wrong rule: a dropped DLL would run inside the
+/// Administrator process. Matching this constant is the whole check, and it is
+/// checked before `LoadLibrary`, not after.
+pub const DLL_SHA256: &str = "c1e060ee19444a259b2162f8af0f3fe8c4428a1c6f694dce20de194ac8d7d9a2";
+/// The signed driver binary that must travel with it.
+pub const SYS_SHA256: &str = "8da085332782708d8767bcace5327a6ec7283c17cfb85e40b03cd2323a90ddc2";
+
+/// Does this file exist and hold exactly the bytes this build trusts?
+///
+/// The hashing itself lives in `vpn`, beside the pins for every other artifact
+/// this app downloads, so there is one implementation and one place to bump.
+fn is_trusted(path: &std::path::Path, expected: &str) -> bool {
+    crate::vpn::sha256_of(path).as_deref() == Some(expected)
+}
+
 /// Which WinDivert release to fetch, and from where.
 pub const VERSION: &str = "2.2.2";
 const URL: &str = "https://github.com/basil00/WinDivert/releases/download/v2.2.2/WinDivert-2.2.2-A.zip";
@@ -193,8 +213,17 @@ pub fn install() -> Result<String, String> {
         let dst = dir.join(to);
         std::fs::copy(&src, &dst).map_err(|e| format!("install {}: {e}", from))?;
     }
-    // Only now, with the files in place, does the signature matter.
-    let sig = verify_signature(&dir.join("WinDivert64.sys"))?;
+    // Both files are checked: the signature on the driver, and the pinned hash on
+    // each. A copy that does not match is removed, so a later run cannot load it.
+    let dll = dir.join("WinDivert.dll");
+    let sys = dir.join("WinDivert64.sys");
+    if !is_trusted(&dll, DLL_SHA256) || !is_trusted(&sys, SYS_SHA256) {
+        let _ = std::fs::remove_file(&dll);
+        let _ = std::fs::remove_file(&sys);
+        let _ = std::fs::remove_file(&zip);
+        return Err("the downloaded driver is not the build this app expects".to_string());
+    }
+    let sig = verify_signature(&sys)?;
     let _ = std::fs::remove_file(&zip);
     let _ = std::fs::remove_dir_all(dir.join(format!("WinDivert-{VERSION}-A")));
     note(&format!("driver installed, signature {sig}"));
@@ -234,12 +263,23 @@ fn verify_signature(path: &std::path::Path) -> Result<String, String> {
 #[cfg(windows)]
 fn dll_candidates() -> Vec<std::path::PathBuf> {
     let mut out: Vec<std::path::PathBuf> = Vec::new();
+    // The fetched pair, beside the engine. First because it is the copy the app
+    // itself installed and verified.
+    out.push(driver_dir().join("WinDivert.dll"));
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
+            // With `installMode: perMachine` this is Program Files, which only an
+            // administrator can write.
             out.push(dir.join("WinDivert.dll"));
-            // .../target/<profile>/app.exe, so the crate root is one to three
-            // levels up depending on whether a target triple is in the path.
-            let mut p = dir.to_path_buf();
+        }
+    }
+    // Dev runs only. These resolve inside a checkout or the build directory, and
+    // nothing in a shipped build should ever load a driver from there: the hash
+    // check below decides, but a path that ought to exist in release is a path an
+    // attacker can pre-create.
+    if cfg!(debug_assertions) {
+        if let Ok(exe) = std::env::current_exe() {
+            let mut p = exe.parent().map(|d| d.to_path_buf()).unwrap_or_default();
             for _ in 0..4 {
                 let Some(parent) = p.parent().map(|d| d.to_path_buf()) else {
                     break;
@@ -248,23 +288,17 @@ fn dll_candidates() -> Vec<std::path::PathBuf> {
                 out.push(p.join("res").join("windivert").join("WinDivert.dll"));
             }
         }
+        if let Ok(cwd) = std::env::current_dir() {
+            out.push(cwd.join("res").join("windivert").join("WinDivert.dll"));
+            out.push(
+                cwd.join("..")
+                    .join("..")
+                    .join("res")
+                    .join("windivert")
+                    .join("WinDivert.dll"),
+            );
+        }
     }
-    // The fetched pair, beside the engine.
-    out.push(driver_dir().join("WinDivert.dll"));
-    if let Ok(cwd) = std::env::current_dir() {
-        out.push(cwd.join("WinDivert.dll"));
-        out.push(cwd.join("res").join("windivert").join("WinDivert.dll"));
-        // `cargo tauri dev` and `tauri build` both run from desktop/src-tauri.
-        out.push(
-            cwd.join("..")
-                .join("..")
-                .join("res")
-                .join("windivert")
-                .join("WinDivert.dll"),
-        );
-    }
-    // Last: whatever the loader's own search order finds.
-    out.push(std::path::PathBuf::from("WinDivert.dll"));
     let mut seen: Vec<String> = Vec::new();
     out.retain(|p| {
         let key = p.to_string_lossy().to_lowercase();
@@ -293,6 +327,16 @@ impl WinDivert {
             let mut lib = None;
             let mut last = String::from("no candidate");
             for path in dll_candidates() {
+                // Before LoadLibrary, never after: a DLL's initialiser runs inside
+                // the load, so a check that happens later has already run the code.
+                if !is_trusted(&path, DLL_SHA256) {
+                    note(&format!("refused {}: hash does not match", path.display()));
+                    last = format!(
+                        "{} is not the driver this build expects (wrong bytes)",
+                        path.display()
+                    );
+                    continue;
+                }
                 match unsafe { libloading::Library::new(&path) } {
                     Ok(l) => {
                         note(&format!("loaded from {}", path.display()));

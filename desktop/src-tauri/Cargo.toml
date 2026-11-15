@@ -35,6 +35,8 @@ rand_core = { version = "0.6", features = ["getrandom", "std"] }
 # Shared core: server setup + cards over SSH, Windows sing-box engine.
 quotacards = { path = "../.." }
 
+sha2 = "0.10"
+
 [target.'cfg(windows)'.dependencies]
 # TUN adapter byte counters for the live traffic chart.
 windows = { version = "0.62", features = ["Win32_NetworkManagement_IpHelper", "Win32_NetworkManagement_Ndis", "Win32_Foundation", "Win32_System_Diagnostics_ToolHelp", "Win32_System_Registry", "Win32_System_Threading", "Win32_System_Com", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Gdi", "Win32_Storage_FileSystem", "Win32_Security_Cryptography"] }

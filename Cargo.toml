@@ -23,6 +23,9 @@ ssh-key = { version = "0.6", features = ["ed25519", "rand_core", "std"] }
 # A build-time SDK or a bundled import library would stop the project from
 # compiling without the driver present, which is the thing this avoids.
 libloading = "0.8"
+# The packet driver is verified by pinned hash before it is loaded, because it
+# is loaded into an elevated process. sha2 is already in the tree transitively.
+sha2 = "0.10"
 
 [dev-dependencies]
 uuid = { version = "1", features = ["v4"] }
