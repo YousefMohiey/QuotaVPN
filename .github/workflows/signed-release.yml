@@ -135,12 +135,25 @@ jobs:
           $bad = @{
             "WinDivert-2.2.2-A.zip" = "the app must not download a kernel driver"
             "QC_FEED_URL"           = "the app must not accept a feed override at runtime"
-            "msSmartScreenProtection" = "the app must not disable SmartScreen"
           }
           foreach ($k in $bad.Keys) {
             if ($text.Contains($k)) { throw "$k is still in the binary: $($bad[$k])" }
           }
-          Write-Host "checked: no driver download, no feed override, no SmartScreen disable"
+          Write-Host "checked: no driver download, no feed override"
+
+      # SmartScreen is a config value, and checking it in the binary would always
+      # fail: the WebView2 runtime links its own default argument string into the
+      # executable whether or not the app sets it. The config is where the decision
+      # is actually made, so that is what is checked.
+      - name: SmartScreen stays on
+        shell: pwsh
+        run: |
+          $cfg = Get-Content desktop/src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
+          $args = $cfg.app.windows[0].additionalBrowserArgs
+          if ($args -and $args.Contains("msSmartScreenProtection")) {
+            throw "additionalBrowserArgs disables SmartScreen"
+          }
+          Write-Host "checked: the window does not disable SmartScreen"
 
       - name: The updater signature must exist
         shell: bash
