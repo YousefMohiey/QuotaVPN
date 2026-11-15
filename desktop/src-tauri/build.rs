@@ -35,19 +35,31 @@ fn main() {
     println!("cargo:rerun-if-changed=../../.git/HEAD");
     println!("cargo:rerun-if-changed=../../.git/refs/heads");
 
-    tauri_build::build();
+    // The application manifest goes through tauri-build, which compiles the
+    // resources with whatever this toolchain actually has: rc.exe on MSVC,
+    // windres on GNU. Doing it by hand was the bug in 0.6.6: this script shelled
+    // out to windres itself and, on a runner that had none, warned and shipped an
+    // exe with no manifest at all. That exe bound comctl32 v5, which has no
+    // TaskDialogIndirect, so it died with "Entry Point Not Found" before it could
+    // draw a window. `res/quotacards.manifest` carries both halves now: the
+    // requested execution level and the Common-Controls 6 dependency.
+    let windows = tauri_build::WindowsAttributes::new()
+        .app_manifest(include_str!("../../res/quotacards.manifest"));
+    let attrs = tauri_build::Attributes::new().windows_attributes(windows);
+    tauri_build::try_build(attrs).expect("tauri-build");
 
     let target = env::var("TARGET").unwrap_or_default();
     if !target.contains("windows") {
         return;
     }
+
+    // Test binaries are not covered by the manifest above, and on the GNU
+    // toolchain a test binary without the Common-Controls dependency dies before
+    // main (0xc0000139 STATUS_ENTRYPOINT_NOT_FOUND). They get an asInvoker copy
+    // through windres, because the app manifest demands admin and a test runner
+    // must not. A missing windres costs the tests, never the app, so this is a
+    // note and not a failure.
     let out = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let rc = out.join("quotacards.rc");
-    let res = out.join("quotacards.res");
-    let mf = root.join("res").join("quotacards.manifest");
-    // forward slashes: backslashes would parse as escapes inside the .rc
-    let mf_res = mf.to_string_lossy().replace('\\', "/");
-    fs::write(&rc, format!("1 RT_MANIFEST \"{mf_res}\"\n")).unwrap();
     let windres = ["windres.exe", "x86_64-w64-mingw32-windres.exe"]
         .into_iter()
         .find(|w| std::process::Command::new(w).arg("--version").output().is_ok())
@@ -55,80 +67,43 @@ fn main() {
             let known = PathBuf::from(r"C:\Tools\mingw_extract\mingw64\bin\windres.exe");
             known.exists().then_some("C:\\Tools\\mingw_extract\\mingw64\\bin\\windres.exe")
         });
-    match windres {
-        Some(w) => {
-            let ok = std::process::Command::new(w)
-                .args([
-                    rc.to_string_lossy().as_ref(),
-                    "-O",
-                    "coff",
-                    "-o",
-                    res.to_string_lossy().as_ref(),
-                ])
-                .status()
-                .map(|s| s.success())
-                .unwrap_or(false);
-            if ok && res.exists() {
-                println!("cargo:rustc-link-arg-bins={}", res.to_string_lossy());
-                // Test binaries need the Common-Controls 6 manifest too, or the
-                // GNU-toolchain loader kills them before main (0xc0000139
-                // STATUS_ENTRYPOINT_NOT_FOUND). They get an asInvoker copy: the
-                // app manifest demands admin and a test runner must not.
-                let test_manifest = out.join("test.manifest");
-                let _ = fs::write(
-                    &test_manifest,
-                    concat!(
-                        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n",
-                        "<assembly xmlns=\"urn:schemas-microsoft-com:asm.v1\" manifestVersion=\"1.0\">\n",
-                        "  <dependency><dependentAssembly><assemblyIdentity type=\"win32\" ",
-                        "name=\"Microsoft.Windows.Common-Controls\" version=\"6.0.0.0\" ",
-                        "processorArchitecture=\"*\" publicKeyToken=\"6595b64144ccf1df\" ",
-                        "language=\"*\"/></dependentAssembly></dependency>\n",
-                        "</assembly>\n"
-                    ),
-                );
-                let test_rc = out.join("test.rc");
-                let test_res = out.join("test.res");
-                let tm = test_manifest.to_string_lossy().replace('\\', "/");
-                if fs::write(&test_rc, format!("1 RT_MANIFEST \"{tm}\"\n")).is_ok()
-                    && std::process::Command::new(w)
-                        .args([
-                            test_rc.to_string_lossy().as_ref(),
-                            "-O",
-                            "coff",
-                            "-o",
-                            test_res.to_string_lossy().as_ref(),
-                        ])
-                        .status()
-                        .map(|s| s.success())
-                        .unwrap_or(false)
-                    && test_res.exists()
-                {
-                    println!("cargo:rustc-link-arg-tests={}", test_res.to_string_lossy());
-                }
-            } else {
-                no_manifest("windres ran but produced nothing");
-            }
-        }
-        None => no_manifest("windres is not on PATH"),
+    let Some(w) = windres else {
+        println!("cargo:warning=windres not found; test binaries will have no manifest");
+        return;
+    };
+    let test_manifest = out.join("test.manifest");
+    let _ = fs::write(
+        &test_manifest,
+        concat!(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n",
+            "<assembly xmlns=\"urn:schemas-microsoft-com:asm.v1\" manifestVersion=\"1.0\">\n",
+            "  <dependency><dependentAssembly><assemblyIdentity type=\"win32\" ",
+            "name=\"Microsoft.Windows.Common-Controls\" version=\"6.0.0.0\" ",
+            "processorArchitecture=\"*\" publicKeyToken=\"6595b64144ccf1df\" ",
+            "language=\"*\"/></dependentAssembly></dependency>\n",
+            "</assembly>\n"
+        ),
+    );
+    let test_rc = out.join("test.rc");
+    let test_res = out.join("test.res");
+    let tm = test_manifest.to_string_lossy().replace('\\', "/");
+    if fs::write(&test_rc, format!("1 RT_MANIFEST \"{tm}\"\n")).is_ok()
+        && std::process::Command::new(w)
+            .args([
+                test_rc.to_string_lossy().as_ref(),
+                "-O",
+                "coff",
+                "-o",
+                test_res.to_string_lossy().as_ref(),
+            ])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+        && test_res.exists()
+    {
+        println!("cargo:rustc-link-arg-tests={}", test_res.to_string_lossy());
+    } else {
+        println!("cargo:warning=windres failed; test binaries will have no manifest");
     }
     println!("cargo:rerun-if-changed=../../res/quotacards.manifest");
-}
-
-/// A Windows binary with no manifest is not a smaller build, it is a broken one:
-/// the loader binds comctl32 v5, TaskDialogIndirect does not exist there, and the
-/// process dies with "Entry Point Not Found" before it draws a window. That is
-/// exactly how 0.6.6 shipped from a CI runner without windres, so this is a
-/// failure now, not a warning. `QC_ALLOW_NO_MANIFEST=1` is for a deliberately
-/// throwaway build and nothing else.
-fn no_manifest(why: &str) {
-    if std::env::var("QC_ALLOW_NO_MANIFEST").as_deref() == Ok("1") {
-        println!("cargo:warning=no manifest: {why} (allowed by QC_ALLOW_NO_MANIFEST)");
-        return;
-    }
-    panic!(
-        "cannot embed the Windows manifest: {why}. The app needs the Common-Controls 6 \
-         dependency and the requested execution level, or it fails at load. Install \
-         mingw (windres) or set QC_ALLOW_NO_MANIFEST=1 for a throwaway build."
-    );
 }
