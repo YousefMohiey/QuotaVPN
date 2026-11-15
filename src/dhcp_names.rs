@@ -46,11 +46,41 @@ pub fn cached() -> HashMap<String, String> {
     out
 }
 
+/// Most names this cache will hold. A household has a few dozen devices; the
+/// number exists because the input is an unauthenticated broadcast from anyone on
+/// the wire, and the file is rewritten every window.
+const MAX_NAMES: usize = 512;
+/// Longest name kept. DHCP option 12 has no length agreement between clients.
+const MAX_NAME: usize = 64;
+
+/// Trim a device-announced name to something a roster can show and a file can
+/// hold: printable, bounded, and never empty.
+fn tidy_name(raw: &str) -> Option<String> {
+    let cleaned: String = raw
+        .trim()
+        .chars()
+        .filter(|c| !c.is_control() && *c != '|' && *c != '\n' && *c != '\r')
+        .take(MAX_NAME)
+        .collect();
+    let cleaned = cleaned.trim().to_string();
+    if cleaned.is_empty() {
+        None
+    } else {
+        Some(cleaned)
+    }
+}
+
 fn remember(found: &HashMap<String, String>) {
     let mut all = cached();
     let before = all.len();
     for (mac, name) in found {
-        all.insert(mac.clone(), name.clone());
+        if let Some(clean) = tidy_name(name) {
+            if all.len() >= MAX_NAMES && !all.contains_key(mac) {
+                // Full and this is a new device: drop it rather than grow.
+                continue;
+            }
+            all.insert(mac.clone(), clean);
+        }
     }
     if all.len() == before {
         return;
@@ -239,7 +269,9 @@ pub fn listen(secs: u64) -> HashMap<String, String> {
             match sock.recv_from(&mut buf) {
                 Ok((n, _)) => {
                     if let Some((mac, name)) = dhcp_payload(&buf[..n.min(buf.len())]) {
-                        found.insert(mac, name);
+                        if let Some(clean) = tidy_name(&name) {
+                            found.insert(mac, clean);
+                        }
                     }
                 }
                 // A timeout is the normal case on a quiet network; one is

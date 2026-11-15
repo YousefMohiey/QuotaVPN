@@ -39,6 +39,13 @@ use std::time::{Duration, Instant};
 pub const MAX_DOMAINS: usize = 256;
 /// How many address-to-name bindings to keep from DNS responses.
 pub const MAX_BINDINGS: usize = 4096;
+/// Most addresses one policy may carry. A roster is a household, not a campus,
+/// and the list becomes a driver filter string.
+pub const MAX_IPS: usize = 256;
+/// Longest session the loop will honour. The app asks for fifteen minutes; an
+/// unbounded value would let a file keep an elevated filtering process alive.
+pub const MAX_TTL_SECS: u64 = 12 * 60 * 60;
+
 /// How often the policy file is re-read. Half a second is fast enough that a
 /// block feels instant and slow enough that it costs nothing.
 const POLICY_POLL: Duration = Duration::from_millis(500);
@@ -111,8 +118,21 @@ impl Policy {
 
     /// Parse without trusting the file: a half-written policy is a policy that
     /// is not there yet, and the loop must keep running on the old one.
+    ///
+    /// The file sits in the user's profile and this loop runs elevated, so its
+    /// contents are only as trustworthy as that directory. Everything it can
+    /// affect is bounded here: addresses must parse as IPv4 (they are
+    /// interpolated into a driver filter, so a string is also a syntax problem),
+    /// the lists are capped, and the session lifetime has a ceiling.
     pub fn parse(text: &str) -> Option<Policy> {
-        serde_json::from_str(text).ok()
+        let mut p: Policy = serde_json::from_str(text).ok()?;
+        p.ips.retain(|s| s.parse::<std::net::Ipv4Addr>().is_ok());
+        p.blocked.retain(|s| s.parse::<std::net::Ipv4Addr>().is_ok());
+        p.caps.retain(|k, _| k.parse::<std::net::Ipv4Addr>().is_ok());
+        p.ips.truncate(MAX_IPS);
+        p.blocked.truncate(MAX_IPS);
+        p.ttl_secs = p.ttl_secs.clamp(60, MAX_TTL_SECS);
+        Some(p)
     }
 }
 
@@ -647,6 +667,21 @@ mod tests {
         // An address already known can still be re-pointed.
         bind(&mut bindings, "10.0.0.0", "new.example.com");
         assert_eq!(bindings["10.0.0.0"], "new.example.com");
+    }
+
+    #[test]
+    fn a_hostile_policy_file_is_bounded() {
+        // The file is in the user's profile and the loop is elevated, so its
+        // contents arrive untrusted: a filter string, a list length, and a
+        // session lifetime all have to be constrained before they are obeyed.
+        let text = r#"{"seq":1,"ips":["192.168.1.39","not-an-address","10.0.0.1 and true"],
+            "blocked":["1.2.3.4","x"],"caps":{"9.9.9.9":{"up_bps":1,"down_bps":1},"y":{"up_bps":1,"down_bps":1}},
+            "ttl_secs":99999999}"#;
+        let p = Policy::parse(text).expect("a whole policy parses");
+        assert_eq!(p.ips, vec!["192.168.1.39"], "only addresses survive");
+        assert_eq!(p.blocked, vec!["1.2.3.4"]);
+        assert_eq!(p.caps.len(), 1);
+        assert!(p.ttl_secs <= MAX_TTL_SECS);
     }
 
     #[test]
