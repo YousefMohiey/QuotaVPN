@@ -1010,7 +1010,7 @@ async fn tunnel_start(
 #[tauri::command]
 async fn setup_helper() -> Result<CmdResult, String> {
     vpn::app_log("setup: asked for the one-time setup");
-    if vpn::task_installed() && vpn::lan_task_installed() {
+    if vpn::task_installed() && vpn::lan_task_installed() && quotacards::windivert::installed() {
         return Ok(CmdResult { ok: true, msg: "ready".into() });
     }
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
@@ -3299,7 +3299,9 @@ pub fn run() {
     if std::env::args().any(|a| a == "--check-helper") {
         // Both passes, so an upgrade from a build that had only the tunnel one
         // runs the setup again and registers the network pass.
-        let ready = vpn::task_installed() && vpn::lan_task_installed();
+        let ready = vpn::task_installed()
+            && vpn::lan_task_installed()
+            && quotacards::windivert::installed();
         std::process::exit(if ready { 0 } else { 3 });
     }
     // Remove this account's helper task (called by the uninstaller while the
@@ -3371,6 +3373,13 @@ pub fn run() {
         match vpn::install_lan_task(&owner) {
             Ok(()) => vpn::app_log("setup-helper: network task installed"),
             Err(e) => vpn::app_log(&format!("setup-helper: network task failed: {e}")),
+        }
+        // The packet driver is fetched rather than shipped: an unsigned
+        // installer that carries a kernel driver is what Defender quarantines,
+        // and the driver is what the LAN features run on.
+        match quotacards::windivert::install() {
+            Ok(msg) => vpn::app_log(&format!("setup-helper: {msg}")),
+            Err(e) => vpn::app_log(&format!("setup-helper: driver failed: {e}")),
         }
         match vpn::ensure_engine() {
             Ok(msg) => vpn::app_log(&format!("setup-helper: engine {msg}")),
