@@ -235,7 +235,7 @@ export default function App() {
                 exit={{ opacity: 0, y: -6, transition: { duration: 0.1 } }}
                 transition={{ duration: 0.2, ease: EASE_OUT }}
               >
-                {tab === "home" && <Home onOpenApps={() => go("apps")} onOpenSettings={() => go("settings")} />}
+                {tab === "home" && <Home onOpenApps={() => go("apps")} />}
                 {tab === "speed" && <Speed />}
                 {tab === "network" && <Network />}
                 {tab === "voice" && <Voice />}

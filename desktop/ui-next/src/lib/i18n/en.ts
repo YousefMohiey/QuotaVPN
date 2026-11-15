@@ -345,7 +345,6 @@ export const en = {
   "setLead": "App, connection, and update settings",
   "weLinked": "Linked",
   "weNotLinked": "Not linked",
-  "openServerSettings": "Open server settings",
   "setSrvGroup": "Server",
   "setSrvHost": "Address",
   "setSrvUser": "User",
