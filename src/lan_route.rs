@@ -1000,6 +1000,46 @@ pub fn release() -> Result<(), String> {
         ));
     }
 
+    // The record is a file in the user's profile, so its contents are only as
+    // trustworthy as the rest of that profile. Sending frames built from it tells
+    // `target_mac` that the gateway lives at `router_mac`; a crafted record could
+    // therefore point an arbitrary device at an arbitrary machine from inside an
+    // elevated process. Both facts are re-checked against the live network before
+    // anything goes on the wire.
+    //
+    // The gateway's own entry is the safe one to compare: `pin_gateway` wrote it
+    // during the claim and nothing else in this feature rewrites it.
+    let live_gateway_mac = crate::lan::mac_for(&gateway.to_string());
+    let same_subnet = {
+        let (a, b) = (u32::from(ad.ip), u32::from(target_ip));
+        (a >> 8) == (b >> 8)
+    };
+    let trusted_record = same_subnet
+        && match &live_gateway_mac {
+            Some(m) => m.eq_ignore_ascii_case(&router_mac),
+            // The table forgot the entry: nothing to compare against, so the
+            // record cannot be corroborated. Refusing costs a stale ARP entry;
+            // proceeding could poison a host that was never ours.
+            None => false,
+        };
+    if !trusted_record {
+        // Leave the device's own entry alone, drop the record, and say so. This is
+        // the path a tampered record takes, and also the honest outcome when the
+        // network moved between claim and release.
+        forget_intent();
+        let _ = set_forwarding(&intent.interface, false);
+        if !intent.tun_interface.is_empty() {
+            let _ = set_forwarding(&intent.tun_interface, false);
+        }
+        return Err(format!(
+            "refused to send a restore for {}: the record does not match the live network (gateway {} is {}, recorded {})",
+            target_ip,
+            gateway,
+            live_gateway_mac.as_deref().unwrap_or("unknown"),
+            router_mac
+        ));
+    }
+
     let link = claim_link();
     let frame = arp_release(&router_mac, gateway, &intent.target_mac, target_ip)
         .ok_or_else(|| "could not build the release frame".to_string())?;

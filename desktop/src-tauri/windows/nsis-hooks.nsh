@@ -119,10 +119,15 @@
   ; that: the task is per account and re-registering it means another Windows
   ; prompt. The app drops a marker before it hands over to the updater, so that
   ; marker is the test. A real uninstall has no marker and takes the task.
-  IfFileExists "$LOCALAPPDATA\quotacards\updating" qvp_keep_helper qvp_drop_helper
-  qvp_drop_helper:
-    nsExec::ExecToLog '"$INSTDIR\${MAINBINARYNAME}.exe" --remove-helper'
-  qvp_keep_helper:
+  ; The helper tasks are removed on every uninstall, with no exception.
+  ;
+  ; This used to keep them when `%LOCALAPPDATA%\quotacards\updating` existed, so
+  ; that an in-app update did not have to ask Windows for administrator again. The
+  ; marker is a file in the user's own profile, so anyone could create it, and the
+  ; tasks would survive an uninstall and still name this executable. "Uninstall the
+  ; app" has to mean the privileged tasks are gone; an update paying one prompt is
+  ; the cheaper problem.
+  nsExec::ExecToLog '"$INSTDIR\${MAINBINARYNAME}.exe" --remove-helper'
 !macroend
 
 !macro NSIS_HOOK_POSTUNINSTALL

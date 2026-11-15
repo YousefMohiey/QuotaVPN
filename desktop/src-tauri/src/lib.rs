@@ -1612,11 +1612,11 @@ async fn app_icons(pkgs: Vec<String>) -> Vec<AppIconOut> {
         let paths = process_paths();
         pkgs.into_iter()
             .map(|pkg| {
-                let path = if pkg.contains('\\') || pkg.contains('/') {
-                    pkg.clone()
-                } else {
-                    paths.get(&pkg.to_ascii_lowercase()).cloned().unwrap_or_default()
-                };
+                // Only names are accepted. A caller-supplied path used to be taken
+                // verbatim and handed to SHGetFileInfoW, so `\\host\share\x.ico`
+                // made this elevated process authenticate to a machine it had never
+                // heard of, and run whatever shell handler lived there.
+                let path = paths.get(&pkg.to_ascii_lowercase()).cloned().unwrap_or_default();
                 let png = if path.is_empty() {
                     String::new()
                 } else {
@@ -2290,7 +2290,20 @@ fn kill_switch_release() -> Result<bool, String> {
 /// cannot install for them.
 #[tauri::command]
 fn open_page(url: String) -> bool {
-    if !url.starts_with("https://") {
+    // A prefix test is not a check. `cmd /C start` re-parses its argument, so
+    // `https://x&calc.exe` ran a program from an "https" string, inside an
+    // elevated process. The alphabet below is a URL's and nothing else: no
+    // space, no `&`, `|`, `^`, `<`, `>`, `"`, `'`, `;`, `$`, backtick, braces.
+    // What survives leaves cmd nothing to parse as a second command.
+    fn safe(c: char) -> bool {
+        c.is_ascii_alphanumeric()
+            || matches!(
+                c,
+                '-' | '.' | '_' | '~' | ':' | '/' | '?' | '#' | '[' | ']' | '@' | '!' | '*'
+                    | '+' | ',' | '=' | '%' | '(' | ')'
+            )
+    }
+    if !url.starts_with("https://") || url.len() > 2048 || !url.chars().all(safe) {
         return false;
     }
     #[cfg(windows)]

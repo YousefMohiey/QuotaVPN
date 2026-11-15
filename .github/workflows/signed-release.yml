@@ -34,11 +34,22 @@ jobs:
     # The secret has to sit in env, because the secrets context is not allowed
     # inside a step condition.
     env:
-      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
-      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      # Booleans, not values. Conditions need to know whether a secret exists, and
+      # a comparison in `env:` gives that without putting the secret back in scope
+      # for every step.
+      HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+      HAS_SIGNPATH: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
     steps:
+      # The updater key and the SignPath token are scoped to the two steps that
+      # need them, not to the job. At job level every step inherited them,
+      # including `npm ci` and `npx --yes @tauri-apps/cli@2`, so any package that
+      # answered to that floating version could read the key that signs every
+      # client's updates.
       - uses: actions/checkout@v7
+        with:
+          # The job is already `contents: write`; a token left in .git/config by
+          # checkout is one more credential for build-time code to find.
+          persist-credentials: false
 
       - uses: actions/setup-node@v7
         with:
@@ -59,13 +70,16 @@ jobs:
       - name: Build
         working-directory: desktop
         shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           if [ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
             # No updater key configured yet: build the installer without the
             # updater manifest instead of failing on an empty key.
-            npx --yes @tauri-apps/cli@2 build --config '{"bundle":{"createUpdaterArtifacts":false}}'
+            npx --yes @tauri-apps/cli@2.11.4 build --config '{"bundle":{"createUpdaterArtifacts":false}}'
           else
-            npx --yes @tauri-apps/cli@2 build
+            npx --yes @tauri-apps/cli@2.11.4 build
           fi
 
       # 0.6.6 shipped an exe with no manifest: it bound comctl32 v5, which has no
@@ -109,7 +123,7 @@ jobs:
           if-no-files-found: error
 
       - name: The updater signature must exist
-        if: env.TAURI_SIGNING_PRIVATE_KEY != ''
+        if: env.HAS_UPDATER_KEY == 'true'
         shell: bash
         run: |
           set -e
@@ -117,10 +131,10 @@ jobs:
 
       - name: Sign with SignPath
         id: signpath
-        if: env.SIGNPATH_API_TOKEN != ''
+        if: env.HAS_SIGNPATH == 'true'
         uses: signpath/github-action-submit-signing-request@v3
         with:
-          api-token: ${{ env.SIGNPATH_API_TOKEN }}
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: ${{ vars.SIGNPATH_ORG_ID }}
           project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
           signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
@@ -133,17 +147,20 @@ jobs:
       # It is made here, over the signed file, because signing changes the hash
       # and the .sig that the bundler produced belongs to the unsigned build.
       - name: Sign the updater manifest
-        if: env.SIGNPATH_API_TOKEN != ''
+        if: env.HAS_SIGNPATH == 'true'
         shell: bash
         working-directory: signed
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           set -e
           FILE="$(ls *.exe | head -1)"
-          npx --yes @tauri-apps/cli@2 signer sign "$FILE"
+          npx --yes @tauri-apps/cli@2.11.4 signer sign "$FILE"
           ls -la
 
       - name: Check the signature really verifies
-        if: env.SIGNPATH_API_TOKEN != ''
+        if: env.HAS_SIGNPATH == 'true'
         shell: pwsh
         run: |
           $file = Get-ChildItem signed/*.exe | Select-Object -First 1
@@ -155,13 +172,13 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "the installer is not validly signed" }
 
       - name: Attach to the release
-        if: ${{ startsWith(github.ref, 'refs/tags/') && env.SIGNPATH_API_TOKEN != '' }}
+        if: ${{ startsWith(github.ref, 'refs/tags/') && env.HAS_SIGNPATH == 'true' }}
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "${GITHUB_REF_NAME}" signed/*.exe signed/*.sig --clobber
+        run: gh release upload "${GITHUB_REF_NAME}" signed/*.exe signed/*.sig
 
       - name: Keep the unsigned build when signing is not set up
-        if: env.SIGNPATH_API_TOKEN == ''
+        if: env.HAS_SIGNPATH != 'true'
         run: |
           echo "::warning::SignPath secrets are not configured, so this installer is unsigned."

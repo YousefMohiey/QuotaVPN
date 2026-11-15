@@ -1805,6 +1805,29 @@ fn xml_escape(raw: &str) -> String {
         .replace('"', "&quot;")
 }
 
+/// PowerShell's `-EncodedCommand` form: base64 of the UTF-16LE script.
+///
+/// Hand-rolled because this crate has no base64 dependency and the alternative is
+/// another download; it is a dozen lines of table lookup.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn ps_encoded(script: &str) -> String {
+    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut bytes: Vec<u8> = Vec::with_capacity(script.len() * 2);
+    for unit in script.encode_utf16() {
+        bytes.extend_from_slice(&unit.to_le_bytes());
+    }
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
+        let n = ((b[0] as u32) << 16) | ((b[1] as u32) << 8) | b[2] as u32;
+        out.push(TABLE[(n >> 18) as usize & 63] as char);
+        out.push(TABLE[(n >> 12) as usize & 63] as char);
+        out.push(if chunk.len() > 1 { TABLE[(n >> 6) as usize & 63] as char } else { '=' });
+        out.push(if chunk.len() > 2 { TABLE[n as usize & 63] as char } else { '=' });
+    }
+    out
+}
+
 #[cfg(windows)]
 pub fn remove_task() {
     // Both passes: the tunnel helper and the network one. Leaving the second
@@ -1845,16 +1868,18 @@ pub fn remove_task() {
         task_name(),
         lan_task_name()
     );
-    if std::fs::write(&script, body).is_ok() {
-        // Start-Process joins an argument array with spaces and quotes
-        // nothing, so the whole switch list goes as one string.
-        let ps = format!(
-            "Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{}\"' -Verb RunAs -Wait -WindowStyle Hidden",
-            script.display()
-        );
-        let _ = run_hidden("powershell", &["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps]);
-        let _ = std::fs::remove_file(&script);
-    }
+    // The script goes to the elevated process as an encoded command, never as a
+    // file. A file has to live somewhere, and the only place this process can
+    // write is the user's own profile: an attacker could replace it between the
+    // write and the launch, and the launch runs it as Administrator.
+    let encoded = ps_encoded(&body);
+    // Start-Process joins an argument array with spaces and quotes nothing, so
+    // the whole switch list goes as one string.
+    let ps = format!(
+        "Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -EncodedCommand {encoded}' -Verb RunAs -Wait -WindowStyle Hidden"
+    );
+    let _ = run_hidden("powershell", &["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps]);
+    let _ = std::fs::remove_file(&script);
     std::thread::sleep(std::time::Duration::from_secs(3));
 }
 
@@ -2776,6 +2801,17 @@ mod tests {
             .find(|o| o["tag"] == "direct")
             .expect("no direct outbound");
         assert!(direct["inet4_bind_address"].is_null(), "a plain session must not pin its direct outbound");
+    }
+
+    #[test]
+    fn the_encoded_command_is_utf16le_base64() {
+        // "A" is 0x41 0x00 in UTF-16LE, which base64 spells QQA=.
+        assert_eq!(ps_encoded("A"), "QQA=");
+        // Two characters: four bytes, so one whole group plus a short one.
+        assert_eq!(ps_encoded("AB"), "QQBCAA==");
+        // The byte order is the point: a big-endian encoder agrees on ASCII and
+        // disagrees here, which is exactly the bug that would slip through.
+        assert_ne!(ps_encoded("\u{0e01}"), ps_encoded("\u{010e}"));
     }
 
     #[test]

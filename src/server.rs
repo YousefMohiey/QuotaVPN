@@ -170,6 +170,12 @@ fn valid_uuid(u: &str) -> bool {
 }
 
 pub async fn add_client(host: &str, port: u16, user: &str, key: &str, uuidv: &str) -> Result<String, String> {
+    // Unconditional. This value used to be validated only on the embedded-key
+    // path, and every other path substituted it into a Python script run as root
+    // on the server, where a single double quote breaks out of the string.
+    if !valid_uuid(uuidv) {
+        return Err("not a card id".to_string());
+    }
     if is_embed_key(key) {
         if !valid_uuid(uuidv) {
             return Err("bad id".to_string());
@@ -181,6 +187,9 @@ pub async fn add_client(host: &str, port: u16, user: &str, key: &str, uuidv: &st
 }
 
 pub async fn remove_client(host: &str, port: u16, user: &str, key: &str, uuidv: &str) -> Result<String, String> {
+    if !valid_uuid(uuidv) {
+        return Err("not a card id".to_string());
+    }
     if is_embed_key(key) {
         if !valid_uuid(uuidv) {
             return Err("bad id".to_string());
