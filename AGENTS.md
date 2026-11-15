@@ -57,6 +57,13 @@ Windows, run from git-bash. The toolchain this project was developed against:
   RTL). Never mirror the layout in Arabic, only the text direction.
 - **Never emit em-dashes** in code, UI strings, or docs. Plain hyphens only. The user treats
   anything else as an obvious tell.
+- **The Windows manifest is not optional.** It carries the requested execution level and the
+  Common-Controls 6 dependency. Without it the exe binds comctl32 v5, `TaskDialogIndirect` does not
+  exist there, and the app dies with "Entry Point Not Found" before it draws a window: that is what
+  shipped as 0.6.6. `desktop/src-tauri/build.rs` hands `res/quotacards.manifest` to
+  `tauri_build::WindowsAttributes::app_manifest`, which compiles it with whatever the toolchain has
+  (rc.exe on MSVC, windres on GNU). Do not compile it by hand again, and the release job greps the
+  built exe for the dependency before it publishes.
 - **Version lives in four files**: `desktop/src-tauri/{tauri.conf.json,Cargo.toml}` and
   `android/tauri-app/src-tauri/{tauri.conf.json,Cargo.toml}`. Bump all four together.
 - **Releases**: bump, build the installer and the APK, then publish the GitHub release with the
@@ -100,9 +107,11 @@ frame can be forged, and only claiming should ever be gated on it.
 
 ## Current state
 
-**The latest published release is v0.6.5.** The four version files are aligned at 0.6.6 in this
-tree, which is the next release; the slower of the two jobs is the Windows build, which the
-`signed-release` workflow does on a GitHub runner from a `v*` tag.
+**The latest published release is v0.6.7.** The four version files are aligned at 0.6.7 in this
+tree. The Windows build is done by the `signed-release` workflow on a GitHub runner from a `v*`
+tag; SignPath is not configured, so that installer is unsigned and `latest.json` is composed by
+hand from the run's `.exe` and `.sig` artifacts. v0.6.6 is published and broken on purpose of
+record: it had no manifest and could not start. Do not rebuild from its tag.
 
 What the shipping builds are: Windows is the React app in `desktop/ui-next`; the phone still runs
 the vanilla UI in `android/tauri-app/ui`. All three transports ship on both platforms, the
