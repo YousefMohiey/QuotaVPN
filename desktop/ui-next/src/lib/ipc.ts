@@ -100,6 +100,22 @@ export const lanRouteDiagnose = (ip?: string, mac?: string): Promise<string[]> =
 
 /** Is Npcap present? Only one-click ARP claiming still needs it: watching,
     limiting, blocking and routing run on the driver the app ships. */
+/** The server this install points at, and the device key it presents. */
+export type ServerInfo = {
+  host: string
+  user: string
+  port: number
+  has_key: boolean
+  public_key: string
+  baked_in: boolean
+}
+
+export const serverInfo = (): Promise<ServerInfo> => call<ServerInfo>("server_info")
+
+/** Point this install at a server. An empty key means "make me one". */
+export const setServer = (host: string, user: string, port: number, key: string): Promise<ServerInfo> =>
+  call<ServerInfo>("set_server", { host, user, port, key })
+
 export const lanClaimReady = (): Promise<boolean> => call<boolean>("lan_claim_ready")
 
 
@@ -268,6 +284,9 @@ export const api = {
   lanUnrouteDevice: (): Promise<boolean> => call<boolean>("lan_unroute_device"),
   lanRoutedDevice: (): Promise<{ ip: string; mac: string } | null> => call<{ ip: string; mac: string } | null>("lan_routed_device"),
   lanClaimReady: (): Promise<boolean> => call<boolean>("lan_claim_ready"),
+  serverInfo: (): Promise<ServerInfo> => serverInfo(),
+  setServer: (host: string, user: string, port: number, key: string): Promise<ServerInfo> =>
+    setServer(host, user, port, key),
   lanRouteDiagnose: (ip?: string, mac?: string): Promise<string[]> =>
     call<string[]>("lan_route_diagnose", { ip: ip ?? null, mac: mac ?? null }),
   lanInstallNpcap: (): Promise<string> => call<string>("lan_install_npcap"),
