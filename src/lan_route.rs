@@ -279,10 +279,10 @@ pub fn adapter() -> Result<Adapter, String> {
 // Npcap is loaded when it is needed, never linked.
 //
 // The first version linked `wpcap` into the binary, which made the DLL a startup
-/// dependency: on any PC without Npcap installed the app died with
-/// "The code execution cannot proceed because wpcap.dll was not found" before it could draw a
-/// window. A packet driver is needed by one optional feature, so its absence has to cost that
-/// feature and nothing else.
+// dependency: on any PC without Npcap installed the app died with
+// "The code execution cannot proceed because wpcap.dll was not found" before it could draw a
+// window. A packet driver is needed by one optional feature, so its absence has to cost that
+// feature and nothing else.
 #[link(name = "kernel32")]
 unsafe extern "system" {
     fn LoadLibraryW(name: *const u16) -> *mut std::ffi::c_void;
@@ -1090,7 +1090,7 @@ pub fn diagnose(target: Option<(Ipv4Addr, String)>) -> Vec<String> {
         None => say("intent on disk: none".to_string()),
     }
 
-    if let Some((target_ip, target_mac)) = target {
+    if let Some((target_ip, _target_mac)) = target {
         // The first stage that can be wrong and leave no trace: a claim against a
         // config with no device rule takes the device and forwards nothing.
         say(format!(

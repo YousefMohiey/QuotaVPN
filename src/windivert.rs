@@ -27,7 +27,7 @@
 
 #![allow(non_snake_case)]
 
-use std::ffi::{c_char, c_int, c_void, CStr};
+use std::ffi::{c_char, c_int, c_void};
 use std::time::{Duration, Instant};
 
 /// The layer that sees packets being forwarded between interfaces.

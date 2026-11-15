@@ -116,7 +116,6 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
       return null as T
     case "lan_guard":
       return { watching: true, attacker_mac: "" } as T
-    case "lan_npcap_ready":
     case "lan_claim_ready":
       if (NPCAP_MODE === "unknown") throw new Error("the driver state could not be read")
       return npcapInstalled as T

@@ -102,8 +102,6 @@ export const lanRouteDiagnose = (ip?: string, mac?: string): Promise<string[]> =
     limiting, blocking and routing run on the driver the app ships. */
 export const lanClaimReady = (): Promise<boolean> => call<boolean>("lan_claim_ready")
 
-/** The older name for the same question, kept for callers that still ask it. */
-export const lanNpcapReady = (): Promise<boolean> => call<boolean>("lan_npcap_ready")
 
 /** Download and install the packet driver, then report whether it worked. */
 export const lanInstallNpcap = (): Promise<string> => call<string>("lan_install_npcap")
@@ -269,7 +267,6 @@ export const api = {
   lanRouteDevice: (ip: string, mac: string): Promise<unknown> => call<unknown>("lan_route_device", { ip, mac }),
   lanUnrouteDevice: (): Promise<boolean> => call<boolean>("lan_unroute_device"),
   lanRoutedDevice: (): Promise<{ ip: string; mac: string } | null> => call<{ ip: string; mac: string } | null>("lan_routed_device"),
-  lanNpcapReady: (): Promise<boolean> => call<boolean>("lan_npcap_ready"),
   lanClaimReady: (): Promise<boolean> => call<boolean>("lan_claim_ready"),
   lanRouteDiagnose: (ip?: string, mac?: string): Promise<string[]> =>
     call<string[]>("lan_route_diagnose", { ip: ip ?? null, mac: mac ?? null }),

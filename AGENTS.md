@@ -79,23 +79,37 @@ the harness throttles timers in pages it considers background, so enable
 `Emulation.setFocusEmulationEnabled` before timing anything, and the animation clock can be
 frozen, so measure geometry numerically rather than trusting a screenshot.
 
+## The LAN stack
+
+Everything a device sees of this machine goes through one elevated pass, never the window
+process. `src/windivert.rs` loads the WinDivert DLL that ships next to the executable and wraps
+the `WINDIVERT_LAYER_NETWORK_FORWARD` layer; `src/lan_forward.rs` is the loop that counts, caps
+and blocks on it, reading `lan/policy.json` from the engine directory and writing
+`lan/state.json`. The window process writes policy, starts the pass through a scheduled task
+(`QuotaVPN Network <user>`, argument `--lan-pipeline`), and mirrors the page's flags, which is why
+none of it raises a UAC prompt after setup. `Session` and `MonitorSession` keep their old shapes,
+so the screen reads what it always read.
+
+Npcap is not required for watching, capping, blocking, naming or routing. It is only the backend
+for forging the 42-byte ARP claim frame on a router that does not already point its devices at
+this PC, chosen in one place through `wpcap::claim_link`; with no driver that answers gateway
+mode, which is correct exactly when the router's DHCP already sends devices here. Discovery and
+naming use `arp -a`, a ping sweep, a UDP socket on 67 when elevated, and unicast mDNS queries.
+`pipeline_ready` answers whether the screen can work; `lan_claim_ready` answers whether a claim
+frame can be forged, and only claiming should ever be gated on it.
+
 ## Current state
 
-**The latest published stable release is v0.5.0.** Everything after it (v0.5.1 through v0.5.7, plus the
-v0.5.7-linux preview) went out as **pre-releases**, and `releases/latest` skips those, so the in-app
-updater still points at v0.5.0 and an installed app will not see anything newer. That is worth knowing
-before assuming a 0.5.x build is in the field. This section previously claimed v0.3.2 was latest, which
-had been stale for months.
+**The latest published release is v0.6.5.** The four version files are aligned at 0.6.6 in this
+tree, which is the next release; the slower of the two jobs is the Windows build, which the
+`signed-release` workflow does on a GitHub runner from a `v*` tag.
 
-What the shipping builds are: Windows is the React app in `desktop/ui-next`; the phone still runs the
-vanilla UI in `android/tauri-app/ui`. All three transports ship on both platforms, the desktop's
-WireGuard being AmneziaWG. `notes/STATUS.md` has the Sept 2026 detail and `notes/linux.md` covers the
-Linux port.
+What the shipping builds are: Windows is the React app in `desktop/ui-next`; the phone still runs
+the vanilla UI in `android/tauri-app/ui`. All three transports ship on both platforms, the
+desktop's WireGuard being AmneziaWG. `notes/STATUS.md` has the Sept 2026 detail and
+`notes/linux.md` covers the Linux port.
 
-The four version files are aligned at 0.5.7 in this tree. They were not before: the Android
-`tauri.conf.json` said 0.4.0 and the Android `Cargo.toml` said 0.3.3, against the rule above.
-
-The working tree also carries uncommitted work: a Network screen rebuild, presence with a second-sweep
-guard, MAC-keyed traffic identity, a single `network_snapshot` per tick, top destinations from the
-engine's Clash API, name provenance, and a recoverable kill switch. `cargo test --lib` is green
-(47 passed) on Windows and `cargo check` passes for both crates.
+`cargo test` is green (53 passed) on Linux. The Windows-only modules and `src/vpn.rs` itself
+type-check for `x86_64-pc-windows-gnu` through a stub crate, because the real Windows build stops
+in the `ring` build script without a mingw C compiler; the Tauri crate still needs a Windows
+toolchain, so its release build is the first real check of it.
