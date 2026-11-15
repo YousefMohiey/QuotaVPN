@@ -111,10 +111,11 @@ frame can be forged, and only claiming should ever be gated on it.
 
 ## Current state
 
-**The latest published release is v0.6.9.** The four version files are aligned at 0.6.9 in this
+**The latest published release is v0.6.13.** The four version files are aligned at 0.6.13 in this
 tree. The Windows build is done by the `signed-release` workflow on a GitHub runner from a `v*`
-tag; SignPath is not configured, so that installer is unsigned and `latest.json` is composed by
-hand from the run's `.exe` and `.sig` artifacts. Three releases are published and broken on purpose
+tag and `latest.json` is composed by hand from the run's `.exe` and `.sig` artifacts. There is no
+code signing: every installer is unsigned, which is why SmartScreen warns and heuristic engines
+sometimes quarantine it. Three releases are published and broken on purpose
 of record: v0.6.6 had no manifest and could not start, Defender quarantined v0.6.7 for carrying a
 kernel driver, and v0.6.8 for installing persistence from the installer. Do not rebuild from those
 tags. `notes/defender.md` has the whole sequence and the false-positive report.

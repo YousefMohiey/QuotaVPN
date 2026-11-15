@@ -56,3 +56,17 @@ is incorrectly detected" (software developer).
 >
 > Please re-evaluate: this is a false positive on a signed-out build of a
 > legitimate VPN client.
+
+
+## SignPath is gone
+
+The workflow no longer has a signing provider. SignPath needed an application that
+was never approved, its steps never ran, and the configuration sat in the file
+pretending there was a path to a signature. All of it is removed: the steps, the
+presence flag, the artifact configuration, the notes, and the repository variables.
+
+Every release this project produces is unsigned. That is the honest state. SmartScreen
+warns on first run and heuristic engines may quarantine the installer, because an
+unsigned executable that self-updates and asks for Administrator looks like a dropper
+regardless of what it does. A certificate is the only thing that changes that verdict,
+and the workflow now says so in its header instead of carrying dead configuration.
