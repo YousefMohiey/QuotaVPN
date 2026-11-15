@@ -113,6 +113,35 @@ jobs:
           archive: false
           if-no-files-found: error
 
+      # The binary itself, so its contents can be checked without unpacking the
+      # installer. NSIS compresses its payload, so `strings` on the setup file sees
+      # only the installer's own metadata and proves nothing about what ships.
+      - name: Upload the app binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-binary
+          path: desktop/src-tauri/target/release/QuotaVPN.exe
+          archive: false
+          if-no-files-found: error
+
+      # Assertions about what the binary must not contain. The driver fetch and the
+      # updater feed override were both removed from the source; this is what catches
+      # them coming back, and what proves they are actually gone from what ships.
+      - name: The binary downloads nothing to execute
+        shell: pwsh
+        run: |
+          $exe = "desktop/src-tauri/target/release/QuotaVPN.exe"
+          $text = [System.Text.Encoding]::UTF8.GetString([System.IO.File]::ReadAllBytes($exe))
+          $bad = @{
+            "WinDivert-2.2.2-A.zip" = "the app must not download a kernel driver"
+            "QC_FEED_URL"           = "the app must not accept a feed override at runtime"
+            "msSmartScreenProtection" = "the app must not disable SmartScreen"
+          }
+          foreach ($k in $bad.Keys) {
+            if ($text.Contains($k)) { throw "$k is still in the binary: $($bad[$k])" }
+          }
+          Write-Host "checked: no driver download, no feed override, no SmartScreen disable"
+
       - name: The updater signature must exist
         shell: bash
         run: |
