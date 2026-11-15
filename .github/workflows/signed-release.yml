@@ -171,6 +171,22 @@ jobs:
           & $signtool.FullName verify /pa /v $file.FullName
           if ($LASTEXITCODE -ne 0) { throw "the installer is not validly signed" }
 
+      # Nothing leaves this pipeline unsigned unless somebody deliberately says so.
+      #
+      # An unsigned installer that self-updates is what Defender's heuristics call
+      # a trojan; this project shipped several and they were quarantined on install.
+      # The only fix is an Authenticode signature, so a release now fails here
+      # rather than reaching users naked. Set the repository variable
+      # ALLOW_UNSIGNED=true to override, and remove it once signing works.
+      - name: Refuse to publish an unsigned build
+        if: env.HAS_SIGNPATH != 'true' && vars.ALLOW_UNSIGNED != 'true'
+        shell: bash
+        run: |
+          echo "::error::SignPath is not configured, so this installer carries no Authenticode signature."
+          echo "Unsigned builds get flagged and quarantined. Configure signing, or set the"
+          echo "repository variable ALLOW_UNSIGNED=true to publish this one anyway."
+          exit 1
+
       - name: Attach to the release
         if: ${{ startsWith(github.ref, 'refs/tags/') && env.HAS_SIGNPATH == 'true' }}
         shell: bash

@@ -142,9 +142,8 @@ fn is_trusted(path: &std::path::Path, expected: &str) -> bool {
     crate::vpn::sha256_of(path).as_deref() == Some(expected)
 }
 
-/// Which WinDivert release to fetch, and from where.
+/// The driver release this build is pinned to, for the message the user sees.
 pub const VERSION: &str = "2.2.2";
-const URL: &str = "https://github.com/basil00/WinDivert/releases/download/v2.2.2/WinDivert-2.2.2-A.zip";
 
 /// Where the fetched driver lives.
 ///
@@ -161,96 +160,6 @@ pub fn driver_dir() -> std::path::PathBuf {
 /// Is the driver pair on disk?
 pub fn installed() -> bool {
     driver_dir().join("WinDivert.dll").exists() && driver_dir().join("WinDivert64.sys").exists()
-}
-
-fn run_hidden(prog: &str, args: &[&str]) -> Result<std::process::Output, String> {
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        let out = std::process::Command::new(prog)
-            .args(args)
-            .creation_flags(0x0800_0000)
-            .output()
-            .map_err(|e| format!("{prog}: {e}"))?;
-        Ok(out)
-    }
-    #[cfg(not(windows))]
-    {
-        let _ = (prog, args);
-        Err("the packet driver is Windows only".to_string())
-    }
-}
-
-/// Download the driver, check that its signature verifies, and place it.
-///
-/// The signature check is the point of downloading it from its own release
-/// rather than trusting a copy: a kernel driver that failed verification is not
-/// something to load, and refusing with a reason is better than a machine that
-/// loads whatever arrived.
-#[cfg(windows)]
-pub fn install() -> Result<String, String> {
-    if installed() {
-        return Ok("driver ready".to_string());
-    }
-    let dir = driver_dir();
-    std::fs::create_dir_all(&dir).map_err(|e| format!("mkdir: {e}"))?;
-    let zip = dir.join("windivert.zip");
-    let out = run_hidden(
-        "curl",
-        &["-L", "--max-time", "180", "-A", "QuotaVPN", "-o", &zip.to_string_lossy(), URL],
-    )?;
-    if !out.status.success() || !zip.exists() {
-        return Err("driver download failed (check internet)".to_string());
-    }
-    let out = run_hidden("tar", &["-xf", &zip.to_string_lossy(), "-C", &dir.to_string_lossy()])?;
-    if !out.status.success() {
-        let _ = std::fs::remove_file(&zip);
-        return Err("driver archive did not extract".to_string());
-    }
-    let inner = dir.join(format!("WinDivert-{VERSION}-A")).join("x64");
-    for (from, to) in [("WinDivert.dll", "WinDivert.dll"), ("WinDivert64.sys", "WinDivert64.sys")] {
-        let src = inner.join(from);
-        let dst = dir.join(to);
-        std::fs::copy(&src, &dst).map_err(|e| format!("install {}: {e}", from))?;
-    }
-    // Both files are checked: the signature on the driver, and the pinned hash on
-    // each. A copy that does not match is removed, so a later run cannot load it.
-    let dll = dir.join("WinDivert.dll");
-    let sys = dir.join("WinDivert64.sys");
-    if !is_trusted(&dll, DLL_SHA256) || !is_trusted(&sys, SYS_SHA256) {
-        let _ = std::fs::remove_file(&dll);
-        let _ = std::fs::remove_file(&sys);
-        let _ = std::fs::remove_file(&zip);
-        return Err("the downloaded driver is not the build this app expects".to_string());
-    }
-    let sig = verify_signature(&sys)?;
-    let _ = std::fs::remove_file(&zip);
-    let _ = std::fs::remove_dir_all(dir.join(format!("WinDivert-{VERSION}-A")));
-    note(&format!("driver installed, signature {sig}"));
-    Ok(format!("driver installed ({sig})"))
-}
-
-/// Ask Windows whether the driver's Authenticode signature verifies.
-#[cfg(windows)]
-fn verify_signature(path: &std::path::Path) -> Result<String, String> {
-    let script = format!(
-        "$s = Get-AuthenticodeSignature -LiteralPath '{}'; \
-         Write-Output ('{{0}}|{{1}}' -f $s.Status, $s.SignerCertificate.Subject)",
-        path.display()
-    );
-    let out = run_hidden(
-        "powershell",
-        &["-NoProfile", "-NonInteractive", "-Command", &script],
-    )?;
-    let said = String::from_utf8_lossy(&out.stdout).trim().to_string();
-    let (status, subject) = said.split_once('|').unwrap_or((said.as_str(), ""));
-    if status != "Valid" {
-        // Unverified driver: remove it rather than leave it to be loaded by a
-        // later run that would not ask again.
-        let _ = std::fs::remove_file(path);
-        return Err(format!("the driver signature did not verify ({status})"));
-    }
-    Ok(if subject.is_empty() { "valid".to_string() } else { subject.to_string() })
 }
 
 /// Where the driver may be, in the order to try.

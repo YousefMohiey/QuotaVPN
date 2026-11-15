@@ -1010,7 +1010,7 @@ async fn tunnel_start(
 #[tauri::command]
 async fn setup_helper() -> Result<CmdResult, String> {
     vpn::app_log("setup: asked for the one-time setup");
-    if vpn::task_installed() && vpn::lan_task_installed() && quotacards::windivert::installed() {
+    if vpn::task_installed() && vpn::lan_task_installed() {
         return Ok(CmdResult { ok: true, msg: "ready".into() });
     }
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
@@ -2481,9 +2481,7 @@ fn up_to_date(current: &str) -> UpdateInfo {
     }
 }
 
-/// The updater handle for a channel. QC_FEED_URL repoints it at a local
-/// feed so the check and install paths can be exercised without publishing
-/// a release. The experimental channel resolves the newest published
+/// The updater handle for a channel. The experimental channel resolves the newest published
 /// release itself, pre-releases included; the stable channel keeps the
 /// built-in endpoint, which GitHub only serves for full releases.
 async fn updater(app: &tauri::AppHandle, channel: &str) -> Result<tauri_plugin_updater::Updater, String> {
@@ -2496,21 +2494,7 @@ async fn updater(app: &tauri::AppHandle, channel: &str) -> Result<tauri_plugin_u
     // check resolved the right feed and then reported "up to date" anyway
     // because 0.4.0 is not newer than 0.4.0.
     builder = builder.version_comparator(|current, remote| remote.version >= current);
-    if let Ok(raw) = std::env::var("QC_FEED_URL") {
-        let raw = raw.trim();
-        if !raw.is_empty() {
-            // A rejected feed is a developer problem, not something to show a
-            // user verbatim: keep the detail in the log and answer plainly.
-            let url = reqwest::Url::parse(raw).map_err(|e| {
-                vpn::app_log(&format!("updater: bad QC_FEED_URL: {e}"));
-                "Could not check for updates".to_string()
-            })?;
-            builder = builder.endpoints(vec![url]).map_err(|e| {
-                vpn::app_log(&format!("updater: feed rejected: {e}"));
-                "Could not check for updates".to_string()
-            })?;
-        }
-    } else if channel == "experimental" {
+    if channel == "experimental" {
         if let Some(raw) = experimental_feed_url().await {
             if let Ok(url) = reqwest::Url::parse(&raw) {
                 builder = builder
@@ -3312,9 +3296,7 @@ pub fn run() {
     if std::env::args().any(|a| a == "--check-helper") {
         // Both passes, so an upgrade from a build that had only the tunnel one
         // runs the setup again and registers the network pass.
-        let ready = vpn::task_installed()
-            && vpn::lan_task_installed()
-            && quotacards::windivert::installed();
+        let ready = vpn::task_installed() && vpn::lan_task_installed();
         std::process::exit(if ready { 0 } else { 3 });
     }
     // Remove this account's helper task (called by the uninstaller while the
@@ -3387,13 +3369,12 @@ pub fn run() {
             Ok(()) => vpn::app_log("setup-helper: network task installed"),
             Err(e) => vpn::app_log(&format!("setup-helper: network task failed: {e}")),
         }
-        // The packet driver is fetched rather than shipped: an unsigned
-        // installer that carries a kernel driver is what Defender quarantines,
-        // and the driver is what the LAN features run on.
-        match quotacards::windivert::install() {
-            Ok(msg) => vpn::app_log(&format!("setup-helper: {msg}")),
-            Err(e) => vpn::app_log(&format!("setup-helper: driver failed: {e}")),
-        }
+        // The packet driver is neither shipped nor fetched. Downloading a kernel
+        // driver and loading it at runtime is the shape antivirus engines treat as
+        // a trojan, and it was getting this app quarantined on install. The LAN
+        // features now need the driver placed deliberately (see notes/driver.md);
+        // without it they report that it is missing and everything else works.
+        vpn::app_log("setup-helper: the packet driver is not installed by this app");
         match vpn::ensure_engine() {
             Ok(msg) => vpn::app_log(&format!("setup-helper: engine {msg}")),
             Err(e) => vpn::app_log(&format!("setup-helper: engine failed: {e}")),

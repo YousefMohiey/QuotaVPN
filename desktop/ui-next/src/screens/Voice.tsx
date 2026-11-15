@@ -143,10 +143,16 @@ export function Voice() {
                     healthy ? "text-[var(--green)]" : "text-txt",
                   )}
                 >
-                  {working && shownOn ? t("voiceConnecting") : shownOn ? t("voiceActive") : t("voiceOffTitle")}
+                  {working && shownOn
+                    ? t("voiceConnecting")
+                    : noCard
+                      ? t("voiceOffTitle")
+                      : shownOn
+                        ? t("voiceActive")
+                        : t("voiceOffTitle")}
                 </span>
                 <span className="max-w-[430px] text-[13px] leading-snug text-txt2">{stateWord}</span>
-                {msg ? (
+                {msg && msg !== stateWord ? (
                   <span className="max-w-[440px] text-[12px] leading-snug text-txt3" role="status">{msg}</span>
                 ) : null}
                 <span aria-hidden className={cn("mt-3 h-px w-16", healthy ? "bg-[var(--green-line)]" : "bg-[var(--brand-line)]")} />
