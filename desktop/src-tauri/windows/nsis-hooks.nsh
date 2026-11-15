@@ -47,44 +47,20 @@
 !macroend
 
 !macro NSIS_HOOK_POSTINSTALL
-  ; The tunnel needs a privileged helper: creating a WinTun adapter is
-  ; something Windows only allows an administrator to do. Registering that
-  ; helper here is the ONE time this product asks for administrator, and the
-  ; app itself then runs as an ordinary user forever. On an update the task is
-  ; already registered, so nothing is asked and no prompt appears.
-  nsExec::ExecToLog '"$INSTDIR\${MAINBINARYNAME}.exe" --check-helper'
-  Pop $0
-  ${If} $0 != 0
-    DetailPrint "Setting up the tunnel helper (one time)"
-    ; The owner is passed explicitly: a standard user who elevates with an
-    ; administrator's credentials runs the helper pass as THAT administrator,
-    ; and without this the task is registered for the wrong account and the
-    ; app never finds it.
-    ; Read the name from the environment: inside this macro the literal
-    ; $USERNAME reached the child unexpanded, and a task registered for a user
-    ; called "$USERNAME" is a task nobody owns.
-    ReadEnvStr $9 "USERNAME"
-    ExecShell "runas" "$INSTDIR\${MAINBINARYNAME}.exe" "--setup-helper --as $9" SW_HIDE
-    ; Wait for it, so the app opens with a working tunnel instead of a button
-    ; that asks for the same permission the installer just asked for. The task
-    ; is written first and takes a second, so half a minute is generous and a
-    ; failure does not hold the installer hostage for two.
-    StrCpy $1 0
-    qvp_setup_wait:
-      Sleep 1000
-      nsExec::ExecToStack '"$INSTDIR\${MAINBINARYNAME}.exe" --check-helper'
-      Pop $0
-      Pop $3
-      ${If} $0 == 0
-        DetailPrint "Tunnel helper ready"
-        Goto qvp_setup_done
-      ${EndIf}
-      IntOp $1 $1 + 1
-      ${If} $1 < 30
-        Goto qvp_setup_wait
-      ${EndIf}
-    qvp_setup_done:
-  ${EndIf}
+  ; The installer deliberately asks for nothing and registers nothing.
+  ;
+  ; It used to spawn `--setup-helper` hidden and elevated from here, and that
+  ; pass registers scheduled tasks. Defender's behaviour model read exactly that
+  ; and called the installer Behavior:Win32/Persistence.A!ml: an unsigned
+  ; installer that launches a hidden elevated process which then installs
+  ; persistence. It quarantined the download on sight, twice.
+  ;
+  ; The registration moved to the app, on the first connect, where a person
+  ; presses a button and Windows shows them the prompt. Same outcome, and the
+  ; elevation happens in front of them instead of behind an installer.
+  ; `setup_helper` in the app calls `--setup-helper` and the connect button
+  ; offers it whenever the helper is missing, so nothing is lost but the
+  ; silent part.
 
   !insertmacro QCVPN_PURGE_LEGACY_SHORTCUTS
 
