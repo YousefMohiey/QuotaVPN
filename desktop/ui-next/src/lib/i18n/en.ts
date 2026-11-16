@@ -139,6 +139,7 @@ export const en = {
   "noCardsOpt": "No cards - generate one first",
   "noReply": "No reply",
   "notConnected": "Not connected",
+  "noTraffic": "Connected, but nothing is passing through the server.",
   "ob1": "Create a card - pick Gamerz or Streamerz",
   "ob2": "Pick that card on Home",
   "ob3": "Hit Connect - back out anytime, the VPN stays on",

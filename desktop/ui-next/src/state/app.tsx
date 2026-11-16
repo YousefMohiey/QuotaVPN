@@ -744,6 +744,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const probe = await api.probeTunnel().catch(() => null)
       if (stale()) return
       if (probe) setConnected(!!probe.ok)
+      // A reachable server is not a working tunnel: the card can be missing
+      // from the server, and then every flow dies while the dial says on. Ask
+      // the engine for a real round trip through the proxy outbound, the same
+      // check the voice page uses, and say so when it comes back empty.
+      if (!(probe && !probe.ok)) {
+        let h = await api.tunnelHealth().catch(() => -1)
+        if (h < 0) {
+          await new Promise((res) => setTimeout(res, 2500))
+          h = await api.tunnelHealth().catch(() => -1)
+        }
+        if (stale()) return
+        if (h < 0 && vpnRef.current) setStatus(t("noTraffic"))
+      }
       // Success messages (like the reachable line) stay out of the UI;
       // only a failed probe gets to speak.
       if (probe && !probe.ok && probe.msg) {
