@@ -1,12 +1,12 @@
 {
-  "version": "0.6.16",
-  "build": "4b69cbe",
-  "notes": "The app no longer registers any scheduled task. That was the file Defender kept naming as Behavior:Win32/Persistence: a task whose action launches the app. The engine and the LAN pipeline now start as detached children of the already-elevated app, so nothing outlives it.",
-  "pub_date": "2026-11-16T14:49:30Z",
+  "version": "0.6.17",
+  "build": "e4f9614",
+  "notes": "Device names expire after a day instead of sticking forever, routing no longer reports success when nothing was sent, and the router sign-in is gone from the screen. Limit and block still need the packet driver, and now say so.",
+  "pub_date": "2026-11-16T15:18:35Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSVBBVWdjbjcyOTc1NTZ0TU9VZ0UybU5mbCtRWWI5dEdRVHk0RlN4YWlSQWlpejhWTks0UnAvUWloblp6VjJZdUwvUEVlRURzTGJ2dGtoRm5nWmExa3c0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0ODQwNTMzCWZpbGU6UXVvdGFWUE5fMC42LjE2X3g2NC1zZXR1cC5leGUKeDAxN2NnUDVXUFJON1pweGNYc05qSHpKVVBlN0l3Rng0dHIzb3owT3NyWEw3RUhVaTBWanlNMk03R01BbWxNK0Q0V0E5Q0JoTUJmUjJxN1I1bDJaQ0E9PQo=",
-      "url": "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.6.16/QuotaVPN_0.6.16_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSU1NMCsyZWU1bnZPWElicjBta0FsditLUkpxeHhnQWhOVTI0UkJSUE0wUkJ6U2NmSTEzU0JzVzF4MUR1bTJTbitneXBJQXo5aDVRUlFqc0lmcEFKWEFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0ODQyMTc5CWZpbGU6UXVvdGFWUE5fMC42LjE3X3g2NC1zZXR1cC5leGUKMDBjRUE2MWVxTnV2TlNzaEluWE9NMkZpOThnbE1naWx2SVhFc3lDODBmWUYyK0xUdHYrYjBTZkU3Mk8yeEpnUTgwREJ4TVc2ci9aQitDblpzZk5UQVE9PQo=",
+      "url": "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.6.17/QuotaVPN_0.6.17_x64-setup.exe"
     }
   }
 }
