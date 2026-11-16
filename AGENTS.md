@@ -92,30 +92,42 @@ Everything a device sees of this machine goes through one elevated pass, never t
 process. `src/windivert.rs` loads the WinDivert DLL that ships next to the executable and wraps
 the `WINDIVERT_LAYER_NETWORK_FORWARD` layer; `src/lan_forward.rs` is the loop that counts, caps
 and blocks on it, reading `lan/policy.json` from the engine directory and writing
-`lan/state.json`. The window process writes policy, starts the pass through a scheduled task
-(`QuotaVPN Network <user>`, argument `--lan-pipeline`), and mirrors the page's flags, which is why
-none of it raises a UAC prompt after setup. `Session` and `MonitorSession` keep their old shapes,
-so the screen reads what it always read.
+`lan/state.json`. The window process writes policy and starts the pass as a detached child of
+itself (argument `--lan-pipeline`); there is no scheduled task any more, see below.
 
-The WinDivert pair is fetched, not shipped: setup downloads the official release, checks the
-`.sys` Authenticode signature and keeps it in `engine_dir/windivert`, because an unsigned
-installer carrying a kernel driver is what Defender quarantines. The app looks there first.
+The WinDivert pair is neither shipped nor fetched. It was fetched for a day and that, plus the
+task registration, is what kept getting the app quarantined. The loader still verifies the DLL
+against a SHA-256 pinned in `src/vpn.rs` before `LoadLibrary`, and only looks in
+`engine_dir/windivert` and beside the executable (the checkout paths exist in debug builds only).
+Without the driver, watching, capping and blocking cannot work: they filter packets this PC
+forwards, and nothing else on Windows can drop a forwarded packet.
 
-Npcap is not required for watching, capping, blocking, naming or routing. It is only the backend
-for forging the 42-byte ARP claim frame on a router that does not already point its devices at
-this PC, chosen in one place through `wpcap::claim_link`; with no driver that answers gateway
-mode, which is correct exactly when the router's DHCP already sends devices here. Discovery and
-naming use `arp -a`, a ping sweep, a UDP socket on 67 when elevated, and unicast mDNS queries.
-`pipeline_ready` answers whether the screen can work; `lan_claim_ready` answers whether a claim
-frame can be forged, and only claiming should ever be gated on it.
+Npcap is the backend for forging the 42-byte ARP claim frame, chosen in one place through
+`wpcap::claim_link`. Discovery and naming never need it: they use `arp -a`, a ping sweep, a UDP
+socket on 67 when elevated, and unicast mDNS queries. `lan_claim_ready` gates only claiming.
+GatewayMode used to answer "sent" without sending anything, so a route could be reported as
+working when it was not; it answers false now and `claim` refuses with a reason.
+
+**No scheduled tasks, ever.** `Behavior:Win32/Persistence.A!ml` named
+`C:\Windows\System32\Tasks\QuotaVPN Network ...` and quarantined the app twice, once from the
+installer and once from the app. Registering a task whose action launches the executable is the
+detected behaviour regardless of the token used. The engine and the pipeline are detached
+children of the app, which already holds an administrator token. `install_lan_task` and
+`install_helper_task` are cleanup functions that delete tasks left by older versions, and
+`task_installed` / `lan_task_installed` answer true because there is nothing to install. The
+release job fails if the binary contains `<Task version=` or `schtasks /Create`.
 
 ## Current state
 
-**The latest published release is v0.6.13.** The four version files are aligned at 0.6.13 in this
-tree. The Windows build is done by the `signed-release` workflow on a GitHub runner from a `v*`
-tag and `latest.json` is composed by hand from the run's `.exe` and `.sig` artifacts. There is no
-code signing: every installer is unsigned, which is why SmartScreen warns and heuristic engines
-sometimes quarantine it. Three releases are published and broken on purpose
+**The latest published release is v0.6.17.** The four version files are aligned at 0.6.17 in this
+tree. `notes/HANDOFF-2026-11-16.md` is the change log from 0.6.5 to 0.6.17 and the first thing to
+read. The Windows build is done by the `signed-release` workflow on a GitHub runner from a `v*`
+tag and `latest.json` is composed by hand from the run's `.exe`, `.sig` and `QuotaVPN.exe`
+artifacts. The feed is served from `raw.githubusercontent.com/.../master/latest.json`, committed
+to the branch on every release, because that URL answers 200 with no redirect; the release asset
+is the second endpoint. There is no code signing and there is no signing provider wired up:
+every installer is unsigned, which is why SmartScreen warns and heuristic engines sometimes
+quarantine it. Three releases are published and broken on purpose
 of record: v0.6.6 had no manifest and could not start, Defender quarantined v0.6.7 for carrying a
 kernel driver, and v0.6.8 for installing persistence from the installer. Do not rebuild from those
 tags. `notes/defender.md` has the whole sequence and the false-positive report.
@@ -125,7 +137,7 @@ the vanilla UI in `android/tauri-app/ui`. All three transports ship on both plat
 desktop's WireGuard being AmneziaWG. `notes/STATUS.md` has the Sept 2026 detail and
 `notes/linux.md` covers the Linux port.
 
-`cargo test` is green (53 passed) on Linux. The Windows-only modules and `src/vpn.rs` itself
+`cargo test` is green (55 passed) on Linux. The Windows-only modules and `src/vpn.rs` itself
 type-check for `x86_64-pc-windows-gnu` through a stub crate, because the real Windows build stops
 in the `ring` build script without a mingw C compiler; the Tauri crate still needs a Windows
 toolchain, so its release build is the first real check of it.
