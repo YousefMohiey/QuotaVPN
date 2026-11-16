@@ -243,8 +243,13 @@ pub trait ClaimLink {
 pub struct GatewayMode;
 
 impl ClaimLink for GatewayMode {
+    /// Nothing can be sent without a capture device, and saying otherwise was a
+    /// lie the caller could not see: `claim` reports success, the screen says the
+    /// device is routed, and no frame ever left this machine. Whether the router
+    /// already points the device here is not something this process can know, so
+    /// it answers false and the caller turns that into a plain refusal.
     fn send_claim(&self, _frame: &[u8]) -> bool {
-        true
+        false
     }
     fn needs_driver(&self) -> bool {
         false

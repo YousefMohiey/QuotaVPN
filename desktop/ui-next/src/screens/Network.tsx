@@ -29,7 +29,6 @@ import { cn } from "@/lib/utils"
 import { copyText } from "@/lib/clipboard"
 import { Tip } from "@/components/Tip"
 import { LanLimitDialog } from "@/components/LanLimitDialog"
-import { RouterLinkDialog } from "@/components/RouterLinkDialog"
 
 /**
  * Who is on this network, and which one of them rides the tunnel.
@@ -111,8 +110,6 @@ export function Network() {
   const [active, setActive] = useState<LanStatus | null>(null)
   const [limitFor, setLimitFor] = useState<LanDevice | null>(null)
   const [guard, setGuard] = useState<LanGuard | null>(null)
-  const [routerOpen, setRouterOpen] = useState(false)
-  const [routerLinked, setRouterLinked] = useState(false)
   const [driverReady, setDriverReady] = useState<boolean | null>(null)
   const [watching, setWatching] = useState(false)
   // Which device rides the tunnel. Read back from the backend, never assumed:
@@ -237,17 +234,9 @@ export function Network() {
     setWatching(snap.watching)
     if (snap.watching) applyTraffic(snap.traffic)
     else setLive({})
-    if (snap.router_linked) {
-      setRouterLinked(true)
-      return snap
-    }
-    // A saved sign in means the router's names come back on their own, and the
-    // roster has to be rescanned for them to show up.
-    const ok = await api.routerAutoLink().catch(() => false)
-    if (ok) {
-      setRouterLinked(true)
-      void scan(true)
-    }
+    // No router sign-in, silent or otherwise: names come from what devices
+    // announce and answer here, so nothing logs in to anything on the user's
+    // behalf to read a client list.
     return snap
   }, [applyTraffic, scan])
 
@@ -736,21 +725,9 @@ export function Network() {
               )}
             </div>
             <div className="flex min-w-0 items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setRouterOpen(true)}
-              style={{ height: ALLOWED_MIN }}
-              className="press flex min-w-0 flex-1 items-center gap-2 rounded-[9px] px-1 text-[11.5px] text-txt2 transition-colors hover:text-txt"
-            >
-              <Router className="size-3.5 shrink-0" aria-hidden />
-              <span className="min-w-0 flex-1 truncate text-start">
-                {routerLinked ? t("routerLinked") : t("routerNames")}
-              </span>
-              {routerLinked ? (
-                <span className="size-1.5 shrink-0 rounded-full bg-[var(--green)]" aria-hidden />
-              ) : null}
-              <Check className={cn("size-3.5 shrink-0", routerLinked ? "text-[var(--green)]" : "invisible")} aria-hidden />
-            </button>
+            {/* The router sign-in used to live here. Asking for a router's admin
+                password to read its client list is a thing this app should not
+                do: the names come from what the devices announce and answer. */}
             <Tip text={t("netDiagnose")} align="end">
               <button
                 type="button"
@@ -1223,15 +1200,6 @@ export function Network() {
           )}
         </div>
       </div>
-
-      <RouterLinkDialog
-        open={routerOpen}
-        onOpenChange={setRouterOpen}
-        onLinked={() => {
-          setRouterLinked(true)
-          void scan()
-        }}
-      />
 
       <LanLimitDialog
         device={limitFor}

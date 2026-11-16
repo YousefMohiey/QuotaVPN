@@ -31,17 +31,65 @@ fn cache_path() -> std::path::PathBuf {
     base.join("quotavpn").join("lan_names.txt")
 }
 
+/// How long a learned name is trusted.
+///
+/// The cache used to be `mac|name` with no time at all, so whatever a device
+/// announced once stayed on screen forever: a rename, a wrong announcement, or a
+/// device that borrowed another's hostname never corrected itself. That is why
+/// listed names were wrong. Entries carry the moment they were learned now, and an
+/// old answer stops being trusted instead of ageing into a fact.
+pub const NAME_TTL_SECS: u64 = 24 * 60 * 60;
+
+fn now_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+
+/// Would this cache line be trusted at `now`? Split out so the rule is testable
+/// without a file, which is the only way it ever gets checked.
+#[cfg(test)]
+fn trusts(text: &str, mac: &str) -> bool {
+    let now = now_secs();
+    for line in text.lines() {
+        let mut parts = line.split('|');
+        let (Some(m), Some(name), Some(at)) = (parts.next(), parts.next(), parts.next()) else {
+            continue;
+        };
+        if !m.eq_ignore_ascii_case(mac) || name.is_empty() {
+            continue;
+        }
+        if let Ok(at) = at.trim().parse::<u64>() {
+            if now.saturating_sub(at) <= NAME_TTL_SECS {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 pub fn cached() -> HashMap<String, String> {
     let mut out = HashMap::new();
     let Ok(text) = std::fs::read_to_string(cache_path()) else {
         return out;
     };
+    let now = now_secs();
     for line in text.lines() {
-        if let Some((mac, name)) = line.split_once('|') {
-            if !mac.is_empty() && !name.is_empty() {
-                out.insert(mac.to_lowercase(), name.to_string());
-            }
+        // Three fields or nothing. The old two-field form carried no age, so it
+        // cannot be trusted and is dropped: on upgrade, every stale name goes.
+        let mut parts = line.split('|');
+        let (Some(mac), Some(name), Some(at)) = (parts.next(), parts.next(), parts.next()) else {
+            continue;
+        };
+        let Ok(at) = at.trim().parse::<u64>() else {
+            continue;
+        };
+        if mac.is_empty() || name.is_empty() || now.saturating_sub(at) > NAME_TTL_SECS {
+            continue;
         }
+        out.insert(mac.to_lowercase(), name.to_string());
     }
     out
 }
@@ -89,9 +137,12 @@ fn remember(found: &HashMap<String, String>) {
     if let Some(dir) = path.parent() {
         let _ = std::fs::create_dir_all(dir);
     }
+    // Every entry is rewritten with the moment it was last confirmed, so a name
+    // that keeps being announced stays and one that stopped is dropped.
+    let stamp = now_secs();
     let body: String = all
         .iter()
-        .map(|(mac, name)| format!("{mac}|{name}\n"))
+        .map(|(mac, name)| format!("{mac}|{name}|{stamp}\n"))
         .collect();
     let _ = std::fs::write(path, body);
 }
@@ -342,6 +393,19 @@ mod tests {
         p.extend_from_slice(name.as_bytes());
         p.push(255);
         p
+    }
+
+    #[test]
+    fn a_name_that_stopped_being_announced_is_forgotten() {
+        // The bug: a name learned once was shown forever, so a rename or a bad
+        // announcement never corrected itself. That is why names were wrong.
+        let stale = format!("aa:bb:cc:dd:ee:ff|OldName|{}\n", now_secs() - NAME_TTL_SECS - 5);
+        assert!(!trusts(&stale, "aa:bb:cc:dd:ee:ff"), "an expired name is dropped");
+        // The old two-field form carried no age, so it cannot be trusted either:
+        // on upgrade every stale name goes, which is the point.
+        assert!(!trusts("aa:bb:cc:dd:ee:ff|OldName\n", "aa:bb:cc:dd:ee:ff"));
+        let fresh = format!("aa:bb:cc:dd:ee:ff|NewName|{}\n", now_secs());
+        assert!(trusts(&fresh, "aa:bb:cc:dd:ee:ff"), "a fresh name is kept");
     }
 
     #[test]

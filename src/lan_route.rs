@@ -790,11 +790,12 @@ pub fn claim(target_ip: Ipv4Addr, target_mac: &str) -> Result<Adapter, String> {
         pin_gateway(&ad.if_index.to_string(), ad.gateway, &router_mac)?;
         let frame = arp_reply(&ad.mac, ad.gateway, target_mac, target_ip)
             .ok_or_else(|| "could not build the claim frame".to_string())?;
-        // Under gateway mode this writes nothing and answers true: the device is
-        // already sending here, and a forged frame would only repeat it.
+        // Without a capture device the frame cannot leave, and pretending it did
+        // is worse than refusing: the screen would show a route that does not
+        // exist. Say what is missing instead.
         if !claim_link().send_claim(&frame) {
             return Err(
-                "no driver to send the claim frame, and this router does not point the device at this PC"
+                "routing a device needs the packet driver: without it this PC cannot send the ARP reply that redirects the device"
                     .into(),
             );
         }
