@@ -1,12 +1,12 @@
 {
-  "version": "0.6.17",
-  "build": "e4f9614",
-  "notes": "Device names expire after a day instead of sticking forever, routing no longer reports success when nothing was sent, and the router sign-in is gone from the screen. Limit and block still need the packet driver, and now say so.",
-  "pub_date": "2026-11-16T15:18:35Z",
+  "version": "0.6.18",
+  "build": "346edbd",
+  "notes": "Connect now proves the tunnel before it says Connected.\n\nThe old check only asked whether the server port answered, which stays\nreachable even when the card behind it is not registered. In that state the\ndial read Connected while every flow died. The engine is now asked for a real\nround trip through the tunnel, and the line under the dial says so when\nnothing passes.\n\nNothing else changed. Same transports, same screens.",
+  "pub_date": "2026-11-16T23:45:13Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSU1NMCsyZWU1bnZPWElicjBta0FsditLUkpxeHhnQWhOVTI0UkJSUE0wUkJ6U2NmSTEzU0JzVzF4MUR1bTJTbitneXBJQXo5aDVRUlFqc0lmcEFKWEFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0ODQyMTc5CWZpbGU6UXVvdGFWUE5fMC42LjE3X3g2NC1zZXR1cC5leGUKMDBjRUE2MWVxTnV2TlNzaEluWE9NMkZpOThnbE1naWx2SVhFc3lDODBmWUYyK0xUdHYrYjBTZkU3Mk8yeEpnUTgwREJ4TVc2ci9aQitDblpzZk5UQVE9PQo=",
-      "url": "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.6.17/QuotaVPN_0.6.17_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSU9FdXpCTmN0cXRMYWM5SDMzZVdVUVJnTlE1SnBqNmNiaFptbmttVDAxUUhIbDlPS2hNL1IrUlN1bEhPZEJrR0ZLZVlEaHREa0xrRS9vMWhYR202ZkEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0ODcyNDg1CWZpbGU6UXVvdGFWUE5fMC42LjE4X3g2NC1zZXR1cC5leGUJdmVyc2lvbjowLjYuMTgKcWt1WCtMQTE5N2wraVFOcFpxNS9uNGZXc053RHRWK1JwdjFDSEllcGhyWWk4N1EwRkhNdDNBVHhGZjFhWlhJdzEwZmUrK3ExZGQ1Ykk1eVU5akNBREE9PQo=",
+      "url": "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.6.18/QuotaVPN_0.6.18_x64-setup.exe"
     }
   }
 }
