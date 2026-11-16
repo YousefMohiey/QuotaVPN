@@ -62,19 +62,18 @@
   ; offers it whenever the helper is missing, so nothing is lost but the
   ; silent part.
 
-  ; The helper tasks are registered here, during the install.
+  ; This installer registers nothing, schedules nothing, and starts nothing.
   ;
-  ; It used to happen in the app, on the first connect, because the installer was
-  ; a per-user one and had to spawn an elevated child to do it: an unsigned
-  ; installer launching a hidden elevated process that registers scheduled tasks,
-  ; which is what Defender called Behavior:Win32/Persistence.A!ml.
+  ; It tried twice. First it spawned a hidden elevated `--setup-helper`, and
+  ; Defender called that Behavior:Win32/Persistence.A!ml and quarantined the
+  ; download. Then, once the install was per-machine, it ran the setup pass
+  ; directly - same verdict, same outcome, because the behaviour model is reading
+  ; "an installer created a scheduled task that launches this program", and it
+  ; does not care whose token was used.
   ;
-  ; The install is per-machine now, so this installer already holds the
-  ; administrator token. Running the setup pass here crosses no elevation
-  ; boundary, shows no prompt, and happens once, before anyone opens the app.
-  ; No `runas`, no hidden UAC, nothing for a behaviour model to object to.
-  DetailPrint "Registering the helper tasks"
-  nsExec::ExecToLog '"$INSTDIR\${MAINBINARYNAME}.exe" --setup-helper --as "$USERNAME"'
+  ; The tasks are gone from the product entirely now. The app already runs with
+  ; an administrator token, so it starts its engine as a detached child and
+  ; registers nothing. Nothing needs doing here.
 
   !insertmacro QCVPN_PURGE_LEGACY_SHORTCUTS
 

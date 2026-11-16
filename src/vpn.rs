@@ -37,6 +37,7 @@ pub fn sha256_of(path: &std::path::Path) -> Option<String> {
 
 /// Refuse to go on unless the downloaded file is the exact bytes this build
 /// expects. The file is removed on a mismatch so a later run cannot retry with it.
+#[cfg_attr(not(windows), allow(dead_code))]
 fn verify_artifact(path: &std::path::Path, expected: &str, what: &str) -> Result<(), String> {
     match sha256_of(path) {
         Some(got) if got == expected => Ok(()),
@@ -1247,23 +1248,9 @@ pub fn account_name() -> String {
 /// connect, so it counts as not installed and the setup pass replaces it.
 #[cfg(windows)]
 pub fn task_installed() -> bool {
-    let out = match run_hidden("schtasks", &["/Query", "/TN", &task_name(), "/XML"]) {
-        Ok(o) if o.status.success() => o,
-        _ => return false,
-    };
-    let xml = String::from_utf8_lossy(&out.stdout);
-    if !xml.contains("--run-engine") {
-        return false;
-    }
-    // A task left over from an older install points at a binary that may no
-    // longer exist, and connecting through it fails with nothing to read.
-    // Treat a task aimed at another path as no task at all, so the setup runs
-    // again and rewrites it.
-    let exe = match std::env::current_exe() {
-        Ok(p) => p.display().to_string().to_lowercase(),
-        Err(_) => return true,
-    };
-    xml.to_lowercase().contains(&exe)
+    // There is nothing to install. The engine pass is a detached child of this
+    // process, so "is the helper ready" has one honest answer.
+    true
 }
 
 /// What the privileged setup pass wrote, for the window that asked for it.
@@ -1639,123 +1626,42 @@ pub fn install_task(owner: &str) -> Result<(), String> {
         "--run-engine",
     )
 }
-
-/// Install the elevated pass that carries the LAN pipeline.
+/// Nothing is installed any more.
 ///
-/// The same definition as the tunnel helper, and for the same reason: a task
-/// started with `schtasks /Run` runs with the logged-on user's elevated token,
-/// so opening the packet driver costs no prompt. Installed once at setup with
-/// the other one.
-pub fn install_lan_task(owner: &str) -> Result<(), String> {
-    install_helper_task(
-        owner,
-        &format!("QuotaVPN Network {owner}"),
-        "QuotaVPN network helper",
-        "--lan-pipeline",
-    )
+/// These used to register two scheduled tasks, and registering a task whose
+/// action launches this executable is exactly what `Behavior:Win32/Persistence.A!ml`
+/// describes. Windows quarantined the app for it three times. The app runs with an
+/// administrator token already, so the passes are started as detached children and
+/// nothing is written to the Task Scheduler.
+///
+/// The functions stay because older installs left tasks behind: calling one now
+/// deletes them, which is the cleanup path.
+pub fn install_lan_task(_owner: &str) -> Result<(), String> {
+    remove_legacy_tasks();
+    Ok(())
 }
 
 fn install_helper_task(
-    owner: &str,
-    name: &str,
-    description: &str,
-    args: &str,
+    _owner: &str,
+    _name: &str,
+    _description: &str,
+    _args: &str,
 ) -> Result<(), String> {
-    let _ = std::fs::remove_file(engine_ps_path());
-    let exe = std::env::current_exe().map_err(|e| format!("exe: {e}"))?;
-    let exe = exe.display().to_string();
-    // Name first, because the elevated pass may be running as an administrator
-    // on behalf of someone else. If the name cannot be mapped, the account
-    // running this process is the next best answer, and it is always valid.
-    let principal = sid_for(owner)
-        .or_else(current_sid)
-        .unwrap_or_else(|| owner.to_string());
-
-    // A task definition rather than command line flags. InteractiveToken means
-    // the task uses the logged-on user's token and needs no stored password,
-    // which is the difference between working and "the user name or password
-    // is incorrect" on a Microsoft account. HighestAvailable still runs it
-    // elevated, which is what creating the tunnel adapter needs.
-    let xml = format!(
-        r#"<?xml version="1.0" encoding="UTF-16"?>
-<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
-  <RegistrationInfo>
-    <Description>{description} for {owner}</Description>
-  </RegistrationInfo>
-  <Triggers />
-  <Principals>
-    <Principal id="Author">
-      <UserId>{principal}</UserId>
-      <LogonType>InteractiveToken</LogonType>
-      <RunLevel>HighestAvailable</RunLevel>
-    </Principal>
-  </Principals>
-  <Settings>
-    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
-    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
-    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
-    <AllowHardTerminate>true</AllowHardTerminate>
-    <StartWhenAvailable>false</StartWhenAvailable>
-    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
-    <AllowStartOnDemand>true</AllowStartOnDemand>
-    <Enabled>true</Enabled>
-    <Hidden>false</Hidden>
-    <RunOnlyIfIdle>false</RunOnlyIfIdle>
-    <UseUnifiedSchedulingEngine>true</UseUnifiedSchedulingEngine>
-    <WakeToRun>false</WakeToRun>
-    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
-    <Priority>7</Priority>
-  </Settings>
-  <Actions Context="Author">
-    <Exec>
-      <Command>{exe}</Command>
-      <Arguments>{args}</Arguments>
-    </Exec>
-  </Actions>
-</Task>
-"#,
-        owner = xml_escape(owner),
-        description = xml_escape(description),
-        args = xml_escape(args),
-        principal = xml_escape(&principal),
-        exe = xml_escape(&exe),
-    );
-
-    let dir = engine_dir();
-    let _ = std::fs::create_dir_all(&dir);
-    let file = dir.join(format!("helper-{}.xml", args.trim_start_matches('-')));
-    std::fs::write(&file, xml).map_err(|e| format!("task xml: {e}"))?;
-
-    let out = run_hidden(
-        "schtasks",
-        &["/Create", "/TN", &name, "/XML", &file.to_string_lossy(), "/F"],
-    )
-    .map_err(|e| format!("task: {e}"))?;
-    let _ = std::fs::remove_file(&file);
-    if out.status.success() {
-        return Ok(());
-    }
-
-    // Keep the plain command line as a fallback for the rare machine where the
-    // definition is refused, and report both reasons if neither works.
-    let tr = format!("\"{exe}\" {args}");
-    let out2 = run_hidden(
-        "schtasks",
-        &[
-            "/Create", "/TN", &name, "/TR", &tr, "/SC", "ONCE", "/ST", "00:00", "/RU", owner,
-            "/RL", "HIGHEST", "/IT", "/F",
-        ],
-    )
-    .map_err(|e| format!("task: {e}"))?;
-    if out2.status.success() {
-        return Ok(());
-    }
-    let first = said(&out);
-    let second = said(&out2);
-    Err(format!("{first} / {second}"))
+    remove_legacy_tasks();
+    Ok(())
 }
 
-/// schtasks writes its complaint to stdout, not stderr.
+/// Delete tasks that earlier versions registered, if this machine still has them.
+#[cfg(windows)]
+fn remove_legacy_tasks() {
+    for name in [task_name(), lan_task_name()] {
+        let _ = run_hidden("schtasks", &["/Delete", "/TN", &name, "/F"]);
+    }
+}
+
+#[cfg(not(windows))]
+fn remove_legacy_tasks() {}
+
 fn said(out: &std::process::Output) -> String {
     let err = String::from_utf8_lossy(&out.stderr).trim().to_string();
     let std_out = String::from_utf8_lossy(&out.stdout).trim().to_string();
@@ -1883,19 +1789,38 @@ pub fn remove_task() {
     std::thread::sleep(std::time::Duration::from_secs(3));
 }
 
+/// Start the engine pass as a detached child of this process.
+///
+/// It used to be a scheduled task started with `schtasks /Run`, which is the one
+/// thing about this app that antivirus engines kept calling
+/// `Behavior:Win32/Persistence.A!ml`: an installer, or a program, creating a task
+/// whose action launches itself. The detection is about the mechanism, not the
+/// intent, and it quarantined the executable each time.
+///
+/// The app already runs with an administrator token, so a child process inherits
+/// exactly what the task provided, without registering anything that outlives it.
+/// `DETACHED_PROCESS` is what lets the window close and the tunnel stay up.
 #[cfg(windows)]
 fn start_task() -> Result<(), String> {
-    let out = run_hidden("schtasks", &["/Run", "/TN", &task_name()]).map_err(|e| format!("task: {e}"))?;
-    if out.status.success() {
-        Ok(())
-    } else {
-        Err(String::from_utf8_lossy(&out.stderr).trim().to_string())
-    }
+    use std::os::windows::process::CommandExt;
+    const DETACHED_PROCESS: u32 = 0x0000_0008;
+    const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    let exe = std::env::current_exe().map_err(|e| format!("exe: {e}"))?;
+    std::process::Command::new(exe)
+        .arg("--run-engine")
+        .creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| format!("engine: {e}"))
 }
 
 #[cfg(windows)]
 pub fn stop_task() {
-    let _ = run_hidden("schtasks", &["/End", "/TN", &task_name()]);
+    // The pid the engine pass wrote for itself. Nothing to ask the scheduler for.
+    if let Some(pid) = task_engine_pid() {
+        let _ = run_hidden("taskkill", &["/F", "/PID", &pid.to_string()]);
+    }
 }
 
 /// The name of the elevated pass that carries the LAN pipeline.
@@ -1909,36 +1834,41 @@ pub fn lan_task_name() -> String {
 /// path it runs, because a task left over from an older install names a binary
 /// that may no longer exist and starting it fails silently.
 pub fn lan_task_installed() -> bool {
-    let out = match run_hidden("schtasks", &["/Query", "/TN", &lan_task_name(), "/XML"]) {
-        Ok(o) if o.status.success() => o,
-        _ => return false,
-    };
-    let xml = String::from_utf8_lossy(&out.stdout);
-    if !xml.contains("--lan-pipeline") {
-        return false;
-    }
-    let exe = match std::env::current_exe() {
-        Ok(p) => p.display().to_string().to_lowercase(),
-        Err(_) => return true,
-    };
-    xml.to_lowercase().contains(&exe)
+    true
 }
 
 /// Start the LAN pass through its task, which costs no prompt.
+/// Start the LAN pipeline pass, detached, the same way the engine starts.
+///
+/// Same reasoning as `start_task`: no scheduled task, so nothing on this machine
+/// outlives the app, and nothing looks like persistence to a behaviour model.
 pub fn start_lan_task() -> Result<(), String> {
-    let out =
-        run_hidden("schtasks", &["/Run", "/TN", &lan_task_name()]).map_err(|e| format!("task: {e}"))?;
-    if out.status.success() {
-        Ok(())
-    } else {
-        Err(String::from_utf8_lossy(&out.stderr).trim().to_string())
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const DETACHED_PROCESS: u32 = 0x0000_0008;
+        const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        let exe = std::env::current_exe().map_err(|e| format!("exe: {e}"))?;
+        std::process::Command::new(exe)
+            .arg("--lan-pipeline")
+            .creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW)
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| format!("lan pipeline: {e}"))
+    }
+    #[cfg(not(windows))]
+    {
+        Err("the LAN pipeline is Windows only".to_string())
     }
 }
 
 /// End the LAN pass from outside. The loop stops itself when the stop file it
 /// watches appears, so this is the backstop for a process that will not go.
 pub fn stop_lan_task() {
-    let _ = run_hidden("schtasks", &["/End", "/TN", &lan_task_name()]);
+    // Nothing to end: the pipeline watches `lan/stop` and exits, which is the
+    // protocol the control layer already speaks.
+    let _ = crate::lan_forward::request_stop();
 }
 
 /// The pid of the engine our task started: the sing-box whose command line

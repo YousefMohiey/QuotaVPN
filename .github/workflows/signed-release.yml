@@ -135,6 +135,8 @@ jobs:
           $bad = @{
             "WinDivert-2.2.2-A.zip" = "the app must not download a kernel driver"
             "QC_FEED_URL"           = "the app must not accept a feed override at runtime"
+            "<Task version="       = "the app must not register a scheduled task"
+            "schtasks /Create"      = "the app must not register a scheduled task"
           }
           foreach ($k in $bad.Keys) {
             if ($text.Contains($k)) { throw "$k is still in the binary: $($bad[$k])" }
