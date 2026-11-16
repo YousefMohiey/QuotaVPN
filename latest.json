@@ -1,12 +1,12 @@
 {
-  "version": "0.6.15",
-  "build": "62bc191",
-  "notes": "The update check now reads its feed from a URL that answers directly instead of redirecting, keeps the release URL as a fallback, and reports the real reason when it fails instead of the canned 'Could not reach GitHub'. The helper is registered during install, so no in-app setup press is needed.",
-  "pub_date": "2026-11-15T20:41:44Z",
+  "version": "0.6.16",
+  "build": "4b69cbe",
+  "notes": "The app no longer registers any scheduled task. That was the file Defender kept naming as Behavior:Win32/Persistence: a task whose action launches the app. The engine and the LAN pipeline now start as detached children of the already-elevated app, so nothing outlives it.",
+  "pub_date": "2026-11-16T14:49:30Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSU5jWHdMT0RvdDZnL0NHK1pKUThqL3JDUEpacXM2SEpXOUpMQWJlUUp4ZjJDeVJMZkVLQzc5MlFIaG9ST0NrbU96SG5Xc24wR09xQVd5Wm02NE1teVFBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0Nzc1MjQwCWZpbGU6UXVvdGFWUE5fMC42LjE1X3g2NC1zZXR1cC5leGUKVFo0YUxJdVJrNTVSM3hpdDhVMGFpRXB4RGY3NWlQOENlSWk0elZ5ZG53SkJpWWdjcStIRCsremxuYjZkL2N4UjJSNGpybmZSNDk4cFYrMFJ5bWVBQ3c9PQo=",
-      "url": "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.6.15/QuotaVPN_0.6.15_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSVBBVWdjbjcyOTc1NTZ0TU9VZ0UybU5mbCtRWWI5dEdRVHk0RlN4YWlSQWlpejhWTks0UnAvUWloblp6VjJZdUwvUEVlRURzTGJ2dGtoRm5nWmExa3c0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0ODQwNTMzCWZpbGU6UXVvdGFWUE5fMC42LjE2X3g2NC1zZXR1cC5leGUKeDAxN2NnUDVXUFJON1pweGNYc05qSHpKVVBlN0l3Rng0dHIzb3owT3NyWEw3RUhVaTBWanlNMk03R01BbWxNK0Q0V0E5Q0JoTUJmUjJxN1I1bDJaQ0E9PQo=",
+      "url": "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.6.16/QuotaVPN_0.6.16_x64-setup.exe"
     }
   }
 }
