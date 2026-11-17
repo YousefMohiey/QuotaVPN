@@ -3004,12 +3004,12 @@ async fn lan_route_device(ip: String, mac: String) -> Result<RoutedDevice, Strin
     // A device pointed at this PC has nowhere to go while the tunnel is down:
     // its packets would arrive here and leave through the normal route, or
     // stop dead. Refuse in words rather than cut a device off.
-    if quotacards::vpn::task_engine_pid().is_none() {
-        return Err(
-            "Connect the VPN first. Routing a device sends its traffic through this PC, \
-             and with no tunnel it has nowhere to go."
-                .to_string(),
-        );
+    // Routing a device must not need the whole PC tunnelled first. With no
+    // engine, seed a session from the saved card: the claim writes its intent
+    // and starts the engine already in device-only shape, so the host keeps
+    // final=direct the whole time.
+    if quotacards::vpn::task_engine_pid().is_none() && !quotacards::vpn::session_exists() {
+        quotacards::vpn::seed_session_from_config()?;
     }
     let dev = tauri::async_runtime::spawn_blocking(move || {
         let target: std::net::Ipv4Addr = ip.parse().map_err(|_| format!("not an address: {ip}"))?;
@@ -3023,10 +3023,6 @@ async fn lan_route_device(ip: String, mac: String) -> Result<RoutedDevice, Strin
     })
     .await
     .map_err(|e| e.to_string())??;
-    // The claim is only half of it: the engine has to be rebuilt so its rules
-    // carry this device. The builder reads the intent record, so this one call
-    // is what turns "rule outbound: MISSING" into a proxied flow.
-    rebuild_engine_for_routed()?;
     Ok(dev)
 }
 
@@ -3034,13 +3030,12 @@ async fn lan_route_device(ip: String, mac: String) -> Result<RoutedDevice, Strin
 #[tauri::command]
 #[cfg(windows)]
 async fn lan_unroute_device() -> Result<bool, String> {
-    let done = tauri::async_runtime::spawn_blocking(|| quotacards::lan_route::release().map(|_| true))
+    // release() restores the ARP entry, lifts the pin, turns forwarding off and
+    // stops an engine this claim started, so nothing is rebuilt here: a rebuild
+    // would put a whole-device tunnel back up after the device was let go.
+    tauri::async_runtime::spawn_blocking(|| quotacards::lan_route::release().map(|_| true))
         .await
-        .map_err(|e| e.to_string())??;
-    // Hand the engine back to the PC alone, so no stale rule keeps proxying a
-    // device that is no longer ours.
-    rebuild_engine_for_routed()?;
-    Ok(done)
+        .map_err(|e| e.to_string())?
 }
 
 /// Report every fact that decides whether routing a device can work.

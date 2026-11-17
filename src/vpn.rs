@@ -1036,6 +1036,37 @@ fn remember_session(rec: &SessionRecord) -> Result<(), String> {
     std::fs::write(session_path(), text).map_err(|e| format!("write session record: {e}"))
 }
 
+/// Is there a session on disk a claim can rebuild from?
+pub fn session_exists() -> bool {
+    read_session().is_some()
+}
+
+/// Write a session record from the saved card and server settings, so a device
+/// can be routed without connecting this PC first. The PC is never tunnelled in
+/// that shape: the record only gives the engine something to build from.
+pub fn seed_session_from_config() -> Result<(), String> {
+    let cfg = crate::config::AppConfig::load();
+    let card = cfg
+        .cards
+        .first()
+        .ok_or("no card saved yet: pick a package on Home once")?;
+    let rec = SessionRecord {
+        uuid: card.uuid.clone(),
+        host: cfg.server_ip.clone(),
+        sni: card.sni.clone(),
+        apps_mode: "all".to_string(),
+        apps: Vec::new(),
+        voice: false,
+        transport: "vless".to_string(),
+        hy2_pass: cfg.hy2_password.clone(),
+        wg_private: card.wg_private.clone(),
+        wg_addr: card.wg_addr.clone(),
+        wg_server_pub: cfg.wg_server_pub.clone(),
+        wg_params: cfg.awg_params.clone(),
+    };
+    remember_session(&rec)
+}
+
 fn read_session() -> Option<SessionRecord> {
     let text = std::fs::read_to_string(session_path()).ok()?;
     serde_json::from_str(&text).ok()

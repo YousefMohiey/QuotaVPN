@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Copy, Loader2, RefreshCw, Shield, ShieldCheck } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
-import { useApp } from "@/state/app"
 import { RouterLinkDialog } from "@/components/RouterLinkDialog"
 import { copyText } from "@/lib/clipboard"
 import * as api from "@/lib/ipc"
@@ -22,7 +21,6 @@ type Routed = { ip: string; mac: string } | null
 // shield. Nothing is a dropdown.
 export function Network() {
   const { t } = useI18n()
-  const { vpnOn } = useApp()
   const [list, setList] = useState<LanDevice[]>([])
   const [scanning, setScanning] = useState(true)
   const [scanError, setScanError] = useState("")
@@ -393,15 +391,13 @@ export function Network() {
                     ) : (
                       <button
                         onClick={() => void route(d)}
-                        disabled={!!busy || locked || !ready || !vpnOn}
+                        disabled={!!busy || locked || !ready}
                         title={
-                          !vpnOn
-                            ? t("netNeedTunnel")
-                            : locked
-                              ? t("netCannotSelf")
-                              : !ready
-                                ? t("netCannotNpcap")
-                                : t("netViaTunnelHint")
+                          locked
+                            ? t("netCannotSelf")
+                            : !ready
+                              ? t("netCannotNpcap")
+                              : t("netViaTunnelHint")
                         }
                         className="press h-8 w-[118px] shrink-0 rounded-[7px] border border-[var(--brand-line)] text-[12px] text-brand-strong transition-colors hover:bg-[var(--brand-bg)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
                       >
