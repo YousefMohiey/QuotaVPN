@@ -24,6 +24,7 @@ pub const FRAME_LEN: usize = 42;
 
 const ETHERTYPE_ARP: u16 = 0x0806;
 const ARP_REPLY: u16 = 2;
+const ARP_REQUEST: u16 = 1;
 const HWTYPE_ETHERNET: u16 = 1;
 const PROTO_IPV4: u16 = 0x0800;
 
@@ -69,6 +70,37 @@ pub fn arp_reply(
     f[28..32].copy_from_slice(&claimed_ip.octets()); // sender protocol
     f[32..38].copy_from_slice(&tmac); // target hardware
     f[38..42].copy_from_slice(&target_ip.octets()); // target protocol
+    Some(f)
+}
+
+/// The same claim as a REQUEST instead of a reply.
+///
+/// Android and Linux keep `arp_accept = 0`: they will not create a cache entry
+/// from an unsolicited reply, which is why a phone routed this way never sent a
+/// packet and the engine sat at zero connections. A request with the router's
+/// address as sender looks like the router speaking, and Linux does take that.
+/// Both frames go out on every claim and every refresh.
+pub fn arp_claim_request(
+    sender_mac: &str,
+    claimed_ip: Ipv4Addr,
+    target_mac: &str,
+    target_ip: Ipv4Addr,
+) -> Option<[u8; FRAME_LEN]> {
+    let smac = mac_bytes(sender_mac)?;
+    let tmac = mac_bytes(target_mac)?;
+    let mut f = [0u8; FRAME_LEN];
+    f[0..6].copy_from_slice(&tmac);
+    f[6..12].copy_from_slice(&smac);
+    f[12..14].copy_from_slice(&ETHERTYPE_ARP.to_be_bytes());
+    f[14..16].copy_from_slice(&HWTYPE_ETHERNET.to_be_bytes());
+    f[16..18].copy_from_slice(&PROTO_IPV4.to_be_bytes());
+    f[18] = 6;
+    f[19] = 4;
+    f[20..22].copy_from_slice(&ARP_REQUEST.to_be_bytes());
+    f[22..28].copy_from_slice(&smac);
+    f[28..32].copy_from_slice(&claimed_ip.octets());
+    f[32..38].copy_from_slice(&tmac);
+    f[38..42].copy_from_slice(&target_ip.octets());
     Some(f)
 }
 
@@ -921,11 +953,17 @@ pub fn claim(target_ip: Ipv4Addr, target_mac: &str) -> Result<Adapter, String> {
         // Without a capture device the frame cannot leave, and pretending it did
         // is worse than refusing: the screen would show a route that does not
         // exist. Say what is missing instead.
-        if !claim_link().send_claim(&frame) {
+        let link = claim_link();
+        if !link.send_claim(&frame) {
             return Err(
                 "routing a device needs the packet driver: without it this PC cannot send the ARP reply that redirects the device"
                     .into(),
             );
+        }
+        // The same claim as a request: phones and Linux ignore unsolicited
+        // replies, and a request from the router's address is accepted.
+        if let Some(ask) = arp_claim_request(&ad.mac, ad.gateway, target_mac, target_ip) {
+            let _ = link.send_claim(&ask);
         }
         Ok(())
     })();
@@ -953,6 +991,9 @@ pub fn claim(target_ip: Ipv4Addr, target_mac: &str) -> Result<Adapter, String> {
             }
             if let Some(f) = arp_reply(&mac, gw, &target_mac_owned, target_ip_owned) {
                 let _ = link.send_claim(&f);
+            }
+            if let Some(a) = arp_claim_request(&mac, gw, &target_mac_owned, target_ip_owned) {
+                let _ = link.send_claim(&a);
             }
         }
     });
