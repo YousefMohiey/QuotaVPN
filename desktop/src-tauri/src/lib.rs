@@ -3000,10 +3000,11 @@ impl From<quotacards::lan_route::Intent> for RoutedDevice {
 /// is confirmed, so a success here means its traffic is coming to this machine now.
 #[tauri::command]
 #[cfg(windows)]
-async fn lan_route_device(ip: String, mac: String) -> Result<RoutedDevice, String> {
-    // A device pointed at this PC has nowhere to go while the tunnel is down:
-    // its packets would arrive here and leave through the normal route, or
-    // stop dead. Refuse in words rather than cut a device off.
+async fn lan_route_device(
+    ip: String,
+    mac: String,
+    state: tauri::State<'_, LanState>,
+) -> Result<RoutedDevice, String> {
     // Routing a device must not need the whole PC tunnelled first. With no
     // engine, seed a session from the saved card: the claim writes its intent
     // and starts the engine already in device-only shape, so the host keeps
@@ -3011,25 +3012,44 @@ async fn lan_route_device(ip: String, mac: String) -> Result<RoutedDevice, Strin
     if quotacards::vpn::task_engine_pid().is_none() && !quotacards::vpn::session_exists() {
         quotacards::vpn::seed_session_from_config()?;
     }
+    let ip2 = ip.clone();
+    let mac2 = mac.clone();
     let dev = tauri::async_runtime::spawn_blocking(move || {
-        let target: std::net::Ipv4Addr = ip.parse().map_err(|_| format!("not an address: {ip}"))?;
-        let adapter = quotacards::lan_route::claim(target, &mac)?;
+        let target: std::net::Ipv4Addr = ip2.parse().map_err(|_| format!("not an address: {ip2}"))?;
+        let adapter = quotacards::lan_route::claim(target, &mac2)?;
         Ok::<RoutedDevice, String>(RoutedDevice {
-            ip,
-            mac,
+            ip: ip2,
+            mac: mac2,
             gateway: adapter.gateway.to_string(),
             interface: adapter.if_index.to_string(),
         })
     })
     .await
     .map_err(|e| e.to_string())??;
+
+    // The claim points the device at this PC; this is what actually carries its
+    // frames. Without the pump the rule sits in the engine with nothing to
+    // match, which is exactly what "0 connections" looked like.
+    let previous = { state.0.lock().map_err(|_| "state".to_string())?.take() };
+    if let Some(prev) = previous {
+        prev.stop();
+    }
+    let session = quotacards::lan_ctrl::start_with(&dev.ip, false, Some(dev.mac.clone()))?;
+    if session.target_ip != dev.ip {
+        return Err(format!("the pump came up for {} instead of {}", session.target_ip, dev.ip));
+    }
+    *state.0.lock().map_err(|_| "state".to_string())? = Some(session);
     Ok(dev)
 }
 
 /// Hand it back to the router. Safe to call when nothing is routed.
 #[tauri::command]
 #[cfg(windows)]
-async fn lan_unroute_device() -> Result<bool, String> {
+async fn lan_unroute_device(state: tauri::State<'_, LanState>) -> Result<bool, String> {
+    let previous = { state.0.lock().map_err(|_| "state".to_string())?.take() };
+    if let Some(prev) = previous {
+        prev.stop();
+    }
     // release() restores the ARP entry, lifts the pin, turns forwarding off and
     // stops an engine this claim started, so nothing is rebuilt here: a rebuild
     // would put a whole-device tunnel back up after the device was let go.
@@ -3329,7 +3349,23 @@ pub fn run() {
         let mac = std::env::args().nth(i + 2).unwrap_or_default();
         match ip.parse::<std::net::Ipv4Addr>() {
             Ok(target) => match quotacards::lan_route::claim(target, &mac) {
-                Ok(_) => println!("CLAIM_OK {ip}"),
+                Ok(_) => {
+                    // The headless probe starts the same pump the window does,
+                    // so a claim here proves the whole path and not half of it.
+                    match quotacards::lan_ctrl::start_with(&ip, false, Some(mac.clone())) {
+                        Ok(s) => {
+                            println!("CLAIM_OK {ip} PUMP_OK seen={}", s.seen.load(std::sync::atomic::Ordering::Relaxed));
+                            std::thread::sleep(std::time::Duration::from_secs(12));
+                            println!(
+                                "PUMP seen={} forwarded={} up={}",
+                                s.seen.load(std::sync::atomic::Ordering::Relaxed),
+                                s.forwarded.load(std::sync::atomic::Ordering::Relaxed),
+                                s.bytes_up.load(std::sync::atomic::Ordering::Relaxed)
+                            );
+                        }
+                        Err(e) => println!("CLAIM_OK {ip} PUMP_ERR {e}"),
+                    }
+                }
                 Err(e) => println!("CLAIM_ERR {e}"),
             },
             Err(_) => println!("CLAIM_ERR not an address: {ip}"),
