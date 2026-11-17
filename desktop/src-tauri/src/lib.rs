@@ -2928,6 +2928,57 @@ async fn network_snapshot(
     })
 }
 
+/// Rebuild the running tunnel from the session record, so a claim or a release
+/// changes what the engine carries. The routed device list is read from the
+/// intent record inside the config builder, so the same call serves both.
+#[cfg(windows)]
+fn rebuild_engine_for_routed() -> Result<(), String> {
+    let path = quotacards::vpn::engine_dir().join("session.json");
+    let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let v: serde_json::Value = serde_json::from_str(&raw).map_err(|e| e.to_string())?;
+    let s = |k: &str| v.get(k).and_then(|x| x.as_str()).unwrap_or("").to_string();
+    let apps: Vec<String> = v
+        .get("apps")
+        .and_then(|a| a.as_array())
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| x.as_str())
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
+    let voice = v.get("voice").and_then(|b| b.as_bool()).unwrap_or(false);
+    let (wg_private, wg_addr, wg_pub, wg_params) = (
+        s("wg_private"),
+        s("wg_addr"),
+        s("wg_server_pub"),
+        s("wg_params"),
+    );
+    let wg = if wg_private.is_empty() {
+        None
+    } else {
+        Some((
+            wg_private.as_str(),
+            wg_addr.as_str(),
+            wg_pub.as_str(),
+            wg_params.as_str(),
+        ))
+    };
+    quotacards::vpn::write_tun_config(
+        &s("uuid"),
+        &s("host"),
+        &s("sni"),
+        &s("apps_mode"),
+        &apps,
+        voice,
+        &s("transport"),
+        &s("hy2_pass"),
+        wg,
+    )?;
+    quotacards::vpn::stop_engine();
+    quotacards::vpn::spawn_engine().map(|_| ())
+}
+
 /// One device routed through the tunnel with nothing installed on it.
 #[derive(serde::Serialize, Clone)]
 #[cfg(windows)]
@@ -2960,10 +3011,10 @@ async fn lan_route_device(ip: String, mac: String) -> Result<RoutedDevice, Strin
                 .to_string(),
         );
     }
-    tauri::async_runtime::spawn_blocking(move || {
+    let dev = tauri::async_runtime::spawn_blocking(move || {
         let target: std::net::Ipv4Addr = ip.parse().map_err(|_| format!("not an address: {ip}"))?;
         let adapter = quotacards::lan_route::claim(target, &mac)?;
-        Ok(RoutedDevice {
+        Ok::<RoutedDevice, String>(RoutedDevice {
             ip,
             mac,
             gateway: adapter.gateway.to_string(),
@@ -2971,16 +3022,25 @@ async fn lan_route_device(ip: String, mac: String) -> Result<RoutedDevice, Strin
         })
     })
     .await
-    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())??;
+    // The claim is only half of it: the engine has to be rebuilt so its rules
+    // carry this device. The builder reads the intent record, so this one call
+    // is what turns "rule outbound: MISSING" into a proxied flow.
+    rebuild_engine_for_routed()?;
+    Ok(dev)
 }
 
 /// Hand it back to the router. Safe to call when nothing is routed.
 #[tauri::command]
 #[cfg(windows)]
 async fn lan_unroute_device() -> Result<bool, String> {
-    tauri::async_runtime::spawn_blocking(|| quotacards::lan_route::release().map(|_| true))
+    let done = tauri::async_runtime::spawn_blocking(|| quotacards::lan_route::release().map(|_| true))
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())??;
+    // Hand the engine back to the PC alone, so no stale rule keeps proxying a
+    // device that is no longer ours.
+    rebuild_engine_for_routed()?;
+    Ok(done)
 }
 
 /// Report every fact that decides whether routing a device can work.

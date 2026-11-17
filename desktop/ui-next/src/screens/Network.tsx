@@ -140,10 +140,12 @@ export function Network() {
         // The claim changes what the tunnel carries, so re-read the roster.
         void scan()
       } catch (e) {
-        setRouteError(t("netRouteFailed"))
+        // The backend's sentence is the useful part: it names the stage that
+        // refused. Never replace it with a generic line.
         const why = typeof e === "string" ? e : String(e)
+        setRouteError(why)
         const lines = await api.lanRouteDiagnose(d.ip, d.mac).catch(() => [])
-        setDiag(lines.length ? lines : [why])
+        setDiag(lines)
       } finally {
         setBusy("")
       }
