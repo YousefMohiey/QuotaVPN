@@ -253,25 +253,150 @@ impl Adapter {
 }
 
 pub fn adapter() -> Result<Adapter, String> {
-    let script = "$c = Get-NetIPConfiguration | Where-Object { $_.IPv4DefaultGateway -and $_.NetAdapter.Status -eq 'Up' } | Select-Object -First 1;                   if (-not $c) { '' } else { [pscustomobject]@{                     ip = [string]$c.IPv4Address.IPAddress;                     gateway = [string]$c.IPv4DefaultGateway.NextHop;                     ifindex = [int]$c.NetAdapter.ifIndex;                     mac = [string]$c.NetAdapter.MacAddress;                     name = [string]$c.NetAdapter.Name } | ConvertTo-Json -Compress }";
-    // Hidden: this is a GUI app, and a console flashing on every adapter lookup is
-    // the difference between a feature and a bug report.
-    let out = crate::lan::hidden("powershell")
-        .args(["-NoProfile", "-NonInteractive", "-Command", script])
-        .output()
-        .map_err(|e| format!("powershell: {e}"))?;
-    let text = String::from_utf8_lossy(&out.stdout);
-    let text = text.trim();
-    if text.is_empty() {
-        return Err("no adapter with an IPv4 gateway is up".into());
+    // The LAN adapter, chosen by what it can reach rather than by its name.
+    // Every virtual adapter on this class of machine (Radmin, Tailscale, a dead
+    // TAP, the tun itself) also carries a default route, and one of them used to
+    // win: the engine then bound its direct outbound to 26.64.x and the PC lost
+    // the internet the moment a device was routed. A real LAN adapter is one
+    // that has a gateway, an address outside the ranges virtual adapters use,
+    // and no virtual wording in its alias OR its description.
+    let run = |prog: &str, args: &[&str]| -> Result<String, String> {
+        let out = crate::lan::hidden(prog)
+            .args(args)
+            .output()
+            .map_err(|e| format!("{prog}: {e}"))?;
+        Ok(String::from_utf8_lossy(&out.stdout).replace(char::from(13), ""))
+    };
+
+    let conf = run("ipconfig", &["/all"])?;
+    let mut blocks: Vec<(String, Vec<String>)> = Vec::new();
+    let mut alias = String::new();
+    let mut block: Vec<String> = Vec::new();
+    for line in conf.lines() {
+        let t = line.trim();
+        let is_header = !line.starts_with(|c: char| c.is_whitespace()) && t.ends_with(':');
+        if is_header {
+            if !block.is_empty() {
+                blocks.push((alias.clone(), std::mem::take(&mut block)));
+            }
+            // ipconfig labels the header "Ethernet adapter Ethernet:": the alias
+            // netsh and the engine bind by is the tail after the last " adapter ".
+            let mut a = t.trim_end_matches(':').trim().to_string();
+            if let Some(p) = a.to_lowercase().rfind(" adapter ") {
+                a = a[p + 9..].to_string();
+            }
+            alias = a;
+            continue;
+        }
+        if !t.is_empty() {
+            block.push(t.to_string());
+        }
     }
-    let v: serde_json::Value = serde_json::from_str(text).map_err(|e| format!("adapter json: {e}"))?;
-    let ip: Ipv4Addr = v["ip"].as_str().ok_or("no ip")?.parse().map_err(|_| "bad ip")?;
-    let gateway: Ipv4Addr = v["gateway"].as_str().ok_or("no gateway")?.parse().map_err(|_| "bad gateway")?;
-    let if_index = v["ifindex"].as_u64().ok_or("no ifindex")? as u32;
-    let mac = v["mac"].as_str().ok_or("no mac")?.to_ascii_lowercase().replace('-', ":");
-    let name = v["name"].as_str().unwrap_or_default().to_string();
-    Ok(Adapter { ip, gateway, if_index, mac, name })
+    if !block.is_empty() {
+        blocks.push((alias, block));
+    }
+
+    let virtual_words = [
+        "vpn", "tailscale", "radmin", "wireguard", "openvpn", "tap", "tunnel", "wintun",
+        "zerotier", "hamachi", "loopback", "bluetooth", "hyper-v", "virtualbox", "vmware",
+    ];
+    // alias, ip, mac, gateway
+    let mut cands: Vec<(String, Ipv4Addr, String, Ipv4Addr)> = Vec::new();
+    for (al, lines) in &blocks {
+        let mut ip: Option<Ipv4Addr> = None;
+        let mut mac = String::new();
+        let mut gw: Option<Ipv4Addr> = None;
+        let mut desc = String::new();
+        for l in lines {
+            let lower = l.to_lowercase();
+            if lower.starts_with("description") {
+                if let Some(v) = l.split(':').next_back() {
+                    desc = v.trim().to_string();
+                }
+            } else if lower.starts_with("physical address") {
+                if let Some(v) = l.split(':').next_back() {
+                    mac = v.trim().to_lowercase().replace('-', ":");
+                }
+            } else if lower.starts_with("ipv4 address") && ip.is_none() {
+                if let Some(v) = l.split(':').next_back() {
+                    ip = v.trim().split('(').next().unwrap_or("").trim().parse().ok();
+                }
+            } else if lower.starts_with("default gateway") && gw.is_none() {
+                if let Some(v) = l.split(':').next_back() {
+                    let v = v.trim();
+                    if !v.is_empty() {
+                        gw = v.parse().ok();
+                    }
+                }
+            }
+        }
+        let (Some(ip), Some(gw)) = (ip, gw) else { continue };
+        let joined = format!("{al} {desc}").to_lowercase();
+        if virtual_words.iter().any(|w| joined.contains(w)) {
+            continue;
+        }
+        // Ranges a LAN adapter never holds: Radmin's 26/8, carrier NAT 100.64/10,
+        // link-local, loopback.
+        let o = ip.octets();
+        if o[0] == 26
+            || (o[0] == 100 && (64..128).contains(&o[1]))
+            || (o[0] == 169 && o[1] == 254)
+            || o[0] == 127
+        {
+            continue;
+        }
+        cands.push((al.clone(), ip, mac, gw));
+    }
+    if cands.is_empty() {
+        return Err("no LAN adapter with a default gateway".into());
+    }
+
+    // Rank by the metric of the default route that belongs to each candidate.
+    let ifaces = run("netsh", &["interface", "ipv4", "show", "interfaces"])?;
+    let mut idx_of: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
+    for line in ifaces.lines() {
+        let f: Vec<&str> = line.split_whitespace().collect();
+        if f.len() < 5 {
+            continue;
+        }
+        let Ok(idx) = f[0].parse::<u32>() else { continue };
+        if let Some(pos) = line.find(f[3]) {
+            idx_of.insert(line[pos + f[3].len()..].trim().to_lowercase(), idx);
+        }
+    }
+    let routes = run("netsh", &["interface", "ipv4", "show", "route"])?;
+    let mut metric: std::collections::HashMap<u32, u32> = std::collections::HashMap::new();
+    for line in routes.lines() {
+        let f: Vec<&str> = line.split_whitespace().collect();
+        if f.len() < 6 || f[3] != "0.0.0.0/0" {
+            continue;
+        }
+        let (Ok(m), Ok(i)) = (f[2].parse::<u32>(), f[4].parse::<u32>()) else {
+            continue;
+        };
+        let e = metric.entry(i).or_insert(m);
+        if m < *e {
+            *e = m;
+        }
+    }
+
+    let mut best: Option<(u32, usize, u32)> = None; // (metric, candidate, if_index)
+    for (n, c) in cands.iter().enumerate() {
+        let idx = idx_of.get(&c.0.to_lowercase()).copied().unwrap_or(0);
+        let m = metric.get(&idx).copied().unwrap_or(u32::MAX);
+        if best.map_or(true, |(bm, _, _)| m < bm) {
+            best = Some((m, n, idx));
+        }
+    }
+    let (_, n, if_index) = best.ok_or("no LAN adapter with a default route")?;
+    let (name, ip, mac, gateway) = cands.swap_remove(n);
+    Ok(Adapter {
+        ip,
+        gateway,
+        if_index,
+        mac,
+        name,
+    })
 }
 
 // ---------------------------------------------------------------- npcap, loaded at runtime
@@ -668,14 +793,14 @@ fn pin_gateway(interface: &str, gateway: Ipv4Addr, router_mac: &str) -> Result<(
             "neighbors",
             interface,
             &gateway.to_string(),
-            router_mac,
+            &router_mac.replace(':', "-"),
         ])
         .output()
         .map_err(|e| e.to_string())?;
     if !out.status.success() {
         return Err(format!(
             "could not pin the gateway: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
+            { let e = String::from_utf8_lossy(&out.stderr).trim().to_string(); if e.is_empty() { String::from_utf8_lossy(&out.stdout).trim().to_string() } else { e } }
         ));
     }
     Ok(())
@@ -761,7 +886,10 @@ pub fn claim(target_ip: Ipv4Addr, target_mac: &str) -> Result<Adapter, String> {
     // device's packets to a tun with no rule for them: a black hole that looks
     // exactly like a broken route. The intention record is already on disk, which
     // is what makes the regenerated config device-only.
-    if !crate::vpn::device_route_ready(&target_ip.to_string()) {
+    // Always rebuild. A rule that is already in the file can still sit next to a
+    // stale bind or a stale adapter choice, and skipping the rebuild was how a
+    // correct new config never reached the engine.
+    if true {
         if let Err(e) = crate::vpn::restart_for_intent() {
             let _ = release();
             return Err(e);

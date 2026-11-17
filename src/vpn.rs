@@ -500,9 +500,22 @@ pub fn write_tun_config(
 fn routed_device_ips() -> Vec<String> {
     #[cfg(all(windows, not(test)))]
     {
-        crate::lan_route::read_intent()
-            .map(|i| vec![format!("{}/32", i.target_ip)])
-            .unwrap_or_default()
+        // Read the target address straight out of the record. The decoded
+        // Intent needs every field, including the tun index, which is empty
+        // whenever the engine is not up at claim time, and one empty field
+        // used to drop the device rule without a word.
+        let path = std::env::var("LOCALAPPDATA")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|_| std::path::PathBuf::from("."))
+            .join("quotavpn")
+            .join("lan_route_intent.txt");
+        let text = std::fs::read_to_string(path).unwrap_or_default();
+        let ip = text.split('|').next().unwrap_or("").trim().to_string();
+        if ip.parse::<std::net::Ipv4Addr>().is_ok() {
+            vec![format!("{ip}/32")]
+        } else {
+            Vec::new()
+        }
     }
     #[cfg(not(all(windows, not(test))))]
     {
@@ -894,7 +907,7 @@ where
             "type": "tun",
             "tag": "tun-in",
             "interface_name": if_name,
-            "mtu": 9000,
+            "mtu": if device_only { 1400 } else { 9000 },
             "address": [format!("{tun_ip}/28"), format!("{tun_v6}/126")],
             "auto_route": true,
             // Low-metric block rules that would otherwise kill the bound direct
@@ -1070,6 +1083,7 @@ pub fn restart_for_intent() -> Result<(), String> {
     })?;
     // A claim can arrive long after the last connect, or before the first one. The
     // engine has to exist to be restarted; this is a no-op when it is already there.
+    eprintln!("[claim] session ok, ensuring engine");
     ensure_engine()?;
     let wg = if s.transport == "wg" {
         Some((
@@ -1081,16 +1095,28 @@ pub fn restart_for_intent() -> Result<(), String> {
     } else {
         None
     };
+    eprintln!("[claim] engine ok, writing config");
     write_tun_config(
         &s.uuid, &s.host, &s.sni, &s.apps_mode, &s.apps, s.voice, &s.transport, &s.hy2_pass, wg,
     )?;
     // The same gate the connect path uses: a config that fails here would fail
     // inside the engine, where the message is a log tail instead of a reason.
+    eprintln!("[claim] config written, checking");
     check_config()?;
+    eprintln!("[claim] config ok, stopping engine");
     stop_engine();
+    eprintln!("[claim] stopped, starting engine");
     let pid = start_engine()?;
     if pid == 0 {
         return Err("the engine did not come back after the routing change".to_string());
+    }
+    // A live pid is not a carrying engine: confirm the rule for the routed
+    // device is really in the file the engine just read.
+    if let Some(ip) = routed_device_ips().first() {
+        let bare = ip.trim_end_matches("/32").to_string();
+        if !crate::vpn::device_route_ready(&bare) {
+            return Err(format!("the engine came up without a rule for {bare}"));
+        }
     }
     Ok(())
 }

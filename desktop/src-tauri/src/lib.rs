@@ -3329,6 +3329,19 @@ pub fn run() {
     }
     // Headless device scan, for checking the network layer without the UI.
 #[cfg(windows)]
+    if let Some(i) = std::env::args().position(|a| a == "--lan-claim") {
+        let ip = std::env::args().nth(i + 1).unwrap_or_default();
+        let mac = std::env::args().nth(i + 2).unwrap_or_default();
+        match ip.parse::<std::net::Ipv4Addr>() {
+            Ok(target) => match quotacards::lan_route::claim(target, &mac) {
+                Ok(_) => println!("CLAIM_OK {ip}"),
+                Err(e) => println!("CLAIM_ERR {e}"),
+            },
+            Err(_) => println!("CLAIM_ERR not an address: {ip}"),
+        }
+        return;
+    }
+#[cfg(windows)]
     if std::env::args().any(|a| a == "--lan-probe") {
         let started = std::time::Instant::now();
         let devices = quotacards::lan::scan();
