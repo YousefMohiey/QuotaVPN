@@ -2129,9 +2129,12 @@ async fn lan_devices(
         .await
         .unwrap_or_default();
     // The router knows every name, including the phones that hide theirs.
+    // Never wait for the lock: a router session that is mid-poll held it for
+    // the whole scan once, and the page sat on "Scanning" forever. A skipped
+    // enrichment costs names, never the list.
     {
-        let guard = state.0.lock().await;
-        if let Some(session) = guard.as_ref() {
+        if let Ok(guard) = state.0.try_lock() {
+            if let Some(session) = guard.as_ref() {
             let names = router_huawei::names_by_ip(session).await;
             let mut learned: Vec<(String, String)> = Vec::new();
             for d in list.iter_mut() {
@@ -2151,6 +2154,7 @@ async fn lan_devices(
             // without signing in to the router again.
             if !learned.is_empty() {
                 quotacards::lan::save_router_names(learned);
+            }
             }
         }
     }
