@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Copy, Loader2, RefreshCw, Shield, ShieldCheck } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
+import { useApp } from "@/state/app"
+import { RouterLinkDialog } from "@/components/RouterLinkDialog"
 import { copyText } from "@/lib/clipboard"
 import * as api from "@/lib/ipc"
 import type { LanDevice } from "@/lib/ipc"
@@ -20,6 +22,7 @@ type Routed = { ip: string; mac: string } | null
 // shield. Nothing is a dropdown.
 export function Network() {
   const { t } = useI18n()
+  const { vpnOn } = useApp()
   const [list, setList] = useState<LanDevice[]>([])
   const [scanning, setScanning] = useState(true)
   const [scanError, setScanError] = useState("")
@@ -30,6 +33,8 @@ export function Network() {
   const [diag, setDiag] = useState<string[]>([])
   const [routeError, setRouteError] = useState("")
   const [copied, setCopied] = useState("")
+  const [linked, setLinked] = useState(false)
+  const [linkOpen, setLinkOpen] = useState(false)
 
   // Paint what the last scan remembered, immediately, so the page is never an
   // empty box while a sweep runs.
@@ -47,9 +52,47 @@ export function Network() {
       .lanClaimReady()
       .then((r) => alive && setReady(r))
       .catch(() => undefined)
+    void api
+      .routerStatus()
+      .then((r) => alive && setLinked(r))
+      .catch(() => undefined)
     return () => {
       alive = false
     }
+  }, [])
+
+  // Names that were only guessed from the hardware address are filled in by a
+  // background resolver a few seconds after the scan answers. Re-read the list
+  // twice so those real names reach the page instead of waiting for the next
+  // manual scan.
+  const nameTimers = useRef<number[]>([])
+  const scheduleNameRefresh = useCallback(() => {
+    nameTimers.current.forEach((id) => window.clearTimeout(id))
+    nameTimers.current = [4000, 9000, 16000].map((ms) =>
+      window.setTimeout(() => {
+        void api
+          .lanKnown()
+          .then(applyList)
+          .catch(() => undefined)
+      }, ms),
+    )
+  }, [])
+
+  // A refresh must never make a name worse. The remembered list answers
+  // before the scan and carries no names, so a blind overwrite replaced the
+  // scan's vendor labels with nothing; the better-provenanced name wins.
+  const nameRank = (src?: string) =>
+    !src || src === "-" || src === "vendor" || src === "guess" ? 0 : 1
+  const applyList = useCallback((next: LanDevice[]) => {
+    setList((prev) =>
+      next.map((n) => {
+        const p = prev.find((x) => x.mac === n.mac)
+        if (p && nameRank(p.source) > nameRank(n.source)) {
+          return { ...n, name: p.name, source: p.source }
+        }
+        return n
+      }),
+    )
   }, [])
 
   const scan = useCallback(async () => {
@@ -57,16 +100,33 @@ export function Network() {
     setScanError("")
     try {
       const d = await api.lanDevices()
-      setList(d)
+      applyList(d)
+      scheduleNameRefresh()
     } catch (e) {
       setScanError(typeof e === "string" ? e : String(e))
     } finally {
       setScanning(false)
     }
-  }, [])
+  }, [applyList, scheduleNameRefresh])
 
   useEffect(() => {
     void scan()
+    return () => {
+      nameTimers.current.forEach((id) => window.clearTimeout(id))
+    }
+  }, [scan])
+
+  // The router knows every name, including the phones that hide theirs. The
+  // link is optional: without it the list falls back to hardware guesses.
+  const unlink = useCallback(async () => {
+    setBusy("router")
+    try {
+      await api.routerUnlink()
+      setLinked(false)
+      void scan()
+    } finally {
+      setBusy("")
+    }
   }, [scan])
 
   const route = useCallback(
@@ -189,6 +249,38 @@ export function Network() {
         </div>
       )}
 
+      <div className="flex shrink-0 items-center gap-3 rounded-[var(--r-card)] border border-line bg-[var(--panel)] px-5 py-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[12.5px] text-txt">{t("netNamesTitle")}</p>
+          <p className="mt-0.5 truncate text-[11.5px] text-txt3">{t("netNamesBody")}</p>
+        </div>
+        {linked ? (
+          <button
+            onClick={() => void unlink()}
+            disabled={busy === "router"}
+            className="press h-8 shrink-0 rounded-[7px] border border-line px-3 text-[12px] text-txt2 transition-colors hover:bg-white/[0.05] disabled:opacity-50"
+          >
+            {t("netNamesUnlink")}
+          </button>
+        ) : (
+          <button
+            onClick={() => setLinkOpen(true)}
+            className="press h-8 shrink-0 rounded-[7px] border border-[var(--brand-line)] px-3 text-[12px] text-brand-strong transition-colors hover:bg-[var(--brand-bg)]"
+          >
+            {t("netNamesLink")}
+          </button>
+        )}
+      </div>
+
+      <RouterLinkDialog
+        open={linkOpen}
+        onOpenChange={setLinkOpen}
+        onLinked={() => {
+          setLinked(true)
+          void scan()
+        }}
+      />
+
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
         <div className="flex shrink-0 items-center gap-3 border-b border-line px-5 py-3">
           <input
@@ -229,25 +321,38 @@ export function Network() {
                           {d.name && d.name !== "-" ? d.name : t("netPrivateName")}
                         </span>
                         {d.self_pc && <Tag>{t("netThisPc")}</Tag>}
+                        {(d.source === "vendor" || d.source === "guess") && !d.self_pc && (
+                          <Tag>{t("netSrcGuess")}</Tag>
+                        )}
                         {d.protected && !d.self_pc && <Tag>{t("netProtected")}</Tag>}
                         {isRouted && <Tag brand>{t("netViaTunnel")}</Tag>}
                       </div>
-                      <div className="mt-0.5 flex items-center gap-3 text-[11.5px] text-txt3">
-                        <button
-                          onClick={() => void copy(d.ip)}
-                          className="press inline-flex items-center gap-1 font-mono tabular-nums transition-colors hover:text-txt2"
-                          aria-label={t("netCopyIp")}
-                        >
-                          {d.ip}
-                          <Copy className="size-3 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
-                        </button>
-                        <button
-                          onClick={() => void copy(d.mac.toUpperCase())}
-                          className="press truncate font-mono transition-colors hover:text-txt2"
-                          aria-label={t("netCopyMac")}
-                        >
-                          {d.mac.toUpperCase()}
-                        </button>
+                      <div className="mt-1 flex items-center gap-3 text-[11.5px] text-txt3">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-txt3/70">
+                            {t("netLabelIp")}
+                          </span>
+                          <button
+                            onClick={() => void copy(d.ip)}
+                            className="press inline-flex items-center gap-1 font-mono tabular-nums transition-colors hover:text-txt2"
+                            aria-label={t("netCopyIp")}
+                          >
+                            {d.ip}
+                            <Copy className="size-3 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
+                          </button>
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-txt3/70">
+                            {t("netLabelMac")}
+                          </span>
+                          <button
+                            onClick={() => void copy(d.mac.toUpperCase())}
+                            className="press truncate font-mono transition-colors hover:text-txt2"
+                            aria-label={t("netCopyMac")}
+                          >
+                            {d.mac.toUpperCase()}
+                          </button>
+                        </span>
                         {copied === d.ip || copied === d.mac.toUpperCase() ? (
                           <span className="text-brand-strong">{t("copied")}</span>
                         ) : null}
@@ -286,13 +391,15 @@ export function Network() {
                     ) : (
                       <button
                         onClick={() => void route(d)}
-                        disabled={!!busy || locked || !ready}
+                        disabled={!!busy || locked || !ready || !vpnOn}
                         title={
-                          locked
-                            ? t("netCannotSelf")
-                            : !ready
-                              ? t("netCannotNpcap")
-                              : t("netViaTunnelHint")
+                          !vpnOn
+                            ? t("netNeedTunnel")
+                            : locked
+                              ? t("netCannotSelf")
+                              : !ready
+                                ? t("netCannotNpcap")
+                                : t("netViaTunnelHint")
                         }
                         className="press h-8 w-[118px] shrink-0 rounded-[7px] border border-[var(--brand-line)] text-[12px] text-brand-strong transition-colors hover:bg-[var(--brand-bg)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
                       >

@@ -2950,6 +2950,16 @@ impl From<quotacards::lan_route::Intent> for RoutedDevice {
 #[tauri::command]
 #[cfg(windows)]
 async fn lan_route_device(ip: String, mac: String) -> Result<RoutedDevice, String> {
+    // A device pointed at this PC has nowhere to go while the tunnel is down:
+    // its packets would arrive here and leave through the normal route, or
+    // stop dead. Refuse in words rather than cut a device off.
+    if quotacards::vpn::task_engine_pid().is_none() {
+        return Err(
+            "Connect the VPN first. Routing a device sends its traffic through this PC, \
+             and with no tunnel it has nowhere to go."
+                .to_string(),
+        );
+    }
     tauri::async_runtime::spawn_blocking(move || {
         let target: std::net::Ipv4Addr = ip.parse().map_err(|_| format!("not an address: {ip}"))?;
         let adapter = quotacards::lan_route::claim(target, &mac)?;
