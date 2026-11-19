@@ -995,17 +995,24 @@ async fn tunnel_start(
     } else if pid_alive(pid) {
         // Alive but not routing yet: keep it running and let the status poll
         // adopt it once the routes land, instead of killing a healthy engine.
-        // A card the server never registered carries nothing. Repair it here,
-        // once, so the next press works, and say what happened instead of
-        // leaving the user to guess.
-        let repair = server::add_client(&host, port, &user, &key, &card.uuid).await;
-        let tail = match repair {
-            Ok(_) => " The server did not know this card; it was registered just now, press Connect again.".to_string(),
-            Err(e) => format!(" The server still refuses this card: {e}"),
-        };
+        // Where did it break? Only a server that answers and still carries
+        // nothing is a registration problem; a name that will not resolve, a
+        // blocked port or a broken handshake must never trigger a repair.
+        let stage = vpn::stage_of(&host, port, &vpn::engine_log_tail());
+        if stage == vpn::Stage::Reachable {
+            let repaired = server::add_client(&host, port, &user, &key, &card.uuid).await;
+            let tail = match repaired {
+                Ok(_) => " The server did not know this card; it is registered now, press Connect again.",
+                Err(_) => " The server did not know this card and refused the repair; support is needed.",
+            };
+            return Ok(CmdResult {
+                ok: false,
+                msg: format!("The tunnel came up but carried nothing.{tail}"),
+            });
+        }
         Ok(CmdResult {
             ok: false,
-            msg: format!("The tunnel is still starting - give it a few seconds or connect again.{tail}"),
+            msg: vpn::stage_words(stage).to_string(),
         })
     } else {
         // A task start can show up a moment after our wait window: adopt what
@@ -1029,16 +1036,24 @@ async fn tunnel_start(
         }
         *engine.0.lock().unwrap() = None;
         vpn::engine_cleanup();
-        // Same repair on the hard failure: a client the server does not know
-        // looks exactly like a dead tunnel from here.
-        let repair = server::add_client(&host, port, &user, &key, &card.uuid).await;
-        let tail = match repair {
-            Ok(_) => " The card was re-registered; press Connect again.".to_string(),
-            Err(e) => format!(" The server refuses this card: {e}"),
-        };
+        // Same rule on the hard failure: repair only when the server itself
+        // answers. The engine's log stays out of the message, it can carry the
+        // card id and the server name.
+        let stage = vpn::stage_of(&host, port, &vpn::engine_log_tail());
+        if stage == vpn::Stage::Reachable {
+            let repaired = server::add_client(&host, port, &user, &key, &card.uuid).await;
+            let tail = match repaired {
+                Ok(_) => " The card was re-registered; press Connect again.",
+                Err(_) => " The server refused to register this card.",
+            };
+            return Ok(CmdResult {
+                ok: false,
+                msg: format!("The tunnel did not come up.{tail}"),
+            });
+        }
         Ok(CmdResult {
             ok: false,
-            msg: format!("The tunnel did not come up: {}{tail}", vpn::engine_log_tail()),
+            msg: format!("The tunnel did not come up. {}", vpn::stage_words(stage)),
         })
     }
 }
@@ -3373,6 +3388,18 @@ pub fn run() {
     }
     // Headless device scan, for checking the network layer without the UI.
 #[cfg(windows)]
+    if let Some(i) = std::env::args().position(|a| a == "--stage") {
+        let host = std::env::args().nth(i + 1).unwrap_or_default();
+        let port: u16 = std::env::args().nth(i + 2).and_then(|v| v.parse().ok()).unwrap_or(443);
+        let log = std::env::args()
+            .nth(i + 3)
+            .and_then(|p| std::fs::read_to_string(p).ok())
+            .unwrap_or_default();
+        let stage = quotacards::vpn::stage_of(&host, port, &log);
+        println!("STAGE {:?}", stage);
+        println!("WORDS {}", quotacards::vpn::stage_words(stage));
+        return;
+    }
     if let Some(i) = std::env::args().position(|a| a == "--lan-monitor") {
         let secs: u64 = std::env::args().nth(i + 1).and_then(|v| v.parse().ok()).unwrap_or(60);
         // Every address the neighbour table knows, so the watch has the same

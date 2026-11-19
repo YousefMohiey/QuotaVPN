@@ -1155,6 +1155,71 @@ pub fn restart_for_intent() -> Result<(), String> {
 /// Validate the config before routing a single packet.
 /// Cheap fingerprint of the tunnel config that is on disk, so a connect can
 /// tell "same file" from "new file" without parsing it.
+/// Which stage of a connection actually failed, worked out from two cheap
+/// facts: can the name resolve, and does anything accept a TCP connection on
+/// the port. TLS is read from the engine's own log because only the engine
+/// knows whether the handshake, the certificate or the server name was the
+/// part that broke.
+///
+/// Deliberately narrow: it answers "where", never "who" - no address, no card
+/// id and no log line leaves this function.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Stage {
+    Dns,
+    TcpTimeout,
+    TcpRefused,
+    Tls,
+    Reachable,
+}
+
+pub fn stage_of(host: &str, port: u16, log: &str) -> Stage {
+    use std::net::ToSocketAddrs;
+    let addrs: Vec<std::net::SocketAddr> = match (host, port).to_socket_addrs() {
+        Ok(a) => a.collect(),
+        Err(_) => return Stage::Dns,
+    };
+    if addrs.is_empty() {
+        return Stage::Dns;
+    }
+    let mut refused = false;
+    for a in &addrs {
+        match std::net::TcpStream::connect_timeout(a, std::time::Duration::from_secs(4)) {
+            Ok(_) => {
+                let l = log.to_lowercase();
+                if l.contains("certificate")
+                    || l.contains("handshake")
+                    || l.contains("tls:")
+                    || l.contains("unexpected eof")
+                {
+                    return Stage::Tls;
+                }
+                return Stage::Reachable;
+            }
+            Err(e) => {
+                if e.kind() == std::io::ErrorKind::ConnectionRefused {
+                    refused = true;
+                }
+            }
+        }
+    }
+    if refused {
+        Stage::TcpRefused
+    } else {
+        Stage::TcpTimeout
+    }
+}
+
+/// The sentence a user gets for a stage. No addresses, no identifiers.
+pub fn stage_words(stage: Stage) -> &'static str {
+    match stage {
+        Stage::Dns => "This network cannot look up the server name. Your internet or DNS is the problem, not your card.",
+        Stage::TcpRefused => "The server refused the connection on port 443. It may be restarting; try again in a moment.",
+        Stage::TcpTimeout => "Nothing answered on port 443. Your network or ISP is probably blocking it.",
+        Stage::Tls => "The secure handshake failed. A network filter is intercepting port 443.",
+        Stage::Reachable => "The server is reachable but the tunnel carried nothing.",
+    }
+}
+
 pub fn tun_config_digest() -> Option<u64> {
     use std::hash::{Hash, Hasher};
     let bytes = std::fs::read(engine_dir().join("singbox-tun.json")).ok()?;
