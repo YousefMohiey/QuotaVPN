@@ -10,6 +10,7 @@ pub mod fingerprint;
 #[cfg(target_os = "windows")]
 pub mod lan_ask;
 #[cfg(target_os = "windows")]
+pub mod dhcp;
 pub mod lan_ctrl;
 #[cfg(target_os = "windows")]
 pub mod lan_names;

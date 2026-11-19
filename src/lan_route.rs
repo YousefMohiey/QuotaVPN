@@ -28,7 +28,7 @@ const ARP_REQUEST: u16 = 1;
 const HWTYPE_ETHERNET: u16 = 1;
 const PROTO_IPV4: u16 = 0x0800;
 
-fn mac_bytes(mac: &str) -> Option<[u8; 6]> {
+pub fn mac_bytes(mac: &str) -> Option<[u8; 6]> {
     let parts: Vec<&str> = mac.split(':').collect();
     if parts.len() != 6 {
         return None;

@@ -744,9 +744,12 @@ pub fn start_monitor(targets: Vec<(String, String)>) -> Result<MonitorSession, S
 
     // Watching, capping and blocking all live in the pipeline now, so none of
     // them is gated on the packet driver being installed.
+    // Watching enforces nothing, so it must intercept nothing. Putting every
+    // device in the policy pulled the whole network through one userland queue
+    // and a couple of minutes later everything, this PC included, fell over.
     let policy = crate::lan_forward::Policy {
         seq: 1,
-        ips: peers.iter().map(|p| p.ip.clone()).collect(),
+        ips: Vec::new(),
         blocked: Vec::new(),
         caps: HashMap::new(),
         ttl_secs: limit_secs(),
@@ -776,13 +779,11 @@ pub fn start_monitor(targets: Vec<(String, String)>) -> Result<MonitorSession, S
 
         let mut last_poison = Instant::now() - Duration::from_secs(5);
         while !stop2.load(Ordering::Relaxed) {
-            if last_poison.elapsed() > Duration::from_millis(900) {
-                last_poison = Instant::now();
-                for (tm, tip, _, _) in &nodes {
-                    let _ = link.send_claim(&arp_reply(*tm, our, gip, *tm, *tip));
-                    let _ = link.send_claim(&arp_reply(gw, our, *tip, gw, gip));
-                }
-            }
+            // Counting is passive. Repointing every device at this PC is what
+            // made the whole network depend on one machine and took it down
+            // after a couple of minutes, so nothing is claimed while watching:
+            // the capture counts what it can see and says nothing else.
+            let _ = (&mut last_poison, &nodes, our, gw, gip);
             // The pipeline counts; this side only files the totals under the
             // bucket each device already has.
             if let Some(state) = crate::lan_forward::read_state() {

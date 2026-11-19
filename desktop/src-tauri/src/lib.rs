@@ -3344,6 +3344,61 @@ pub fn run() {
     }
     // Headless device scan, for checking the network layer without the UI.
 #[cfg(windows)]
+    if let Some(i) = std::env::args().position(|a| a == "--lan-monitor") {
+        let secs: u64 = std::env::args().nth(i + 1).and_then(|v| v.parse().ok()).unwrap_or(60);
+        // Every address the neighbour table knows, so the watch has the same
+        // roster the page would hand it.
+        let out = std::process::Command::new("arp").arg("-a").output();
+        let mut targets: Vec<(String, String)> = Vec::new();
+        if let Ok(o) = out {
+            for line in String::from_utf8_lossy(&o.stdout).lines() {
+                let f: Vec<&str> = line.split_whitespace().collect();
+                if f.len() >= 2 && f[0].starts_with("192.168.") && f[1].contains('-') {
+                    targets.push((f[0].to_string(), f[1].replace('-', ":").to_lowercase()));
+                }
+            }
+        }
+        println!("MONITOR targets={}", targets.len());
+        match quotacards::lan_ctrl::start_monitor(targets) {
+            Ok(session) => {
+                let started = std::time::Instant::now();
+                while started.elapsed() < std::time::Duration::from_secs(secs) {
+                    std::thread::sleep(std::time::Duration::from_secs(5));
+                    let b = session.bytes.lock().map(|m| m.len()).unwrap_or(0);
+                    println!("MONITOR alive {}s buckets={b}", started.elapsed().as_secs());
+                }
+                session.stop.store(true, std::sync::atomic::Ordering::Relaxed);
+                println!("MONITOR done");
+            }
+            Err(e) => println!("MONITOR_ERR {e}"),
+        }
+        return;
+    }
+    if let Some(i) = std::env::args().position(|a| a == "--dhcp-serve") {
+        let secs: u64 = std::env::args().nth(i + 1).and_then(|v| v.parse().ok()).unwrap_or(30);
+        let mac = std::env::args().nth(i + 2).unwrap_or_default();
+        let ip = std::env::args().nth(i + 3).unwrap_or_default();
+        let mut routed = std::collections::HashMap::new();
+        if let (Ok(addr), true) = (ip.parse::<std::net::Ipv4Addr>(), !mac.is_empty()) {
+            if let Some(m) = quotacards::lan_route::mac_bytes(&mac) {
+                routed.insert(m, addr);
+            }
+        }
+        let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(secs);
+        let s2 = stop.clone();
+        std::thread::spawn(move || {
+            while std::time::Instant::now() < deadline {
+                std::thread::sleep(std::time::Duration::from_millis(200));
+            }
+            s2.store(true, std::sync::atomic::Ordering::Relaxed);
+        });
+        match quotacards::dhcp::serve(routed, stop, |line| println!("{line}")) {
+            Ok(()) => println!("DHCP_DONE"),
+            Err(e) => println!("DHCP_ERR {e}"),
+        }
+        return;
+    }
     if let Some(i) = std::env::args().position(|a| a == "--lan-claim") {
         let ip = std::env::args().nth(i + 1).unwrap_or_default();
         let mac = std::env::args().nth(i + 2).unwrap_or_default();
