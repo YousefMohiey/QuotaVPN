@@ -897,8 +897,22 @@ async fn tunnel_start(
     let list = apps.unwrap_or_default();
     vpn::ensure_engine().map_err(|e| e)?;
     let wg_ref = wg_tuple.as_ref().map(|(p, a, s, j)| (p.as_str(), a.as_str(), s.as_str(), j.as_str()));
+    // The config is rebuilt on every press, but it is usually byte-identical to
+    // the one a live engine is already running. Restarting in that case costs a
+    // full engine stop, driver handover and route settle for nothing, which is
+    // most of the wait on a second connect.
+    let before = vpn::tun_config_digest();
     vpn::write_tun_config(&card.uuid, &host, &card.sni, &mode, &list, voice_on, t, &hy2_pass, wg_ref)
         .map_err(|e| e)?;
+    let unchanged = before.is_some() && before == vpn::tun_config_digest();
+    let live = engine.0.lock().ok().and_then(|g| *g).filter(|p| *p != 0 && pid_alive(*p));
+    if unchanged && live.is_some() && vpn::tun_routes_present() {
+        vpn::app_log("connect: config unchanged and the tunnel is already carrying it");
+        return Ok(CmdResult {
+            ok: true,
+            msg: format!("VPN on - {} carries the traffic", card.name),
+        });
+    }
     vpn::check_config().map_err(|e| e)?;
     stop_engine(&engine);
     let mode_label = if voice_on {
@@ -953,7 +967,7 @@ async fn tunnel_start(
                 up = true;
                 break;
             }
-            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(120)).await;
         }
         if up || (pid != 0 && pid_alive(pid)) || attempt == 1 {
             break;

@@ -1153,6 +1153,16 @@ pub fn restart_for_intent() -> Result<(), String> {
 }
 
 /// Validate the config before routing a single packet.
+/// Cheap fingerprint of the tunnel config that is on disk, so a connect can
+/// tell "same file" from "new file" without parsing it.
+pub fn tun_config_digest() -> Option<u64> {
+    use std::hash::{Hash, Hasher};
+    let bytes = std::fs::read(engine_dir().join("singbox-tun.json")).ok()?;
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    bytes.hash(&mut h);
+    Some(h.finish())
+}
+
 pub fn check_config() -> Result<(), String> {
     let o = run_hidden(
         &singbox_path().to_string_lossy(),
