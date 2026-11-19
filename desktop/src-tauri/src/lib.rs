@@ -995,9 +995,17 @@ async fn tunnel_start(
     } else if pid_alive(pid) {
         // Alive but not routing yet: keep it running and let the status poll
         // adopt it once the routes land, instead of killing a healthy engine.
+        // A card the server never registered carries nothing. Repair it here,
+        // once, so the next press works, and say what happened instead of
+        // leaving the user to guess.
+        let repair = server::add_client(&host, port, &user, &key, &card.uuid).await;
+        let tail = match repair {
+            Ok(_) => " The server did not know this card; it was registered just now, press Connect again.".to_string(),
+            Err(e) => format!(" The server still refuses this card: {e}"),
+        };
         Ok(CmdResult {
             ok: false,
-            msg: "The tunnel is still starting - give it a few seconds or connect again".into(),
+            msg: format!("The tunnel is still starting - give it a few seconds or connect again.{tail}"),
         })
     } else {
         // A task start can show up a moment after our wait window: adopt what
@@ -1021,9 +1029,16 @@ async fn tunnel_start(
         }
         *engine.0.lock().unwrap() = None;
         vpn::engine_cleanup();
+        // Same repair on the hard failure: a client the server does not know
+        // looks exactly like a dead tunnel from here.
+        let repair = server::add_client(&host, port, &user, &key, &card.uuid).await;
+        let tail = match repair {
+            Ok(_) => " The card was re-registered; press Connect again.".to_string(),
+            Err(e) => format!(" The server refuses this card: {e}"),
+        };
         Ok(CmdResult {
             ok: false,
-            msg: format!("The tunnel did not come up: {}", vpn::engine_log_tail()),
+            msg: format!("The tunnel did not come up: {}{tail}", vpn::engine_log_tail()),
         })
     }
 }
