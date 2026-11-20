@@ -1000,7 +1000,7 @@ async fn tunnel_start(
         // blocked port or a broken handshake must never trigger a repair.
         let stage = vpn::stage_of(&host, port, &vpn::engine_log_tail());
         if stage == vpn::Stage::Reachable {
-            let repaired = server::add_client(&host, port, &user, &key, &card.uuid).await;
+            let repaired = quotacards::qcreg::call("register", &card.uuid);
             let tail = match repaired {
                 Ok(_) => " The server did not know this card; it is registered now, press Connect again.",
                 Err(_) => " The server did not know this card and refused the repair; support is needed.",
@@ -1041,7 +1041,7 @@ async fn tunnel_start(
         // card id and the server name.
         let stage = vpn::stage_of(&host, port, &vpn::engine_log_tail());
         if stage == vpn::Stage::Reachable {
-            let repaired = server::add_client(&host, port, &user, &key, &card.uuid).await;
+            let repaired = quotacards::qcreg::call("register", &card.uuid);
             let tail = match repaired {
                 Ok(_) => " The card was re-registered; press Connect again.",
                 Err(_) => " The server refused to register this card.",
