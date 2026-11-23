@@ -139,13 +139,13 @@ release job fails if the binary contains `<Task version=` or `schtasks /Create`.
 
 ## Current state
 
-**The latest published release is v0.6.18.** This tree carries the Windows 0.7.0 credential
-migration (`notes/HANDOFF-2026-11-22.md`): the desktop imports a server-issued `qc1:` secret into a
-DPAPI-sealed per-card store, talks to the card API over HTTPS, and no longer compiles the SSH
-control plane. The phone stays at 0.6.18 for now; its `server.rs`/`ssh.rs` path is behind
-`legacy-ssh`. The private Windows 0.7.0 installer was built at
-`desktop/src-tauri/target/release/bundle/nsis/QuotaVPN_0.7.0_x64-setup.exe` with updater artifacts
-off. It is not published and must not be distributed until the owner installs and approves it.
+**The latest published release is v0.7.0, Windows only.** This tree carries the 0.7.0 credential
+migration (`notes/HANDOFF-2026-11-22.md`): the desktop imports a server-issued `qv1:` secret into a
+DPAPI-sealed per-card store (`qc1:` is still accepted), talks to the card API over HTTPS, and no
+longer compiles the SSH control plane. The phone stays at 0.6.18 for now; its `server.rs`/`ssh.rs`
+path is behind `legacy-ssh`. The 0.7.0 installer is published and signed for the updater:
+`QuotaVPN_0.7.0_x64-setup.exe`. The Network page is held back from this build and the WinDivert
+pair is not bundled; the LAN work returns in a later update.
 
 `notes/HANDOFF-2026-11-16.md` is the change log from 0.6.5 to 0.6.17. The Windows build is done by
 the `signed-release` workflow on a GitHub runner from a `v*` tag and `latest.json` is composed by
@@ -164,11 +164,10 @@ the vanilla UI in `android/tauri-app/ui`. The desktop keeps all three transports
 cached Hysteria2/WireGuard values; a newly imported card is VLESS only until the API can provision
 the other two. `notes/STATUS.md` has the Sept 2026 detail and `notes/linux.md` covers the Linux port.
 
-`cargo test` is green (102 passed) on this tree. The Windows app builds for the MSVC host target;
+`cargo test` is green (103 passed) on this tree. The Windows app builds for the MSVC host target;
 the GNU target currently fails in `embed-resource`, not in the Rust code. The card API hostname is
-`quotavpn.duckdns.org` and resolves to `80.225.89.162`. TCP 443 answers; TCP 8444 still times out,
-so the OCI ingress rule and an API certificate for the new name are the remaining network
-blockers.
+`quotavpn.duckdns.org` and resolves to `80.225.89.162`. TCP 443 and TCP 8444 both answer, the
+`qvreg` API certificate for the new name is deployed, and the real card reports active.
 
 ## Agent skills and MCPs
 

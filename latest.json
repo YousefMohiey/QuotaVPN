@@ -1,12 +1,12 @@
 {
-  "version": "0.6.18",
-  "build": "346edbd",
-  "notes": "Connect now proves the tunnel before it says Connected.\n\nThe old check only asked whether the server port answered, which stays\nreachable even when the card behind it is not registered. In that state the\ndial read Connected while every flow died. The engine is now asked for a real\nround trip through the tunnel, and the line under the dial says so when\nnothing passes.\n\nNothing else changed. Same transports, same screens.",
-  "pub_date": "2026-11-16T23:45:13Z",
+  "version": "0.7.0",
+  "build": "8f2f7dd",
+  "notes": "Windows 0.7.0. The phone stays on 0.6.18 for now.\n\n**Cards are delivered, not pasted.** The server issues a `qv1:` credential; the desktop imports it from `qvprofile.json` and keeps it in a DPAPI-sealed store. The customer UI no longer creates, imports or pastes cards, and Settings has no card section.\n\n**One card, two presets.** Gamerz and Streamerz switch the domain (`ea.com` / `youtube.com`) on the same card. A custom domain still works. Two-card installs from 0.6.x keep both cards and pick the matching kind.\n\n**Server naming.** The server side is now `qvreg` / `qv-provision` / `qv-xray-client`. `qv1:` is the new prefix; existing `qc1:` credentials still parse and connect.\n\n**Faster connect.** Warm backend connect is about 2.8 s. The unconditional pre-connect teardown and leftover-adapter reset are gone, and start/stop are serialised so pressing Connect while the dial is still stopping cannot be killed by the previous stop.\n\n**Valorant.** \"Launch with Valorant\" arms the voice helper from the backend watcher. The voice rules stay on the selected transport, exactly as before. A direct exception for `20.190.0.0/16` fixes Microsoft login/OAuth failing while voice is on.\n\n**Network page held back.** The Network page is not in this build; the LAN work is incomplete and will return in a later update. The WinDivert driver is not bundled.\n\nThe installer is unsigned, so SmartScreen warns on first run. Existing installs update in place; cards and the server name are migrated automatically.",
+  "pub_date": "2026-11-23T00:31:06Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSU9FdXpCTmN0cXRMYWM5SDMzZVdVUVJnTlE1SnBqNmNiaFptbmttVDAxUUhIbDlPS2hNL1IrUlN1bEhPZEJrR0ZLZVlEaHREa0xrRS9vMWhYR202ZkEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0ODcyNDg1CWZpbGU6UXVvdGFWUE5fMC42LjE4X3g2NC1zZXR1cC5leGUJdmVyc2lvbjowLjYuMTgKcWt1WCtMQTE5N2wraVFOcFpxNS9uNGZXc053RHRWK1JwdjFDSEllcGhyWWk4N1EwRkhNdDNBVHhGZjFhWlhJdzEwZmUrK3ExZGQ1Ykk1eVU5akNBREE9PQo=",
-      "url": "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.6.18/QuotaVPN_0.6.18_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSUdoL2Z0MHhEQlJTYmxCUVcwckVaTlZlelNPR1BOcU5OTGhodnFVbGswMDRkTitLeld6WUdvM3ZESTN5OFBsN0k1allkTUd6TStFVzByajRCWTdRREFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MzkzODU2CWZpbGU6UXVvdGFWUE5fMC43LjBfeDY0LXNldHVwLmV4ZQptT1JoQnVNTmpVUHJlYmlzZ2g3SHgrZ1N0eDdKaWgvTDhJUTc5ajcveWxMVXhWSlArdWh6U2Y5L0lqenJwYlJ2N1dYdXdoWENRZ05TV2YzRkRyWXpBdz09Cg==",
+      "url": "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.0/QuotaVPN_0.7.0_x64-setup.exe"
     }
   }
 }
