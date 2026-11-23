@@ -17,6 +17,10 @@ pub mod lan_ctrl;
 pub mod lan_names;
 #[cfg(target_os = "windows")]
 pub mod wpcap;
+// One device carried at layer 2, without the router's cooperation. Windows
+// only: it opens Npcap for the raw frames.
+#[cfg(target_os = "windows")]
+pub mod lan_relay;
 #[cfg(feature = "legacy-ssh")]
 pub mod server;
 #[cfg(feature = "legacy-ssh")]

@@ -28,7 +28,7 @@ pub struct Wire {
 /// session has a deadline and a written note of what it changed.
 #[cfg(not(target_os = "windows"))]
 use crate::wincompat::CmdExt;
-fn journal_path() -> std::path::PathBuf {
+pub(crate) fn journal_path() -> std::path::PathBuf {
     // The app's own data directory is the one place that is always writable,
     // whatever the working directory or the environment happens to be.
     let base = std::env::var("LOCALAPPDATA")
@@ -43,7 +43,7 @@ fn journal_path() -> std::path::PathBuf {
     base.join("quotavpn").join("lan_journal.txt")
 }
 
-fn write_journal(line: &str) {
+pub(crate) fn write_journal(line: &str) {
     let path = journal_path();
     if let Some(dir) = path.parent() {
         let _ = std::fs::create_dir_all(dir);
@@ -54,7 +54,7 @@ fn write_journal(line: &str) {
     }
 }
 
-fn clear_journal() {
+pub(crate) fn clear_journal() {
     let _ = std::fs::remove_file(journal_path());
 }
 
@@ -298,7 +298,29 @@ fn mac_for(ip: &str) -> Option<String> {
     None
 }
 
-fn mac_bytes(mac: &str) -> Option<[u8; 6]> {
+/// Resolve the hardware address of a device, using the caller's copy first and
+/// one ping to fill the neighbour table when it is not there.
+pub(crate) fn resolve_mac(target_ip: &str, known: Option<String>) -> Option<String> {
+    let mut mac = known
+        .map(|m| m.replace('-', ":").to_lowercase())
+        .filter(|m| m.split(':').count() == 6 && !m.is_empty())
+        .unwrap_or_default();
+    if mac.is_empty() {
+        mac = mac_for(target_ip).unwrap_or_default();
+    }
+    if mac.is_empty() {
+        let _ = run("ping", &["-n", "1", "-w", "700", target_ip]);
+        std::thread::sleep(Duration::from_millis(150));
+        mac = mac_for(target_ip).unwrap_or_default();
+    }
+    if mac.is_empty() {
+        None
+    } else {
+        Some(mac)
+    }
+}
+
+pub(crate) fn mac_bytes(mac: &str) -> Option<[u8; 6]> {
     let parts: Vec<&str> = mac.split(':').collect();
     if parts.len() != 6 {
         return None;
@@ -347,7 +369,7 @@ pub fn wire() -> Option<Wire> {
     })
 }
 
-fn arp_reply(dst_mac: [u8; 6], src_mac: [u8; 6], sender_ip: [u8; 4], target_mac: [u8; 6], target_ip: [u8; 4]) -> Vec<u8> {
+pub(crate) fn arp_reply(dst_mac: [u8; 6], src_mac: [u8; 6], sender_ip: [u8; 4], target_mac: [u8; 6], target_ip: [u8; 4]) -> Vec<u8> {
     let mut f = Vec::with_capacity(42);
     f.extend_from_slice(&dst_mac);
     f.extend_from_slice(&src_mac);
@@ -360,7 +382,7 @@ fn arp_reply(dst_mac: [u8; 6], src_mac: [u8; 6], sender_ip: [u8; 4], target_mac:
     f
 }
 
-fn ip4(s: &str) -> Option<[u8; 4]> {
+pub(crate) fn ip4(s: &str) -> Option<[u8; 4]> {
     let p: Vec<u8> = s.split('.').filter_map(|x| x.parse().ok()).collect();
     if p.len() == 4 {
         Some([p[0], p[1], p[2], p[3]])

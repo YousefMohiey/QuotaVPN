@@ -374,9 +374,16 @@ export function Network() {
     (active.ip === selectedDevice.ip || active.mac === selectedDevice.mac)
   )
   const activeOther = !!active && !activeHere
-  const ready = !!(
-    (snap?.driver_ready || setup?.windivert) &&
-    (snap?.claim_ready || setup?.npcap)
+  const ready = !!(snap?.claim_ready || setup?.npcap)
+  // A TCP download cannot move without its ACKs coming back. If this PC has
+  // carried a meaningful download for the device but not one upload byte, the
+  // device is sending its own traffic to the router and only the download half
+  // is ours. Some phones pin the gateway address exactly to prevent this.
+  const uploadsBypass = !!(
+    activeHere &&
+    active &&
+    active.up_bytes === 0 &&
+    active.down_bytes > 256 * 1024
   )
   // The guard sees our own claim as the gateway MAC moving, and after the claim
   // it can name the real router as the intruder. An alert needs a real,
@@ -428,7 +435,7 @@ export function Network() {
     try {
       await api.lanStart(selectedDevice.ip, selectedDevice.mac, block)
       const d = Math.max(0, Number(down) || 0)
-      const u = Math.max(0, Number(up) || 0)
+      const u = uploadsBypass ? 0 : Math.max(0, Number(up) || 0)
       if (!block && (d > 0 || u > 0)) await api.lanLimits(d, u)
       setBlocked(block)
       setActive(await api.lanStatus())
@@ -450,7 +457,7 @@ export function Network() {
     setError("")
     try {
       const d = Math.max(0, Number(down) || 0)
-      const u = Math.max(0, Number(up) || 0)
+      const u = uploadsBypass ? 0 : Math.max(0, Number(up) || 0)
       await api.lanLimits(d, u)
       setActive(await api.lanStatus())
     } catch (e) {
@@ -507,20 +514,6 @@ export function Network() {
       setDriverMsg(String(e))
     } finally {
       setNpcapBusy(false)
-    }
-  }
-
-  const prepareDriver = async () => {
-    setBusy("driver")
-    setDriverMsg("")
-    try {
-      const p = await api.lanPrepare()
-      setSetup(p)
-      await quickRefresh()
-    } catch (e) {
-      setDriverMsg(String(e))
-    } finally {
-      setBusy(null)
     }
   }
 
@@ -735,6 +728,7 @@ export function Network() {
                       key={k}
                       role="button"
                       tabIndex={0}
+                      data-no-drag
                       onClick={() => choose(d)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") choose(d)
@@ -958,25 +952,6 @@ export function Network() {
                               </button>
                             )}
                           </div>
-                          <div className="flex items-center justify-between gap-2 rounded-[7px] border border-line/70 px-2.5 py-1.5">
-                            <span className="flex items-center gap-2 text-[11px] text-txt2">
-                              <span className={cn("size-1.5 rounded-full", setup?.windivert || snap?.driver_ready ? "bg-[var(--green)]" : "bg-[var(--amber,orange)]")} aria-hidden />
-                              WinDivert
-                            </span>
-                            {setup?.windivert || snap?.driver_ready ? (
-                              <span className="text-[10px] uppercase tracking-[0.1em] text-[var(--green)]">{t("netReady")}</span>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => void prepareDriver()}
-                                disabled={busy === "driver"}
-                                className="press flex h-7 items-center gap-1.5 rounded-[6px] bg-[var(--brand)]/15 px-2 text-[10.5px] font-medium text-brand-strong disabled:opacity-50"
-                              >
-                                {busy === "driver" ? <Loader2 className="size-3 animate-spin" aria-hidden /> : null}
-                                {t("netSetupDriver")}
-                              </button>
-                            )}
-                          </div>
                         </div>
                         {!(setup?.npcap || snap?.claim_ready) ? (
                           <p className="mt-2 text-[10px] leading-snug text-txt3">{t("netNpcapHint")}</p>
@@ -1045,12 +1020,16 @@ export function Network() {
                             onChange={(e) => setUp(e.target.value.replace(/[^0-9]/g, ""))}
                             inputMode="numeric"
                             placeholder="0"
-                            className="h-7 w-20 border-0 bg-transparent text-right font-mono text-[12px]"
+                            disabled={uploadsBypass}
+                            className="h-7 w-20 border-0 bg-transparent text-right font-mono text-[12px] disabled:opacity-40"
                             dir="ltr"
                           />
                           <span className="text-[9.5px] text-txt3">KB/s</span>
                         </span>
                       </label>
+                      {uploadsBypass ? (
+                        <p className="px-1 text-[10px] leading-snug text-[var(--amber,orange)]">{t("netUploadBypass")}</p>
+                      ) : null}
                       <div className="flex gap-2">
                         {activeHere ? (
                           <>
@@ -1109,6 +1088,9 @@ export function Network() {
                           </div>
                         </div>
                         <p className="text-[10px] leading-snug text-txt3">{t("netTrafficOnly")}</p>
+                        {uploadsBypass ? (
+                          <p className="text-[10px] leading-snug text-[var(--amber,orange)]">{t("netUploadBypass")}</p>
+                        ) : null}
                       </>
                     ) : (
                       <div className="rounded-[9px] border border-line/70 px-3 py-2.5">

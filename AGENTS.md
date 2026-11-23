@@ -108,34 +108,41 @@ and leaves the normal binary untouched. Launch that copy, then `tauri_app_attach
 
 ## The LAN stack
 
-Everything a device sees of this machine goes through one elevated pass, never the window
-process. `src/windivert.rs` loads the WinDivert DLL that ships next to the executable and wraps
-the `WINDIVERT_LAYER_NETWORK_FORWARD` layer; `src/lan_forward.rs` is the loop that counts, caps
-and blocks on it, reading `lan/policy.json` from the engine directory and writing
-`lan/state.json`. The window process writes policy and starts the pass as a detached child of
-itself (argument `--lan-pipeline`); there is no scheduled task any more, see below.
+One device at a time is carried by `src/lan_relay.rs`, inside the window process (the manifest
+already requires an administrator token). It opens Npcap non-promiscuous on the wired adapter,
+asks the segment who holds the device's address, then tells the device this PC is the gateway and
+tells the router this PC is the device. Frames are re-addressed at layer 2 and sent back out, so
+the PC's IP stack, routes, firewall and VPN never see them. There is no IP forwarding to enable
+and no WinDivert pipeline. The capture opens before anything is claimed, a frame must actually be
+sent before the session is returned, the device must answer its probe first, and every exit
+including a panic sends the true mappings back. A killed process is restored from
+`lan_journal.txt` at the next start.
 
-The WinDivert pair is neither shipped nor fetched. It was fetched for a day and that, plus the
-task registration, is what kept getting the app quarantined. The loader still verifies the DLL
-against a SHA-256 pinned in `src/vpn.rs` before `LoadLibrary`, and only looks in
-`engine_dir/windivert` and beside the executable (the checkout paths exist in debug builds only).
-Without the driver, watching, capping and blocking cannot work: they filter packets this PC
-forwards, and nothing else on Windows can drop a forwarded packet.
+Npcap is the only packet driver the control path needs. The free installer has no silent mode, so
+the app runs its wizard. The relay opens non-promiscuous on purpose: promiscuous mode is the
+setting Npcap's own guide says to turn off when a wireless adapter misbehaves. Discovery and
+naming never need the driver: they use `arp -a`, a ping sweep, a UDP socket on 67 when elevated,
+and unicast mDNS queries.
 
-Npcap is the backend for forging the 42-byte ARP claim frame, chosen in one place through
-`wpcap::claim_link`. Discovery and naming never need it: they use `arp -a`, a ping sweep, a UDP
-socket on 67 when elevated, and unicast mDNS queries. `lan_claim_ready` gates only claiming.
-GatewayMode used to answer "sent" without sending anything, so a route could be reported as
-working when it was not; it answers false now and `claim` refuses with a reason.
+The router remains the optional second path, for names now and for upload control later.
+`router_huawei.rs` logs in for the session only, never stores the password, and dumps the QoS and
+MAC-filter pages. Names stay hidden until that login.
+
+**The upload half can bypass the relay.** A phone that pins its gateway's hardware address
+ignores the gateway-shaped ARP, so its uploads go straight to the router while its downloads come
+through the PC. Download caps and Block still work, because the router accepts the claim for the
+device. `Network.tsx` detects the case (`down_bytes` has moved, `up_bytes` has not) and disables
+the upload field with an explanation. Do not claim upload caps work on such a device; the
+router's QoS is the only place to enforce them.
 
 **No scheduled tasks, ever.** `Behavior:Win32/Persistence.A!ml` named
 `C:\Windows\System32\Tasks\QuotaVPN Network ...` and quarantined the app twice, once from the
 installer and once from the app. Registering a task whose action launches the executable is the
-detected behaviour regardless of the token used. The engine and the pipeline are detached
-children of the app, which already holds an administrator token. `install_lan_task` and
-`install_helper_task` are cleanup functions that delete tasks left by older versions, and
-`task_installed` / `lan_task_installed` answer true because there is nothing to install. The
-release job fails if the binary contains `<Task version=` or `schtasks /Create`.
+detected behaviour regardless of the token used. The engine is a detached child of the app, which
+already holds an administrator token. `install_lan_task` and `install_helper_task` are cleanup
+functions that delete tasks left by older versions, and `task_installed` / `lan_task_installed`
+answer true because there is nothing to install. The release job fails if the binary contains
+`<Task version=` or `schtasks /Create`.
 
 ## Current state
 
@@ -144,8 +151,8 @@ migration (`notes/HANDOFF-2026-11-22.md`): the desktop imports a server-issued `
 DPAPI-sealed per-card store (`qc1:` is still accepted), talks to the card API over HTTPS, and no
 longer compiles the SSH control plane. The phone stays at 0.6.18 for now; its `server.rs`/`ssh.rs`
 path is behind `legacy-ssh`. The 0.7.0 installer is published and signed for the updater:
-`QuotaVPN_0.7.0_x64-setup.exe`. The Network page is held back from this build and the WinDivert
-pair is not bundled; the LAN work returns in a later update.
+`QuotaVPN_0.7.0_x64-setup.exe`. The Network page is in the private 0.7.1 build, carried by the
+layer-2 relay, and is not published yet; 0.7.1 is a local install only.
 
 `notes/HANDOFF-2026-11-16.md` is the change log from 0.6.5 to 0.6.17. The Windows build is done by
 the `signed-release` workflow on a GitHub runner from a `v*` tag and `latest.json` is composed by

@@ -2273,8 +2273,8 @@ async fn lan_wire() -> Option<quotacards::lan_ctrl::Wire> {
         .flatten()
 }
 
-/// Start standing between one device and the router. One at a time: two
-/// poisoned devices on the same wire would fight over one forwarding loop.
+/// Start carrying one device. Nothing changes on the wire unless the capture is
+/// open, the device has answered for its address, and the first claim went out.
 #[tauri::command]
 #[cfg(windows)]
 fn lan_start(
@@ -2290,6 +2290,8 @@ fn lan_start(
             return Err(why);
         }
     }
+    // One session at a time, and the old one is handed back before the new one
+    // claims anything: two relays would fight over the same adapter.
     let previous = {
         let mut guard = state.0.lock().map_err(|_| "state".to_string())?;
         guard.take()
@@ -2297,7 +2299,7 @@ fn lan_start(
     if let Some(s) = previous {
         s.stop();
     }
-    let session = quotacards::lan_ctrl::start_with(&ip, blocked, mac)?;
+    let session = quotacards::lan_relay::start_with(&ip, blocked, mac)?;
     let mut guard = state.0.lock().map_err(|_| "state".to_string())?;
     *guard = Some(session);
     Ok(true)
@@ -2366,35 +2368,19 @@ pub struct LanPrepare {
 
 #[tauri::command]
 #[cfg(windows)]
-async fn lan_prepare(app: tauri::AppHandle) -> Result<LanPrepare, String> {
-    let dir = quotacards::vpn::engine_dir().join("windivert");
-    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    let mut sources: Vec<std::path::PathBuf> = Vec::new();
-    if let Ok(res) = app.path().resource_dir() {
-        sources.push(res);
-    }
-    sources.push(
-        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../res/windivert"),
-    );
-    let mut copied = 0;
-    for name in ["WinDivert.dll", "WinDivert64.sys", "LICENSE"] {
-        if dir.join(name).exists() {
-            continue;
-        }
-        for src in &sources {
-            let from = src.join(name);
-            if from.exists() && std::fs::copy(&from, dir.join(name)).is_ok() {
-                copied += 1;
-                break;
-            }
-        }
-    }
-    let windivert = quotacards::windivert::ready();
+async fn lan_prepare(_app: tauri::AppHandle) -> Result<LanPrepare, String> {
+    // There is no bundled driver any more. Carrying a device is Npcap's job, and
+    // its installer has no silent mode, so the only thing this can report is
+    // whether it is already there.
     let npcap = quotacards::lan_route::npcap_installed();
     Ok(LanPrepare {
-        windivert,
+        windivert: npcap,
         npcap,
-        detail: format!("copied {copied} driver file(s)"),
+        detail: if npcap {
+            String::new()
+        } else {
+            "Npcap is not installed".to_string()
+        },
     })
 }
 
@@ -2455,17 +2441,12 @@ fn lan_stop(state: tauri::State<'_, LanState>) -> Result<bool, String> {
     Ok(true)
 }
 
-/// Whether the packet driver this app ships can be opened, which is what
-/// watching, capping, blocking and routing a device need.
-///
-/// This used to ask whether Npcap was installed, because the control layer ran
-/// on it. The forward pipeline does that work now and the driver ships with the
-/// app, so Npcap is only ever a question about claiming a device on a router
-/// nobody configured: see `lan_claim_ready`.
+/// Whether the raw packet driver is installed. The relay is the only thing that
+/// carries a device now, and it runs on Npcap.
 #[tauri::command]
 #[cfg(windows)]
 async fn pipeline_ready() -> bool {
-    quotacards::windivert::ready()
+    quotacards::lan_route::npcap_installed()
 }
 
 /// The devices the machine already knows about, without sweeping.
@@ -2779,6 +2760,9 @@ async fn router_link(
         .map(|w| w.gateway_ip)
         .ok_or("no gateway")?;
     let session = router_huawei::login(&host, &user, &pass).await?;
+    // Keep the router's own control pages for the next step: caps and blocking
+    // move there, so the switch enforces them without this PC forwarding.
+    session.dump_pages().await;
     // The password lives in this request only. A previous build kept a sealed
     // copy for autolink; that file is deleted here so it cannot outlive the
     // upgrade.
@@ -2851,12 +2835,9 @@ async fn router_unlink(state: tauri::State<'_, RouterState>) -> Result<bool, Str
 fn lan_status(state: tauri::State<'_, LanState>) -> Option<LanStatus> {
     let guard = state.0.lock().ok()?;
     let session = guard.as_ref()?;
-    // The packet pass is the honest owner of "under control". If it has stopped
-    // (driver error, TTL, a crash), the panel must not keep claiming the device.
-    let live = quotacards::lan_forward::read_state()
-        .map(|s| s.running && quotacards::vpn::process_alive(s.pid))
-        .unwrap_or(false);
-    if !live {
+    // The relay is the honest owner of "under control". If it has stopped for
+    // any reason the panel must not keep claiming the device.
+    if !session.alive() {
         return None;
     }
     Some(LanStatus {
@@ -3318,8 +3299,8 @@ fn set_webview_memory_low(app: &tauri::AppHandle, low: bool) {
 pub struct RouterState(pub tokio::sync::Mutex<Option<router_huawei::Session>>);
 
 #[cfg(windows)]
-/// The one redirection that may be active at a time.
-pub struct LanState(pub std::sync::Mutex<Option<quotacards::lan_ctrl::Session>>);
+/// The one device being carried at a time.
+pub struct LanState(pub std::sync::Mutex<Option<quotacards::lan_relay::Session>>);
 
 #[cfg(windows)]
 /// The whole-network watcher, separate from the one-device session above:
@@ -3375,8 +3356,11 @@ async fn network_snapshot(
     cfg: tauri::State<'_, State>,
 ) -> Result<NetworkSnapshot, String> {
     let guard = lan_guard();
-    let driver_ready = quotacards::windivert::ready();
-    let claim_ready = quotacards::lan_route::npcap_installed();
+    // Both flags answer the same question now: is the raw packet driver there?
+    // The relay is the only carrier, and it runs on Npcap. The second field is
+    // kept because the screen still reads it.
+    let driver_ready = quotacards::lan_route::npcap_installed();
+    let claim_ready = driver_ready;
     let mut devices = scan_with_router(&router, &cfg).await?;
     let active = lan_status(lan);
     // A claimed device's ARP entry now points at this PC, so the sweep drops it
@@ -3514,8 +3498,8 @@ impl From<quotacards::lan_route::Intent> for RoutedDevice {
     }
 }
 
-/// Take one device over. Returns only once the claim frame is on the wire and forwarding
-/// is confirmed, so a success here means its traffic is coming to this machine now.
+/// Take one device over. Returns only once the capture is carrying it, so a
+/// success here means its traffic is coming to this machine now.
 #[tauri::command]
 #[cfg(windows)]
 async fn lan_route_device(
@@ -3523,45 +3507,23 @@ async fn lan_route_device(
     mac: String,
     state: tauri::State<'_, LanState>,
 ) -> Result<RoutedDevice, String> {
-    // Routing a device must not need the whole PC tunnelled first. With no
-    // engine, seed a session from the saved card: the claim writes its intent
-    // and starts the engine already in device-only shape, so the host keeps
-    // final=direct the whole time.
-    if quotacards::vpn::task_engine_pid().is_none() && !quotacards::vpn::session_exists() {
-        quotacards::vpn::seed_session_from_config()?;
-    }
-    let ip2 = ip.clone();
-    let mac2 = mac.clone();
-    let dev = tauri::async_runtime::spawn_blocking(move || {
-        let target: std::net::Ipv4Addr =
-            ip2.parse().map_err(|_| format!("not an address: {ip2}"))?;
-        let adapter = quotacards::lan_route::claim(target, &mac2)?;
-        Ok::<RoutedDevice, String>(RoutedDevice {
-            ip: ip2,
-            mac: mac2,
-            gateway: adapter.gateway.to_string(),
-            interface: adapter.if_index.to_string(),
-        })
-    })
-    .await
-    .map_err(|e| e.to_string())??;
-
-    // The claim points the device at this PC; this is what actually carries its
-    // frames. Without the pump the rule sits in the engine with nothing to
-    // match, which is exactly what "0 connections" looked like.
+    let wire = tauri::async_runtime::spawn_blocking(quotacards::lan_ctrl::wire)
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or("No network adapter leads to the router.")?;
     let previous = { state.0.lock().map_err(|_| "state".to_string())?.take() };
     if let Some(prev) = previous {
         prev.stop();
     }
-    let session = quotacards::lan_ctrl::start_with(&dev.ip, false, Some(dev.mac.clone()))?;
-    if session.target_ip != dev.ip {
-        return Err(format!(
-            "the pump came up for {} instead of {}",
-            session.target_ip, dev.ip
-        ));
-    }
+    let session = quotacards::lan_relay::start_with(&ip, false, Some(mac))?;
+    let learned = session.target_mac.clone();
     *state.0.lock().map_err(|_| "state".to_string())? = Some(session);
-    Ok(dev)
+    Ok(RoutedDevice {
+        ip,
+        mac: learned,
+        gateway: wire.gateway_ip,
+        interface: wire.adapter,
+    })
 }
 
 /// Hand it back to the router. Safe to call when nothing is routed.
@@ -3786,29 +3748,91 @@ pub fn run() {
             .nth(i + 2)
             .and_then(|v| v.parse().ok())
             .unwrap_or(8);
+        let log = |line: &str| {
+            println!("{line}");
+            let base = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| ".".into());
+            let dir = std::path::Path::new(&base).join("quotavpn");
+            let _ = std::fs::create_dir_all(&dir);
+            if let Ok(mut f) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(dir.join("lan_test.log"))
+            {
+                use std::io::Write;
+                let _ = writeln!(f, "{line}");
+            }
+        };
         match quotacards::lan_ctrl::wire() {
-            Some(w) => println!(
+            Some(w) => log(&format!(
                 "wire: {} | our {} {} | gateway {} {}",
                 w.adapter, w.ip, w.mac, w.gateway_ip, w.gateway_mac
-            ),
-            None => println!("wire: none"),
+            )),
+            None => log("wire: none"),
         }
         let block = std::env::args()
             .nth(i + 3)
             .map(|v| v != "0")
-            .unwrap_or(true);
-        let mac = std::env::args().nth(i + 4);
-        match quotacards::lan_ctrl::start_with(&ip, block, mac) {
+            .unwrap_or(false);
+        let mac = std::env::args().nth(i + 4).filter(|m| !m.is_empty());
+        let down: u32 = std::env::args()
+            .nth(i + 5)
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(0);
+        let up: u32 = std::env::args()
+            .nth(i + 6)
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(0);
+        match quotacards::lan_relay::start_with(&ip, block, mac) {
             Ok(s) => {
-                println!("started on {} (blocked={block})", s.target_ip);
-                std::thread::sleep(std::time::Duration::from_secs(secs));
-                let seen = s.seen.load(std::sync::atomic::Ordering::Relaxed);
+                log(&format!(
+                    "started on {} at {} (blocked={block}, down={down} KB/s, up={up} KB/s)",
+                    s.target_ip, s.target_mac
+                ));
+                s.down_kbps.store(down, std::sync::atomic::Ordering::Relaxed);
+                s.up_kbps.store(up, std::sync::atomic::Ordering::Relaxed);
+                let until = std::time::Instant::now() + std::time::Duration::from_secs(secs);
+                while std::time::Instant::now() < until {
+                    std::thread::sleep(std::time::Duration::from_secs(2));
+                    log(&format!(
+                        "tick up={} down={} forwarded={} dropped={} answers={}",
+                        s.bytes_up.load(std::sync::atomic::Ordering::Relaxed),
+                        s.bytes_down.load(std::sync::atomic::Ordering::Relaxed),
+                        s.forwarded.load(std::sync::atomic::Ordering::Relaxed),
+                        s.dropped.load(std::sync::atomic::Ordering::Relaxed),
+                        s.client_answers.load(std::sync::atomic::Ordering::Relaxed)
+                    ));
+                }
+                let up_bytes = s.bytes_up.load(std::sync::atomic::Ordering::Relaxed);
+                let down_bytes = s.bytes_down.load(std::sync::atomic::Ordering::Relaxed);
                 let fwd = s.forwarded.load(std::sync::atomic::Ordering::Relaxed);
+                let drop = s.dropped.load(std::sync::atomic::Ordering::Relaxed);
+                let answers = s.client_answers.load(std::sync::atomic::Ordering::Relaxed);
+                let alive = s.alive();
                 s.stop();
-                println!("frames for target: {seen}, forwarded: {fwd}");
+                log(&format!(
+                    "stopped: up {up_bytes} B, down {down_bytes} B, forwarded {fwd}, dropped {drop}, answers {answers}, was_alive {alive}"
+                ));
             }
-            Err(e) => println!("start failed: {e}"),
+            Err(e) => log(&format!("start failed: {e}")),
         }
+        return;
+    }
+    // Open the capture and hold it, without sending anything: the probe for
+    // whether opening a handle disturbs this adapter.
+    #[cfg(windows)]
+    if let Some(i) = std::env::args().position(|a| a == "--lan-tap") {
+        let secs: u64 = std::env::args()
+            .nth(i + 1)
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(10);
+        let Some(w) = quotacards::lan_ctrl::wire() else {
+            println!("tap: no wire");
+            return;
+        };
+        let cap = quotacards::wpcap::with(|p| p.open_mode(&w.device, false, 20)).flatten();
+        println!("tap: open={} for {secs}s", cap.is_some());
+        std::thread::sleep(std::time::Duration::from_secs(secs));
+        println!("tap: done");
         return;
     }
     #[cfg(windows)]
@@ -4055,31 +4079,25 @@ pub fn run() {
     if let Some(i) = std::env::args().position(|a| a == "--lan-claim") {
         let ip = std::env::args().nth(i + 1).unwrap_or_default();
         let mac = std::env::args().nth(i + 2).unwrap_or_default();
-        match ip.parse::<std::net::Ipv4Addr>() {
-            Ok(target) => match quotacards::lan_route::claim(target, &mac) {
-                Ok(_) => {
-                    // The headless probe starts the same pump the window does,
-                    // so a claim here proves the whole path and not half of it.
-                    match quotacards::lan_ctrl::start_with(&ip, false, Some(mac.clone())) {
-                        Ok(s) => {
-                            println!(
-                                "CLAIM_OK {ip} PUMP_OK seen={}",
-                                s.seen.load(std::sync::atomic::Ordering::Relaxed)
-                            );
-                            std::thread::sleep(std::time::Duration::from_secs(12));
-                            println!(
-                                "PUMP seen={} forwarded={} up={}",
-                                s.seen.load(std::sync::atomic::Ordering::Relaxed),
-                                s.forwarded.load(std::sync::atomic::Ordering::Relaxed),
-                                s.bytes_up.load(std::sync::atomic::Ordering::Relaxed)
-                            );
-                        }
-                        Err(e) => println!("CLAIM_OK {ip} PUMP_ERR {e}"),
-                    }
-                }
-                Err(e) => println!("CLAIM_ERR {e}"),
-            },
-            Err(_) => println!("CLAIM_ERR not an address: {ip}"),
+        if ip.parse::<std::net::Ipv4Addr>().is_err() {
+            println!("CLAIM_ERR not an address: {ip}");
+            return;
+        }
+        let known = if mac.is_empty() { None } else { Some(mac) };
+        match quotacards::lan_relay::start_with(&ip, false, known) {
+            Ok(s) => {
+                println!("CLAIM_OK {ip} RELAY_OK at {}", s.target_mac);
+                std::thread::sleep(std::time::Duration::from_secs(12));
+                println!(
+                    "RELAY forwarded={} dropped={} up={} down={}",
+                    s.forwarded.load(std::sync::atomic::Ordering::Relaxed),
+                    s.dropped.load(std::sync::atomic::Ordering::Relaxed),
+                    s.bytes_up.load(std::sync::atomic::Ordering::Relaxed),
+                    s.bytes_down.load(std::sync::atomic::Ordering::Relaxed)
+                );
+                s.stop();
+            }
+            Err(e) => println!("CLAIM_ERR {e}"),
         }
         return;
     }

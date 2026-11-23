@@ -57,11 +57,6 @@
         ]
       },
       "appimage": {}
-    },
-    "resources": {
-      "../../res/windivert/LICENSE": "WinDivert-LICENSE.txt",
-      "../../res/windivert/WinDivert.dll": "WinDivert.dll",
-      "../../res/windivert/WinDivert64.sys": "WinDivert64.sys"
     }
   },
   "plugins": {

@@ -221,11 +221,17 @@ impl Session {
     /// one can be read instead of guessed. Local only, and it holds nothing but
     /// what the router itself shows an administrator.
     pub async fn dump_pages(&self) {
-        const PAGES: [(&str, &str); 4] = [
+        const PAGES: [(&str, &str); 10] = [
             ("macfilter", "/html/bbsp/macfilter/macfilter.asp"),
             ("parental", "/html/bbsp/parentalcontrol/parentalcontrol.asp"),
             ("wlanfilter", "/html/amp/wlanfilter/wlanfilter.asp"),
-            ("qos", "/html/bbsp/upnplane/upnplane.asp"),
+            ("qos", "/html/bbsp/qos/qos.asp"),
+            ("upnp", "/html/bbsp/upnplane/upnplane.asp"),
+            ("bandwidth", "/html/bbsp/bandwidth/bandwidth.asp"),
+            ("wanlimit", "/html/bbsp/wanlimit/wanlimit.asp"),
+            ("lanlimit", "/html/bbsp/lanlimit/lanlimit.asp"),
+            ("limit", "/html/bbsp/limit/limit.asp"),
+            ("hostinfo", "/html/bbsp/lanhostinfo/lanhostinfo.asp"),
         ];
         let base = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| String::from("."));
         let dir = std::path::Path::new(&base).join("quotavpn").join("router_pages");

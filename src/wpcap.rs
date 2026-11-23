@@ -173,10 +173,37 @@ impl Wpcap {
 
     /// Open one interface for capture and injection.
     pub fn open(&self, device: &str) -> Option<Capture> {
+        self.open_mode(device, true, 20)
+    }
+
+    /// Open with an explicit promiscuous mode and read timeout.
+    ///
+    /// The relay opens the adapter non-promiscuous. It only ever needs frames
+    /// addressed to this machine, and promiscuous mode is the setting Npcap's
+    /// own guide tells people to turn off when a wireless adapter misbehaves.
+    /// The timeout bounds how long a stop request waits for a quiet link.
+    pub fn open_mode(&self, device: &str, promiscuous: bool, timeout_ms: i32) -> Option<Capture> {
         let c = CString::new(device).ok()?;
         let mut err = [0 as c_char; PCAP_ERRBUF_SIZE];
-        let h = unsafe { (self.open_live)(c.as_ptr(), 65536, 1, 20, err.as_mut_ptr()) };
+        let h = unsafe {
+            (self.open_live)(
+                c.as_ptr(),
+                65536,
+                if promiscuous { 1 } else { 0 },
+                timeout_ms,
+                err.as_mut_ptr(),
+            )
+        };
         if h.is_null() {
+            let text: Vec<u8> = err
+                .iter()
+                .take_while(|c| **c != 0)
+                .map(|c| *c as u8)
+                .collect();
+            note(&format!(
+                "open failed for {device}: {}",
+                String::from_utf8_lossy(&text)
+            ));
             return None;
         }
         Some(Capture { handle: h })
@@ -185,6 +212,15 @@ impl Wpcap {
 
 pub struct Capture {
     handle: *mut c_void,
+}
+
+/// One read from a capture handle: a frame, the timeout expiring, or the handle
+/// failing. The relay has to tell these apart: a timeout is a quiet link, an
+/// error is an adapter that will never carry anything again.
+pub enum Read {
+    Frame(Vec<u8>),
+    Timeout,
+    Error(String),
 }
 
 impl Capture {
@@ -196,21 +232,44 @@ impl Capture {
         unsafe { f(self.handle, frame.as_ptr(), frame.len() as c_int) == 0 }
     }
 
-    /// Wait for one frame, up to the open timeout.
-    pub fn next(&self) -> Option<Vec<u8>> {
-        let wp = loaded()?;
+    /// Wait for one frame, up to the open timeout, and say why there was none.
+    pub fn read(&self) -> Read {
+        let Some(wp) = loaded() else {
+            return Read::Error("the packet driver is no longer loaded".into());
+        };
         let f = wp.next_ex;
         let mut hdr: *mut pcap_pkthdr = std::ptr::null_mut();
         let mut data: *const c_uchar = std::ptr::null();
-        let rc = unsafe { f(self.handle, &mut hdr, &mut data) };
-        if rc != 1 || data.is_null() || hdr.is_null() {
-            return None;
+        match unsafe { f(self.handle, &mut hdr, &mut data) } {
+            1 => {
+                if data.is_null() || hdr.is_null() {
+                    return Read::Timeout;
+                }
+                let len = (unsafe { (*hdr).caplen } as usize).min(65_535);
+                if len == 0 {
+                    return Read::Timeout;
+                }
+                Read::Frame(unsafe { std::slice::from_raw_parts(data, len) }.to_vec())
+            }
+            0 => Read::Timeout,
+            _ => {
+                let ptr = unsafe { (wp.geterr)(self.handle) };
+                let why = if ptr.is_null() {
+                    "the adapter stopped delivering frames".to_string()
+                } else {
+                    unsafe { CStr::from_ptr(ptr) }.to_string_lossy().to_string()
+                };
+                Read::Error(why)
+            }
         }
-        let len = (unsafe { (*hdr).caplen } as usize).min(65_535);
-        if len == 0 {
-            return None;
+    }
+
+    /// Wait for one frame, up to the open timeout.
+    pub fn next(&self) -> Option<Vec<u8>> {
+        match self.read() {
+            Read::Frame(f) => Some(f),
+            _ => None,
         }
-        Some(unsafe { std::slice::from_raw_parts(data, len) }.to_vec())
     }
 }
 
