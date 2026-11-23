@@ -2133,6 +2133,27 @@ pub fn engine_alive(pid: u32) -> bool {
     }
 }
 
+/// Whether a process with this pid is still alive, without caring what its
+/// image is. The packet pipeline is a QuotaVPN child, not sing-box, so
+/// `engine_alive` (which checks the image name) cannot answer for it.
+#[cfg(windows)]
+pub fn process_alive(pid: u32) -> bool {
+    use windows_sys::Win32::Foundation::{CloseHandle, STILL_ACTIVE};
+    use windows_sys::Win32::System::Threading::{
+        GetExitCodeProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION,
+    };
+    unsafe {
+        let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+        if handle.is_null() {
+            return false;
+        }
+        let mut code: u32 = 0;
+        let ok = GetExitCodeProcess(handle, &mut code);
+        let _ = CloseHandle(handle);
+        ok != 0 && code == STILL_ACTIVE as u32
+    }
+}
+
 /// Bring the engine up through the task and return its pid (0 while the task
 /// is still starting; the caller waits on the routes anyway).
 

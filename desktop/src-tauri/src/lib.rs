@@ -2351,11 +2351,73 @@ fn lan_guard() -> quotacards::lan_ctrl::Guard {
     quotacards::lan_ctrl::guard_state()
 }
 
+/// What the two drivers need: the packet driver WinDivert (loaded from the
+/// driver folder) and Npcap for forging the claim frame. The app ships the
+/// WinDivert pair; this copies it out of the resource folder when it is not
+/// already unpacked, so control works on a fresh install without a second
+/// installer.
+#[derive(serde::Serialize)]
+#[cfg(windows)]
+pub struct LanPrepare {
+    pub windivert: bool,
+    pub npcap: bool,
+    pub detail: String,
+}
+
+#[tauri::command]
+#[cfg(windows)]
+async fn lan_prepare(app: tauri::AppHandle) -> Result<LanPrepare, String> {
+    let dir = quotacards::vpn::engine_dir().join("windivert");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let mut sources: Vec<std::path::PathBuf> = Vec::new();
+    if let Ok(res) = app.path().resource_dir() {
+        sources.push(res);
+    }
+    sources.push(
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../res/windivert"),
+    );
+    let mut copied = 0;
+    for name in ["WinDivert.dll", "WinDivert64.sys", "LICENSE"] {
+        if dir.join(name).exists() {
+            continue;
+        }
+        for src in &sources {
+            let from = src.join(name);
+            if from.exists() && std::fs::copy(&from, dir.join(name)).is_ok() {
+                copied += 1;
+                break;
+            }
+        }
+    }
+    let windivert = quotacards::windivert::ready();
+    let npcap = quotacards::lan_route::npcap_installed();
+    Ok(LanPrepare {
+        windivert,
+        npcap,
+        detail: format!("copied {copied} driver file(s)"),
+    })
+}
+
+/// Block or unblock the device that is already under control, without ending
+/// the session. This is the quick switch; a fresh block on an uncontrolled
+/// device goes through `lan_start` with `blocked: true`.
+#[tauri::command]
+#[cfg(windows)]
+fn lan_block(state: tauri::State<'_, LanState>, on: bool) -> Result<bool, String> {
+    let guard = state.0.lock().map_err(|_| "state".to_string())?;
+    let Some(session) = guard.as_ref() else {
+        return Ok(false);
+    };
+    session
+        .blocked
+        .store(on, std::sync::atomic::Ordering::Relaxed);
+    Ok(true)
+}
+
 /// Set the caps for the active device. Zero means no cap.
 #[tauri::command]
 #[cfg(windows)]
-fn lan_limits(
-    state: tauri::State<'_, LanState>,
+fn lan_limits(    state: tauri::State<'_, LanState>,
     cfg: tauri::State<'_, State>,
     down_kbps: u32,
     up_kbps: u32,
@@ -2435,48 +2497,69 @@ fn lan_known(cfg: tauri::State<'_, State>) -> Vec<quotacards::lan::Device> {
 }
 
 /// Who is on this network: ip, mac and a name when the system resolves one.
-#[tauri::command]
+///
+/// The router is the only source that knows every name, so when a session is
+/// open its full client table is merged in. That also adds the phones the ping
+/// sweep slept through, which is what makes the roster read "everybody" rather
+/// than "everybody awake". A router-only row is a lease, not a live sighting;
+/// the screen labels it as such.
 #[cfg(windows)]
-async fn lan_devices(
-    state: tauri::State<'_, RouterState>,
-    cfg: tauri::State<'_, State>,
+async fn scan_with_router(
+    router: &tauri::State<'_, RouterState>,
+    cfg: &tauri::State<'_, State>,
 ) -> Result<Vec<quotacards::lan::Device>, String> {
     let mut list = tauri::async_runtime::spawn_blocking(quotacards::lan::scan)
         .await
         .unwrap_or_default();
-    // The router knows every name, including the phones that hide theirs.
+    let mut clients: Vec<router_huawei::RouterClient> = Vec::new();
     // Never wait for the lock: a router session that is mid-poll held it for
     // the whole scan once, and the page sat on "Scanning" forever. A skipped
     // enrichment costs names, never the list.
-    {
-        if let Ok(guard) = state.0.try_lock() {
-            if let Some(session) = guard.as_ref() {
-                let names = router_huawei::names_by_ip(session).await;
-                let mut learned: Vec<(String, String)> = Vec::new();
-                for d in list.iter_mut() {
-                    if let Some(name) = names.get(&d.ip) {
-                        if !name.is_empty() {
-                            // Routed through the same rank check as the rest of the
-                            // scan, so a router name fills a gap without replacing
-                            // a name the device gave itself.
-                            quotacards::lan::offer_name(d, name, "router");
-                            if !d.mac.is_empty() {
-                                learned.push((d.mac.clone(), name.clone()));
-                            }
-                        }
-                    }
-                }
-                // Written down by address, so the next launch shows the same names
-                // without signing in to the router again.
-                if !learned.is_empty() {
-                    quotacards::lan::save_router_names(learned);
-                }
+    if let Ok(guard) = router.0.try_lock() {
+        if let Some(session) = guard.as_ref() {
+            if let Ok(found) = session.clients().await {
+                clients = found;
             }
         }
     }
+    let mut learned: Vec<(String, String)> = Vec::new();
+    for c in &clients {
+        let named = !c.name.trim().is_empty();
+        if let Some(d) = list.iter_mut().find(|d| {
+            (!c.mac.is_empty() && d.mac.eq_ignore_ascii_case(&c.mac)) || d.ip == c.ip
+        }) {
+            if named {
+                quotacards::lan::offer_name(d, &c.name, "router");
+                if !d.mac.is_empty() {
+                    learned.push((d.mac.clone(), c.name.clone()));
+                }
+            }
+            continue;
+        }
+        // The router has a lease the sweep did not see. Keep the row: a phone
+        // that is asleep is still on the network, it just did not answer.
+        if c.ip.is_empty() {
+            continue;
+        }
+        list.push(quotacards::lan::Device {
+            ip: c.ip.clone(),
+            mac: c.mac.clone(),
+            name: if named { c.name.clone() } else { String::new() },
+            self_pc: false,
+            name_source: if named { "router".into() } else { String::new() },
+            protected: false,
+            protected_always: false,
+            live: false,
+        });
+        if named && !c.mac.is_empty() {
+            learned.push((c.mac.clone(), c.name.clone()));
+        }
+    }
+    if !learned.is_empty() {
+        quotacards::lan::save_router_names(learned);
+    }
     // Protection, marked here so every screen agrees: the router and this PC
-    // are always safe, plus whatever the user marked. The list is what the
-    // controls read before they are allowed to act.
+    // are always safe, plus whatever the user marked.
     let chosen = cfg
         .0
         .lock()
@@ -2491,41 +2574,30 @@ async fn lan_devices(
         d.protected = fixed || chosen.iter().any(|m| m.eq_ignore_ascii_case(&d.mac));
     }
     // Names that are still missing are looked up in the background, so the list
-    // is on screen in a second and fills itself in a few seconds later.
+    // is on screen in a second and fills itself in a few seconds later. The
+    // screen only shows names that came from the router.
     let probe = list.clone();
     std::thread::spawn(move || quotacards::lan::enrich_names(probe));
     Ok(list)
 }
 
-/// Start watching every device on the network. Their traffic passes through
-/// this machine so it can be counted; nothing is dropped and nothing is slowed.
+#[cfg(windows)]
+#[tauri::command]
+async fn lan_devices(
+    router: tauri::State<'_, RouterState>,
+    cfg: tauri::State<'_, State>,
+) -> Result<Vec<quotacards::lan::Device>, String> {
+    scan_with_router(&router, &cfg).await
+}
+
+/// Whole-network interception is retired. Watching every device put the whole
+/// house through one userland queue and collapsed the network after a couple
+/// of minutes. Discovery is passive now; only a device the user explicitly
+/// controls is claimed, one at a time, through `lan_start`.
 #[tauri::command]
 #[cfg(windows)]
-async fn lan_monitor_start(state: tauri::State<'_, MonitorState>) -> Result<bool, String> {
-    {
-        let guard = state.0.lock().map_err(|_| "state".to_string())?;
-        if guard.is_some() {
-            return Ok(true);
-        }
-    }
-    let list = tauri::async_runtime::spawn_blocking(quotacards::lan::scan)
-        .await
-        .unwrap_or_default();
-    let targets: Vec<(String, String)> = list
-        .iter()
-        .filter(|d| !d.self_pc && !d.protected_always && !d.mac.is_empty())
-        .map(|d| (d.ip.clone(), d.mac.clone()))
-        .collect();
-    if targets.is_empty() {
-        return Err("No devices to watch".into());
-    }
-    let session =
-        tauri::async_runtime::spawn_blocking(move || quotacards::lan_ctrl::start_monitor(targets))
-            .await
-            .map_err(|e| e.to_string())??;
-    let mut guard = state.0.lock().map_err(|_| "state".to_string())?;
-    *guard = Some(session);
-    Ok(true)
+async fn lan_monitor_start(_state: tauri::State<'_, MonitorState>) -> Result<bool, String> {
+    Err("Passive discovery is always on. Select a device to control it.".into())
 }
 
 /// Stop watching and hand the network back.
@@ -2689,9 +2761,10 @@ async fn router_link(
         .map(|w| w.gateway_ip)
         .ok_or("no gateway")?;
     let session = router_huawei::login(&host, &user, &pass).await?;
-    session.dump_pages().await;
-    // Signed in once: keep it sealed for this Windows account.
-    let _ = router_remember::save(&user, &pass);
+    // The password lives in this request only. A previous build kept a sealed
+    // copy for autolink; that file is deleted here so it cannot outlive the
+    // upgrade.
+    let _ = router_remember::clear();
     let mut guard = state.0.lock().await;
     *guard = Some(session);
     Ok(true)
@@ -2723,6 +2796,20 @@ async fn router_autolink(state: tauri::State<'_, RouterState>) -> Result<bool, S
     }
 }
 
+/// The router's own client table, names included. The page calls this after a
+/// fresh sign in so a device the sweep cannot wake still appears with its name.
+#[tauri::command]
+#[cfg(windows)]
+async fn router_clients(
+    state: tauri::State<'_, RouterState>,
+) -> Result<Vec<router_huawei::RouterClient>, String> {
+    let guard = state.0.lock().await;
+    let Some(session) = guard.as_ref() else {
+        return Err("Sign in to your router to load names.".into());
+    };
+    session.clients().await
+}
+
 #[tauri::command]
 #[cfg(windows)]
 async fn router_status(state: tauri::State<'_, RouterState>) -> Result<bool, String> {
@@ -2746,6 +2833,14 @@ async fn router_unlink(state: tauri::State<'_, RouterState>) -> Result<bool, Str
 fn lan_status(state: tauri::State<'_, LanState>) -> Option<LanStatus> {
     let guard = state.0.lock().ok()?;
     let session = guard.as_ref()?;
+    // The packet pass is the honest owner of "under control". If it has stopped
+    // (driver error, TTL, a crash), the panel must not keep claiming the device.
+    let live = quotacards::lan_forward::read_state()
+        .map(|s| s.running && quotacards::vpn::process_alive(s.pid))
+        .unwrap_or(false);
+    if !live {
+        return None;
+    }
     Some(LanStatus {
         ip: session.target_ip.clone(),
         mac: session.target_mac.clone(),
@@ -3239,36 +3334,80 @@ pub struct NetworkSnapshot {
     /// Whether the packet driver the control layer needs is installed.
     pub driver_ready: bool,
     /// Whether a claim frame can be forged, which is the only thing Npcap is
-    /// still for. False means this machine can still watch, cap, block and route
+    /// still for. False means this machine can still discover, cap and block
     /// when the router points its devices here.
     pub claim_ready: bool,
     /// Whether the router is signed in, so its names are available.
     pub router_linked: bool,
-    /// Whether the whole network is being watched right now.
-    pub watching: bool,
-    /// Bytes seen per device since the watch began, empty when not watching.
-    pub traffic: Vec<TrafficRow>,
+    /// Every device the sweep or the router knows about.
+    pub devices: Vec<quotacards::lan::Device>,
+    /// The one device currently under this PC's control, if any.
+    pub active: Option<LanStatus>,
     /// When this snapshot was taken, milliseconds since the Unix epoch.
     pub ts: u64,
 }
 
-/// One snapshot of the whole network surface: the guard, the driver, the
-/// router session, the watch flag and every device's counters.
-///
-/// It is composed from the same functions the single purpose commands use, not
-/// a second implementation of them, so the two can never drift.
+/// One snapshot of the whole network surface: the guard, the drivers, the
+/// router session, the roster and the one controlled device.
 #[tauri::command]
 #[cfg(windows)]
 async fn network_snapshot(
-    monitor: tauri::State<'_, MonitorState>,
+    lan: tauri::State<'_, LanState>,
     router: tauri::State<'_, RouterState>,
+    cfg: tauri::State<'_, State>,
 ) -> Result<NetworkSnapshot, String> {
     let guard = lan_guard();
-    let driver_ready = pipeline_ready().await;
+    let driver_ready = quotacards::windivert::ready();
     let claim_ready = quotacards::lan_route::npcap_installed();
-    let router_linked = router_status(router).await?;
-    let watching = lan_monitor_active(monitor.clone())?;
-    let traffic = lan_traffic(monitor)?;
+    let mut devices = scan_with_router(&router, &cfg).await?;
+    let active = lan_status(lan);
+    // A claimed device's ARP entry now points at this PC, so the sweep drops it
+    // (it never lists our own hardware address). The controlled row must stay
+    // on screen: put it back from the session itself, with the saved router
+    // name when there is one.
+    if let Some(a) = active.as_ref() {
+        let known = devices.iter().any(|d| {
+            d.ip == a.ip || (!a.mac.is_empty() && d.mac.eq_ignore_ascii_case(&a.mac))
+        });
+        if !known {
+            let names = quotacards::lan::router_names();
+            let name = names
+                .get(&a.mac.to_ascii_lowercase())
+                .cloned()
+                .unwrap_or_default();
+            devices.push(quotacards::lan::Device {
+                ip: a.ip.clone(),
+                mac: a.mac.clone(),
+                name: if name.is_empty() {
+                    String::new()
+                } else {
+                    name.clone()
+                },
+                self_pc: false,
+                name_source: if name.is_empty() {
+                    String::new()
+                } else {
+                    "router".into()
+                },
+                protected: false,
+                protected_always: false,
+                live: true,
+            });
+        }
+    }
+    let router_linked = {
+        let guard = router.0.lock().await;
+        guard.is_some()
+    };
+    // Our own claim makes the gateway's ARP entry point at this PC; that is the
+    // shape the guard reports as an attack. While a session we own is active,
+    // the claim is ours and the alert would be a lie.
+    let mut guard = guard;
+    if active.is_some() {
+        guard.watching = false;
+        guard.attacker_mac.clear();
+        guard.attacker_ip.clear();
+    }
     let ts = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as u64)
@@ -3278,8 +3417,8 @@ async fn network_snapshot(
         driver_ready,
         claim_ready,
         router_linked,
-        watching,
-        traffic,
+        devices,
+        active,
         ts,
     })
 }
@@ -3502,6 +3641,8 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         lan_start,
         lan_stop,
         lan_limits,
+        lan_block,
+        lan_prepare,
         lan_status,
         lan_guard,
         lan_protect,
@@ -3514,6 +3655,7 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         open_page,
         router_autolink,
         router_status,
+        router_clients,
         router_unlink,
         lan_known,
         copy_text,
@@ -3587,6 +3729,9 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
 
 pub fn run() {
     AppConfig::migrate_dirs();
+    // The router password is never kept between runs. Delete the sealed file a
+    // previous build wrote, so an upgrade cannot silently keep signing in.
+    let _ = router_remember::clear();
     if std::env::args().any(|a| a == "--connect-bench") {
         let voice = std::env::args().any(|a| a == "--voice");
         match bench_connect(voice) {

@@ -97,8 +97,24 @@ fn launch_pipeline() -> Result<(), String> {
 /// believe a session that no longer exists.
 fn pipeline_running() -> bool {
     match crate::lan_forward::read_state() {
-        Some(s) => s.running && crate::vpn::engine_alive(s.pid),
+        Some(s) => s.running && crate::vpn::process_alive(s.pid),
         None => false,
+    }
+}
+
+/// Hand a previous pass back before a new session writes its policy. The stop
+/// file wakes the blocked receive now, so this is a short, bounded wait rather
+/// than hoping the old process notices on the next packet.
+fn stop_pipeline_wait() {
+    if !pipeline_running() {
+        return;
+    }
+    crate::lan_forward::request_stop();
+    for _ in 0..25 {
+        if !pipeline_running() {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(100));
     }
 }
 
@@ -443,8 +459,36 @@ pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> 
         caps: HashMap::new(),
         ttl_secs: limit_secs(),
     };
+    // A previous session's pass must be gone before this one writes its policy;
+    // otherwise the old process would keep the old address filter and this
+    // device would be claimed by a pass that cannot see it.
+    stop_pipeline_wait();
+    // A stale state file from a previous session must not make the readiness
+    // check read the old driver error as if it were this run's.
+    let _ = std::fs::remove_file(crate::lan_forward::dir().join("state.json"));
     crate::lan_forward::write_policy(&policy);
     launch_pipeline()?;
+    // The pipeline is a detached process. Wait for it to publish a live state
+    // before claiming the device: a dead pass would otherwise blackhole the
+    // device while the window said "under control".
+    let ready_until = Instant::now() + Duration::from_secs(4);
+    loop {
+        if let Some(state) = crate::lan_forward::read_state() {
+            if state.running && crate::vpn::process_alive(state.pid) {
+                break;
+            }
+            if !state.running && !state.error.is_empty() {
+                let why = state.error.clone();
+                crate::lan_forward::request_stop();
+                return Err(format!("packet driver: {why}"));
+            }
+        }
+        if Instant::now() >= ready_until {
+            crate::lan_forward::request_stop();
+            return Err("the packet driver did not start; nothing was claimed".into());
+        }
+        std::thread::sleep(Duration::from_millis(150));
+    }
 
     let w2 = w.clone();
     let device = w.device.clone();
@@ -518,6 +562,12 @@ pub fn start_with(target_ip: &str, blocked: bool, known_mac: Option<String>) -> 
                         Ordering::Relaxed,
                     );
                     fwd2.store(state.forwarded, Ordering::Relaxed);
+                    // The pass is the only thing forwarding this device. If it
+                    // died, hand the ARP tables back instead of leaving the
+                    // device pointed at a PC that is no longer carrying it.
+                    if !state.running {
+                        break;
+                    }
                 }
             }
             std::thread::sleep(Duration::from_millis(150));

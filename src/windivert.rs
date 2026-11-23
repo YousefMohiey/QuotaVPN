@@ -31,7 +31,13 @@ use std::ffi::{c_char, c_int, c_void};
 use std::time::{Duration, Instant};
 
 /// The layer that sees packets being forwarded between interfaces.
-pub const LAYER_NETWORK_FORWARD: i32 = 2;
+///
+/// WinDivert's enum is NETWORK = 0, NETWORK_FORWARD = 1, FLOW = 2,
+/// SOCKET = 3, REFLECT = 4. The old value here was 2 (FLOW), so every open
+/// asked the flow layer for an `ip` filter and the driver correctly answered
+/// ERROR_INVALID_PARAMETER. The claim frame still went out, which is why a
+/// device could be pointed at this PC by a pass that never forwarded a packet.
+pub const LAYER_NETWORK_FORWARD: i32 = 1;
 
 /// Queue length in packets. Long enough to ride out a burst of a few hundred
 /// packets around one TCP handshake, short enough that a paced device does not
@@ -326,13 +332,21 @@ impl Divert {
         let c = std::ffi::CString::new(filter).map_err(|_| "filter has a nul".to_string())?;
         // Safety: a valid filter string and a null-free CString.
         let handle = unsafe { (dll.open)(c.as_ptr(), LAYER_NETWORK_FORWARD, 0, 0) };
-        if handle.is_null() {
+        // WinDivertOpen returns INVALID_HANDLE_VALUE on failure, not NULL. The
+        // old null check accepted that sentinel, and every later recv reported
+        // "The handle is invalid" instead of the real reason the driver did not
+        // open. Treat both as failure.
+        if handle.is_null() || handle as isize == -1 {
             let err = std::io::Error::last_os_error();
             note(&format!("open failed for {filter}: {err}"));
-            // The two failures worth naming, because they are the two that happen.
+            // The failures worth naming, because they are the ones that happen.
             return Err(match err.raw_os_error() {
                 Some(5) => "the packet driver needs this app to run elevated".to_string(),
                 Some(2) => "the packet driver is not installed next to the app".to_string(),
+                Some(577) => "Windows could not verify the packet driver signature".to_string(),
+                Some(1275) => {
+                    "Windows blocked the packet driver by its vulnerable-driver policy".to_string()
+                }
                 _ => format!("could not open the packet driver: {err}"),
             });
         }

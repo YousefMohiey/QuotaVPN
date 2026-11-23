@@ -409,19 +409,23 @@ pub fn run() -> Result<(), String> {
     };
     let _ = std::fs::remove_file(stop_path());
     let mut ledger = Ledger::new(&policy.watched());
-    let mut divert = crate::windivert::Divert::open_forward(
+    let divert = std::sync::Arc::new(crate::windivert::Divert::open_forward(
         &crate::windivert::forward_filter(&policy.watched()),
-    )?;
+    )?);
 
     let stop = Arc::new(AtomicBool::new(false));
     // The stop file is the app's only lever, so watch it from a thread: the
     // receive below blocks until a packet arrives, and a quiet link is exactly
-    // when a stop has to still work.
+    // when a stop has to still work. Writing the file alone only set a flag
+    // that the blocked receive could not see; the shutdown call is what wakes
+    // it, and without it a released device kept a live pipeline process.
     {
         let stop = Arc::clone(&stop);
+        let divert = std::sync::Arc::clone(&divert);
         std::thread::spawn(move || loop {
             if stop_path().exists() {
                 stop.store(true, Ordering::SeqCst);
+                divert.shutdown();
                 return;
             }
             std::thread::sleep(Duration::from_millis(300));
@@ -443,27 +447,9 @@ pub fn run() -> Result<(), String> {
             last_policy = Instant::now();
             if let Some(next) = read_policy() {
                 if next.seq != policy.seq {
-                    // Caps and blocks are live, but the address list is baked
-                    // into the driver filter, so a new list means a new handle.
-                    if next.watched() != policy.watched() {
-                        divert = match crate::windivert::Divert::open_forward(
-                            &crate::windivert::forward_filter(&next.watched()),
-                        ) {
-                            Ok(d) => d,
-                            Err(e) => {
-                                error = e;
-                                break;
-                            }
-                        };
-                        for ip in next.watched() {
-                            ledger.devices.entry(ip.clone()).or_insert(DeviceBytes {
-                                ip,
-                                up: 0,
-                                down: 0,
-                                packets: 0,
-                            });
-                        }
-                    }
+                    // The address list is fixed for this session: a different
+                    // device means a new pipeline. Caps and blocks are picked up
+                    // here, and the address filter already covers this one.
                     policy = next;
                 }
             }

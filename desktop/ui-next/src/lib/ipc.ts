@@ -154,6 +154,17 @@ export const lanGuard = (): Promise<LanGuard> => call<LanGuard>("lan_guard")
 export const lanLimits = (down_kbps: number, up_kbps: number): Promise<boolean> =>
   call<boolean>("lan_limits", { downKbps: down_kbps, upKbps: up_kbps })
 
+/** Block or unblock the device that is already under control. */
+export const lanBlock = (on: boolean): Promise<boolean> => call<boolean>("lan_block", { on })
+
+/** Copy the bundled packet driver into place and report both drivers. */
+export type LanPrepare = { windivert: boolean; npcap: boolean; detail: string }
+export const lanPrepare = (): Promise<LanPrepare> => call<LanPrepare>("lan_prepare")
+
+/** The router's own client table, names included. */
+export type RouterClient = { name: string; ip: string; mac: string }
+export const routerClients = (): Promise<RouterClient[]> => call<RouterClient[]>("router_clients")
+
 export const lanDevices = (): Promise<LanDevice[]> => call<LanDevice[]>("lan_devices")
 
 /** Watch every device at once. Their traffic is counted, never dropped. */
@@ -167,15 +178,16 @@ export type LanTraffic = { mac: string; ip: string; up: number; down: number }
 export const lanTraffic = (): Promise<LanTraffic[]> => call<LanTraffic[]>("lan_traffic")
 
 /** Everything the Network screen polls, in one payload, so its tick is one
-    round trip and the roster and the rates cannot disagree. */
+    round trip and the roster, the router and the controlled device cannot
+    disagree. */
 export type NetworkSnapshot = {
   guard: LanGuard
   driver_ready: boolean
   /// Whether a claim frame can be forged. The one thing Npcap is still for.
   claim_ready: boolean
   router_linked: boolean
-  watching: boolean
-  traffic: LanTraffic[]
+  devices: LanDevice[]
+  active: LanStatus | null
   ts: number
 }
 
@@ -183,16 +195,16 @@ export const networkSnapshot = async (): Promise<NetworkSnapshot> => {
   if (isTauri()) return invoke<NetworkSnapshot>("network_snapshot")
   // The browser demo has no backend, so compose the same shape from the mocks:
   // the screen still makes one call, and the demo shows the same payload.
-  const [guard, driver_ready, claim_ready, router_linked, watching, traffic] =
+  const [guard, driver_ready, claim_ready, router_linked, devices, active] =
     await Promise.all([
       call<LanGuard>("lan_guard"),
       call<boolean>("pipeline_ready"),
       call<boolean>("lan_claim_ready"),
       call<boolean>("router_status"),
-      call<boolean>("lan_monitor_active"),
-      call<LanTraffic[]>("lan_traffic"),
+      call<LanDevice[]>("lan_devices"),
+      call<LanStatus | null>("lan_status"),
     ])
-  return { guard, driver_ready, claim_ready, router_linked, watching, traffic, ts: Date.now() }
+  return { guard, driver_ready, claim_ready, router_linked, devices, active, ts: Date.now() }
 }
 
 /** What the tunnel is carrying, heaviest first. Session scoped and in memory:
@@ -298,8 +310,11 @@ export const api = {
   routerStatus: (): Promise<boolean> => call<boolean>("router_status"),
   routerAutoLink: (): Promise<boolean> => call<boolean>("router_autolink"),
   routerUnlink: (): Promise<boolean> => call<boolean>("router_unlink"),
+  routerClients: (): Promise<RouterClient[]> => call<RouterClient[]>("router_clients"),
   lanLimits: (down_kbps: number, up_kbps: number): Promise<boolean> =>
     call<boolean>("lan_limits", { downKbps: down_kbps, upKbps: up_kbps }),
+  lanBlock: (on: boolean): Promise<boolean> => call<boolean>("lan_block", { on }),
+  lanPrepare: (): Promise<LanPrepare> => call<LanPrepare>("lan_prepare"),
   lanDevices: (): Promise<LanDevice[]> => call<LanDevice[]>("lan_devices"),
   importCredential: (text: string, kind?: string) =>
     call<CardImportResult>("import_credential", { text, kind: kind ?? null }),

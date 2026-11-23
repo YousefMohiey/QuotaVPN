@@ -621,10 +621,11 @@ pub fn install_npcap() -> Result<String, String> {
         return Err(e);
     }
 
-    // /S is the vendor's silent switch. The app already runs elevated, which the driver needs.
+    // The free Npcap installer does not support silent installation; only the
+    // OEM build does, and that one cannot be redistributed. Run the normal
+    // wizard and wait for it: the user clicks I Agree, then Finish. The app is
+    // already elevated, which the driver needs. Do not add /S here again.
     let run = crate::lan::hidden(&dest.to_string_lossy())
-        .arg("/S")
-        .arg("/winpcap_mode=yes")
         .status()
         .map_err(|e| format!("could not run the Npcap installer: {e}"))?;
     let _ = std::fs::remove_file(&dest);
