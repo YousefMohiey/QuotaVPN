@@ -465,4 +465,5 @@ export const ar = {
   "weOffersFail": "تعذرت قراءة الباقة",
   "weGenericFail": "حدث خطأ حاول مجدداً",
   "copyFailed": "تعذر النسخ",
+  "notProvisioned": "هذا الجهاز غير مهيأ بعد. تواصل مع مزوّدك.",
 } as const

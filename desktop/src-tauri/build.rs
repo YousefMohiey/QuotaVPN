@@ -43,6 +43,18 @@ fn main() {
     // TaskDialogIndirect, so it died with "Entry Point Not Found" before it could
     // draw a window. `res/quotacards.manifest` carries both halves now: the
     // requested execution level and the Common-Controls 6 dependency.
+    // tauri-build 2.6 reads <target-dir>/build on the GNU branch. On a clean
+    // cross-build that directory does not exist yet and the whole build dies
+    // with os error 3 before the manifest step. Create it first; harmless when
+    // it already exists.
+    if let Ok(out) = env::var("OUT_DIR") {
+        let mut target_dir = PathBuf::from(out);
+        for _ in 0..3 {
+            target_dir.pop();
+        }
+        let _ = fs::create_dir_all(target_dir.join("build"));
+    }
+
     let windows = tauri_build::WindowsAttributes::new()
         .app_manifest(include_str!("../../res/quotacards.manifest"));
     let attrs = tauri_build::Attributes::new().windows_attributes(windows);

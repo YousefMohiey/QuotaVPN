@@ -5,7 +5,7 @@ include!(concat!(env!("OUT_DIR"), "/embed.rs"));
 
 /// Pre-pointed server (owner's) - used for zero-setup auto-connect when the
 /// embedded device key was baked in at compile time.
-pub const DEFAULT_HOST: &str = "quotacards.duckdns.org";
+pub const DEFAULT_HOST: &str = "quotavpn.duckdns.org";
 pub const DEFAULT_USER: &str = "ubuntu";
 pub const DEFAULT_PORT: u16 = 22;
 
@@ -65,6 +65,11 @@ pub struct Card {
     /// WireGuard address for this card, e.g. "10.8.0.7/32".
     #[serde(default)]
     pub wg_addr: String,
+    /// True once the server confirmed this UUID is in Xray. Cached so a normal
+    /// connect does not wait on the control plane; the failure path still
+    /// repairs a card that disappeared.
+    #[serde(default)]
+    pub registered: bool,
 }
 
 impl Card {
@@ -82,7 +87,35 @@ impl Card {
 impl AppConfig {
     pub fn config_dir() -> PathBuf {
         let base = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
-        base.join("quotacards")
+        base.join("quotavpn")
+    }
+
+    /// Move the old QuotaCards folders to QuotaVPN on first launch. The
+    /// roaming folder carries the config, cards and sealed credentials; the
+    /// local folder carries the engine and driver cache. If a folder is
+    /// locked, the small roaming files are copied and the engine is rebuilt.
+    pub fn migrate_dirs() {
+        let roaming = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
+        let old = roaming.join("quotacards");
+        let new = roaming.join("quotavpn");
+        if !new.exists() && old.exists() && std::fs::rename(&old, &new).is_err() {
+            let _ = std::fs::create_dir_all(&new);
+            for name in [
+                "config.json",
+                "card_credentials.bin",
+                "device_secret",
+                "device_hmac.bin",
+                "device_hmac.uuid",
+            ] {
+                let _ = std::fs::copy(old.join(name), new.join(name));
+            }
+        }
+        let local = dirs::data_local_dir().unwrap_or_else(|| PathBuf::from("."));
+        let old = local.join("quotacards");
+        let new = local.join("quotavpn");
+        if !new.exists() && old.exists() {
+            let _ = std::fs::rename(&old, &new);
+        }
     }
 
     pub fn config_path() -> PathBuf {

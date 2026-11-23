@@ -4,11 +4,11 @@
  * Values mirror the shapes in lib.rs; the tunnel "runs" so connected-state
  * screens are reachable with ?vpn=1.
  */
-import type { Card, CmdResult, TrafficState, TunnelState, UpdateInfo } from "./ipc"
+import type { Card, CardStatus, CmdResult, TrafficState, TunnelState, UpdateInfo } from "./ipc"
 
 const cards: Card[] = [
-  { name: "Gamerz (playvalorant.com)", uuid: "11111111-1111-4111-8111-111111111111", card_type: "Gamerz", sni: "playvalorant.com", wg_private: "", wg_addr: "" },
-  { name: "Streamerz (youtube.com)", uuid: "22222222-2222-4222-8222-222222222222", card_type: "Streamerz", sni: "youtube.com", wg_private: "", wg_addr: "" },
+  { name: "Gamerz (playvalorant.com)", uuid: "11111111-1111-4111-8111-111111111111", card_type: "Gamerz", sni: "playvalorant.com", wg_private: "", wg_addr: "", registered: true },
+  { name: "Streamerz (youtube.com)", uuid: "22222222-2222-4222-8222-222222222222", card_type: "Streamerz", sni: "youtube.com", wg_private: "", wg_addr: "", registered: true },
 ]
 
 let running = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("vpn") === "1"
@@ -104,7 +104,12 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
   const ok = (msg = ""): CmdResult => ({ ok: true, msg })
   switch (cmd) {
     case "get_state":
-      return { server_ip: "qc-speed.example.com", ssh_user: "ubuntu", ssh_port: 22, cards, version: "0.4.15", update_channel: "normal" } as T
+      return {
+        server_ip: "qv-speed.example.com",
+        cards,
+        version: "0.4.15",
+        update_channel: "normal",
+      } as T
     case "lan_known":
     case "lan_devices":
       return DEMO_DEVICES as T
@@ -173,19 +178,27 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
       return true as T
     case "copy_text":
       return true as T
-    case "probe_server":
-      return ok("Server reachable.") as T
-    case "generate_card": {
-      const name = String(args?.name || "New card")
+    case "card_status":
+      return {
+        imported: true,
+        uuid: String(args?.uuid || cards[0]?.uuid || ""),
+        ok: true,
+        message: "Active on the server.",
+      } as CardStatus as T
+    case "import_credential": {
+      const text = String(args?.text || "")
+      const match = text.match(/qc1:([0-9a-fA-F-]{36}):/)
+      const uuid = match ? match[1].toLowerCase() : crypto.randomUUID()
       const kind = String(args?.kind || "Gamerz")
-      const sni = String(args?.sni || "")
-      cards.push({ name, uuid: crypto.randomUUID(), card_type: kind, sni, wg_private: "", wg_addr: "" })
-      return ok("Card created.") as T
+      if (!cards.some((c) => c.uuid === uuid)) {
+        cards.push({ name: "Card", uuid, card_type: kind, sni: "ea.com", wg_private: "", wg_addr: "", registered: false })
+      }
+      return { ok: true, msg: "Credential imported.", uuid } as T
     }
-    case "revoke_card": {
+    case "forget_card": {
       const i = cards.findIndex((c) => c.uuid === args?.uuid)
       if (i >= 0) cards.splice(i, 1)
-      return ok("Card revoked.") as T
+      return ok("Card removed from this PC. The server still has it.") as T
     }
     case "copy_card":
       return ok("Link copied.") as T
@@ -222,8 +235,6 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
       return "[mock] engine log line\n[mock] tunnel up\n" as T
     case "tunnel_copy_log":
       return ok("Log copied.") as T
-    case "import_card":
-      return ok("Card added.") as T
     case "app_icons":
       // The preview has no executables to read icons from: the rows tile.
       return [] as unknown as T

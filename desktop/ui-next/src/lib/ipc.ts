@@ -18,16 +18,29 @@ export type Card = {
   sni: string
   wg_private: string
   wg_addr: string
+  registered: boolean
 }
 
 export type UiState = {
   server_ip: string
-  ssh_user: string
-  ssh_port: number
   cards: Card[]
   version: string
   update_channel: string
 }
+
+/** Read-only state of one card. `ok` is false when the server refused or the
+    PC could not reach it; `message` carries the server's own sentence. */
+export type CardStatus = {
+  imported: boolean
+  uuid: string
+  ok: boolean
+  state: string
+  registered: boolean
+  message: string
+}
+
+/** An import stores the credential locally and returns the card it belongs to. */
+export type CardImportResult = CmdResult & { uuid: string }
 
 export type TunnelState = { running: boolean; error: string }
 export type TrafficState = { rx: number; tx: number }
@@ -288,12 +301,10 @@ export const api = {
   lanLimits: (down_kbps: number, up_kbps: number): Promise<boolean> =>
     call<boolean>("lan_limits", { downKbps: down_kbps, upKbps: up_kbps }),
   lanDevices: (): Promise<LanDevice[]> => call<LanDevice[]>("lan_devices"),
-  probeServer: () => call<CmdResult>("probe_server"),
-  generateCard: (name: string, kind: string, sni: string) =>
-    call<CmdResult>("generate_card", { name, kind, sni }),
-  importCard: (uuid: string, name: string, kind: string, sni: string) =>
-    call<CmdResult>("import_card", { uuid, name, kind, sni }),
-  revokeCard: (uuid: string) => call<CmdResult>("revoke_card", { uuid }),
+  importCredential: (text: string, kind?: string) =>
+    call<CardImportResult>("import_credential", { text, kind: kind ?? null }),
+  cardStatus: (uuid?: string) => call<CardStatus>("card_status", { uuid: uuid ?? null }),
+  forgetCard: (uuid: string) => call<CmdResult>("forget_card", { uuid }),
   setCardSni: (uuid: string, sni: string) => call<CmdResult>("set_card_sni", { uuid, sni }),
   copyCard: (uuid: string) => call<CmdResult>("copy_card", { uuid }),
   copyToClipboard: (text: string) => call<boolean>("copy_text", { text }),
@@ -308,6 +319,7 @@ export const api = {
   status: () => call<TunnelState>("tunnel_status"),
   tunnelHealth: () => call<number>("tunnel_health"),
   processRunning: (name: string) => call<boolean>("process_running", { name }),
+  gameRunning: () => call<boolean>("game_running"),
   autostartGet: () => call<boolean>("autostart_get"),
   autostartSet: (on: boolean) => call<unknown>("autostart_set", { on }),
   traffic: () => call<TrafficState>("tunnel_traffic"),

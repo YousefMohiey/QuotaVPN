@@ -177,7 +177,7 @@ const PROXY_DOH_IP: &str = "1.1.1.1";
 
 pub fn engine_dir() -> PathBuf {
     let base = dirs::data_local_dir().unwrap_or_else(|| PathBuf::from("."));
-    base.join("quotacards").join("engine")
+    base.join("quotavpn").join("engine")
 }
 
 #[cfg(windows)]
@@ -200,19 +200,24 @@ pub fn tun_config_path() -> PathBuf {
 /// should not have to know about Tailscale specifically.
 #[cfg(windows)]
 fn another_default_route() -> bool {
-    let out = std::process::Command::new("powershell")
-        .args([
-            "-NoProfile",
-            "-NonInteractive",
-            "-Command",
-            "(Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Measure-Object).Count",
-        ])
+    // `route print` is a native command; the old PowerShell query spent about
+    // a second starting the shell on every connect just to count two lines.
+    let out = std::process::Command::new("route")
+        .args(["print", "-4"])
         .creation_flags(NO_WINDOW)
         .output();
-    match out {
-        Ok(o) => String::from_utf8_lossy(&o.stdout).trim().parse::<u32>().unwrap_or(0) > 1,
-        Err(_) => false,
+    let Ok(o) = out else {
+        return false;
+    };
+    let text = String::from_utf8_lossy(&o.stdout);
+    let mut count = 0;
+    for line in text.lines() {
+        let mut fields = line.split_whitespace();
+        if fields.next() == Some("0.0.0.0") && fields.next() == Some("0.0.0.0") {
+            count += 1;
+        }
     }
+    count > 1
 }
 
 /// Put our tun ahead of the competition once it exists.
@@ -221,26 +226,26 @@ fn another_default_route() -> bool {
 /// a reason to refuse the connection, because the tunnel still works without it.
 #[cfg(windows)]
 fn raise_our_route() {
-    let Ok(out) = std::process::Command::new("powershell")
-        .args([
-            "-NoProfile",
-            "-NonInteractive",
-            "-Command",
-            "Get-NetAdapter -IncludeHidden | Where-Object { $_.Name -like 'QuotaVPN*' } | Select-Object -First 1 -ExpandProperty ifIndex",
-        ])
-        .creation_flags(NO_WINDOW)
-        .output()
+    // The adapter name is written before the engine starts. `netsh` resolves
+    // its index in one native call; the old PowerShell lookup cost about a
+    // second on every connect.
+    let name = std::fs::read_to_string(engine_dir().join("tun-ifname.txt")).unwrap_or_default();
+    let name = name.trim();
+    if name.is_empty() {
+        return;
+    }
+    let Ok(out) = run_hidden("netsh", &["interface", "ipv4", "show", "interfaces"]) else {
+        return;
+    };
+    let text = String::from_utf8_lossy(&out.stdout);
+    let Some(idx) = text
+        .lines()
+        .find(|line| line.contains(name))
+        .and_then(|line| line.split_whitespace().next())
     else {
         return;
     };
-    let idx = String::from_utf8_lossy(&out.stdout).trim().to_string();
-    if idx.is_empty() {
-        return;
-    }
-    let _ = std::process::Command::new("netsh")
-        .args(["interface", "ipv4", "set", "interface", &idx, "metric=1"])
-        .creation_flags(NO_WINDOW)
-        .output();
+    let _ = run_hidden("netsh", &["interface", "ipv4", "set", "interface", idx, "metric=1"]);
 }
 
 #[cfg(windows)]
@@ -353,9 +358,58 @@ pub fn ensure_engine() -> Result<String, String> {
     }
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
+struct IpCache {
+    host: String,
+    ts: u64,
+    ips: Vec<String>,
+}
+
+fn ip_cache_path() -> std::path::PathBuf {
+    engine_dir().join("server-ips-cache.json")
+}
+
+fn cached_server_ips(host: &str) -> Option<Vec<String>> {
+    let text = std::fs::read_to_string(ip_cache_path()).ok()?;
+    let cache: IpCache = serde_json::from_str(&text).ok()?;
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?
+        .as_secs();
+    (cache.host == host && now.saturating_sub(cache.ts) < 1800 && !cache.ips.is_empty())
+        .then_some(cache.ips)
+}
+
+fn cache_server_ips(host: &str, ips: &[String]) {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let cache = IpCache {
+        host: host.to_string(),
+        ts: now,
+        ips: ips.to_vec(),
+    };
+    if let Ok(text) = serde_json::to_string(&cache) {
+        let _ = std::fs::create_dir_all(engine_dir());
+        let _ = std::fs::write(ip_cache_path(), text);
+    }
+}
+
+/// A server move must not be hidden behind the IP cache. Called on a failed
+/// connect so the next press resolves the name again.
+pub fn clear_server_ip_cache() {
+    let _ = std::fs::remove_file(ip_cache_path());
+}
+
 /// Resolve the server domain NOW (system DNS intact) so its IPs can be
-/// excluded from TUN routing - otherwise the tunnel eats its own path.
+/// excluded from TUN routing - otherwise the tunnel eats its own path. The
+/// answer is cached for thirty minutes: a warm connect must not spend a DNS
+/// round trip inside the config build.
 pub fn resolve_server_ips(host: &str) -> Result<Vec<String>, String> {
+    if let Some(ips) = cached_server_ips(host) {
+        return Ok(ips);
+    }
     let mut ips: Vec<String> = format!("{host}:443")
         .to_socket_addrs()
         .map_err(|e| format!("can't resolve {host} ({e})"))?
@@ -374,6 +428,7 @@ pub fn resolve_server_ips(host: &str) -> Result<Vec<String>, String> {
     if ips.is_empty() {
         return Err(format!("can't resolve {host}"));
     }
+    cache_server_ips(host, &ips);
     Ok(ips)
 }
 
@@ -564,6 +619,11 @@ where
     F: FnOnce() -> Option<(String, String)>,
 {
     let mut excludes = resolve_server_ips(host)?;
+    // The config, session and address records all live here. Production
+    // creates this during engine setup; a direct config build (including the
+    // tests) must be able to create it too, or the first write fails on a
+    // fresh profile.
+    let _ = std::fs::create_dir_all(engine_dir());
     // The kill switch needs to know which addresses the tunnel itself is
     // allowed to reach, and it runs as root without the card in hand.
     #[cfg(target_os = "linux")]
@@ -730,6 +790,17 @@ where
             1,
             serde_json::json!({"ip_cidr": VOICE_CIDRS.to_vec(), "outbound": "proxy"}),
         );
+        // 20.0.0.0/8 carries the voice networks, but it also contains
+        // Microsoft's identity endpoints (20.190.x.x). With the voice helper
+        // on, login.microsoftonline.com, login.live.com and every OAuth flow
+        // failed with ERR_CONNECTION_CLOSED while unrelated Microsoft sites
+        // kept working. This direct exception sits above the voice CIDR and
+        // below the Riot-scoped rules (which are inserted after it), so only
+        // non-Riot traffic to that /16 leaves directly.
+        rules.insert(
+            1,
+            serde_json::json!({"ip_cidr": ["20.190.0.0/16"], "outbound": "direct"}),
+        );
         // Name-based fallback, for any future name-based voice endpoint.
         rules.insert(
             1,
@@ -799,26 +870,26 @@ where
     // top-level ENDPOINT (the outbound form was removed outright), Hysteria2
     // is an outbound. The endpoint carries the "proxy" tag, so route rules,
     // DNS detours, per-app rules and the voice rules all keep working.
+    let hy2_out = |tag: &str| {
+        serde_json::json!({
+            "type": "hysteria2",
+            "tag": tag,
+            "server": server_v4,
+            "server_port": 443,
+            "password": hy2_pass,
+            "up_mbps": 10,
+            "down_mbps": 50,
+            "tls": {
+                "enabled": true,
+                "server_name": sni,
+                "insecure": true,
+                "alpn": ["h3"]
+            }
+        })
+    };
     let (outbounds, endpoints) = match transport {
         "hy2" => (
-            serde_json::json!([
-                {
-                    "type": "hysteria2",
-                    "tag": "proxy",
-                    "server": server_v4,
-                    "server_port": 443,
-                    "password": hy2_pass,
-                    "up_mbps": 10,
-                    "down_mbps": 50,
-                    "tls": {
-                        "enabled": true,
-                        "server_name": sni,
-                        "insecure": true,
-                        "alpn": ["h3"]
-                    }
-                },
-                direct_out.clone()
-            ]),
+            serde_json::json!([hy2_out("proxy"), direct_out.clone()]),
             serde_json::json!([]),
         ),
         "wg" => {
@@ -1477,7 +1548,7 @@ const KILL_RULE: &str = "QuotaVPN Kill Switch";
 fn kill_flag_path() -> std::path::PathBuf {
     dirs::data_local_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("quotacards")
+        .join("quotavpn")
         .join("killswitch.txt")
 }
 
@@ -1702,10 +1773,20 @@ pub fn run_engine_headless() {
 
     let mut cmd = cmd_hidden(&singbox_path().to_string_lossy());
     cmd.args(["run", "-c", &cfg.to_string_lossy()]);
-    if let Ok(f) = std::fs::File::create(engine_log_path()) {
+    // Append, never truncate: the app writes the connect timings before the
+    // engine starts, and a create here used to erase them on every connect.
+    if let Ok(f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(engine_log_path())
+    {
         cmd.stdout(std::process::Stdio::from(f));
     }
-    if let Ok(f) = std::fs::File::create(engine_dir().join("engine.err")) {
+    if let Ok(f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(engine_dir().join("engine.err"))
+    {
         cmd.stderr(std::process::Stdio::from(f));
     }
     let Ok(mut child) = cmd.spawn() else {
@@ -2030,9 +2111,26 @@ pub fn task_engine_pid() -> Option<u32> {
 /// a SYSTEM process, unlike its command line.
 #[cfg(windows)]
 pub fn engine_alive(pid: u32) -> bool {
-    run_hidden("tasklist", &["/FI", &format!("PID eq {pid}"), "/FO", "CSV", "/NH"])
-        .map(|o| String::from_utf8_lossy(&o.stdout).to_lowercase().contains("sing-box.exe"))
-        .unwrap_or(false)
+    // One syscall instead of a `tasklist` process per poll. The image name is
+    // still verified, so a recycled pid cannot masquerade as our engine.
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::System::Threading::{
+        OpenProcess, QueryFullProcessImageNameW, PROCESS_QUERY_LIMITED_INFORMATION,
+    };
+    unsafe {
+        let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+        if handle.is_null() {
+            return false;
+        }
+        let mut buf = [0u16; 1024];
+        let mut len = buf.len() as u32;
+        let ok = QueryFullProcessImageNameW(handle, 0, buf.as_mut_ptr(), &mut len);
+        let _ = CloseHandle(handle);
+        ok != 0
+            && String::from_utf16_lossy(&buf[..len as usize])
+                .to_ascii_lowercase()
+                .ends_with("sing-box.exe")
+    }
 }
 
 /// Bring the engine up through the task and return its pid (0 while the task
@@ -2066,19 +2164,36 @@ fn refresh_tun_name() -> Option<String> {
 
 /// Is the session's adapter actually standing? A name that exists but never
 /// comes up is the difference between connected and pretending.
+#[cfg(windows)]
 fn tun_adapter_up() -> bool {
-    let name = std::fs::read_to_string(engine_dir().join("tun-ifname.txt"))
-        .unwrap_or_default();
-    let name = name.trim();
-    if name.is_empty() {
+    use windows_sys::Win32::NetworkManagement::IpHelper::{
+        FreeMibTable, GetIfTable2, MIB_IF_TABLE2,
+    };
+    let want = std::fs::read_to_string(engine_dir().join("tun-ifname.txt"))
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+    if want.is_empty() {
         return false;
     }
-    match run_hidden("netsh", &["interface", "show", "interface", &format!("name={name}")]) {
-        Ok(o) => {
-            let text = String::from_utf8_lossy(&o.stdout).to_lowercase();
-            text.contains("connected") || text.contains("up")
+    unsafe {
+        let mut table: *mut MIB_IF_TABLE2 = std::ptr::null_mut();
+        if GetIfTable2(&mut table) != 0 || table.is_null() {
+            return false;
         }
-        Err(_) => false,
+        let rows =
+            std::slice::from_raw_parts((*table).Table.as_ptr(), (*table).NumEntries as usize);
+        let mut up = false;
+        for row in rows {
+            let alias = String::from_utf16_lossy(&row.Alias);
+            if alias.trim_end_matches('\0') == want {
+                // IfOperStatusUp is 1.
+                up = row.OperStatus as u32 == 1;
+                break;
+            }
+        }
+        FreeMibTable(table as *const core::ffi::c_void);
+        up
     }
 }
 
@@ -2116,7 +2231,7 @@ pub fn start_engine() -> Result<u32, String> {
             // stand, and say so plainly when it never does.
             if let Some(name) = if_name.as_deref() {
                 let mut up = false;
-                for _ in 0..24 {
+                for _ in 0..60 {
                     if tun_adapter_up() {
                         up = true;
                         break;
@@ -2124,7 +2239,7 @@ pub fn start_engine() -> Result<u32, String> {
                     if task_engine_pid().is_none() {
                         break;
                     }
-                    std::thread::sleep(std::time::Duration::from_millis(250));
+                    std::thread::sleep(std::time::Duration::from_millis(50));
                 }
                 if !up && task_engine_pid().is_none() {
                     return Err(format!("tunnel-failed: {name}"));
@@ -2140,7 +2255,7 @@ pub fn start_engine() -> Result<u32, String> {
             }
             return Ok(pid);
         }
-        std::thread::sleep(std::time::Duration::from_millis(250));
+        std::thread::sleep(std::time::Duration::from_millis(50));
     }
     Ok(0)
 }
@@ -2189,21 +2304,39 @@ pub fn bounce_wintun() {
 pub fn tun_adapter_present() -> bool {
     #[cfg(windows)]
     {
-        let out = run_hidden(
-            "powershell",
-            &[
-                "-NoProfile",
-                "-WindowStyle",
-                "Hidden",
-                "-Command",
-                "@(Get-NetAdapter -IncludeHidden -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'QuotaVPN*' }).Count",
-            ],
-        );
-        if let Ok(o) = out {
-            let n = String::from_utf8_lossy(&o.stdout);
-            return n.trim() != "0" && !n.trim().is_empty();
+        // Native scan: the PowerShell adapter query cost about a second and a
+        // half on every connect, even when there was no adapter to find.
+        use windows_sys::Win32::NetworkManagement::IpHelper::{
+            FreeMibTable, GetIfTable2, MIB_IF_TABLE2,
+        };
+        unsafe {
+            let mut table: *mut MIB_IF_TABLE2 = std::ptr::null_mut();
+            if GetIfTable2(&mut table) != 0 || table.is_null() {
+                return false;
+            }
+            let rows =
+                std::slice::from_raw_parts((*table).Table.as_ptr(), (*table).NumEntries as usize);
+            let mut found = false;
+            for row in rows {
+                let alias = String::from_utf16_lossy(&row.Alias);
+                let alias = alias.trim_end_matches('\0');
+                let desc = String::from_utf16_lossy(&row.Description);
+                let desc = desc.trim_end_matches('\0');
+                let lower = desc.to_ascii_lowercase();
+                if alias.starts_with("QuotaVPN")
+                    || alias.starts_with("quotavpn")
+                    || desc.contains("QuotaVPN")
+                    || desc.contains("quotavpn")
+                    || lower.contains("wintun")
+                    || lower.contains("sing-box")
+                {
+                    found = true;
+                    break;
+                }
+            }
+            FreeMibTable(table as *const core::ffi::c_void);
+            found
         }
-        false
     }
     #[cfg(not(windows))]
     {
@@ -2264,7 +2397,7 @@ fn process_is_our_app(pid: u32) -> bool {
     };
     let t = String::from_utf8_lossy(&out.stdout).to_lowercase();
     t.lines().any(|l| {
-        (l.contains("quotacards") || l.contains("quotavpn"))
+        (l.contains("quotavpn") || l.contains("quotavpn"))
             && l.split_whitespace().any(|w| w.parse::<u32>().ok() == Some(pid))
     })
 }
@@ -2579,6 +2712,8 @@ impl DestTracker {
 
 #[cfg(test)]
 mod tests {
+    // A literal address: the tests must not depend on DuckDNS.
+    const TEST_HOST: &str = "203.0.113.7";
     use super::*;
 
     // Destinations: the arithmetic the screen depends on. No HTTP, no engine,
@@ -2731,7 +2866,7 @@ mod tests {
         let list: Vec<String> = apps.iter().map(|s| s.to_string()).collect();
         let p = write_tun_config(
             "00000000-test",
-            crate::config::DEFAULT_HOST,
+            TEST_HOST,
             "example.com",
             mode,
             &list,
@@ -2753,7 +2888,7 @@ mod tests {
             // A real UUID shape: the device-only config is also the one that gets
             // handed to `sing-box check` as part of verifying this feature.
             "11111111-1111-1111-1111-111111111111",
-            crate::config::DEFAULT_HOST,
+            TEST_HOST,
             "example.com",
             "",
             &[],
@@ -2886,7 +3021,7 @@ mod tests {
         let list = vec!["VALORANT.exe".to_string(), "Discord.exe".to_string()];
         let p = write_tun_config(
             "00000000-test",
-            crate::config::DEFAULT_HOST,
+            TEST_HOST,
             "example.com",
             "allow",
             &list,
@@ -2922,7 +3057,7 @@ mod tests {
         let list: Vec<String> = vec![];
         let p = write_tun_config(
             "00000000-test",
-            crate::config::DEFAULT_HOST,
+            TEST_HOST,
             "example.com",
             "allow",
             &list,
@@ -3013,6 +3148,66 @@ mod tests {
     }
 
     #[test]
+    fn voice_keeps_microsoft_identity_direct() {
+        let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        // 20.0.0.0/8 carries the voice networks, but it also contains
+        // Microsoft's login endpoints at 20.190.x.x. With the helper on, every
+        // OAuth and Microsoft login flow died with ERR_CONNECTION_CLOSED. The
+        // direct /16 must sit above the voice CIDR rule and only the voice
+        // networks may still use the proxy.
+        let p = write_tun_config(
+            "00000000-test",
+            TEST_HOST,
+            "example.com",
+            "allow",
+            &[],
+            true,
+            "vless",
+            "",
+            None,
+        )
+        .expect("config");
+        let v: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(p).expect("read")).expect("json");
+        let rules = v["route"]["rules"].as_array().unwrap();
+        let direct_at = rules
+            .iter()
+            .position(|r| {
+                r["outbound"] == "direct"
+                    && r["ip_cidr"]
+                        .as_array()
+                        .map_or(false, |a| a.iter().any(|x| x.as_str() == Some("20.190.0.0/16")))
+            })
+            .expect("no direct exception for Microsoft identity");
+        let voice_at = rules
+            .iter()
+            .position(|r| {
+                r["outbound"] == "proxy"
+                    && r["ip_cidr"]
+                        .as_array()
+                        .map_or(false, |a| a.iter().any(|x| x.as_str() == Some("20.0.0.0/8")))
+            })
+            .expect("no voice CIDR rule");
+        assert!(
+            direct_at < voice_at,
+            "Microsoft identity at {direct_at} is below voice at {voice_at}"
+        );
+        // The Riot-scoped rules stay above the direct exception, so a Riot
+        // voice flow on a STUN port is still carried.
+        assert!(rules
+            .iter()
+            .any(|r| r["port_range"][0] == "3478:3480" && r["outbound"] == "proxy"));
+        // No second outbound and no split tag: the connection is the selected
+        // transport, exactly as before the experiment.
+        let outs = v["outbounds"].as_array().unwrap();
+        assert!(outs.iter().any(|o| o["tag"] == "proxy" && o["type"] == "vless"));
+        assert!(!outs.iter().any(|o| o["tag"] == "voice"));
+        if engine_dir().join("sing-box.exe").exists() {
+            check_config().expect("engine accepts the voice config with the direct exception");
+        }
+    }
+
+    #[test]
     fn route_check_sees_voice_sessions_and_defaults() {
         // The voice session confines the tun with route_address: the routes
         // it installs are the voice networks (real table lines, captured on
@@ -3088,7 +3283,7 @@ mod tests {
         let list: Vec<String> = apps.iter().map(|s| s.to_string()).collect();
         let p = write_tun_config(
             "00000000-test",
-            crate::config::DEFAULT_HOST,
+            TEST_HOST,
             "example.com",
             mode,
             &list,
@@ -3153,7 +3348,7 @@ mod tests {
         let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let p = write_tun_config(
             "00000000-test",
-            crate::config::DEFAULT_HOST,
+            TEST_HOST,
             "example.com",
             "",
             &[],
@@ -3246,7 +3441,7 @@ mod tests {
         // server's shared password.
         let p = write_tun_config(
             "00000000-test",
-            crate::config::DEFAULT_HOST,
+            TEST_HOST,
             "example.com",
             "all",
             &[],
@@ -3269,7 +3464,7 @@ mod tests {
         // route rules, DNS detours and the voice rules keep pointing at it.
         let p = write_tun_config(
             "00000000-test",
-            crate::config::DEFAULT_HOST,
+            TEST_HOST,
             "example.com",
             "all",
             &[],
@@ -3611,7 +3806,11 @@ pub fn run_engine_headless() {
     }
     let mut cmd = cmd_hidden(&singbox_path().to_string_lossy());
     cmd.args(["run", "-c", &cfg.to_string_lossy()]);
-    if let Ok(f) = std::fs::File::create(engine_log_path()) {
+    if let Ok(f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(engine_log_path())
+    {
         if let Ok(e) = f.try_clone() {
             cmd.stdout(e);
         }

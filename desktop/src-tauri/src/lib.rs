@@ -7,26 +7,28 @@
 //! previous desktop app untouched.
 
 use quotacards::{
-    config::{AppConfig, Card, EMBED_KEY, DEFAULT_HOST, DEFAULT_PORT, DEFAULT_USER},
-    server, vpn,
+    config::{AppConfig, Card, DEFAULT_HOST},
+    vpn,
 };
 use std::sync::Mutex;
 #[cfg(not(windows))]
 mod wincompat;
-#[cfg(not(windows))]
-use wincompat::CmdExt;
-use tauri::Manager;
-use tauri::Emitter;
-use tauri::WindowEvent;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::Emitter;
+use tauri::Manager;
+use tauri::WindowEvent;
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_updater::UpdaterExt;
+#[cfg(not(windows))]
+use wincompat::CmdExt;
 
-pub mod speed;
+mod cardapi;
+mod credentials;
 pub mod ookla;
 pub mod router_huawei;
 mod router_remember;
+pub mod speed;
 mod we_quota;
 
 #[cfg(windows)]
@@ -35,6 +37,11 @@ use std::os::windows::process::CommandExt;
 struct State(Mutex<AppConfig>);
 /// Live engine PID. None means no tunnel (or one we no longer track).
 struct Engine(Mutex<Option<u32>>);
+/// Serialises start and stop. Without this, a stop that was already sweeping
+/// routes could land halfway through the next start and kill its engine, and
+/// pressing Connect while the dial was still sliding back connected into a
+/// tunnel that immediately came down.
+struct Lifecycle(tokio::sync::Mutex<()>);
 
 /// What this session's tunnel is carrying, per (process, host). In memory only:
 /// no table, no file, nothing that survives the process.
@@ -43,7 +50,6 @@ struct Dests(Mutex<vpn::DestTracker>);
 /// How often the engine's connection list is read. Two seconds is slow enough
 /// to cost nothing and fast enough that a screen opened at random is current.
 const DEST_POLL: std::time::Duration = std::time::Duration::from_secs(2);
-
 
 /// One in-app install at a time. The updater plugin does not serialize
 /// downloads, so a second press used to start a whole second transfer and
@@ -59,19 +65,26 @@ struct CmdResult {
 #[derive(serde::Serialize)]
 struct UiState {
     server_ip: String,
-    ssh_user: String,
-    ssh_port: u16,
     cards: Vec<Card>,
     version: String,
     update_channel: String,
 }
 
 fn snapshot(cfg: &AppConfig) -> UiState {
+    // The window never needs a WireGuard private key: the backend reads it
+    // from config.json when it builds the engine. Keep it out of the webview.
+    let cards = cfg
+        .cards
+        .iter()
+        .cloned()
+        .map(|mut card| {
+            card.wg_private.clear();
+            card
+        })
+        .collect();
     UiState {
         server_ip: cfg.server_ip.clone(),
-        ssh_user: cfg.ssh_user.clone(),
-        ssh_port: cfg.ssh_port,
-        cards: cfg.cards.clone(),
+        cards,
         version: String::new(),
         update_channel: cfg.update_channel.clone(),
     }
@@ -81,73 +94,119 @@ fn build_link(uuid: &str, host: &str, sni: &str, name: &str) -> String {
     format!("vless://{uuid}@{host}:443?type=tcp&encryption=none&security=tls&fp=random&alpn=h3%2Ch2%2Chttp%2F1.1&allowInsecure=1&sni={sni}#{name}")
 }
 
-fn gen_keypair() -> Result<(String, String), String> {
-    use ssh_key::{Algorithm, LineEnding, PrivateKey};
-    let mut rng = rand_core::OsRng;
-    let key = PrivateKey::random(&mut rng, Algorithm::Ed25519).map_err(|e| e.to_string())?;
-    let pem: String = key
-        .to_openssh(LineEnding::LF)
-        .map_err(|e| e.to_string())?
-        .to_string();
-    Ok((pem, key.public_key().to_string()))
-}
-
 fn initial_config() -> AppConfig {
+    AppConfig::migrate_dirs();
     let mut cfg = AppConfig::load();
-    if cfg.private_key.is_empty() {
-        if let Ok((priv_pem, pub_line)) = gen_keypair() {
-            cfg.private_key = priv_pem;
-            cfg.public_key = pub_line;
-            cfg.save();
-        }
+    let mut dirty = false;
+    // The desktop has no SSH control plane any more. Clear any key an older
+    // build left in config.json so the shared credential does not sit in the
+    // profile, and so a stale key cannot make the app look set up.
+    if !cfg.private_key.is_empty() {
+        cfg.private_key.clear();
+        dirty = true;
     }
-    // Zero-setup: baked-in builds point at the owner's server, nothing to type.
-    if let Some(emb) = EMBED_KEY {
-        let points_at_mine = cfg.server_ip.is_empty() || cfg.server_ip == DEFAULT_HOST;
-        if points_at_mine {
-            let mut dirty = false;
-            // Heal an empty host on its own: it used to stay stuck on
-            // "Set up your server first." forever whenever the embed key was
-            // already installed, because the whole block was gated on the key
-            // being stale. Each field is repaired independently now.
-            if cfg.server_ip.is_empty() {
-                cfg.server_ip = DEFAULT_HOST.to_string();
-                dirty = true;
-            }
-            if cfg.private_key != emb {
-                cfg.private_key = emb.to_string();
-                cfg.ssh_user = DEFAULT_USER.to_string();
-                cfg.ssh_port = DEFAULT_PORT;
-                cfg.synced = false;
-                dirty = true;
-            }
-            if dirty {
-                cfg.save();
-            }
-        }
+    if !cfg.public_key.is_empty() {
+        cfg.public_key.clear();
+        dirty = true;
     }
-    // A build made from a checkout carries no device key, so the heal above is
-    // skipped and an install can end up with a key but no host: the key survives a
-    // config rewrite, the host does not. In that state the app answers "Set up your
-    // server first" with no way forward, which is a dead end for the one case where
-    // the key is already the right one. Only fill the host when there is a key to
-    // use it with; an install with neither stays empty and says so.
-    if cfg.server_ip.is_empty() && !cfg.private_key.trim().is_empty() {
+    if !cfg.ssh_user.is_empty() {
+        cfg.ssh_user.clear();
+        dirty = true;
+    }
+    if cfg.ssh_port != 0 {
+        cfg.ssh_port = 0;
+        dirty = true;
+    }
+    // The DuckDNS name moved from quotacards to quotavpn. The old one no
+    // longer resolves, so an install that kept it would report "the server
+    // name did not resolve" forever. Heal the old default in place.
+    if cfg.server_ip.is_empty() || cfg.server_ip == "quotacards.duckdns.org" {
         cfg.server_ip = DEFAULT_HOST.to_string();
-        cfg.save();
+        dirty = true;
     }
     // migrate old cards (no per-card SNI) to a sane default
-    let mut dirty = false;
     for c in &mut cfg.cards {
         if c.sni.is_empty() {
             c.sni = "ea.com".to_string();
             dirty = true;
         }
     }
+    // Owner delivery path: a profile beside the exe or in the config folder
+    // imports the customer's card silently, so the customer never pastes.
+    match credentials::import_profile(&mut cfg) {
+        Ok(count) if count > 0 => {
+            vpn::app_log(&format!("profile: imported {count} card(s)"));
+            dirty = true;
+        }
+        Ok(_) => {}
+        Err(e) => vpn::app_log(&format!("profile: {e}")),
+    }
     if dirty {
         cfg.save();
     }
+    credentials::remove_legacy_device_secret();
     cfg
+}
+
+/// Headless timing for the real connect path. Uses the real card, server,
+/// engine and TUN, then stops the engine. Run once cold and twice warm.
+fn bench_connect(voice: bool) -> Result<(), String> {
+    AppConfig::migrate_dirs();
+    let cfg = AppConfig::load();
+    let card = cfg.cards.first().ok_or("no card on this PC")?;
+    if cfg.server_ip.is_empty() {
+        return Err("no server configured".into());
+    }
+    if vpn::task_engine_pid().is_some() {
+        return Err("an engine is already running; disconnect first".into());
+    }
+    let started = std::time::Instant::now();
+    let _engine = vpn::ensure_engine()?;
+    let ensure = started.elapsed();
+    let t = std::time::Instant::now();
+    vpn::write_tun_config(
+        &card.uuid,
+        &cfg.server_ip,
+        &card.sni,
+        "all",
+        &[],
+        voice,
+        "vless",
+        "",
+        None,
+    )?;
+    let write = t.elapsed();
+    let t = std::time::Instant::now();
+    vpn::check_config()?;
+    let check = t.elapsed();
+    let t = std::time::Instant::now();
+    let pid = vpn::start_engine()?;
+    let start = t.elapsed();
+    let t = std::time::Instant::now();
+    let mut up = false;
+    for _ in 0..200 {
+        if vpn::tun_routes_present() {
+            up = true;
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(25));
+    }
+    let routes = t.elapsed();
+    let total = started.elapsed();
+    let t = std::time::Instant::now();
+    vpn::stop_engine();
+    let stop = t.elapsed();
+    println!(
+        "BENCH voice={voice} ensure={}ms write={}ms check={}ms start={}ms routes={}ms total={}ms stop={}ms up={up} pid={pid}",
+        ensure.as_millis(),
+        write.as_millis(),
+        check.as_millis(),
+        start.as_millis(),
+        routes.as_millis(),
+        total.as_millis(),
+        stop.as_millis()
+    );
+    Ok(())
 }
 
 #[tauri::command]
@@ -159,45 +218,142 @@ fn get_state(app: tauri::AppHandle, state: tauri::State<State>) -> UiState {
     st
 }
 
+#[derive(serde::Serialize)]
+struct CardStatus {
+    imported: bool,
+    uuid: String,
+    ok: bool,
+    state: String,
+    registered: bool,
+    message: String,
+}
+
+fn pick_card<'a>(cfg: &'a AppConfig, uuid: &str) -> Option<&'a Card> {
+    if !uuid.trim().is_empty() {
+        return cfg.cards.iter().find(|card| card.uuid == uuid);
+    }
+    cfg.cards
+        .iter()
+        .find(|card| credentials::has(&card.uuid))
+        .or_else(|| cfg.cards.first())
+}
+
+/// Read-only state of one card, scoped to its own credential. No mutation, so
+/// polling this cannot restart Xray.
 #[tauri::command]
-async fn probe_server(state: tauri::State<'_, State>) -> Result<CmdResult, String> {
-    // Zero-setup: the server is built in, nothing to type. Same probe the
-    // phone app runs on open (add + revoke a throwaway client).
-    let (host, user, port, key) = {
+async fn card_status(
+    state: tauri::State<'_, State>,
+    uuid: Option<String>,
+) -> Result<CardStatus, String> {
+    let card_uuid = {
         let cfg = state.0.lock().unwrap();
-        if cfg.server_ip.is_empty() {
-            return Ok(CmdResult { ok: false, msg: "No server set up".into() });
-        }
-        (cfg.server_ip.clone(), cfg.ssh_user.clone(), cfg.ssh_port, cfg.private_key.clone())
+        pick_card(&cfg, uuid.as_deref().unwrap_or_default()).map(|card| card.uuid.clone())
     };
-    if !server::is_embed_key(&key) {
-        if let Err(e) = server::ensure_xray(&host, port, &user, &key).await {
-            return Ok(CmdResult { ok: false, msg: format!("Connect failed: {e}") });
+    let Some(uuid) = card_uuid else {
+        return Ok(CardStatus {
+            imported: false,
+            uuid: String::new(),
+            ok: false,
+            state: "none".into(),
+            registered: false,
+            message: "No card is provisioned on this PC yet. Contact your provider.".into(),
+        });
+    };
+    if !credentials::has(&uuid) {
+        return Ok(CardStatus {
+            imported: false,
+            uuid,
+            ok: false,
+            state: "unknown".into(),
+            registered: false,
+            message: "No management credential is imported for this card.".into(),
+        });
+    }
+    match cardapi::call_with_timeout("status", &uuid, 8).await {
+        Ok(payload) => {
+            let parsed: serde_json::Value =
+                serde_json::from_str(&payload).unwrap_or(serde_json::Value::Null);
+            let registered = parsed
+                .get("registered")
+                .and_then(|value| value.as_bool())
+                .unwrap_or(false);
+            {
+                let mut cfg = state.0.lock().unwrap();
+                if let Some(card) = cfg.cards.iter_mut().find(|card| card.uuid == uuid) {
+                    card.registered = registered;
+                    cfg.save();
+                }
+            }
+            Ok(CardStatus {
+                imported: true,
+                uuid,
+                ok: true,
+                state: parsed
+                    .get("state")
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("unknown")
+                    .to_string(),
+                registered,
+                message: payload,
+            })
         }
+        Err(e) => Ok(CardStatus {
+            imported: true,
+            uuid,
+            ok: false,
+            state: "unknown".into(),
+            registered: false,
+            message: e,
+        }),
     }
-    let probe = uuid::Uuid::new_v4().to_string();
-    if let Err(e) = server::add_client(&host, port, &user, &key, &probe).await {
-        return Ok(CmdResult { ok: false, msg: format!("Connect failed: {e}") });
+}
+
+#[derive(serde::Serialize)]
+struct ImportResult {
+    ok: bool,
+    msg: String,
+    uuid: String,
+}
+
+/// Store the server-issued secret and place the card in config.json. This is
+/// local and fast: the status check is a separate, read-only action, and the
+/// tunnel failure path registers a card the server has never seen.
+#[tauri::command]
+async fn import_credential(
+    state: tauri::State<'_, State>,
+    text: String,
+    kind: Option<String>,
+) -> Result<ImportResult, String> {
+    let uuid = credentials::import_into_config(&text, kind.as_deref())?;
+    {
+        let mut cfg = state.0.lock().unwrap();
+        *cfg = AppConfig::load();
     }
-    if let Err(e) = server::remove_client(&host, port, &user, &key, &probe).await {
-        return Ok(CmdResult { ok: false, msg: format!("Connect failed: {e}") });
+    // The credential is local and must land even when the network is down.
+    // Settings has a read-only status check, and the tunnel failure path
+    // registers a card the server has never seen.
+    Ok(ImportResult {
+        ok: true,
+        msg: "Credential imported.".into(),
+        uuid,
+    })
+}
+
+/// Remove the card from this PC only. The server entry stays until the owner
+/// revokes it with qv-provision, which is the deliberate two-step the card
+/// model needs.
+#[tauri::command]
+async fn forget_card(state: tauri::State<'_, State>, uuid: String) -> Result<CmdResult, String> {
+    credentials::forget(&uuid)?;
+    {
+        let mut cfg = state.0.lock().unwrap();
+        cfg.cards.retain(|card| card.uuid != uuid);
+        cfg.save();
     }
-    // Server moves/rebuilds wipe registrations: re-add any local card the
-    // server does not know (add is idempotent, unknown agents just skip).
-    if let Ok(remote) = server::list_clients(&host, port, &user, &key).await {
-        let missing: Vec<String> = {
-            let cfg = state.0.lock().unwrap();
-            cfg.cards
-                .iter()
-                .map(|c| c.uuid.clone())
-                .filter(|u| !remote.contains(u))
-                .collect()
-        };
-        for u in missing {
-            let _ = server::add_client(&host, port, &user, &key, &u).await;
-        }
-    }
-    Ok(CmdResult { ok: true, msg: "Connected - server ready".into() })
+    Ok(CmdResult {
+        ok: true,
+        msg: "Card removed from this PC. The server still has it until it is revoked.".into(),
+    })
 }
 
 /// The executables that mean the game is up. The shipping build is the first
@@ -212,13 +368,29 @@ const GAME_EXES: [&str; 2] = ["VALORANT-Win64-Shipping.exe", "VALORANT.exe"];
 /// resuming it is asynchronous: an event sent a moment before the page is
 /// running again is delivered to nothing and lost. The page's own fallback
 /// timer cannot cover this either, because a suspended webview runs no timers.
-/// Six ticks at three seconds covers any realistic resume and then stops.
+/// Six ticks at one second covers a resume and then stops; the faster poll is
+/// what gets the voice helper armed while the game is still loading.
 #[cfg(windows)]
 const GAME_RESEND_TICKS: u8 = 6;
 
 #[cfg(windows)]
 fn game_is_running() -> bool {
     GAME_EXES.iter().any(|n| process_running((*n).to_string()))
+}
+
+/// One call for both Valorant executable names. The webview fallback used to
+/// check only the shipping name, so an install that exposed `VALORANT.exe`
+/// was never noticed.
+#[tauri::command]
+fn game_running() -> bool {
+    #[cfg(windows)]
+    {
+        game_is_running()
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
 }
 
 #[cfg(windows)]
@@ -247,6 +419,7 @@ fn spawn_game_watch(app: tauri::AppHandle) {
             if now != up {
                 up = now;
                 resend = GAME_RESEND_TICKS;
+                vpn::app_log(&format!("game: running={now}"));
                 wake_for_game(&app);
                 emit_game_state(&app, now);
             } else if resend > 0 {
@@ -254,7 +427,7 @@ fn spawn_game_watch(app: tauri::AppHandle) {
                 wake_for_game(&app);
                 emit_game_state(&app, up);
             }
-            std::thread::sleep(std::time::Duration::from_secs(3));
+            std::thread::sleep(std::time::Duration::from_secs(1));
         }
     });
 }
@@ -296,175 +469,44 @@ fn wake_for_game(app: &tauri::AppHandle) {
     });
 }
 
-/// One refresh per app build: list the server's clients and re-add every local
-/// card it does not know. Silent, detached, and the marker is only written on
-/// success, so a launch with no network simply retries on the next one.
-fn spawn_launch_refresh(app: tauri::AppHandle) {
-    let version = app.package_info().version.to_string();
-    let (host, user, port, key, cards) = {
-        let state = app.state::<State>();
-        let cfg = state.0.lock().unwrap();
-        if cfg.server_ip.is_empty() || cfg.cards.is_empty() || cfg.healed_version == version {
-            return;
-        }
-        (
-            cfg.server_ip.clone(),
-            cfg.ssh_user.clone(),
-            cfg.ssh_port,
-            cfg.private_key.clone(),
-            cfg.cards.iter().map(|c| c.uuid.clone()).collect::<Vec<_>>(),
-        )
-    };
-    tauri::async_runtime::spawn(async move {
-        if let Ok(remote) = server::list_clients(&host, port, &user, &key).await {
-            for u in cards.iter().filter(|u| !remote.contains(u)) {
-                let _ = server::add_client(&host, port, &user, &key, u).await;
-            }
-            let state = app.state::<State>();
-            state.0.lock().unwrap().healed_version = version;
-            state.0.lock().unwrap().save();
-        }
-    });
-}
-
 #[tauri::command]
-async fn generate_card(
-    _app: tauri::AppHandle,
+async fn copy_card(
     state: tauri::State<'_, State>,
-    name: String,
-    kind: String,
-    sni: String,
-) -> Result<CmdResult, String> {
-    let (host, user, port, key) = {
-        let cfg = state.0.lock().unwrap();
-        if cfg.server_ip.is_empty() {
-            return Ok(CmdResult { ok: false, msg: "Set up your server first".into() });
-        }
-        (cfg.server_ip.clone(), cfg.ssh_user.clone(), cfg.ssh_port, cfg.private_key.clone())
-    };
-    let uuid = uuid::Uuid::new_v4().to_string();
-    let sni = if sni.trim().is_empty() {
-        (if kind == "Gamerz" { "ea.com" } else { "youtube.com" }).to_string()
-    } else {
-        sni.trim().to_string()
-    };
-    let card = Card {
-        name: if name.trim().is_empty() { kind.clone() } else { name.trim().to_string() },
-        uuid: uuid.clone(),
-        card_type: kind,
-        sni: sni.clone(),
-        wg_private: String::new(),
-        wg_addr: String::new(),
-    };
-    {
-        let mut cfg = state.0.lock().unwrap();
-        cfg.cards.push(card);
-        cfg.save();
-    }
-    // Registering on the server is an SSH round trip: run it detached so the
-    // card shows up at once. Connect re-adds any card the server is missing.
-    if !host.is_empty() {
-        let (h, u, k) = (host.clone(), user.clone(), key.clone());
-        let id = uuid.clone();
-        tauri::async_runtime::spawn(async move {
-            let _ = server::add_client(&h, port, &u, &k, &id).await;
-        });
-    }
-    Ok(CmdResult { ok: true, msg: "Card created".into() })
-}
-
-#[tauri::command]
-async fn import_card(
-    state: tauri::State<'_, State>,
+    app: tauri::AppHandle,
     uuid: String,
-    name: String,
-    kind: String,
-    sni: String,
 ) -> Result<CmdResult, String> {
-    let uuid = uuid.trim().to_string();
-    if uuid.is_empty() {
-        return Ok(CmdResult { ok: false, msg: "That card link has no id".into() });
-    }
-    let sni = if sni.trim().is_empty() {
-        (if kind == "Gamerz" { "ea.com" } else { "youtube.com" }).to_string()
-    } else {
-        sni.trim().to_string()
-    };
-    let name = if name.trim().is_empty() { "Card".to_string() } else { name.trim().to_string() };
-    {
-        let mut cfg = state.0.lock().unwrap();
-        if let Some(c) = cfg.cards.iter_mut().find(|c| c.uuid == uuid) {
-            // Same card arriving from another device: refresh it, never duplicate.
-            c.name = name;
-            c.card_type = kind;
-            c.sni = sni;
-            cfg.save();
-            return Ok(CmdResult { ok: true, msg: "Card updated".into() });
-        }
-        cfg.cards.push(Card {
-            name,
-            uuid: uuid.clone(),
-            card_type: kind,
-            sni,
-            wg_private: String::new(),
-            wg_addr: String::new(),
-        });
-        cfg.save();
-    }
-    // Best effort: the server may already know this client, and add is
-    // idempotent. Detached so adding a card never waits on SSH.
-    let (host, user, port, key) = {
-        let cfg = state.0.lock().unwrap();
-        (cfg.server_ip.clone(), cfg.ssh_user.clone(), cfg.ssh_port, cfg.private_key.clone())
-    };
-    if !host.is_empty() {
-        let (h, u, k) = (host.clone(), user.clone(), key.clone());
-        let id = uuid.clone();
-        tauri::async_runtime::spawn(async move {
-            let _ = server::add_client(&h, port, &u, &k, &id).await;
-        });
-    }
-    Ok(CmdResult { ok: true, msg: "Card added".into() })
-}
-
-#[tauri::command]
-async fn revoke_card(state: tauri::State<'_, State>, uuid: String) -> Result<CmdResult, String> {
-    let (host, user, port, key) = {
-        let mut cfg = state.0.lock().unwrap();
-        cfg.cards.retain(|c| c.uuid != uuid);
-        cfg.save();
-        (cfg.server_ip.clone(), cfg.ssh_user.clone(), cfg.ssh_port, cfg.private_key.clone())
-    };
-    // The server side is an SSH round trip: run it detached so the list reacts
-    // at once. WireGuard peers are per-card, so that peer goes too.
-    let (h, u, k) = (host.clone(), user.clone(), key.clone());
-    let id = uuid.clone();
-    tauri::async_runtime::spawn(async move {
-        let _ = server::wg_del(&h, port, &u, &k, &id).await;
-        let _ = server::remove_client(&h, port, &u, &k, &id).await;
-    });
-    Ok(CmdResult { ok: true, msg: "Card revoked".into() })
-}
-
-#[tauri::command]
-async fn copy_card(state: tauri::State<'_, State>, app: tauri::AppHandle, uuid: String) -> Result<CmdResult, String> {
     let cfg = state.0.lock().unwrap();
     match cfg.cards.iter().find(|c| c.uuid == uuid) {
         Some(c) => {
-            let _ = app.clipboard().write_text(build_link(&c.uuid, &cfg.server_ip, &c.sni, &c.name));
-            Ok(CmdResult { ok: true, msg: "Link copied".into() })
+            let _ =
+                app.clipboard()
+                    .write_text(build_link(&c.uuid, &cfg.server_ip, &c.sni, &c.name));
+            Ok(CmdResult {
+                ok: true,
+                msg: "Link copied".into(),
+            })
         }
-        None => Ok(CmdResult { ok: false, msg: "Card not found".into() }),
+        None => Ok(CmdResult {
+            ok: false,
+            msg: "Card not found".into(),
+        }),
     }
 }
 
 /// Change which domain (SNI) a card rides. The card id stays the same, so the
 /// server side needs nothing; the value is read on the next connect.
 #[tauri::command]
-async fn set_card_sni(state: tauri::State<'_, State>, uuid: String, sni: String) -> Result<CmdResult, String> {
+async fn set_card_sni(
+    state: tauri::State<'_, State>,
+    uuid: String,
+    sni: String,
+) -> Result<CmdResult, String> {
     let sni = sni.trim().to_string();
     if sni.is_empty() {
-        return Ok(CmdResult { ok: false, msg: "Pick a domain first".into() });
+        return Ok(CmdResult {
+            ok: false,
+            msg: "Pick a domain first".into(),
+        });
     }
     let mut cfg = state.0.lock().unwrap();
     let found = cfg.cards.iter_mut().find(|c| c.uuid == uuid);
@@ -472,9 +514,15 @@ async fn set_card_sni(state: tauri::State<'_, State>, uuid: String, sni: String)
         Some(c) => {
             c.sni = sni;
             cfg.save();
-            Ok(CmdResult { ok: true, msg: "Domain updated".into() })
+            Ok(CmdResult {
+                ok: true,
+                msg: "Domain updated".into(),
+            })
         }
-        None => Ok(CmdResult { ok: false, msg: "Card not found".into() }),
+        None => Ok(CmdResult {
+            ok: false,
+            msg: "Card not found".into(),
+        }),
     }
 }
 
@@ -542,7 +590,8 @@ fn read_log_tail(n: usize) -> String {
 fn process_running(name: String) -> bool {
     use windows::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
     use windows::Win32::System::Diagnostics::ToolHelp::{
-        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W, TH32CS_SNAPPROCESS,
+        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
+        TH32CS_SNAPPROCESS,
     };
     let want = name.to_lowercase();
     if want.is_empty() {
@@ -561,7 +610,11 @@ fn process_running(name: String) -> bool {
         let mut found = false;
         if Process32FirstW(snapshot, &mut entry).is_ok() {
             loop {
-                let end = entry.szExeFile.iter().position(|&c| c == 0).unwrap_or(entry.szExeFile.len());
+                let end = entry
+                    .szExeFile
+                    .iter()
+                    .position(|&c| c == 0)
+                    .unwrap_or(entry.szExeFile.len());
                 if String::from_utf16_lossy(&entry.szExeFile[..end]).to_lowercase() == want {
                     found = true;
                     break;
@@ -641,15 +694,7 @@ mod autostart_reg {
             .chain(std::iter::once(0))
             .flat_map(|c| c.to_le_bytes())
             .collect();
-        let st = unsafe {
-            RegSetValueExW(
-                hkey,
-                PCWSTR(name.as_ptr()),
-                None,
-                REG_SZ,
-                Some(&data),
-            )
-        };
+        let st = unsafe { RegSetValueExW(hkey, PCWSTR(name.as_ptr()), None, REG_SZ, Some(&data)) };
         let _ = unsafe { RegCloseKey(hkey) };
         if st != ERROR_SUCCESS {
             return Err("Could not write the startup value".into());
@@ -720,7 +765,11 @@ fn autostart_set(on: bool) -> Result<(), String> {
             autostart_reg::write(&exe.display().to_string())
         } else {
             autostart_reg::remove().or_else(|e| {
-                if autostart_reg::read().is_none() { Ok(()) } else { Err(e) }
+                if autostart_reg::read().is_none() {
+                    Ok(())
+                } else {
+                    Err(e)
+                }
             })
         }
     }
@@ -766,146 +815,156 @@ async fn tunnel_start(
     app: tauri::AppHandle,
     _state: tauri::State<'_, State>,
     engine: tauri::State<'_, Engine>,
+    lifecycle: tauri::State<'_, Lifecycle>,
     uuid: String,
     apps_mode: Option<String>,
     apps: Option<Vec<String>>,
     transport: Option<String>,
     voice: Option<bool>,
 ) -> Result<CmdResult, String> {
-    let (host, user, port, key, card) = {
+    // Wait for any stop that is still sweeping, so this start owns the
+    // engine from spawn to routes instead of racing a teardown.
+    let _gate = lifecycle.0.lock().await;
+    let connect_started = std::time::Instant::now();
+    let (host, card) = {
         let state = app.state::<State>();
         let cfg = state.0.lock().unwrap();
         let Some(card) = cfg.cards.iter().find(|c| c.uuid == uuid).cloned() else {
-            return Ok(CmdResult { ok: false, msg: "Card not found".into() });
+            return Ok(CmdResult {
+                ok: false,
+                msg: "Card not found".into(),
+            });
         };
-        (
-            cfg.server_ip.clone(),
-            cfg.ssh_user.clone(),
-            cfg.ssh_port,
-            cfg.private_key.clone(),
-            card,
-        )
+        (cfg.server_ip.clone(), card)
     };
     if host.is_empty() {
-        return Ok(CmdResult { ok: false, msg: "Set up your server first".into() });
+        return Ok(CmdResult {
+            ok: false,
+            msg: "Set up your server first".into(),
+        });
     }
     let t = match transport.as_deref().unwrap_or("vless") {
         "hy2" => "hy2",
         "wg" => "wg",
         _ => "vless",
     };
-    // Provision whatever the transport needs, cached after first use: the
-    // shared Hysteria2 password, or this card's WireGuard keypair + address.
+    // The transport profiles are provisioned once by the owner and cached in
+    // config.json. The desktop no longer holds an SSH key with which to fetch
+    // or mint them. A card that has never had them is VLESS only.
     let mut hy2_pass = String::new();
     let mut wg_tuple: Option<(String, String, String, String)> = None;
     if t == "hy2" {
-        let cached = app.state::<State>().0.lock().unwrap().hy2_password.clone();
-        hy2_pass = if cached.is_empty() {
-            match server::hy2_password(&host, port, &user, &key).await {
-                Ok(p) => {
-                    let state = app.state::<State>();
-                    let mut st = state.0.lock().unwrap();
-                    st.hy2_password = p.clone();
-                    st.save();
-                    p
-                }
-                Err(e) => {
-                    return Ok(CmdResult {
-                        ok: false,
-                        msg: format!("Could not set up the game transport: {e}"),
-                    })
-                }
-            }
-        } else {
-            cached
-        };
+        hy2_pass = app.state::<State>().0.lock().unwrap().hy2_password.clone();
+        if hy2_pass.is_empty() {
+            return Ok(CmdResult {
+                ok: false,
+                msg: "This card has no Hysteria2 profile on this PC. Connect with Standard, or ask for a new card.".into(),
+            });
+        }
     } else if t == "wg" {
-        // The obfuscation parameters are shared by every card: fetch once.
-        // A cached copy is only worth keeping if it parses - an older server
-        // shipped the params pretty-printed and the first line alone is a
-        // bare "{", which is not JSON.
-        let mut awg_json = app.state::<State>().0.lock().unwrap().awg_params.clone();
-        if awg_json.is_empty() || serde_json::from_str::<serde_json::Value>(&awg_json).is_err() {
-            match server::awg_params(&host, port, &user, &key).await {
-                Ok(p) => {
-                    let state = app.state::<State>();
-                    let mut st = state.0.lock().unwrap();
-                    st.awg_params = p.clone();
-                    st.save();
-                    awg_json = p;
-                }
-                Err(e) => {
-                    return Ok(CmdResult {
-                        ok: false,
-                        msg: format!("Could not set up WireGuard: {e}"),
-                    })
-                }
-            }
-        }
-        if card.wg_private.is_empty() || card.wg_addr.is_empty() {
-            let creds = match server::wg_add(&host, port, &user, &key, &card.uuid).await {
-                Ok(c) => c,
-                Err(e) => {
-                    return Ok(CmdResult {
-                        ok: false,
-                        msg: format!("Could not set up WireGuard: {e}"),
-                    })
-                }
-            };
+        let (awg_json, srvpub) = {
             let state = app.state::<State>();
-            let mut st = state.0.lock().unwrap();
-            if let Some(cc) = st.cards.iter_mut().find(|c| c.uuid == uuid) {
-                cc.wg_private = creds.private_key.clone();
-                cc.wg_addr = creds.address.clone();
-            }
-            st.wg_server_pub = creds.server_pub.clone();
-            st.save();
-            wg_tuple = Some((creds.private_key, creds.address, creds.server_pub, awg_json.clone()));
-        } else {
-            let mut srvpub = app.state::<State>().0.lock().unwrap().wg_server_pub.clone();
-            if srvpub.is_empty() {
-                match server::wg_server_pub(&host, port, &user, &key).await {
-                    Ok(p) => {
-                        srvpub = p;
-                        let state = app.state::<State>();
-                        let mut st = state.0.lock().unwrap();
-                        st.wg_server_pub = srvpub.clone();
-                        st.save();
-                    }
-                    Err(e) => {
-                        return Ok(CmdResult {
-                            ok: false,
-                            msg: format!("Could not set up WireGuard: {e}"),
-                        })
-                    }
-                }
-            }
-            wg_tuple = Some((card.wg_private.clone(), card.wg_addr.clone(), srvpub, awg_json.clone()));
+            let st = state.0.lock().unwrap();
+            (st.awg_params.clone(), st.wg_server_pub.clone())
+        };
+        if awg_json.is_empty()
+            || serde_json::from_str::<serde_json::Value>(&awg_json).is_err()
+            || srvpub.is_empty()
+            || card.wg_private.is_empty()
+            || card.wg_addr.is_empty()
+        {
+            return Ok(CmdResult {
+                ok: false,
+                msg: "This card has no WireGuard profile on this PC. Connect with Standard, or ask for a new card.".into(),
+            });
         }
+        wg_tuple = Some((
+            card.wg_private.clone(),
+            card.wg_addr.clone(),
+            srvpub,
+            awg_json,
+        ));
     }
     // The tunnel runs through a helper task registered once at setup, so this
     // process never needs to be elevated. Without that task the UI offers the
     // one-time setup instead of telling people to run the app as admin.
     if !vpn::task_installed() {
-        return Ok(CmdResult { ok: false, msg: "setup-needed".into() });
+        return Ok(CmdResult {
+            ok: false,
+            msg: "setup-needed".into(),
+        });
     }
+    // The management credential is the control-plane identity. If the server
+    // does not have this UUID in Xray yet, add it once before the engine dials.
+    // Status is read-only; only a real gap triggers register, which is the one
+    // call that restarts Xray. A control-plane outage never blocks the tunnel.
+    let control_started = std::time::Instant::now();
+    if credentials::has(&card.uuid) && !card.registered {
+        let mut confirmed = false;
+        if let Ok(payload) = cardapi::call_with_timeout("status", &card.uuid, 6).await {
+            let registered = serde_json::from_str::<serde_json::Value>(&payload)
+                .ok()
+                .and_then(|value| value.get("registered").and_then(|v| v.as_bool()))
+                .unwrap_or(true);
+            if registered {
+                confirmed = true;
+            } else {
+                vpn::app_log("connect: card is not in Xray, registering it once");
+                if cardapi::call("register", &card.uuid).await.is_ok() {
+                    confirmed = true;
+                }
+            }
+        }
+        if confirmed {
+            let state = app.state::<State>();
+            let mut cfg = state.0.lock().unwrap();
+            if let Some(live) = cfg.cards.iter_mut().find(|c| c.uuid == card.uuid) {
+                live.registered = true;
+                cfg.save();
+            }
+        }
+    }
+    vpn::app_log(&format!(
+        "connect: control {}ms (cached={})",
+        control_started.elapsed().as_millis(),
+        card.registered
+    ));
     let voice_on = voice.unwrap_or(false);
     // The session keeps whatever normal configuration the app was using and
     // the voice rules are added inside it, so the normal VPN and the voice
     // helper run in the same tunnel at once.
     let mode = apps_mode.unwrap_or_default();
     let list = apps.unwrap_or_default();
+    let ensure_started = std::time::Instant::now();
     vpn::ensure_engine().map_err(|e| e)?;
-    let wg_ref = wg_tuple.as_ref().map(|(p, a, s, j)| (p.as_str(), a.as_str(), s.as_str(), j.as_str()));
+    vpn::app_log(&format!(
+        "connect: ensure {}ms",
+        ensure_started.elapsed().as_millis()
+    ));
+    let wg_ref = wg_tuple
+        .as_ref()
+        .map(|(p, a, s, j)| (p.as_str(), a.as_str(), s.as_str(), j.as_str()));
     // The config is rebuilt on every press, but it is usually byte-identical to
     // the one a live engine is already running. Restarting in that case costs a
     // full engine stop, driver handover and route settle for nothing, which is
     // most of the wait on a second connect.
+    let write_started = std::time::Instant::now();
     let before = vpn::tun_config_digest();
-    vpn::write_tun_config(&card.uuid, &host, &card.sni, &mode, &list, voice_on, t, &hy2_pass, wg_ref)
-        .map_err(|e| e)?;
+    vpn::write_tun_config(
+        &card.uuid, &host, &card.sni, &mode, &list, voice_on, t, &hy2_pass, wg_ref,
+    )
+    .map_err(|e| e)?;
+    vpn::app_log(&format!(
+        "connect: write {}ms",
+        write_started.elapsed().as_millis()
+    ));
     let unchanged = before.is_some() && before == vpn::tun_config_digest();
-    let live = engine.0.lock().ok().and_then(|g| *g).filter(|p| *p != 0 && pid_alive(*p));
+    let live = engine
+        .0
+        .lock()
+        .ok()
+        .and_then(|g| *g)
+        .filter(|p| *p != 0 && pid_alive(*p));
     if unchanged && live.is_some() && vpn::tun_routes_present() {
         vpn::app_log("connect: config unchanged and the tunnel is already carrying it");
         return Ok(CmdResult {
@@ -913,8 +972,19 @@ async fn tunnel_start(
             msg: format!("VPN on - {} carries the traffic", card.name),
         });
     }
+    let check_started = std::time::Instant::now();
     vpn::check_config().map_err(|e| e)?;
-    stop_engine(&engine);
+    vpn::app_log(&format!(
+        "connect: check {}ms",
+        check_started.elapsed().as_millis()
+    ));
+    // Only stop what is actually running. The old unconditional call also
+    // swept routes and the adapter when there was no engine, which cost more
+    // than the engine start on a fresh connect. start_engine still handles a
+    // stray engine that the app does not track.
+    if live.is_some() {
+        stop_engine(&engine);
+    }
     let mode_label = if voice_on {
         "voice"
     } else if mode == "allow" && !list.is_empty() {
@@ -926,23 +996,28 @@ async fn tunnel_start(
     };
     vpn::app_log(&format!(
         "connect {} mode={} apps={}",
-        card.name, mode_label, list.len()
+        card.name,
+        mode_label,
+        list.len()
     ));
     // Fresh DNS for the new session: entries from before the tunnel existed
     // are what make the first lookups after connect hang.
     flush_dns_cache();
-    // A dead engine leaves its adapter behind, and Windows then refuses to
-    // give the next one out until the machine restarts. Anything still there
-    // while nothing of ours is running is a ghost: remove it first.
-    if vpn::tun_adapter_present() {
-        vpn::app_log("leftover tun adapter, clearing it first");
-        vpn::reset_tun_adapter();
-    }
+    // A dead engine can leave a ghost adapter behind, but every session picks
+    // a fresh adapter name in start_engine, so the ghost does not block this
+    // one. Resetting here cost about two seconds on every connect and often
+    // could not remove the ghost anyway (it is hidden from Get-NetAdapter).
+    // The engine-failure path still resets when a start actually dies.
     // A session-scoped number must not carry the previous tunnel's bytes.
     if let Ok(mut t) = app.state::<Dests>().0.lock() {
         t.clear();
     }
+    let engine_started = std::time::Instant::now();
     let mut pid = vpn::start_engine().map_err(|e| e)?;
+    vpn::app_log(&format!(
+        "connect: engine start {}ms",
+        engine_started.elapsed().as_millis()
+    ));
     *engine.0.lock().unwrap() = Some(pid);
     // An explicit connect takes the engine over: releasing a routed device later
     // must not stop a tunnel the user asked for.
@@ -953,23 +1028,33 @@ async fn tunnel_start(
     // made the first connect of a session fail while the engine was healthy;
     // pressing again only worked because the driver was warm by then.
     let mut up = false;
+    let routes_started = std::time::Instant::now();
     for attempt in 0..2 {
         for _ in 0..40 {
             if *engine.0.lock().unwrap() != Some(pid) {
                 // A stop during settle clears the pid: drop our engine, report stopped.
                 vpn::request_graceful_stop(pid);
-                return Ok(CmdResult { ok: false, msg: "Stopped".into() });
+                return Ok(CmdResult {
+                    ok: false,
+                    msg: "Stopped".into(),
+                });
             }
-            if pid != 0 && !pid_alive(pid) {
+            // Native check: the old tasklist spawn cost more than the route
+            // poll it guarded.
+            if pid != 0 && !vpn::engine_alive(pid) {
                 break;
             }
             if vpn::tun_routes_present() {
                 up = true;
+                vpn::app_log(&format!(
+                    "connect: routes {}ms",
+                    routes_started.elapsed().as_millis()
+                ));
                 break;
             }
-            tokio::time::sleep(std::time::Duration::from_millis(120)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(80)).await;
         }
-        if up || (pid != 0 && pid_alive(pid)) || attempt == 1 {
+        if up || (pid != 0 && vpn::engine_alive(pid)) || attempt == 1 {
             break;
         }
         // It died before its routes landed: the usual cause is the adapter
@@ -991,25 +1076,46 @@ async fn tunnel_start(
         // Clear whatever the warmup window cached, failed lookups included,
         // so the checks right after connect get fresh answers.
         flush_dns_cache();
-        Ok(CmdResult { ok: true, msg: format!("VPN on - {} carries the traffic", card.name) })
+        vpn::app_log(&format!(
+            "connect: ready in {}ms",
+            connect_started.elapsed().as_millis()
+        ));
+        Ok(CmdResult {
+            ok: true,
+            msg: format!("VPN on - {} carries the traffic", card.name),
+        })
     } else if pid_alive(pid) {
         // Alive but not routing yet: keep it running and let the status poll
         // adopt it once the routes land, instead of killing a healthy engine.
         // Where did it break? Only a server that answers and still carries
         // nothing is a registration problem; a name that will not resolve, a
         // blocked port or a broken handshake must never trigger a repair.
-        let stage = vpn::stage_of(&host, port, &vpn::engine_log_tail());
+        // The data plane is VLESS on TCP 443. The old call passed the SSH
+        // port here, so "reachable" described a control port the tunnel never
+        // used. This is the port the engine actually dials.
+        let stage = vpn::stage_of(&host, 443, &vpn::engine_log_tail());
         if stage == vpn::Stage::Reachable {
-            let repaired = quotacards::qcreg::call("register", &card.uuid);
+            if !credentials::has(&card.uuid) {
+                return Ok(CmdResult {
+                    ok: false,
+                    msg: "The tunnel came up but carried nothing. This card is not provisioned for management on this PC; contact your provider.".into(),
+                });
+            }
+            let repaired = cardapi::call("register", &card.uuid).await;
             let tail = match repaired {
-                Ok(_) => " The server did not know this card; it is registered now, press Connect again.",
-                Err(_) => " The server did not know this card and refused the repair; support is needed.",
+                Ok(_) => {
+                    " The server did not know this card; it is registered now, press Connect again."
+                }
+                Err(_) => {
+                    " The server did not know this card and refused the repair; support is needed."
+                }
             };
             return Ok(CmdResult {
                 ok: false,
                 msg: format!("The tunnel came up but carried nothing.{tail}"),
             });
         }
+        vpn::clear_server_ip_cache();
         Ok(CmdResult {
             ok: false,
             msg: vpn::stage_words(stage).to_string(),
@@ -1039,9 +1145,18 @@ async fn tunnel_start(
         // Same rule on the hard failure: repair only when the server itself
         // answers. The engine's log stays out of the message, it can carry the
         // card id and the server name.
-        let stage = vpn::stage_of(&host, port, &vpn::engine_log_tail());
+        // The data plane is VLESS on TCP 443. The old call passed the SSH
+        // port here, so "reachable" described a control port the tunnel never
+        // used. This is the port the engine actually dials.
+        let stage = vpn::stage_of(&host, 443, &vpn::engine_log_tail());
         if stage == vpn::Stage::Reachable {
-            let repaired = quotacards::qcreg::call("register", &card.uuid);
+            if !credentials::has(&card.uuid) {
+                return Ok(CmdResult {
+                    ok: false,
+                    msg: "The tunnel did not come up. This card is not provisioned for management on this PC; contact your provider.".into(),
+                });
+            }
+            let repaired = cardapi::call("register", &card.uuid).await;
             let tail = match repaired {
                 Ok(_) => " The card was re-registered; press Connect again.",
                 Err(_) => " The server refused to register this card.",
@@ -1051,6 +1166,7 @@ async fn tunnel_start(
                 msg: format!("The tunnel did not come up.{tail}"),
             });
         }
+        vpn::clear_server_ip_cache();
         Ok(CmdResult {
             ok: false,
             msg: format!("The tunnel did not come up. {}", vpn::stage_words(stage)),
@@ -1065,7 +1181,10 @@ async fn tunnel_start(
 async fn setup_helper() -> Result<CmdResult, String> {
     vpn::app_log("setup: asked for the one-time setup");
     if vpn::task_installed() && vpn::lan_task_installed() {
-        return Ok(CmdResult { ok: true, msg: "ready".into() });
+        return Ok(CmdResult {
+            ok: true,
+            msg: "ready".into(),
+        });
     }
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     let ps = format!(
@@ -1092,7 +1211,10 @@ async fn setup_helper() -> Result<CmdResult, String> {
         || refusal.contains("Incorrect function")
         || refusal.contains("The operation was canceled");
     if !refusal.is_empty() && !cancelled {
-        return Ok(CmdResult { ok: false, msg: "The tunnel setup did not run".into() });
+        return Ok(CmdResult {
+            ok: false,
+            msg: "The tunnel setup did not run".into(),
+        });
     }
     if cancelled {
         return Ok(CmdResult {
@@ -1111,7 +1233,10 @@ async fn setup_helper() -> Result<CmdResult, String> {
             if !vpn::lan_task_installed() {
                 vpn::app_log("setup: network helper missing, LAN features will prompt once");
             }
-            return Ok(CmdResult { ok: true, msg: "ready".into() });
+            return Ok(CmdResult {
+                ok: true,
+                msg: "ready".into(),
+            });
         }
         // The privileged pass says what went wrong as soon as it knows. Waiting
         // three minutes to report a failure that happened in one second is how
@@ -1138,12 +1263,21 @@ async fn setup_helper() -> Result<CmdResult, String> {
 }
 
 #[tauri::command]
-async fn tunnel_stop(engine: tauri::State<'_, Engine>) -> Result<CmdResult, String> {
+async fn tunnel_stop(
+    engine: tauri::State<'_, Engine>,
+    lifecycle: tauri::State<'_, Lifecycle>,
+) -> Result<CmdResult, String> {
+    // Queued behind a start that is still running: pressing stop during a
+    // connect cancels it, and the cancel must not overtake the spawn.
+    let _gate = lifecycle.0.lock().await;
     vpn::app_log("stop from app");
     stop_engine(&engine);
     // Drop the tunnel's DNS answers so normal resolution resumes cleanly.
     flush_dns_cache();
-    Ok(CmdResult { ok: true, msg: "VPN off".into() })
+    Ok(CmdResult {
+        ok: true,
+        msg: "VPN off".into(),
+    })
 }
 
 #[tauri::command]
@@ -1156,33 +1290,51 @@ async fn tunnel_status(engine: tauri::State<'_, Engine>) -> Result<TunnelState, 
             // it here stranded a live engine that the UI could no longer
             // stop. Only a dead process clears the state and speaks.
             if vpn::tun_routes_present() {
-                Ok(TunnelState { running: true, error: String::new() })
+                Ok(TunnelState {
+                    running: true,
+                    error: String::new(),
+                })
             } else {
-                Ok(TunnelState { running: false, error: String::new() })
+                Ok(TunnelState {
+                    running: false,
+                    error: String::new(),
+                })
             }
         }
         Some(_) => {
             *engine.0.lock().unwrap() = None;
-            Ok(TunnelState { running: false, error: vpn::engine_log_tail() })
+            Ok(TunnelState {
+                running: false,
+                error: vpn::engine_log_tail(),
+            })
         }
         None => {
             // Adopt a live engine we lost track of: the task owns it now, and
             // after an app restart the pid file points at it.
             if let Some(p) = vpn::task_engine_pid() {
                 *engine.0.lock().unwrap() = Some(p);
-                return Ok(TunnelState { running: vpn::tun_routes_present(), error: String::new() });
+                return Ok(TunnelState {
+                    running: vpn::tun_routes_present(),
+                    error: String::new(),
+                });
             }
             if vpn::tun_routes_present() {
                 if let Ok(s) = std::fs::read_to_string(vpn::engine_dir().join("engine.pid")) {
                     if let Ok(p) = s.trim().parse::<u32>() {
                         if p != 0 && pid_alive(p) {
                             *engine.0.lock().unwrap() = Some(p);
-                            return Ok(TunnelState { running: true, error: String::new() });
+                            return Ok(TunnelState {
+                                running: true,
+                                error: String::new(),
+                            });
                         }
                     }
                 }
             }
-            Ok(TunnelState { running: false, error: String::new() })
+            Ok(TunnelState {
+                running: false,
+                error: String::new(),
+            })
         }
     }
 }
@@ -1308,10 +1460,8 @@ fn tun_octets() -> (u64, u64) {
         if GetIfTable2(&mut table) != NO_ERROR || table.is_null() {
             return (0, 0);
         }
-        let rows = std::slice::from_raw_parts(
-            (*table).Table.as_ptr(),
-            (*table).NumEntries as usize,
-        );
+        let rows =
+            std::slice::from_raw_parts((*table).Table.as_ptr(), (*table).NumEntries as usize);
         // The session's own adapter name is written next to the config when
         // the engine starts. Matching it exactly matters: other products'
         // wintun adapters and ghosts of force-killed runs share the vague
@@ -1330,9 +1480,9 @@ fn tun_octets() -> (u64, u64) {
             let ours = match &want {
                 Some(w) => alias == w.as_str(),
                 None => {
-                    alias.starts_with("QuotaCards")
+                    alias.starts_with("quotavpn")
                         || alias.starts_with("QuotaVPN")
-                        || desc.contains("QuotaCards")
+                        || desc.contains("quotavpn")
                         || desc.contains("QuotaVPN")
                         || desc.to_ascii_lowercase().contains("wintun")
                         || desc.to_ascii_lowercase().contains("sing-box")
@@ -1368,14 +1518,19 @@ async fn tunnel_log() -> Result<String, String> {
 async fn tunnel_copy_log(app: tauri::AppHandle) -> Result<CmdResult, String> {
     let lines = read_log_tail(300);
     if lines.trim().is_empty() {
-        return Ok(CmdResult { ok: false, msg: "No log yet - connect the VPN first".into() });
+        return Ok(CmdResult {
+            ok: false,
+            msg: "No log yet - connect the VPN first".into(),
+        });
     }
     app.clipboard()
         .write_text(lines)
         .map_err(|e| e.to_string())?;
-    Ok(CmdResult { ok: true, msg: "Log copied - paste it to Cypher".into() })
+    Ok(CmdResult {
+        ok: true,
+        msg: "Log copied - paste it to Cypher".into(),
+    })
 }
-
 
 /// Put text on the clipboard through the native clipboard, which does not
 /// depend on what the web engine decides about the async clipboard API.
@@ -1395,13 +1550,37 @@ async fn tunnel_apps() -> Result<String, String> {
     // Live list: whatever Windows is actually running right now, one row
     // per distinct exe. Nothing hardcoded, nothing curated.
     const SKIP: &[&str] = &[
-        "system", "registry", "smss.exe", "csrss.exe", "wininit.exe", "winlogon.exe",
-        "services.exe", "lsass.exe", "lsm.exe", "svchost.exe", "dwm.exe", "explorer.exe",
-        "ctfmon.exe", "conhost.exe", "dllhost.exe", "taskhostw.exe", "sihost.exe",
-        "fontdrvhost.exe", "backgroundtaskhost.exe", "runtimebroker.exe",
-        "searchindexer.exe", "searchhost.exe", "startmenuexperiencehost.exe",
-        "shellexperiencehost.exe", "applicationframehost.exe", "systemsettings.exe",
-        "lockapp.exe", "widgets.exe", "msedgewebview2.exe", "quotacards.exe", "quotavpn.exe",
+        "system",
+        "registry",
+        "smss.exe",
+        "csrss.exe",
+        "wininit.exe",
+        "winlogon.exe",
+        "services.exe",
+        "lsass.exe",
+        "lsm.exe",
+        "svchost.exe",
+        "dwm.exe",
+        "explorer.exe",
+        "ctfmon.exe",
+        "conhost.exe",
+        "dllhost.exe",
+        "taskhostw.exe",
+        "sihost.exe",
+        "fontdrvhost.exe",
+        "backgroundtaskhost.exe",
+        "runtimebroker.exe",
+        "searchindexer.exe",
+        "searchhost.exe",
+        "startmenuexperiencehost.exe",
+        "shellexperiencehost.exe",
+        "applicationframehost.exe",
+        "systemsettings.exe",
+        "lockapp.exe",
+        "widgets.exe",
+        "msedgewebview2.exe",
+        "quotacards.exe",
+        "quotavpn.exe",
         "tasklist.exe",
     ];
     let out = std::process::Command::new("tasklist.exe")
@@ -1442,7 +1621,6 @@ async fn tunnel_apps() -> Result<String, String> {
         .collect();
     serde_json::to_string(&v).map_err(|e| e.to_string())
 }
-
 
 /// The routing list on Linux: whatever is actually running. sing-box matches
 /// on the executable path, so the path is the value and the file name is the
@@ -1527,7 +1705,10 @@ async fn tunnel_probe(app: tauri::AppHandle) -> Result<CmdResult, String> {
     // over TCP reported a healthy tunnel as blocked and left the dial on
     // "working" for a full minute of timeouts.
     if vpn::task_engine_pid().is_some() || vpn::tun_routes_present() {
-        return Ok(CmdResult { ok: true, msg: "Tunnel up".into() });
+        return Ok(CmdResult {
+            ok: true,
+            msg: "Tunnel up".into(),
+        });
     }
     let host = {
         let state = app.state::<State>();
@@ -1535,7 +1716,10 @@ async fn tunnel_probe(app: tauri::AppHandle) -> Result<CmdResult, String> {
         guard.server_ip.clone()
     };
     if host.is_empty() {
-        return Ok(CmdResult { ok: false, msg: "No server set".into() });
+        return Ok(CmdResult {
+            ok: false,
+            msg: "No server set".into(),
+        });
     }
     let target = format!("{host}:443");
     let conn = tokio::time::timeout(
@@ -1544,9 +1728,18 @@ async fn tunnel_probe(app: tauri::AppHandle) -> Result<CmdResult, String> {
     )
     .await;
     match conn {
-        Ok(Ok(_)) => Ok(CmdResult { ok: true, msg: format!("{target} reachable") }),
-        Ok(Err(e)) => Ok(CmdResult { ok: false, msg: format!("{target} refused: {e}") }),
-        Err(_) => Ok(CmdResult { ok: false, msg: format!("{target} timed out (blocked?)") }),
+        Ok(Ok(_)) => Ok(CmdResult {
+            ok: true,
+            msg: format!("{target} reachable"),
+        }),
+        Ok(Err(e)) => Ok(CmdResult {
+            ok: false,
+            msg: format!("{target} refused: {e}"),
+        }),
+        Err(_) => Ok(CmdResult {
+            ok: false,
+            msg: format!("{target} timed out (blocked?)"),
+        }),
     }
 }
 
@@ -1612,7 +1805,11 @@ async fn net_from_ipapi(client: &reqwest::Client) -> Option<NetInfo> {
     if ip.is_empty() {
         return None;
     }
-    let isp = v.get("org").and_then(|x| x.as_str()).unwrap_or("").to_string();
+    let isp = v
+        .get("org")
+        .and_then(|x| x.as_str())
+        .unwrap_or("")
+        .to_string();
     let place = join_place(
         v.get("city").and_then(|x| x.as_str()),
         v.get("country_name").and_then(|x| x.as_str()),
@@ -1621,13 +1818,25 @@ async fn net_from_ipapi(client: &reqwest::Client) -> Option<NetInfo> {
 }
 
 async fn net_from_cf(client: &reqwest::Client) -> Option<NetInfo> {
-    let r = client.get("https://cloudflare.com/cdn-cgi/trace").send().await.ok()?;
+    let r = client
+        .get("https://cloudflare.com/cdn-cgi/trace")
+        .send()
+        .await
+        .ok()?;
     let body = r.text().await.ok()?;
-    let ip = body.lines().find_map(|l| l.strip_prefix("ip="))?.trim().to_string();
+    let ip = body
+        .lines()
+        .find_map(|l| l.strip_prefix("ip="))?
+        .trim()
+        .to_string();
     if ip.is_empty() {
         return None;
     }
-    Some(NetInfo { ip, isp: String::new(), place: String::new() })
+    Some(NetInfo {
+        ip,
+        isp: String::new(),
+        place: String::new(),
+    })
 }
 
 #[tauri::command]
@@ -1670,7 +1879,10 @@ async fn app_icons(pkgs: Vec<String>) -> Vec<AppIconOut> {
                 // verbatim and handed to SHGetFileInfoW, so `\\host\share\x.ico`
                 // made this elevated process authenticate to a machine it had never
                 // heard of, and run whatever shell handler lived there.
-                let path = paths.get(&pkg.to_ascii_lowercase()).cloned().unwrap_or_default();
+                let path = paths
+                    .get(&pkg.to_ascii_lowercase())
+                    .cloned()
+                    .unwrap_or_default();
                 let png = if path.is_empty() {
                     String::new()
                 } else {
@@ -1714,9 +1926,11 @@ fn process_paths() -> std::collections::HashMap<String, String> {
                     .trim_end_matches('\0')
                     .to_ascii_lowercase();
                 if !name.is_empty() && !map.contains_key(&name) {
-                    if let Ok(h) =
-                        OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, entry.th32ProcessID)
-                    {
+                    if let Ok(h) = OpenProcess(
+                        PROCESS_QUERY_LIMITED_INFORMATION,
+                        false,
+                        entry.th32ProcessID,
+                    ) {
                         let mut buf = [0u16; 1024];
                         let mut len = buf.len() as u32;
                         if QueryFullProcessImageNameW(
@@ -1757,15 +1971,28 @@ fn b64(data: &[u8]) -> String {
             | c.get(2).copied().unwrap_or(0) as u32;
         out.push(T[((n >> 18) & 63) as usize] as char);
         out.push(T[((n >> 12) & 63) as usize] as char);
-        out.push(if c.len() > 1 { T[((n >> 6) & 63) as usize] as char } else { '=' });
-        out.push(if c.len() > 2 { T[(n & 63) as usize] as char } else { '=' });
+        out.push(if c.len() > 1 {
+            T[((n >> 6) & 63) as usize] as char
+        } else {
+            '='
+        });
+        out.push(if c.len() > 2 {
+            T[(n & 63) as usize] as char
+        } else {
+            '='
+        });
     }
     out
 }
 
 /// Read a GDI bitmap into raw bytes at the requested depth.
 #[cfg(windows)]
-unsafe fn read_dib(hbm: windows::Win32::Graphics::Gdi::HBITMAP, w: i32, h: i32, bpp: u16) -> Option<Vec<u8>> {
+unsafe fn read_dib(
+    hbm: windows::Win32::Graphics::Gdi::HBITMAP,
+    w: i32,
+    h: i32,
+    bpp: u16,
+) -> Option<Vec<u8>> {
     use windows::Win32::Graphics::Gdi::{
         CreateCompatibleDC, DeleteDC, GetDIBits, BITMAPINFO, BITMAPINFOHEADER, BI_RGB,
         DIB_RGB_COLORS,
@@ -1783,7 +2010,15 @@ unsafe fn read_dib(hbm: windows::Win32::Graphics::Gdi::HBITMAP, w: i32, h: i32, 
     if dc.0.is_null() {
         return None;
     }
-    let lines = GetDIBits(dc, hbm, 0, h as u32, Some(buf.as_mut_ptr() as *mut _), &mut bi, DIB_RGB_COLORS);
+    let lines = GetDIBits(
+        dc,
+        hbm,
+        0,
+        h as u32,
+        Some(buf.as_mut_ptr() as *mut _),
+        &mut bi,
+        DIB_RGB_COLORS,
+    );
     let _ = DeleteDC(dc);
     if lines == 0 {
         return None;
@@ -1823,7 +2058,11 @@ fn icon_png(path: &str) -> Option<Vec<u8>> {
             let mut ii = ICONINFO::default();
             GetIconInfo(hicon, &mut ii).ok()?;
             let res = (|| {
-                let color = if !ii.hbmColor.0.is_null() { ii.hbmColor } else { ii.hbmMask };
+                let color = if !ii.hbmColor.0.is_null() {
+                    ii.hbmColor
+                } else {
+                    ii.hbmMask
+                };
                 let mut bm = BITMAP::default();
                 if GetObjectW(
                     HGDIOBJ(color.0),
@@ -1903,7 +2142,12 @@ async fn speed_servers() -> Option<String> {
     let mut libre: Option<String> = None;
 
     let ookla_url = "https://www.speedtest.net/api/js/servers?engine=js&limit=60";
-    if let Ok(r) = client.get(ookla_url).header("Accept", "application/json").send().await {
+    if let Ok(r) = client
+        .get(ookla_url)
+        .header("Accept", "application/json")
+        .send()
+        .await
+    {
         if r.status().is_success() {
             if let Ok(t) = r.text().await {
                 let t = t.trim().to_string();
@@ -1980,7 +2224,9 @@ async fn speed_latency(url: String, probes: u32) -> Vec<f64> {
 #[tauri::command]
 #[cfg(windows)]
 async fn speed_reach(url: String) -> bool {
-    !speed::latency(&speed_client(true), &url, 1).await.is_empty()
+    !speed::latency(&speed_client(true), &url, 1)
+        .await
+        .is_empty()
 }
 
 #[tauri::command]
@@ -2002,9 +2248,15 @@ async fn speed_up(
     chunk_mb: Option<u32>,
 ) -> speed::SpeedOut {
     let chunk = chunk_mb.unwrap_or(2).clamp(1, 8) as usize;
-    speed::upload(&speed_client(true), &url, seconds.clamp(2.0, 30.0), chunk, |v| {
-        let _ = app.emit("speed-tick", v);
-    })
+    speed::upload(
+        &speed_client(true),
+        &url,
+        seconds.clamp(2.0, 30.0),
+        chunk,
+        |v| {
+            let _ = app.emit("speed-tick", v);
+        },
+    )
     .await
 }
 
@@ -2015,7 +2267,10 @@ async fn speed_up(
 #[tauri::command]
 #[cfg(windows)]
 async fn lan_wire() -> Option<quotacards::lan_ctrl::Wire> {
-    tauri::async_runtime::spawn_blocking(quotacards::lan_ctrl::wire).await.ok().flatten()
+    tauri::async_runtime::spawn_blocking(quotacards::lan_ctrl::wire)
+        .await
+        .ok()
+        .flatten()
 }
 
 /// Start standing between one device and the router. One at a time: two
@@ -2054,7 +2309,10 @@ fn lan_start(
 fn lan_protect(mac: String, on: bool, state: tauri::State<State>) -> Result<bool, String> {
     let mac = mac.to_lowercase();
     let mut cfg = state.0.lock().map_err(|_| "config".to_string())?;
-    let already = cfg.lan_protected.iter().any(|m| m.eq_ignore_ascii_case(&mac));
+    let already = cfg
+        .lan_protected
+        .iter()
+        .any(|m| m.eq_ignore_ascii_case(&mac));
     if on && !already {
         cfg.lan_protected.push(mac);
         cfg.save();
@@ -2076,7 +2334,11 @@ fn protected_reason(ip: &str, mac: &str, cfg: &AppConfig) -> Option<String> {
             return Some("The router is protected".to_string());
         }
     }
-    if cfg.lan_protected.iter().any(|m| m.eq_ignore_ascii_case(mac)) {
+    if cfg
+        .lan_protected
+        .iter()
+        .any(|m| m.eq_ignore_ascii_case(mac))
+    {
         return Some("This device is protected".to_string());
     }
     None
@@ -2099,15 +2361,21 @@ fn lan_limits(
     up_kbps: u32,
 ) -> Result<bool, String> {
     let guard = state.0.lock().map_err(|_| "state".to_string())?;
-    let Some(session) = guard.as_ref() else { return Ok(false) };
+    let Some(session) = guard.as_ref() else {
+        return Ok(false);
+    };
     {
         let conf = cfg.0.lock().map_err(|_| "config".to_string())?;
         if let Some(why) = protected_reason(&session.target_ip, &session.target_mac, &conf) {
             return Err(why);
         }
     }
-    session.down_kbps.store(down_kbps, std::sync::atomic::Ordering::Relaxed);
-    session.up_kbps.store(up_kbps, std::sync::atomic::Ordering::Relaxed);
+    session
+        .down_kbps
+        .store(down_kbps, std::sync::atomic::Ordering::Relaxed);
+    session
+        .up_kbps
+        .store(up_kbps, std::sync::atomic::Ordering::Relaxed);
     Ok(true)
 }
 
@@ -2149,7 +2417,11 @@ fn lan_known(cfg: tauri::State<'_, State>) -> Vec<quotacards::lan::Device> {
     let gateway = quotacards::lan_ctrl::wire()
         .map(|w| w.gateway_ip)
         .unwrap_or_default();
-    let protected = cfg.0.lock().map(|c| c.lan_protected.clone()).unwrap_or_default();
+    let protected = cfg
+        .0
+        .lock()
+        .map(|c| c.lan_protected.clone())
+        .unwrap_or_default();
     for d in list.iter_mut() {
         if d.self_pc || d.ip == gateway {
             d.protected_always = !d.self_pc;
@@ -2179,34 +2451,40 @@ async fn lan_devices(
     {
         if let Ok(guard) = state.0.try_lock() {
             if let Some(session) = guard.as_ref() {
-            let names = router_huawei::names_by_ip(session).await;
-            let mut learned: Vec<(String, String)> = Vec::new();
-            for d in list.iter_mut() {
-                if let Some(name) = names.get(&d.ip) {
-                    if !name.is_empty() {
-                        // Routed through the same rank check as the rest of the
-                        // scan, so a router name fills a gap without replacing
-                        // a name the device gave itself.
-                        quotacards::lan::offer_name(d, name, "router");
-                        if !d.mac.is_empty() {
-                            learned.push((d.mac.clone(), name.clone()));
+                let names = router_huawei::names_by_ip(session).await;
+                let mut learned: Vec<(String, String)> = Vec::new();
+                for d in list.iter_mut() {
+                    if let Some(name) = names.get(&d.ip) {
+                        if !name.is_empty() {
+                            // Routed through the same rank check as the rest of the
+                            // scan, so a router name fills a gap without replacing
+                            // a name the device gave itself.
+                            quotacards::lan::offer_name(d, name, "router");
+                            if !d.mac.is_empty() {
+                                learned.push((d.mac.clone(), name.clone()));
+                            }
                         }
                     }
                 }
-            }
-            // Written down by address, so the next launch shows the same names
-            // without signing in to the router again.
-            if !learned.is_empty() {
-                quotacards::lan::save_router_names(learned);
-            }
+                // Written down by address, so the next launch shows the same names
+                // without signing in to the router again.
+                if !learned.is_empty() {
+                    quotacards::lan::save_router_names(learned);
+                }
             }
         }
     }
     // Protection, marked here so every screen agrees: the router and this PC
     // are always safe, plus whatever the user marked. The list is what the
     // controls read before they are allowed to act.
-    let chosen = cfg.0.lock().map(|c| c.lan_protected.clone()).unwrap_or_default();
-    let gateway_ip = quotacards::lan_ctrl::wire().map(|w| w.gateway_ip).unwrap_or_default();
+    let chosen = cfg
+        .0
+        .lock()
+        .map(|c| c.lan_protected.clone())
+        .unwrap_or_default();
+    let gateway_ip = quotacards::lan_ctrl::wire()
+        .map(|w| w.gateway_ip)
+        .unwrap_or_default();
     for d in list.iter_mut() {
         let fixed = d.self_pc || (!gateway_ip.is_empty() && d.ip == gateway_ip);
         d.protected_always = fixed;
@@ -2218,7 +2496,6 @@ async fn lan_devices(
     std::thread::spawn(move || quotacards::lan::enrich_names(probe));
     Ok(list)
 }
-
 
 /// Start watching every device on the network. Their traffic passes through
 /// this machine so it can be counted; nothing is dropped and nothing is slowed.
@@ -2242,11 +2519,10 @@ async fn lan_monitor_start(state: tauri::State<'_, MonitorState>) -> Result<bool
     if targets.is_empty() {
         return Err("No devices to watch".into());
     }
-    let session = tauri::async_runtime::spawn_blocking(move || {
-        quotacards::lan_ctrl::start_monitor(targets)
-    })
-    .await
-    .map_err(|e| e.to_string())??;
+    let session =
+        tauri::async_runtime::spawn_blocking(move || quotacards::lan_ctrl::start_monitor(targets))
+            .await
+            .map_err(|e| e.to_string())??;
     let mut guard = state.0.lock().map_err(|_| "state".to_string())?;
     *guard = Some(session);
     Ok(true)
@@ -2294,7 +2570,6 @@ fn lan_traffic(state: tauri::State<'_, MonitorState>) -> Result<Vec<TrafficRow>,
         .collect())
 }
 
-
 /// Whether the kill switch is armed, and whether the block is on right now.
 #[tauri::command]
 fn kill_switch_state() -> serde_json::Value {
@@ -2321,7 +2596,13 @@ fn release_block_elevated() -> Result<(), String> {
             exe.display()
         );
         std::process::Command::new("powershell")
-            .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", &script])
+            .args([
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                &script,
+            ])
             .spawn()
             .map_err(|e| e.to_string())?;
     }
@@ -2357,8 +2638,24 @@ fn open_page(url: String) -> bool {
         c.is_ascii_alphanumeric()
             || matches!(
                 c,
-                '-' | '.' | '_' | '~' | ':' | '/' | '?' | '#' | '[' | ']' | '@' | '!' | '*'
-                    | '+' | ',' | '=' | '%' | '(' | ')'
+                '-' | '.'
+                    | '_'
+                    | '~'
+                    | ':'
+                    | '/'
+                    | '?'
+                    | '#'
+                    | '['
+                    | ']'
+                    | '@'
+                    | '!'
+                    | '*'
+                    | '+'
+                    | ','
+                    | '='
+                    | '%'
+                    | '('
+                    | ')'
             )
     }
     if !url.starts_with("https://") || url.len() > 2048 || !url.chars().all(safe) {
@@ -2383,7 +2680,11 @@ fn open_page(url: String) -> bool {
 /// Log in to the router so the device list can carry real names.
 #[tauri::command]
 #[cfg(windows)]
-async fn router_link(state: tauri::State<'_, RouterState>, user: String, pass: String) -> Result<bool, String> {
+async fn router_link(
+    state: tauri::State<'_, RouterState>,
+    user: String,
+    pass: String,
+) -> Result<bool, String> {
     let host = quotacards::lan_ctrl::wire()
         .map(|w| w.gateway_ip)
         .ok_or("no gateway")?;
@@ -2452,7 +2753,9 @@ fn lan_status(state: tauri::State<'_, LanState>) -> Option<LanStatus> {
         up_kbps: session.up_kbps.load(std::sync::atomic::Ordering::Relaxed),
         blocked: session.blocked.load(std::sync::atomic::Ordering::Relaxed),
         up_bytes: session.bytes_up.load(std::sync::atomic::Ordering::Relaxed),
-        down_bytes: session.bytes_down.load(std::sync::atomic::Ordering::Relaxed),
+        down_bytes: session
+            .bytes_down
+            .load(std::sync::atomic::Ordering::Relaxed),
     })
 }
 
@@ -2496,10 +2799,9 @@ async fn speedtest_cli(app: tauri::AppHandle) -> Option<ookla::CliResult> {
             let _ = a1.emit("speed-phase", p.to_string());
         });
     let a2 = app.clone();
-    let on_tick: std::sync::Arc<dyn Fn(f64) + Send + Sync> =
-        std::sync::Arc::new(move |v: f64| {
-            let _ = a2.emit("speed-tick", v);
-        });
+    let on_tick: std::sync::Arc<dyn Fn(f64) + Send + Sync> = std::sync::Arc::new(move |v: f64| {
+        let _ = a2.emit("speed-tick", v);
+    });
     let a3 = app.clone();
     let on_result: std::sync::Arc<dyn Fn(serde_json::Value) + Send + Sync> =
         std::sync::Arc::new(move |j: serde_json::Value| {
@@ -2542,7 +2844,10 @@ fn up_to_date(current: &str) -> UpdateInfo {
 /// The updater handle for a channel. The experimental channel resolves the newest published
 /// release itself, pre-releases included; the stable channel keeps the
 /// built-in endpoint, which GitHub only serves for full releases.
-async fn updater(app: &tauri::AppHandle, channel: &str) -> Result<tauri_plugin_updater::Updater, String> {
+async fn updater(
+    app: &tauri::AppHandle,
+    channel: &str,
+) -> Result<tauri_plugin_updater::Updater, String> {
     let mut builder = app.updater_builder();
     // The plugin's default compare demands a strictly newer version number,
     // but a build of a version line (every test build, every hotfix re-release)
@@ -2620,13 +2925,10 @@ async fn experimental_feed_url() -> Option<String> {
                 && r.get("tag_name")
                     .and_then(|v| v.as_str())
                     .is_some_and(|t| t.starts_with('v'))
-                && r
-                    .get("assets")
-                    .and_then(|v| v.as_array())
-                    .is_some_and(|a| {
-                        a.iter()
-                            .any(|x| x.get("name").and_then(|n| n.as_str()) == Some("latest.json"))
-                    })
+                && r.get("assets").and_then(|v| v.as_array()).is_some_and(|a| {
+                    a.iter()
+                        .any(|x| x.get("name").and_then(|n| n.as_str()) == Some("latest.json"))
+                })
         })
         .max_by_key(|r| {
             // By version, not by time. Two releases published in the same
@@ -2653,7 +2955,11 @@ async fn experimental_feed_url() -> Option<String> {
 /// a switch takes effect on the next check.
 #[tauri::command]
 fn set_update_channel(channel: String, state: tauri::State<State>) -> Result<(), String> {
-    let ch = if channel == "experimental" { "experimental" } else { "normal" };
+    let ch = if channel == "experimental" {
+        "experimental"
+    } else {
+        "normal"
+    };
     let mut cfg = state.0.lock().unwrap();
     if cfg.update_channel != ch {
         cfg.update_channel = ch.to_string();
@@ -2677,27 +2983,26 @@ fn check_failed(e: tauri_plugin_updater::Error) -> String {
 }
 
 #[tauri::command]
-async fn check_update(app: tauri::AppHandle, state: tauri::State<'_, State>) -> Result<UpdateInfo, String> {
+async fn check_update(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, State>,
+) -> Result<UpdateInfo, String> {
     const REPO: &str = "YousefMohiey/QuotaVPN";
     let current = app.package_info().version.to_string();
     let channel = state.0.lock().unwrap().update_channel.clone();
-    let found = updater(&app, &channel)
-        .await?
-        .check()
-        .await
-        .map_err(|e| {
-            let msg = check_failed(e);
-            // The window shows whatever comes back, and an empty string used to
-            // fall back to "Could not reach GitHub" - a guess that hid the real
-            // reason. Every failure is logged with its cause now, and the string
-            // always carries something.
-            vpn::app_log(&format!("update: {msg}"));
-            if msg.trim().is_empty() {
-                "the update check failed without a reason".to_string()
-            } else {
-                msg
-            }
-        })?;
+    let found = updater(&app, &channel).await?.check().await.map_err(|e| {
+        let msg = check_failed(e);
+        // The window shows whatever comes back, and an empty string used to
+        // fall back to "Could not reach GitHub" - a guess that hid the real
+        // reason. Every failure is logged with its cause now, and the string
+        // always carries something.
+        vpn::app_log(&format!("update: {msg}"));
+        if msg.trim().is_empty() {
+            "the update check failed without a reason".to_string()
+        } else {
+            msg
+        }
+    })?;
     match found {
         Some(u) => {
             // Only a higher version is an update. Every build of a version
@@ -2749,7 +3054,10 @@ async fn check_update(app: tauri::AppHandle, state: tauri::State<'_, State>) -> 
 /// then restart into the new build. Progress goes to the UI as
 /// `update-progress` events with a `pct` field.
 #[tauri::command]
-async fn apply_update(app: tauri::AppHandle, state: tauri::State<'_, State>) -> Result<String, String> {
+async fn apply_update(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, State>,
+) -> Result<String, String> {
     let current = app.package_info().version.to_string();
     let channel = state.0.lock().unwrap().update_channel.clone();
     let update = updater(&app, &channel)
@@ -2809,7 +3117,11 @@ async fn apply_update(app: tauri::AppHandle, state: tauri::State<'_, State>) -> 
 /// start the app again. Cleared when the install fails.
 fn update_marker() -> Option<std::path::PathBuf> {
     let base = std::env::var("LOCALAPPDATA").ok()?;
-    Some(std::path::PathBuf::from(base).join("quotacards").join("updating"))
+    Some(
+        std::path::PathBuf::from(base)
+            .join("quotavpn")
+            .join("updating"),
+    )
 }
 
 fn mark_update_started() {
@@ -3036,7 +3348,12 @@ struct RoutedDevice {
 #[cfg(windows)]
 impl From<quotacards::lan_route::Intent> for RoutedDevice {
     fn from(i: quotacards::lan_route::Intent) -> RoutedDevice {
-        RoutedDevice { ip: i.target_ip, mac: i.target_mac, gateway: i.gateway_ip, interface: i.interface }
+        RoutedDevice {
+            ip: i.target_ip,
+            mac: i.target_mac,
+            gateway: i.gateway_ip,
+            interface: i.interface,
+        }
     }
 }
 
@@ -3059,7 +3376,8 @@ async fn lan_route_device(
     let ip2 = ip.clone();
     let mac2 = mac.clone();
     let dev = tauri::async_runtime::spawn_blocking(move || {
-        let target: std::net::Ipv4Addr = ip2.parse().map_err(|_| format!("not an address: {ip2}"))?;
+        let target: std::net::Ipv4Addr =
+            ip2.parse().map_err(|_| format!("not an address: {ip2}"))?;
         let adapter = quotacards::lan_route::claim(target, &mac2)?;
         Ok::<RoutedDevice, String>(RoutedDevice {
             ip: ip2,
@@ -3080,7 +3398,10 @@ async fn lan_route_device(
     }
     let session = quotacards::lan_ctrl::start_with(&dev.ip, false, Some(dev.mac.clone()))?;
     if session.target_ip != dev.ip {
-        return Err(format!("the pump came up for {} instead of {}", session.target_ip, dev.ip));
+        return Err(format!(
+            "the pump came up for {} instead of {}",
+            session.target_ip, dev.ip
+        ));
     }
     *state.0.lock().map_err(|_| "state".to_string())? = Some(session);
     Ok(dev)
@@ -3105,7 +3426,10 @@ async fn lan_unroute_device(state: tauri::State<'_, LanState>) -> Result<bool, S
 /// Report every fact that decides whether routing a device can work.
 #[cfg(windows)]
 #[tauri::command]
-async fn lan_route_diagnose(ip: Option<String>, mac: Option<String>) -> Result<Vec<String>, String> {
+async fn lan_route_diagnose(
+    ip: Option<String>,
+    mac: Option<String>,
+) -> Result<Vec<String>, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let target = match (ip, mac) {
             (Some(ip), Some(mac)) => {
@@ -3150,11 +3474,10 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
     tauri::generate_handler![
         setup_helper,
         get_state,
-        probe_server,
         platform,
-        generate_card,
-        import_card,
-        revoke_card,
+        import_credential,
+        card_status,
+        forget_card,
         copy_card,
         set_card_sni,
         tunnel_start,
@@ -3212,6 +3535,7 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         speedtest_cli_ready,
         speedtest_cli,
         process_running,
+        game_running,
         autostart_get,
         autostart_set,
         we_quota::we_quota_challenge,
@@ -3226,11 +3550,10 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
     tauri::generate_handler![
         setup_helper,
         get_state,
-        probe_server,
         platform,
-        generate_card,
-        import_card,
-        revoke_card,
+        import_credential,
+        card_status,
+        forget_card,
         copy_card,
         set_card_sni,
         tunnel_start,
@@ -3263,6 +3586,18 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
 }
 
 pub fn run() {
+    AppConfig::migrate_dirs();
+    if std::env::args().any(|a| a == "--connect-bench") {
+        let voice = std::env::args().any(|a| a == "--voice");
+        match bench_connect(voice) {
+            Ok(()) => {}
+            Err(e) => {
+                println!("BENCH_ERR {e}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
     // Undo any redirection a previous run failed to clean up: a killed app
     // leaves the router believing this machine is the device it blocked.
     #[cfg(windows)]
@@ -3295,7 +3630,10 @@ pub fn run() {
             ),
             None => println!("wire: none"),
         }
-        let block = std::env::args().nth(i + 3).map(|v| v != "0").unwrap_or(true);
+        let block = std::env::args()
+            .nth(i + 3)
+            .map(|v| v != "0")
+            .unwrap_or(true);
         let mac = std::env::args().nth(i + 4);
         match quotacards::lan_ctrl::start_with(&ip, block, mac) {
             Ok(s) => {
@@ -3310,7 +3648,7 @@ pub fn run() {
         }
         return;
     }
-#[cfg(windows)]
+    #[cfg(windows)]
     // Print the wire the app would use, without touching the network.
     if std::env::args().any(|a| a == "--lan-wire") {
         match quotacards::lan_ctrl::wire() {
@@ -3334,7 +3672,7 @@ pub fn run() {
         return;
     }
     // Ask one device its name, on the wire.
-#[cfg(windows)]
+    #[cfg(windows)]
     if let Some(i) = std::env::args().position(|a| a == "--lan-ask") {
         let ip = std::env::args().nth(i + 1).unwrap_or_default();
         let mac = std::env::args().nth(i + 2).unwrap_or_default();
@@ -3343,7 +3681,7 @@ pub fn run() {
         return;
     }
     // Listen for devices announcing their names.
-#[cfg(windows)]
+    #[cfg(windows)]
     if let Some(i) = std::env::args().position(|a| a == "--lan-listen") {
         let secs: u64 = std::env::args()
             .nth(i + 1)
@@ -3373,7 +3711,7 @@ pub fn run() {
         return;
     }
     // Does the packet driver load, and what does it see?
-#[cfg(windows)]
+    #[cfg(windows)]
     if std::env::args().any(|a| a == "--lan-driver") {
         let ok = quotacards::wpcap::ready();
         println!("driver_loaded={ok}");
@@ -3386,11 +3724,99 @@ pub fn run() {
         }
         return;
     }
-    // Headless device scan, for checking the network layer without the UI.
-#[cfg(windows)]
+    // Headless credential tools. The credential is read from a file or stdin,
+    // never from the command line: an argument is visible to every process on
+    // the machine and lands in crash reports.
+    #[cfg(windows)]
+    if let Some(i) = std::env::args()
+        .position(|a| a == "--qvreg-import" || a == "--qcreg-import")
+    {
+        let source = std::env::args().nth(i + 1).unwrap_or_default();
+        let text = if source == "-" {
+            use std::io::Read;
+            let mut text = String::new();
+            match std::io::stdin().read_to_string(&mut text) {
+                Ok(_) => text,
+                Err(e) => {
+                    println!("IMPORT_ERR read stdin: {e}");
+                    return;
+                }
+            }
+        } else if !source.is_empty()
+            && !source.starts_with("qv1:")
+            && !source.starts_with("qc1:")
+        {
+            match std::fs::read_to_string(&source) {
+                Ok(text) => text,
+                Err(e) => {
+                    println!("IMPORT_ERR read {source}: {e}");
+                    return;
+                }
+            }
+        } else {
+            println!("IMPORT_ERR pass a file path or - for stdin, never the credential on the command line");
+            return;
+        };
+        match credentials::import_into_config(&text, None) {
+            Ok(uuid) => println!("IMPORT_OK {uuid}"),
+            Err(e) => println!("IMPORT_ERR {e}"),
+        }
+        return;
+    }
+    #[cfg(windows)]
+    if let Some(i) = std::env::args()
+        .position(|a| a == "--qvreg-status" || a == "--qcreg-status")
+    {
+        let uuid = std::env::args()
+            .nth(i + 1)
+            .filter(|value| !value.is_empty())
+            .or_else(|| credentials::uuids().into_iter().next());
+        let Some(uuid) = uuid else {
+            println!("STATUS_ERR no card credential imported");
+            return;
+        };
+        println!("CARD {uuid}");
+        match cardapi::call_blocking("status", &uuid) {
+            Ok(v) => println!("STATUS_OK {v}"),
+            Err(e) => println!("STATUS_ERR {e}"),
+        }
+        return;
+    }
+    #[cfg(windows)]
+    if std::env::args().any(|a| a == "--dpapi-selftest") {
+        match credentials::selftest() {
+            Ok(()) => println!("DPAPI_OK"),
+            Err(e) => {
+                println!("DPAPI_ERR {e}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+    #[cfg(windows)]
+    if let Some(i) = std::env::args()
+        .position(|a| a == "--qvreg-forget" || a == "--qcreg-forget")
+    {
+        let uuid = std::env::args().nth(i + 1).unwrap_or_default();
+        match quotacards::qvreg::canonical_uuid(&uuid) {
+            Some(uuid) => {
+                let _ = credentials::forget(&uuid);
+                let mut cfg = AppConfig::load();
+                cfg.cards.retain(|card| card.uuid != uuid);
+                cfg.save();
+                println!("FORGET_OK {uuid}");
+            }
+            None => println!("FORGET_ERR bad card id"),
+        }
+        return;
+    }
+    #[cfg(windows)]
     if let Some(i) = std::env::args().position(|a| a == "--stage") {
         let host = std::env::args().nth(i + 1).unwrap_or_default();
-        let port: u16 = std::env::args().nth(i + 2).and_then(|v| v.parse().ok()).unwrap_or(443);
+        let port: u16 = std::env::args()
+            .nth(i + 2)
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(443);
         let log = std::env::args()
             .nth(i + 3)
             .and_then(|p| std::fs::read_to_string(p).ok())
@@ -3401,7 +3827,10 @@ pub fn run() {
         return;
     }
     if let Some(i) = std::env::args().position(|a| a == "--lan-monitor") {
-        let secs: u64 = std::env::args().nth(i + 1).and_then(|v| v.parse().ok()).unwrap_or(60);
+        let secs: u64 = std::env::args()
+            .nth(i + 1)
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(60);
         // Every address the neighbour table knows, so the watch has the same
         // roster the page would hand it.
         let out = std::process::Command::new("arp").arg("-a").output();
@@ -3423,7 +3852,9 @@ pub fn run() {
                     let b = session.bytes.lock().map(|m| m.len()).unwrap_or(0);
                     println!("MONITOR alive {}s buckets={b}", started.elapsed().as_secs());
                 }
-                session.stop.store(true, std::sync::atomic::Ordering::Relaxed);
+                session
+                    .stop
+                    .store(true, std::sync::atomic::Ordering::Relaxed);
                 println!("MONITOR done");
             }
             Err(e) => println!("MONITOR_ERR {e}"),
@@ -3431,7 +3862,10 @@ pub fn run() {
         return;
     }
     if let Some(i) = std::env::args().position(|a| a == "--dhcp-serve") {
-        let secs: u64 = std::env::args().nth(i + 1).and_then(|v| v.parse().ok()).unwrap_or(30);
+        let secs: u64 = std::env::args()
+            .nth(i + 1)
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(30);
         let mac = std::env::args().nth(i + 2).unwrap_or_default();
         let ip = std::env::args().nth(i + 3).unwrap_or_default();
         let mut routed = std::collections::HashMap::new();
@@ -3465,7 +3899,10 @@ pub fn run() {
                     // so a claim here proves the whole path and not half of it.
                     match quotacards::lan_ctrl::start_with(&ip, false, Some(mac.clone())) {
                         Ok(s) => {
-                            println!("CLAIM_OK {ip} PUMP_OK seen={}", s.seen.load(std::sync::atomic::Ordering::Relaxed));
+                            println!(
+                                "CLAIM_OK {ip} PUMP_OK seen={}",
+                                s.seen.load(std::sync::atomic::Ordering::Relaxed)
+                            );
                             std::thread::sleep(std::time::Duration::from_secs(12));
                             println!(
                                 "PUMP seen={} forwarded={} up={}",
@@ -3483,7 +3920,7 @@ pub fn run() {
         }
         return;
     }
-#[cfg(windows)]
+    #[cfg(windows)]
     if std::env::args().any(|a| a == "--lan-probe") {
         let started = std::time::Instant::now();
         let devices = quotacards::lan::scan();
@@ -3491,9 +3928,19 @@ pub fn run() {
             // The same label the app shows, including the port fingerprint.
             let kind = quotacards::fingerprint::kind(&d.ip);
             let label = quotacards::fingerprint::describe(&d.mac, &d.ip, &d.name, kind);
-            println!("{:<16} {:<18} {}  [{}]", d.ip, d.mac, label, kind.unwrap_or("-"));
+            println!(
+                "{:<16} {:<18} {}  [{}]",
+                d.ip,
+                d.mac,
+                label,
+                kind.unwrap_or("-")
+            );
         }
-        println!("LAN_PROBE {} devices in {} ms", devices.len(), started.elapsed().as_millis());
+        println!(
+            "LAN_PROBE {} devices in {} ms",
+            devices.len(),
+            started.elapsed().as_millis()
+        );
         return;
     }
     if std::env::args().any(|a| a == "--we-probe") {
@@ -3519,7 +3966,8 @@ pub fn run() {
         let channel = flag("--channel").unwrap_or_else(|| "normal".to_string());
         let current = flag("--as-version").unwrap_or_else(|| env!("CARGO_PKG_VERSION").to_string());
         let stable_feed =
-            "https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/latest.json".to_string();
+            "https://github.com/YousefMohiey/QuotaVPN/releases/latest/download/latest.json"
+                .to_string();
         let url = if channel == "experimental" {
             tauri::async_runtime::block_on(experimental_feed_url()).unwrap_or(stable_feed)
         } else {
@@ -3530,14 +3978,23 @@ pub fn run() {
             .user_agent("QuotaVPN")
             .build()
             .ok()
-            .and_then(|c| tauri::async_runtime::block_on(async {
-                c.get(&url).send().await.ok()?.text().await.ok()
-            }))
+            .and_then(|c| {
+                tauri::async_runtime::block_on(async {
+                    c.get(&url).send().await.ok()?.text().await.ok()
+                })
+            })
             .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
-            .and_then(|v| v.get("version").and_then(|x| x.as_str()).map(|x| x.to_string()));
+            .and_then(|v| {
+                v.get("version")
+                    .and_then(|x| x.as_str())
+                    .map(|x| x.to_string())
+            });
         match offered {
             Some(v) => {
-                println!("channel={channel} current={current} offered={v} newer={}", newer(&v, &current));
+                println!(
+                    "channel={channel} current={current} offered={v} newer={}",
+                    newer(&v, &current)
+                );
                 println!("feed={url}");
             }
             None => println!("channel={channel} current={current} offered=none feed={url}"),
@@ -3662,6 +4119,7 @@ pub fn run() {
         )
         .manage(State(Mutex::new(AppConfig::default())))
         .manage(Engine(Mutex::new(None)))
+        .manage(Lifecycle(tokio::sync::Mutex::new(())))
         .manage(Dests(Mutex::new(vpn::DestTracker::new())))
         .manage(we_quota::WeQuota::new())
         .setup(|app| {
@@ -3684,8 +4142,7 @@ pub fn run() {
             // (see the memory-thread note further down).
             #[cfg(windows)]
             {
-                if vpn::reconcile_kill_switch() == vpn::Reconcile::Release
-                    && vpn::traffic_blocked()
+                if vpn::reconcile_kill_switch() == vpn::Reconcile::Release && vpn::traffic_blocked()
                 {
                     let _ = release_block_elevated();
                 }
@@ -3698,10 +4155,8 @@ pub fn run() {
             }
             // Same OS config dir as the previous desktop app: cards carry
             // over, nothing to re-enter. (No chdir - that is phone-only.)
-            let cfg = std::panic::catch_unwind(std::panic::AssertUnwindSafe(
-                initial_config,
-            ))
-            .unwrap_or_default();
+            let cfg = std::panic::catch_unwind(std::panic::AssertUnwindSafe(initial_config))
+                .unwrap_or_default();
             *app.state::<State>().0.lock().unwrap() = cfg;
             // Tray: the app lives here. Closing the window only hides it;
             // Quit from this menu is the real exit (engine stopped first).
@@ -3738,10 +4193,6 @@ pub fn run() {
                     }
                 })
                 .build(&handle)?;
-            // Once per update, quietly re-register every local card on the
-            // server so a wiped or rebuilt server heals on launch, not only
-            // when the user connects.
-            spawn_launch_refresh(app.handle().clone());
             // The Valorant watcher: an OS thread, never a webview timer.
             #[cfg(windows)]
             spawn_game_watch(app.handle().clone());
@@ -3845,10 +4296,8 @@ mod tests {
         unsafe {
             let mut table: *mut MIB_IF_TABLE2 = std::ptr::null_mut();
             assert_eq!(GetIfTable2(&mut table), NO_ERROR);
-            let rows = std::slice::from_raw_parts(
-                (*table).Table.as_ptr(),
-                (*table).NumEntries as usize,
-            );
+            let rows =
+                std::slice::from_raw_parts((*table).Table.as_ptr(), (*table).NumEntries as usize);
             assert!(!rows.is_empty());
             for row in rows.iter().take(8) {
                 let alias = String::from_utf16_lossy(&row.Alias);
@@ -3891,7 +4340,9 @@ mod tests {
     /// Explorer (always present on a real desktop) is true.
     #[test]
     fn process_running_answers() {
-        assert!(!super::process_running("quotavpn-definitely-not-a-process-xyz.exe".into()));
+        assert!(!super::process_running(
+            "quotavpn-definitely-not-a-process-xyz.exe".into()
+        ));
         assert!(!super::process_running(String::new()));
         assert!(super::process_running("explorer.exe".into()));
         assert!(super::process_running("EXPLORER.EXE".into()));

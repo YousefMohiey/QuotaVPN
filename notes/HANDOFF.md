@@ -1,5 +1,12 @@
 # QuotaVPN handoff
 
+> **0.7.0 note, 22 November 2026:** the Windows app no longer uses SSH and no private key is
+> embedded in any customer build. Card management is a server-issued `qc1:` secret sealed with
+> Windows DPAPI, sent to the card API over HTTPS. See `notes/HANDOFF-2026-11-22.md` for the
+> current model. Sections 4, 5 and 6 below describe the 0.3.x tree and are kept for history;
+> where they mention the embedded key or SSH provisioning, they are no longer true for Windows.
+> The phone still carries the legacy `server.rs`/`ssh.rs` path behind the `legacy-ssh` feature.
+
 Read this first, then `notes/STATUS.md` for the live state and `AGENTS.md` for the short
 version of the working rules. This document is the long version: what the product is, how
 the pieces talk to each other, where everything lives, how to build and verify each target,
@@ -90,9 +97,11 @@ server (`/speed/down`, `/speed/up`) plus public ping targets.
 
 - `src/vpn.rs`: TUN config builder, routing rules, per-app matching, interface naming.
   Windows-only paths are `cfg`'d out on Android.
-- `src/server.rs`: server-side provisioning helpers (add/remove a client, WireGuard peer,
-  Hysteria2 credentials, version/need-upgrade checks).
-- `src/ssh.rs`: the SSH transport used for all provisioning.
+- `src/server.rs` and `src/ssh.rs`: the phone's legacy SSH provisioning path, behind the
+  `legacy-ssh` Cargo feature. The Windows app disables the feature, so `russh` never enters its
+  binary.
+- `src/qcreg.rs`: pure `qc1:` parsing, canonical UUID handling, HMAC signing and request shape.
+  No platform I/O, so it compiles on Windows and Android.
 - `src/config.rs`: config struct, paths, load/save.
 - `src/lib.rs`: shared exports.
 - `examples/`: `smoke.rs`, `vpntest.rs`, `embedprobe.rs` are manual probes, not tests.
@@ -141,30 +150,33 @@ server (`/speed/down`, `/speed/up`) plus public ping targets.
 - `embed/qc-fresh.sh`, `embed/qc-agent.sh`: first-boot and maintenance helpers.
 - `embed/qc-speed.py` + `qc-speed.service`: the speed endpoints; Xray `settings.fallbacks`
   routes `/speed/*` on 127.0.0.1:8080 to it so measurements travel the real path.
-- `embed/quotacards-embed.pem` / `.pub`: the restricted embed key pair. The private key ships
-  inside the app on purpose (it is what lets the app talk to the server), the public key is
-  installed in the server's `authorized_keys`. It is in the repo deliberately: do not "clean it
-  up", rotate it, or treat it as a leak.
+- `embed/quotacards-embed.pem` / `.pub`: the old restricted embed key pair. The key is **no longer
+  embedded by the Windows build**; `build.rs` writes `EMBED_KEY = None`, and the desktop has no
+  SSH control plane. The phone still needs the legacy path until it is migrated. Do not restore
+  the private key to a Windows build.
 - `tools/make-icons.py`: regenerates every icon set from `res/app-icon-src.png` and verifies the
   frames. `tools/build-apk.sh`: the one-command signed APK build. `tools/sync-mobile-assets.sh`:
   copies the phone UI into the Android asset folder.
 - Release tooling lives **outside** the repo, in `C:/Tools/qc-tools/` on the owner's build
   machine (publish script, UI audit scripts, screenshot drivers). If you clone this repo
   elsewhere, that tooling will not be there; the release can still be done by hand with `gh`.
-- `notes/ARCHITECTURE.md` and `notes/STATUS.md`: older but still accurate summaries; this file is
-  the entry point.
+- `notes/ARCHITECTURE.md` and `notes/STATUS.md`: older summaries, each with a 0.7.0 note for the
+  Windows credential migration; this file is the entry point.
 
 ## 5. Config and secrets
 
-- App config: `%APPDATA%/quotacards/config.json` on Windows. Holds the server address, port,
-  user, the card list, and the SSH private key the app uses. Treat it as a secret file: never
-  commit it, never print it, never paste it into an issue or a chat.
+- App config: `%APPDATA%/quotacards/config.json` on Windows. Holds the server address, the card
+  list, and the cached transport profiles. The Windows app no longer stores an SSH key: it clears
+  any key left by an older build, and keeps card management secrets in the DPAPI-sealed
+  `card_credentials.bin`. The phone still stores its SSH key here. Treat it as a secret file:
+  never commit it, never print it, never paste it into an issue or a chat.
 - Signing material lives outside the repo on the build machine: the release keystore
   (`C:/Tools/qc-release.keystore` plus its password file), the updater key
   (`C:/Tools/qc-updater.key`, `.pub`, password file), and the APK signing passwords. None of it
   belongs in git, and none of it may appear in logs or transcripts.
-- The repo does contain the embed key described above, plus `licenses`/`README` text. That is
-  expected.
+- The repo contains only the public half of the old embed key (`embed/quotacards-embed.pem.pub`),
+  plus `licenses`/`README` text. The private half was never tracked and the Windows build no
+  longer embeds it.
 
 ## 6. Build and verify
 
@@ -185,20 +197,26 @@ npm run preview      # serves the built UI on http://localhost:4173 for inspecti
 
 ```
 cd desktop/src-tauri
-cargo build --release --offline --target x86_64-pc-windows-gnu
+cargo build --release
 ```
 
-`tauri dev` is unusable here: the dev profile fails to link under MinGW (`export ordinal too
-large`). Always verify through a release build. To run the exe, copy `WebView2Loader.dll` next
-to it.
+The release workflow on `windows-latest` uses the MSVC host target, and that is the canonical
+build. The GNU target still type-checks but currently fails at link on this host: `embed-resource`
+uses the host MSVC `rc.exe` and writes a `.res` file named `resource.lib`, which MinGW's `ld`
+refuses. That is a build-tool trap, not a Rust error. To run the exe, copy `WebView2Loader.dll`
+next to it.
 
 **Installer (NSIS, signed updater feed)**
 
 ```
 cd desktop
 node ../android/tauri-cli-npm/node_modules/@tauri-apps/cli/tauri.js build \
-  --bundles nsis --target x86_64-pc-windows-gnu
+  --bundles nsis
 ```
+
+For a private build without the updater key, pass a small JSON config file:
+`--config no-updater.json` where the file contains
+`{"bundle":{"createUpdaterArtifacts":false}}`.
 
 with `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` exported, and NSIS on
 PATH. Produces `bundle/nsis/QuotaVPN_<version>_x64-setup.exe` plus its `.sig`.
@@ -339,9 +357,12 @@ that matter most:
   `C:/Users/Administrator/AppData/Local/hermes/hermes-agent/venv/Scripts/python.exe`.
 - `gh` CLI at `C:/Program Files/GitHub CLI/gh.exe` is authenticated for the owner's account.
 
-## 11. Current state (as of this handoff)
+## 11. Historical state (0.3.2 handoff)
 
-- Latest release: **v0.3.2** (installer, APK, feed), published and live.
+> For the current state see `notes/HANDOFF-2026-11-22.md` and `AGENTS.md`. The rest of this
+> section records the 0.3.2 tree and is kept for history.
+
+- Latest release at the time: **v0.3.2** (installer, APK, feed), published and live.
 - Unreleased on top of v0.3.2: the in-app window controls (commit `ed0ef4b`) and the memory
   work (`e745b58`). The four version files already read 0.3.3.
 - v0.3.2 carries the installer shortcut cleanup: exactly one desktop shortcut, named QuotaVPN,

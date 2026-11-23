@@ -46,13 +46,8 @@ type Value = {
   refreshing: boolean
   hardRefresh: () => Promise<void>
   updatePct: number | null
-  generateCard: (name: string, kind: string, sni: string) => Promise<CmdResult>
-  importCard: (uuid: string, name: string, kind: string, sni: string) => Promise<CmdResult>
-  revokeCard: (uuid: string) => Promise<CmdResult>
-  revokeCardOptimistic: (uuid: string) => Promise<CmdResult>
   ensurePresetCard: (p: PresetKind) => Promise<CmdResult>
   applyDomain: (sni: string) => Promise<CmdResult>
-  copyCard: (uuid: string) => Promise<CmdResult>
   pickCard: (uuid: string) => void
   preset: PresetKind
   setPreset: (p: PresetKind) => void
@@ -101,12 +96,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [cards, setCards] = useState<Card[]>([])
   const [cardUuid, setCardUuid] = useState<string>(() => read("qc-card", ""))
   const [preset, setPresetState] = useState<PresetKind>(() => read<PresetKind>("qc-preset", "Gamerz"))
-  // Mirrors the preset so a failed card creation can put the switch back where
-  // it was, instead of leaving a kind selected that has no card behind it.
-  const presetRef = useRef<PresetKind>(preset)
-  useEffect(() => {
-    presetRef.current = preset
-  }, [preset])
   const [appsMode, setAppsModeState] = useState<AppsMode>(() => read<AppsMode>("qc-apps-mode", "all"))
   const [apps, setAppsState] = useState<string[]>(() => read<string[]>("qc-apps", []))
   const [transport, setTransportState] = useState<Transport>(() => read<Transport>("qc-transport", "vless"))
@@ -546,7 +535,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
     let game = false
     try {
-      game = await api.processRunning("VALORANT-Win64-Shipping.exe")
+      // Both shipping names, checked inside the backend in one pass.
+      game = await api.gameRunning()
     } catch {
       return
     }
@@ -646,36 +636,23 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setPhase("connecting")
     if (mode === appsMode) setStatus("")
     try {
-      // One-tap connect: make sure a card of the selected preset kind
-      // exists first, creating it through the normal detached path.
-      let uuid = cardUuid
-      const current = cards.find((c) => c.uuid === uuid)
-      if (!current || current.card_type !== preset) {
-        const existing = cards.find((c) => c.card_type === preset)
-        if (existing) {
-          uuid = existing.uuid
-        } else {
-          const g = await api.generateCard(preset, preset, DEFAULT_SNI[preset])
-          if (stale()) return
-          if (!g.ok) {
-            setStatus(g.msg)
-            setPhase("idle")
-            return
-          }
-          const st = await api.state()
-          setCards(st.cards)
-          const created = st.cards.find((c) => c.card_type === preset)
-          if (!created) {
-            setStatus(g.msg)
-            setPhase("idle")
-            return
-          }
-          uuid = created.uuid
-        }
+      // One-tap connect: use the card of the selected kind when the customer
+      // has one. A one-card customer uses the same card for both Gamerz and
+      // Streamerz; the preset buttons set its domain. The app never mints or
+      // imports a card here.
+      const matching = cards.find((c) => c.card_type === preset)
+      const current = cards.find((c) => c.uuid === cardUuid)
+      const target = matching ?? current ?? cards[0]
+      if (!target) {
+        setStatus(t("notProvisioned"))
+        setPhase("idle")
+        return
+      }
+      const uuid = target.uuid
+      if (uuid !== cardUuid) {
         setCardUuid(uuid)
         write("qc-card", uuid)
       }
-      await api.probeServer()
       if (stale()) return
       // The voice helper rides along in the same session when it is on, so
       // the normal VPN and the voice routing live in one tunnel.
@@ -1010,120 +987,53 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [refresh])
 
-  const generateCard = useCallback(
-    async (name: string, kind: string, sni: string) => {
-      // The backend Err path (saved locally but server registration failed)
-      // rejects the invoke, so convert it to a visible CmdResult and still
-      // refresh: the local card stays in all cases.
-      try {
-        const r = await api.generateCard(name, kind, sni)
-        await refresh()
-        return r
-      } catch (e) {
-        await refresh()
-        return { ok: false, msg: e instanceof Error ? e.message : String(e) }
-      }
-    },
-    [refresh],
-  )
-
-  const importCard = useCallback(
-    async (uuid: string, name: string, kind: string, sni: string) => {
-      const r = await api.importCard(uuid, name, kind, sni)
-      await refresh()
-      return r
-    },
-    [refresh],
-  )
-
-  const revokeCard = useCallback(
-    async (uuid: string) => {
-      const r = await api.revokeCard(uuid)
-      await refresh()
-      return r
-    },
-    [refresh],
-  )
-
-  // One-tap preset support: flip the preset, make sure that kind exists
-  // (generating it when missing), and select it. No connection involved.
-  const presetBusyRef = useRef<PresetKind | null>(null)
+  // One-tap preset support. A customer with one card uses it for both kinds;
+  // the preset only changes the domain. A customer with two cards keeps the
+  // matching card for each kind. No card is ever created here.
   const ensurePresetCard = useCallback(
     async (p: PresetKind) => {
-      if (presetBusyRef.current) return { ok: true, msg: "" }
-      const prevPreset = presetRef.current
-      const rollbackPreset = () => {
-        setPresetState(prevPreset)
-        write("qc-preset", prevPreset)
-      }
       setPresetState(p)
       write("qc-preset", p)
-      const existing = cardsRef.current.find((c) => c.card_type === p)
-      if (existing) {
-        setCardUuid(existing.uuid)
-        write("qc-card", existing.uuid)
-        return { ok: true, msg: "" }
+      const cards = cardsRef.current
+      if (cards.length === 0) {
+        const msg = t("notProvisioned")
+        setStatus(msg)
+        return { ok: false, msg }
       }
-      presetBusyRef.current = p
-      try {
-        const g = await api.generateCard(p, p, DEFAULT_SNI[p])
-        if (!g.ok) {
-          rollbackPreset()
-          setStatus(g.msg)
-          return g
+      const matching = cards.find((c) => c.card_type === p)
+      const target = matching ?? cards[0]
+      // One card: every preset click is a domain switch. Gamerz sets ea.com,
+      // Streamerz sets youtube.com; the UUID never changes. With two cards,
+      // the matching card keeps its own domain and only the selection moves.
+      if (cards.length === 1 || !matching) {
+        const result = await api.setCardSni(target.uuid, DEFAULT_SNI[p])
+        if (!result.ok) {
+          setStatus(result.msg)
+          return result
         }
-        const st = await api.state()
-        setServerIp(st.server_ip)
-        setCards(st.cards)
-        const created = st.cards.find((c) => c.card_type === p)
-        if (created) {
-          setCardUuid(created.uuid)
-          write("qc-card", created.uuid)
-        } else {
-          rollbackPreset()
-          setStatus(g.msg)
-        }
-        return g
-      } catch (e) {
-        const r = { ok: false, msg: String(e) }
-        rollbackPreset()
-        setStatus(r.msg)
-        return r
-      } finally {
-        presetBusyRef.current = null
+        await refresh()
       }
+      setCardUuid(target.uuid)
+      write("qc-card", target.uuid)
+      return { ok: true, msg: "" }
     },
-    [],
+    [refresh, t],
   )
 
-  // Home domain switcher: point the active card (or the preset's card) at a
-  // new domain, creating the card when this account has none yet. The card id
+  // Home domain switcher: point the active card at a new domain. The card id
   // never changes, so nothing is registered or revoked server-side.
   const applyDomain = useCallback(
     async (sni: string) => {
       const s = sni.trim()
       if (!s) return { ok: false, msg: "" }
       try {
-        let target = cardsRef.current.find((c) => c.uuid === cardUuidRef.current)
-        if (!target) target = cardsRef.current.find((c) => c.card_type === preset)
+        const target =
+          cardsRef.current.find((c) => c.uuid === cardUuidRef.current) ??
+          cardsRef.current[0]
         if (!target) {
-          const g = await api.generateCard(preset, preset, s)
-          if (!g.ok) {
-            setStatus(g.msg)
-            return g
-          }
-          const st = await api.state()
-          setServerIp(st.server_ip)
-          setCards(st.cards)
-          const created = st.cards.find((c) => c.card_type === preset)
-          if (!created) {
-            setStatus(g.msg)
-            return g
-          }
-          setCardUuid(created.uuid)
-          write("qc-card", created.uuid)
-          if (vpnOn) setStatus(t("domainReconnectHint"))
-          return g
+          const r = { ok: false, msg: t("notProvisioned") }
+          setStatus(r.msg)
+          return r
         }
         if (target.uuid !== cardUuidRef.current) {
           setCardUuid(target.uuid)
@@ -1140,43 +1050,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         return r
       }
     },
-    [preset, refresh, t, vpnOn],
+    [refresh, t, vpnOn],
   )
-
-  // Optimistic revoke: the tile leaves in this tick, the server reconciles in
-  // the background. A failure puts the exact snapshot back.
-  const revokeCardOptimistic = useCallback(
-    async (uuid: string) => {
-      const before = cardsRef.current
-      const beforeUuid = cardUuidRef.current
-      const survivors = before.filter((c) => c.uuid !== uuid)
-      setCards(survivors)
-      if (beforeUuid === uuid) {
-        const fallback = survivors[0]?.uuid ?? ""
-        setCardUuid(fallback)
-        write("qc-card", fallback)
-      }
-      let r: CmdResult
-      try {
-        r = await api.revokeCard(uuid)
-      } catch (e) {
-        r = { ok: false, msg: String(e) }
-      }
-      if (!r.ok) {
-        setCards(before)
-        if (cardUuidRef.current !== beforeUuid) {
-          setCardUuid(beforeUuid)
-          write("qc-card", beforeUuid)
-        }
-      } else {
-        await refresh()
-      }
-      return r
-    },
-    [refresh],
-  )
-
-  const copyCard = useCallback((uuid: string) => api.copyCard(uuid), [])
 
   const value: Value = {
     ready,
@@ -1208,13 +1083,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     refreshing,
     hardRefresh,
     updatePct,
-    generateCard,
-    importCard,
-    revokeCard,
-    revokeCardOptimistic,
     ensurePresetCard,
     applyDomain,
-    copyCard,
     pickCard,
     preset,
     setPreset,

@@ -50,7 +50,7 @@ pub struct CliResult {
 /// Where the CLI lives once fetched.
 pub fn bin_dir() -> PathBuf {
     let base = std::env::var("APPDATA").unwrap_or_else(|_| ".".into());
-    PathBuf::from(base).join("quotacards").join("bin")
+    PathBuf::from(base).join("quotavpn").join("bin")
 }
 
 /// The cached CLI, downloading and unpacking it once if needed. Returns None

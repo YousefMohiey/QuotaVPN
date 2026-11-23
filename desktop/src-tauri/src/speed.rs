@@ -35,7 +35,7 @@ impl SpeedOut {
 /// Capped so it can never grow without bound.
 pub fn note(line: &str) {
     let base = std::env::var("APPDATA").unwrap_or_else(|_| ".".into());
-    let dir = std::path::PathBuf::from(base).join("quotacards");
+    let dir = std::path::PathBuf::from(base).join("quotavpn");
     let _ = std::fs::create_dir_all(&dir);
     let path = dir.join("speed-debug.log");
     if let Ok(meta) = std::fs::metadata(&path) {

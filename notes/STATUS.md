@@ -1,5 +1,9 @@
 # Status (Sept 2026)
 
+> **0.7.0 note:** the Windows app no longer generates, imports or revokes cards over SSH. It
+> imports a server-issued `qc1:` credential into a DPAPI-sealed store and calls the card API over
+> HTTPS. See `notes/HANDOFF-2026-11-22.md`. The phone still uses the legacy SSH path.
+
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.
 

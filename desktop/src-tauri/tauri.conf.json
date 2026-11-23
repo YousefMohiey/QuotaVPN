@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "QuotaVPN",
   "mainBinaryName": "QuotaVPN",
-  "version": "0.6.18",
+  "version": "0.7.0",
   "identifier": "com.quotacards.app",
   "build": {
     "frontendDist": "../ui-next/dist",
@@ -57,11 +57,6 @@
         ]
       },
       "appimage": {}
-    },
-    "resources": {
-      "../../res/windivert/LICENSE": "WinDivert-LICENSE.txt",
-      "../../res/windivert/WinDivert.dll": "WinDivert.dll",
-      "../../res/windivert/WinDivert64.sys": "WinDivert64.sys"
     }
   },
   "plugins": {

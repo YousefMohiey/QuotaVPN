@@ -1,5 +1,9 @@
 # Architecture
 
+> **0.7.0 note:** the Windows app does not use the SSH path shown below. It imports a `qc1:`
+> credential, seals it with DPAPI, and calls the card API over HTTPS. The phone still uses the
+> legacy `server.rs`/`ssh.rs` path. See `notes/HANDOFF-2026-11-22.md`.
+
 ## Pieces
 
 ```

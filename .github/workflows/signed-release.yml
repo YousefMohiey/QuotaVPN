@@ -143,6 +143,26 @@ jobs:
           }
           Write-Host "checked: no driver download, no feed override"
 
+      # The migration removed the shared SSH key and the SSH stack from the
+      # Windows build. A dependency that brings a PEM parser back should not
+      # ship a customer installer, so this reads the binary rather than trusting
+      # the dependency graph.
+      - name: The binary carries no SSH key
+        shell: pwsh
+        run: |
+          $exe = "desktop/src-tauri/target/release/QuotaVPN.exe"
+          if (-not (Test-Path $exe)) { throw "no app binary at $exe" }
+          $text = [System.Text.Encoding]::UTF8.GetString([System.IO.File]::ReadAllBytes($exe))
+          foreach ($k in @(
+            "BEGIN OPENSSH PRIVATE KEY",
+            "BEGIN RSA PRIVATE KEY",
+            "BEGIN PRIVATE KEY",
+            "quotacards-embed"
+          )) {
+            if ($text.Contains($k)) { throw "$k is in the binary" }
+          }
+          Write-Host "checked: no SSH key material and no embedded key marker"
+
       # SmartScreen is a config value, and checking it in the binary would always
       # fail: the WebView2 runtime links its own default argument string into the
       # executable whether or not the app sets it. The config is where the decision

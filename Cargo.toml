@@ -3,23 +3,28 @@ name = "quotacards"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+# The phone still uses the old SSH control plane. The Windows app turns this
+# off so russh, the SSH key handling and their parser constants never enter a
+# customer build. qcreg is pure and always compiled.
+default = ["legacy-ssh"]
+legacy-ssh = ["dep:russh", "dep:tokio"]
+
 [dependencies]
 # NOTE: no `accesskit` (screen-reader stack) - desktop never uses it, and it
 # hard-breaks the Android build (`accesskit` needs `android-game-activity`).
 # wgpu is the renderer on both (DX12 desktop / Vulkan-GLES Android).
 # eframe is desktop-only: it pulls winit/android-activity into the graph and
 # hard-breaks the Android build. Mobile reuses config/server/ssh only.
-russh = { version = "0.63", default-features = false, features = ["ring", "rsa", "flate2"] }
-russh-keys = "0.49"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "net", "fs", "io-util"] }
+russh = { version = "0.63", default-features = false, features = ["ring", "rsa", "flate2"], optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "net", "fs", "io-util"], optional = true }
 uuid = { version = "1", features = ["v4", "serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 dirs = "7"
-windows-sys = { version = "0.59", features = ["Win32_System_LibraryLoader", "Win32_Foundation"] }
+windows-sys = { version = "0.59", features = ["Win32_System_LibraryLoader", "Win32_Foundation", "Win32_NetworkManagement_IpHelper", "Win32_NetworkManagement_Ndis", "Win32_Networking_WinSock", "Win32_System_Threading"] }
 ring = { version = "0.17", default-features = false, features = ["alloc", "std"] }
 rand_core = { version = "0.6", features = ["getrandom", "std"] }
-ssh-key = { version = "0.6", features = ["ed25519", "rand_core", "std"] }
 # WinDivert.dll and wpcap.dll are both loaded by name at runtime, never linked.
 # A build-time SDK or a bundled import library would stop the project from
 # compiling without the driver present, which is the thing this avoids.

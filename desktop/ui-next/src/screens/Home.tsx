@@ -26,11 +26,8 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
   // values still change, they just arrive instead of travelling
   const calm = useReducedMotion()
   const {
-    cards,
     card,
-    pickCard,
     preset,
-    setPreset,
     ensurePresetCard,
     applyDomain,
     transport,
@@ -58,8 +55,9 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
   const [domainBusy, setDomainBusy] = useState(false)
   const [domainErr, setDomainErr] = useState("")
 
-  const activeKind: PresetKind =
-    card?.card_type === "Streamerz" ? "Streamerz" : card?.card_type === "Gamerz" ? "Gamerz" : preset
+  // The preset is the customer's Gamerz/Streamerz switch. A one-card account
+  // uses the same UUID for both; the preset only changes the domain.
+  const activeKind: PresetKind = preset
   const currentSni = card?.sni || DEFAULT_SNI[activeKind]
   const domLabel = labelForSni(currentSni)
   const domText = domLabel === currentSni ? currentSni : `${domLabel} · ${currentSni}`
@@ -190,8 +188,9 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
 
           <div className="grid w-full max-w-[440px] shrink-0 grid-cols-2 gap-2.5" role="group" aria-label={t("setupTitle")}>
             {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
-              const mine = cards.find((c) => c.card_type === kind)
-              const sni = mine?.sni ?? DEFAULT_SNI[kind]
+              // The button is a preset, not the active card: show the domain
+              // that preset selects. The live domain is in the cell below.
+              const sni = DEFAULT_SNI[kind]
               const isActive = preset === kind
               const Icon = kind === "Gamerz" ? Gamepad2 : Tv
               return (
@@ -202,11 +201,8 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   disabled={creating !== null}
                   onClick={() => {
                     if (creating) return
-                    if (mine) {
-                      setPreset(kind)
-                      pickCard(mine.uuid)
-                      return
-                    }
+                    // Always go through the preset path: with one card this
+                    // switches the domain, with two it selects the card.
                     setCreating(kind)
                     void ensurePresetCard(kind).finally(() => setCreating(null))
                   }}

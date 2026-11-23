@@ -465,4 +465,5 @@ export const en = {
   "weOffersFail": "Quota read refused",
   "weGenericFail": "Something failed, try again",
   "copyFailed": "Could not copy",
+  "notProvisioned": "This PC is not set up yet. Contact your provider.",
 } as const
