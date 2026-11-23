@@ -240,13 +240,47 @@ export function Network() {
     }
   }, [])
 
-  /** Re-read what the neighbour table already knows. No sweep, no router wait. */
+  /** Re-read the cheap facts: the neighbour table, the active session, the
+      driver flags and the guard. No sweep, no router HTTP, no game lag. */
   const quickRefresh = useCallback(async () => {
-    setScanning(true)
     try {
-      const [known, st] = await Promise.all([api.lanKnown(), api.lanStatus()])
-      setDevices(known)
+      const [known, st, linked, driver, claim, guard] = await Promise.all([
+        api.lanKnown(),
+        api.lanStatus(),
+        api.routerStatus(),
+        api.pipelineReady(),
+        api.lanClaimReady(),
+        api.lanGuard(),
+      ])
+      // The claimed device's ARP entry points at this PC, so the neighbour
+      // table drops it. Put the session's own row back without a sweep.
+      let list = known
+      if (st && !list.some((d) => d.ip === st.ip || d.mac === st.mac)) {
+        list = [
+          ...list,
+          {
+            ip: st.ip,
+            mac: st.mac,
+            name: "",
+            self_pc: false,
+            source: "",
+            protected: false,
+            protected_always: false,
+            live: true,
+          },
+        ]
+      }
+      setDevices(list)
       setActive(st)
+      setSnap({
+        devices: list,
+        active: st,
+        router_linked: linked,
+        driver_ready: driver,
+        claim_ready: claim,
+        guard,
+        ts: Date.now(),
+      })
       if (st) setSelected(keyOf(st))
     } catch (e) {
       setError(String(e))
@@ -266,12 +300,12 @@ export function Network() {
       void api.lanWire().then((w) => {
         if (alive) setWire(w)
       }).catch(() => undefined)
-      if (alive) await refresh()
+      if (alive) await quickRefresh()
     })()
     return () => {
       alive = false
     }
-  }, [refresh])
+  }, [quickRefresh])
 
   // The driver copy is idempotent and cheap; doing it when the page opens means
   // the control panel knows whether it can act instead of guessing.
@@ -290,12 +324,13 @@ export function Network() {
     }
   }, [])
 
-  // Presence and names do not need to be swept constantly. A slow refresh is
-  // enough, and the press of Refresh is always available.
+  // A cheap tick keeps presence current. A full sweep is only ever the
+  // Discover button: a page left open during a game must not ping the whole
+  // subnet every twenty seconds.
   useEffect(() => {
-    const id = window.setInterval(() => void refresh(), 20000)
+    const id = window.setInterval(() => void quickRefresh(), 20000)
     return () => window.clearInterval(id)
-  }, [refresh])
+  }, [quickRefresh])
 
   // The active session's counters are cheap to read and are what the live
   // numbers on the right are made from.
@@ -397,7 +432,7 @@ export function Network() {
       if (!block && (d > 0 || u > 0)) await api.lanLimits(d, u)
       setBlocked(block)
       setActive(await api.lanStatus())
-      await refresh()
+      await quickRefresh()
     } catch (e) {
       setError(String(e))
     } finally {
@@ -451,7 +486,7 @@ export function Network() {
       await api.lanStop()
       setActive(null)
       setBlocked(false)
-      await refresh()
+      await quickRefresh()
     } catch (e) {
       setError(String(e))
     } finally {
@@ -467,7 +502,7 @@ export function Network() {
       setDriverMsg(msg)
       const p = await api.lanPrepare()
       setSetup(p)
-      await refresh()
+      await quickRefresh()
     } catch (e) {
       setDriverMsg(String(e))
     } finally {
@@ -481,7 +516,7 @@ export function Network() {
     try {
       const p = await api.lanPrepare()
       setSetup(p)
-      await refresh()
+      await quickRefresh()
     } catch (e) {
       setDriverMsg(String(e))
     } finally {

@@ -2476,9 +2476,27 @@ fn lan_known(cfg: tauri::State<'_, State>) -> Vec<quotacards::lan::Device> {
     // The cached list is painted before the scan answers, so the two facts the
     // page needs at once are filled here as well: who the router is, and which
     // addresses the owner protected.
-    let gateway = quotacards::lan_ctrl::wire()
-        .map(|w| w.gateway_ip)
+    let wire = quotacards::lan_ctrl::wire();
+    let gateway = wire
+        .as_ref()
+        .map(|w| w.gateway_ip.clone())
         .unwrap_or_default();
+    // The neighbour table has no entry for this PC's own address, so a quick
+    // read would otherwise show everybody except the machine running the app.
+    if let Some(w) = wire.as_ref() {
+        if !list.iter().any(|d| d.ip == w.ip) {
+            list.push(quotacards::lan::Device {
+                ip: w.ip.clone(),
+                mac: w.mac.clone(),
+                name: String::new(),
+                self_pc: true,
+                name_source: "self".into(),
+                protected: true,
+                protected_always: true,
+                live: true,
+            });
+        }
+    }
     let protected = cfg
         .0
         .lock()
