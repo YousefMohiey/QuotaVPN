@@ -118,6 +118,14 @@ sent before the session is returned, the device must answer its probe first, and
 including a panic sends the true mappings back. A killed process is restored from
 `lan_journal.txt` at the next start.
 
+Before the first claim, the PC's own neighbour entry for the router is made Permanent with the
+router's real hardware address and recorded in `lan_pin.txt`. That entry is what keeps an ARP
+reply from pointing the PC at itself and taking its own connection down; release removes it, a
+watchdog re-pins it, and a session refuses to start if Windows will not pin it. `lan::tidy_roster`
+runs before the page paints: it forces the router and this PC rows to their real addresses, drops
+any other row wearing either address, and dedupes the rest. The page key is `ip|mac|self`, so two
+rows can never collide into duplicate React children.
+
 Npcap is the only packet driver the control path needs. The free installer has no silent mode, so
 the app runs its wizard. The relay opens non-promiscuous on purpose: promiscuous mode is the
 setting Npcap's own guide says to turn off when a wireless adapter misbehaves. Discovery and

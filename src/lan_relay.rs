@@ -22,6 +22,7 @@
 //! slowed or blocked by this session; the screens say so where it matters.
 
 use crate::wpcap;
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -49,12 +50,15 @@ pub struct Session {
     pub bytes_down: Arc<AtomicU64>,
     pub forwarded: Arc<AtomicU64>,
     pub dropped: Arc<AtomicU64>,
-    /// ARP replies the device sent to the gateway-shaped request. Proof that
-    /// the claim reached its stack, which a plain reply does not give.
+    /// ARP replies the device sent to us. Diagnostic only now: the relay no
+    /// longer asks a gateway-shaped question, so this stays quiet on a device
+    /// that ignores the claim.
     pub client_answers: Arc<AtomicU64>,
     alive: Arc<AtomicBool>,
     stop: Arc<AtomicBool>,
     handle: Option<std::thread::JoinHandle<()>>,
+    watch: Option<std::thread::JoinHandle<()>>,
+    pin: Option<Pin>,
 }
 
 impl Session {
@@ -69,6 +73,13 @@ impl Session {
         if let Some(h) = self.handle.take() {
             let _ = h.join();
         }
+        if let Some(h) = self.watch.take() {
+            let _ = h.join();
+        }
+        // Dropping the pin removes the permanent gateway entry. This runs
+        // after the relay has sent its restore frames, so the PC is protected
+        // for the whole session and no longer than that.
+        self.pin.take();
     }
 
     /// Stop and wait for the ARP tables to be handed back.
@@ -83,6 +94,170 @@ impl Drop for Session {
         // not leave a live thread poisoning a device nobody owns.
         self.stop_inner();
     }
+}
+
+// ---------------------------------------------------------------- gateway pin
+
+fn pin_path() -> PathBuf {
+    crate::lan_ctrl::journal_path().with_file_name("lan_pin.txt")
+}
+
+/// Run a PowerShell command without a window. The relay is already elevated,
+/// and the neighbor cmdlets are the only supported way to create a Permanent
+/// entry; `arp -s` answers Access denied on this class of Windows.
+fn run_powershell(script: &str) -> Result<String, String> {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const NO_WINDOW: u32 = 0x0800_0000;
+        let out = std::process::Command::new("powershell")
+            .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script])
+            .creation_flags(NO_WINDOW)
+            .output()
+            .map_err(|e| format!("powershell: {e}"))?;
+        if !out.status.success() {
+            let err = String::from_utf8_lossy(&out.stderr).trim().to_string();
+            return Err(if err.is_empty() {
+                "Windows refused the gateway protection".to_string()
+            } else {
+                err
+            });
+        }
+        Ok(String::from_utf8_lossy(&out.stdout).to_string())
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = script;
+        Err("the gateway pin is Windows only".to_string())
+    }
+}
+
+/// The PC's own gateway entry, made Permanent for the length of a session.
+///
+/// Without this, any ARP reply that reaches the stack can rewrite the address
+/// the PC uses to reach the router. During a relay the PC is the most likely
+/// target of such a reply, and losing this entry takes the PC's own connection
+/// down with the controlled device's. A Permanent neighbor entry ignores ARP
+/// updates, so the PC keeps reaching the real router no matter what the relay
+/// or the device sends.
+struct Pin {
+    index: u32,
+    gateway: String,
+}
+
+impl Pin {
+    fn set(gateway: &str, gateway_mac: &str, self_ip: &str) -> Result<Pin, String> {
+        let script = format!(
+            "$ErrorActionPreference='Stop'; \
+             $idx=(Get-NetIPAddress -IPAddress '{self_ip}' -AddressFamily IPv4 | Select-Object -First 1).InterfaceIndex; \
+             if (-not $idx) {{ throw 'no IPv4 interface holds {self_ip}' }}; \
+             Remove-NetNeighbor -InterfaceIndex $idx -IPAddress '{gateway}' -Confirm:$false -ErrorAction SilentlyContinue; \
+             New-NetNeighbor -InterfaceIndex $idx -IPAddress '{gateway}' -LinkLayerAddress '{gateway_mac}' -State Permanent | Out-Null; \
+             Write-Output $idx"
+        );
+        let out = run_powershell(&script)?;
+        let index: u32 = out
+            .lines()
+            .rev()
+            .find_map(|line| line.trim().parse().ok())
+            .ok_or("Windows did not report the gateway interface")?;
+        let now = crate::lan_ctrl::mac_for(gateway);
+        if now.as_deref() != Some(gateway_mac) {
+            let _ = run_powershell(&format!(
+                "Remove-NetNeighbor -InterfaceIndex {index} -IPAddress '{gateway}' -Confirm:$false -ErrorAction SilentlyContinue"
+            ));
+            return Err(
+                "The gateway address could not be pinned, so nothing was claimed.".into(),
+            );
+        }
+        let path = pin_path();
+        if let Some(dir) = path.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        let _ = std::fs::write(&path, format!("{index}|{gateway}"));
+        Ok(Pin {
+            index,
+            gateway: gateway.to_string(),
+        })
+    }
+
+    fn release(&self) {
+        let _ = run_powershell(&format!(
+            "Remove-NetNeighbor -InterfaceIndex {} -IPAddress '{}' -Confirm:$false -ErrorAction SilentlyContinue",
+            self.index, self.gateway
+        ));
+        let _ = std::fs::remove_file(pin_path());
+    }
+}
+
+/// Replace the Permanent gateway entry with the true hardware address. Split
+/// out so the watchdog can use it without owning the `Pin`, whose drop is the
+/// release.
+fn repin(index: u32, gateway: &str, mac: &str) {
+    let _ = run_powershell(&format!(
+        "Remove-NetNeighbor -InterfaceIndex {index} -IPAddress '{gateway}' -Confirm:$false -ErrorAction SilentlyContinue; \
+         New-NetNeighbor -InterfaceIndex {index} -IPAddress '{gateway}' -LinkLayerAddress '{mac}' -State Permanent -ErrorAction Stop"
+    ));
+}
+
+impl Drop for Pin {
+    fn drop(&mut self) {
+        self.release();
+    }
+}
+
+/// Undo a pin left behind by a killed process. The entry points at the real
+/// router, so leaving it would not break anything, but a stale Permanent entry
+/// is still a change this app made and must not outlive its session.
+pub fn repair_pin() {
+    let Ok(text) = std::fs::read_to_string(pin_path()) else {
+        return;
+    };
+    let mut parts = text.trim().split('|');
+    let index = parts.next().and_then(|s| s.parse::<u32>().ok());
+    let gateway = parts.next().unwrap_or("");
+    if let (Some(index), false) = (index, gateway.is_empty()) {
+        let _ = run_powershell(&format!(
+            "Remove-NetNeighbor -InterfaceIndex {index} -IPAddress '{gateway}' -Confirm:$false -ErrorAction SilentlyContinue"
+        ));
+    }
+    let _ = std::fs::remove_file(pin_path());
+}
+
+/// Keep the gateway entry pinned. A driver or a network profile change can
+/// drop a Permanent entry, and the relay must not keep running on a PC whose
+/// own way to the router is open to being rewritten.
+fn start_pin_watch(
+    index: u32,
+    gateway: String,
+    gateway_mac: String,
+    stop: Arc<AtomicBool>,
+) -> std::thread::JoinHandle<()> {
+    std::thread::spawn(move || {
+        while !stop.load(Ordering::SeqCst) {
+            for _ in 0..10 {
+                if stop.load(Ordering::SeqCst) {
+                    return;
+                }
+                std::thread::sleep(Duration::from_millis(200));
+            }
+            if stop.load(Ordering::SeqCst) {
+                return;
+            }
+            if crate::lan_ctrl::mac_for(&gateway).as_deref() == Some(gateway_mac.as_str()) {
+                continue;
+            }
+            crate::vpn::app_log("lan relay: the gateway entry moved, pinning it again");
+            repin(index, &gateway, &gateway_mac);
+            if crate::lan_ctrl::mac_for(&gateway).as_deref() != Some(gateway_mac.as_str()) {
+                crate::vpn::app_log(
+                    "lan relay: the gateway entry could not be restored, ending the session",
+                );
+                stop.store(true, Ordering::SeqCst);
+                return;
+            }
+        }
+    })
 }
 
 /// Start carrying one device. Nothing on the wire changes until the capture is
@@ -124,6 +299,12 @@ pub fn start_with(
     ) else {
         return Err("An address on the wire could not be read.".into());
     };
+
+    // Before a single frame goes out: make the PC's own way to the router
+    // immune to ARP. A reply that reaches this stack during a relay can point
+    // the PC at itself, which takes its connection down with the device's. If
+    // Windows will not pin it, nothing is claimed.
+    let pin = Pin::set(&w.gateway_ip, &w.gateway_mac, &w.ip)?;
 
     let stop = Arc::new(AtomicBool::new(false));
     let alive = Arc::new(AtomicBool::new(false));
@@ -205,6 +386,13 @@ pub fn start_with(
         .collect::<Vec<_>>()
         .join(":");
 
+    let watch = start_pin_watch(
+        pin.index,
+        pin.gateway.clone(),
+        w.gateway_mac.clone(),
+        Arc::clone(&stop),
+    );
+
     Ok(Session {
         target_ip: target_ip.to_string(),
         target_mac: learned_text,
@@ -219,6 +407,8 @@ pub fn start_with(
         alive,
         stop,
         handle: Some(handle),
+        watch: Some(watch),
+        pin: Some(pin),
     })
 }
 
@@ -314,12 +504,6 @@ fn relay_loop(
     };
 
     let poison_target = crate::lan_ctrl::arp_reply(tm, our, gip, tm, tip);
-    // A reply is what a router accepts, but some client stacks ignore an
-    // unsolicited reply and still answer a request. Asking the device for its
-    // own address, with the gateway's address as the sender, makes it process
-    // a normal request and reply to us. The reply is the proof the claim
-    // reached its stack.
-    let poison_target_request = arp_request(tm, our, gip, tip);
     let poison_gateway = crate::lan_ctrl::arp_reply(gw, our, tip, gw, gip);
 
     // Nothing has been claimed yet. Send the claim only if a frame really
@@ -328,7 +512,6 @@ fn relay_loop(
     let mut sent_any = false;
     for _ in 0..3 {
         sent_any |= cap.send(&poison_target);
-        sent_any |= cap.send(&poison_target_request);
         sent_any |= cap.send(&poison_gateway);
         std::thread::sleep(Duration::from_millis(60));
     }
@@ -368,7 +551,6 @@ fn relay_loop(
         if last_poison.elapsed() >= POISON_EVERY {
             last_poison = Instant::now();
             let _ = cap.send(&poison_target);
-            let _ = cap.send(&poison_target_request);
             let _ = cap.send(&poison_gateway);
         }
 
@@ -401,7 +583,6 @@ fn relay_loop(
                     let tpa = [frame[l3 + 24], frame[l3 + 25], frame[l3 + 26], frame[l3 + 27]];
                     if spa == tip && tpa == gip {
                         let _ = cap.send(&poison_target);
-                        let _ = cap.send(&poison_target_request);
                     } else if spa == gip && tpa == tip {
                         let _ = cap.send(&poison_gateway);
                     } else if spa == tip && !foreign_gateway_logged {
@@ -415,9 +596,9 @@ fn relay_loop(
                         ));
                     }
                 } else if op == 2 {
-                    // The device answered the gateway-shaped request. That is
-                    // the proof the claim reached its stack, and it is the one
-                    // reading a plain reply can never give.
+                    // Any ARP reply the device sends us. With the plain reply
+                    // claim this is normally just the probe answer; it stays
+                    // as a reading, not as a promise that uploads will follow.
                     if let Some(mac) = arp_reply_from(&frame, tip) {
                         if mac == tm {
                             client_answers.fetch_add(1, Ordering::Relaxed);

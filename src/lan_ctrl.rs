@@ -284,7 +284,7 @@ fn best_adapter() -> Option<Adapter> {
     best.map(|(_, a)| a)
 }
 
-fn mac_for(ip: &str) -> Option<String> {
+pub(crate) fn mac_for(ip: &str) -> Option<String> {
     let out = run("arp", &["-a"]);
     for raw in out.lines() {
         let parts: Vec<&str> = raw.split_whitespace().collect();

@@ -499,7 +499,53 @@ fn identity_pass(list: Vec<Device>) -> Vec<Device> {
     out
 }
 
-/// Every device on this subnet, sorted by address.
+/// One roster row per device, with the two fixed addresses made true.
+///
+/// The neighbour table is a cache, and during a relay it can briefly say that
+/// the gateway or another device lives at this PC's hardware address. Those
+/// rows are not devices: a hardware address belongs to one machine. The
+/// gateway row is forced to the router's real address, this PC's row to its
+/// own, and any other row wearing either address is dropped before the normal
+/// identity pass merges the rest. Without this a poisoned cache produced two
+/// rows with one key, which is what duplicated the page and mislabelled the
+/// phone as a Windows PC.
+pub fn tidy_roster(
+    list: Vec<Device>,
+    self_ip: &str,
+    self_mac: &str,
+    gateway_ip: &str,
+    gateway_mac: &str,
+) -> Vec<Device> {
+    let self_mac = self_mac.trim().to_ascii_lowercase().replace('-', ":");
+    let gateway_mac = gateway_mac.trim().to_ascii_lowercase().replace('-', ":");
+    let mut cleaned: Vec<Device> = Vec::with_capacity(list.len());
+    for mut d in list {
+        d.mac = d.mac.trim().to_ascii_lowercase().replace('-', ":");
+        if !gateway_ip.is_empty() && d.ip == gateway_ip {
+            if !gateway_mac.is_empty() {
+                d.mac = gateway_mac.clone();
+            }
+            d.self_pc = false;
+        } else if !self_ip.is_empty() && d.ip == self_ip {
+            if !self_mac.is_empty() {
+                d.mac = self_mac.clone();
+            }
+            d.self_pc = true;
+        } else if !self_mac.is_empty() && d.mac == self_mac {
+            // This PC's address at another IP is a claim, not a device.
+            continue;
+        } else if !gateway_mac.is_empty() && d.mac == gateway_mac {
+            // The router's address at another IP is the same kind of claim.
+            continue;
+        }
+        cleaned.push(d);
+    }
+    let mut cleaned = identity_pass(cleaned);
+    sort_devices(&mut cleaned);
+    cleaned
+}
+
+
 /// A device name is a string a stranger chose. Keep what a person can read and
 /// drop the rest: a name carrying control characters or a broken encoding
 /// renders as a row of empty boxes, which tells the user less than the maker
@@ -669,6 +715,7 @@ fn forget_legacy_caches() {
     });
 }
 
+/// Every device on this subnet, sorted by address.
 pub fn scan() -> Vec<Device> {
     forget_legacy_caches();
     clear_sweep_names();
@@ -954,6 +1001,43 @@ mod tests {
 
     fn name_test_guard() -> std::sync::MutexGuard<'static, ()> {
         NAME_TESTS.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    fn dev(ip: &str, mac: &str) -> Device {
+        Device {
+            ip: ip.to_string(),
+            mac: mac.to_string(),
+            name: String::new(),
+            self_pc: false,
+            name_source: String::new(),
+            protected: false,
+            protected_always: false,
+            live: true,
+        }
+    }
+
+    #[test]
+    fn a_poisoned_neighbour_row_cannot_masquerade_as_another_device() {
+        let pc = "04:7c:16:7d:e7:02";
+        let gw = "f0:a9:51:c1:eb:da";
+        let phone = "42:d5:2a:0c:bc:0a";
+        let list = vec![
+            dev("192.168.1.1", pc),
+            dev("192.168.1.28", pc),
+            dev("192.168.1.28", phone),
+            dev("192.168.1.28", gw),
+            dev("192.168.1.52", pc),
+            dev("192.168.1.28", phone),
+        ];
+        let out = tidy_roster(list, "192.168.1.52", pc, "192.168.1.1", gw);
+        assert_eq!(out.len(), 3, "one router, one phone, this PC");
+        let router = out.iter().find(|d| d.ip == "192.168.1.1").expect("router");
+        assert_eq!(router.mac, gw, "the router row must carry the router's address");
+        let phone_row = out.iter().find(|d| d.ip == "192.168.1.28").expect("phone");
+        assert_eq!(phone_row.mac, phone, "the real phone keeps the row");
+        let me = out.iter().find(|d| d.ip == "192.168.1.52").expect("self");
+        assert!(me.self_pc);
+        assert_eq!(me.mac, pc);
     }
 
     #[test]

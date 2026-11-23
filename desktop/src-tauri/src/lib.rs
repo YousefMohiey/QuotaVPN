@@ -2458,13 +2458,11 @@ fn lan_known(cfg: tauri::State<'_, State>) -> Vec<quotacards::lan::Device> {
     // page needs at once are filled here as well: who the router is, and which
     // addresses the owner protected.
     let wire = quotacards::lan_ctrl::wire();
-    let gateway = wire
-        .as_ref()
-        .map(|w| w.gateway_ip.clone())
-        .unwrap_or_default();
-    // The neighbour table has no entry for this PC's own address, so a quick
-    // read would otherwise show everybody except the machine running the app.
+    let mut gateway = String::new();
     if let Some(w) = wire.as_ref() {
+        gateway = w.gateway_ip.clone();
+        // The neighbour table has no entry for this PC's own address, so a quick
+        // read would otherwise show everybody except the machine running the app.
         if !list.iter().any(|d| d.ip == w.ip) {
             list.push(quotacards::lan::Device {
                 ip: w.ip.clone(),
@@ -2477,6 +2475,16 @@ fn lan_known(cfg: tauri::State<'_, State>) -> Vec<quotacards::lan::Device> {
                 live: true,
             });
         }
+        // A poisoned cache during a session can put this PC's address on the
+        // router or a phone. Those rows are claims, not devices, and they must
+        // not reach the page: one MAC there is also one React key.
+        list = quotacards::lan::tidy_roster(
+            list,
+            &w.ip,
+            &w.mac,
+            &w.gateway_ip,
+            &w.gateway_mac,
+        );
     }
     let protected = cfg
         .0
@@ -2484,7 +2492,7 @@ fn lan_known(cfg: tauri::State<'_, State>) -> Vec<quotacards::lan::Device> {
         .map(|c| c.lan_protected.clone())
         .unwrap_or_default();
     for d in list.iter_mut() {
-        if d.self_pc || d.ip == gateway {
+        if d.self_pc || (!gateway.is_empty() && d.ip == gateway) {
             d.protected_always = !d.self_pc;
             d.protected = true;
         }
@@ -2557,6 +2565,20 @@ async fn scan_with_router(
     if !learned.is_empty() {
         quotacards::lan::save_router_names(learned);
     }
+    // The router's own table is merged before this: a lease for a phone that
+    // renewed while the relay carried it can carry the relay's source address.
+    // Tidy once so one device is one row and the two fixed addresses are true,
+    // then mark protection on the rows that survived.
+    let wire = quotacards::lan_ctrl::wire();
+    if let Some(w) = wire.as_ref() {
+        list = quotacards::lan::tidy_roster(
+            list,
+            &w.ip,
+            &w.mac,
+            &w.gateway_ip,
+            &w.gateway_mac,
+        );
+    }
     // Protection, marked here so every screen agrees: the router and this PC
     // are always safe, plus whatever the user marked.
     let chosen = cfg
@@ -2564,8 +2586,9 @@ async fn scan_with_router(
         .lock()
         .map(|c| c.lan_protected.clone())
         .unwrap_or_default();
-    let gateway_ip = quotacards::lan_ctrl::wire()
-        .map(|w| w.gateway_ip)
+    let gateway_ip = wire
+        .as_ref()
+        .map(|w| w.gateway_ip.clone())
         .unwrap_or_default();
     for d in list.iter_mut() {
         let fixed = d.self_pc || (!gateway_ip.is_empty() && d.ip == gateway_ip);
@@ -3728,6 +3751,10 @@ pub fn run() {
     #[cfg(windows)]
     std::thread::spawn(|| {
         quotacards::lan_ctrl::repair();
+        // A killed session can leave the gateway pinned. Remove that before
+        // the page is usable; the entry is the real router, so this is cleanup
+        // rather than a rescue.
+        quotacards::lan_relay::repair_pin();
     });
     // Names arrive when devices join, so listen for them in the background.
     #[cfg(windows)]
@@ -3833,6 +3860,40 @@ pub fn run() {
         println!("tap: open={} for {secs}s", cap.is_some());
         std::thread::sleep(std::time::Duration::from_secs(secs));
         println!("tap: done");
+        return;
+    }
+    #[cfg(windows)]
+    // Print the roster the Network page would paint, through the same tidy pass.
+    if std::env::args().any(|a| a == "--lan-roster") {
+        let wire = quotacards::lan_ctrl::wire();
+        let mut list = quotacards::lan::known();
+        if let Some(w) = wire.as_ref() {
+            if !list.iter().any(|d| d.ip == w.ip) {
+                list.push(quotacards::lan::Device {
+                    ip: w.ip.clone(),
+                    mac: w.mac.clone(),
+                    name: String::new(),
+                    self_pc: true,
+                    name_source: "self".into(),
+                    protected: true,
+                    protected_always: true,
+                    live: true,
+                });
+            }
+            list = quotacards::lan::tidy_roster(
+                list,
+                &w.ip,
+                &w.mac,
+                &w.gateway_ip,
+                &w.gateway_mac,
+            );
+        }
+        for d in &list {
+            println!(
+                "{} {} {} self={} live={}",
+                d.ip, d.mac, d.name, d.self_pc, d.live
+            );
+        }
         return;
     }
     #[cfg(windows)]

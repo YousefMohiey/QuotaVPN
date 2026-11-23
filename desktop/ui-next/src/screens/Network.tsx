@@ -725,7 +725,7 @@ export function Network() {
                   const status = statusOf(d)
                   return (
                     <div
-                      key={k}
+                      key={`${d.ip}|${d.mac}|${d.self_pc ? "self" : ""}`}
                       role="button"
                       tabIndex={0}
                       data-no-drag

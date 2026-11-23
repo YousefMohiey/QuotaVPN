@@ -5,8 +5,9 @@
 > HTTPS. See `notes/HANDOFF-2026-11-22.md`. The phone still uses the legacy SSH path.
 >
 > **0.7.1 note:** the Network page is carried by a layer-2 relay on Npcap, not the retired
-> WinDivert forward pipeline. Download caps and Block work without a router login; uploads can
-> bypass on phones that pin the gateway ARP. See the 23 November update in
+> WinDivert forward pipeline. The PC's gateway entry is pinned for the session, so a session
+> cannot take the PC's own connection down. Download caps and Block work without a router login;
+> uploads can bypass on phones that pin the gateway ARP. See the 23 November update in
 > `notes/HANDOFF-2026-11-22.md`. Private build only.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
