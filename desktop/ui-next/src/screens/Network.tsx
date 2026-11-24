@@ -227,6 +227,7 @@ export function Network() {
   const [snap, setSnap] = useState<NetworkSnapshot | null>(null)
   const [active, setActive] = useState<LanStatus | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
+  const [showIdle, setShowIdle] = useState(false)
   const [scanning, setScanning] = useState(true)
   const [routerOpen, setRouterOpen] = useState(false)
   const [error, setError] = useState("")
@@ -352,16 +353,28 @@ export function Network() {
     lastRate.current = { t: now, up: active.up_bytes, down: active.down_bytes }
   }, [active])
 
-  const visible = useMemo(
-    () =>
-      [...devices].sort((a, b) => {
-        if (!!a.live !== !!b.live) return a.live ? -1 : 1
-        return ipRank(a.ip) - ipRank(b.ip)
-      }),
-    [devices],
-  )
+  useEffect(() => {
+    if (snap?.router_linked) setShowIdle(false)
+  }, [snap?.router_linked])
 
-  const selectedDevice = useMemo(() => devices.find((d) => keyOf(d) === selected) ?? null, [devices, selected])
+  const onlineOnly = !!snap?.router_linked && !showIdle
+  const visible = useMemo(() => {
+    const base = onlineOnly
+      ? devices.filter(
+          (d) =>
+            d.live ||
+            d.self_pc ||
+            d.protected_always ||
+            !!(active && (active.ip === d.ip || active.mac === d.mac)),
+        )
+      : devices
+    return [...base].sort((a, b) => {
+      if (!!a.live !== !!b.live) return a.live ? -1 : 1
+      return ipRank(a.ip) - ipRank(b.ip)
+    })
+  }, [devices, onlineOnly, active])
+
+  const selectedDevice = useMemo(() => visible.find((d) => keyOf(d) === selected) ?? null, [visible, selected])
   const activeHere = !!(active && selectedDevice && (active.ip === selectedDevice.ip || active.mac === selectedDevice.mac))
   const activeOther = !!active && !activeHere
   const ready = !!(snap?.claim_ready || setup?.npcap)
@@ -547,11 +560,27 @@ export function Network() {
   return (
     <div className="net-page flex h-full min-h-0 w-full flex-col gap-3">
       <header className="flex shrink-0 items-center justify-between gap-4">
-        <div className="flex min-w-0 items-baseline gap-3">
+        <div className="flex min-w-0 items-baseline gap-2.5">
           <h1 className="font-display text-[30px] font-semibold leading-none tracking-[-0.02em] text-txt">
             {t("netTitle")}
           </h1>
-          <span className="text-[13px] text-txt3">{t("netCount").replace("{n}", String(devices.length))}</span>
+          <span className="text-[13px] text-txt3">
+            {t(onlineOnly ? "netCountOnline" : "netCount").replace("{n}", String(visible.length))}
+          </span>
+          {snap?.router_linked ? (
+            <>
+              <span className="text-[12px] text-txt3/40" aria-hidden>
+                ·
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowIdle((v) => !v)}
+                className="press text-[12.5px] text-txt3 underline-offset-4 hover:text-txt hover:underline"
+              >
+                {showIdle ? t("netOnlineOnly") : t("netShowIdle")}
+              </button>
+            </>
+          ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {snap?.router_linked ? (
@@ -1017,7 +1046,7 @@ export function Network() {
                             className="press flex h-10 flex-1 items-center justify-center gap-1.5 rounded-[9px] bg-[var(--brand)] text-[13px] font-medium text-[var(--brand-ink)] disabled:opacity-50"
                           >
                             {busy === "control" ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : null}
-                            {t("netTakeControl")}
+                            {t("netMonitor")}
                           </button>
                           <button
                             type="button"
