@@ -523,6 +523,54 @@
 .net-bar { transition: transform 320ms var(--ease-out); }
 .net-row { transition: background-color 140ms var(--ease-out); }
 
+/* The roster columns are one rule, shared by the header and every row. At the
+   window's minimum width the MAC column moves to the detail panel instead of
+   squeezing the device name, which is the first thing to truncate. */
+.net-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 116px 150px 88px 24px;
+  column-gap: 8px;
+}
+.net-readings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.net-detail {
+  container-type: inline-size;
+}
+@container (max-width: 380px) {
+  .net-readings {
+    grid-template-columns: 1fr;
+  }
+  .net-readings > div + div {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+}
+.net-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.9fr);
+  gap: 12px;
+}
+@media (max-width: 1080px) {
+  .net-page {
+    height: auto;
+    min-height: 100%;
+  }
+  .net-layout {
+    flex: none;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 1180px) {
+  .net-grid {
+    grid-template-columns: minmax(0, 1fr) 120px 82px 24px;
+  }
+  .net-mac {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .net-list-in, .net-check-in, .net-menu-in { animation: net-fade-in 120ms ease; }
   .net-live-dot, .net-wait { animation: none; }

@@ -4,7 +4,7 @@
  * Values mirror the shapes in lib.rs; the tunnel "runs" so connected-state
  * screens are reachable with ?vpn=1.
  */
-import type { Card, CardStatus, CmdResult, TrafficState, TunnelState, UpdateInfo } from "./ipc"
+import type { Card, CardStatus, CmdResult, LanStatus, TrafficState, TunnelState, UpdateInfo } from "./ipc"
 
 const cards: Card[] = [
   { name: "Gamerz (playvalorant.com)", uuid: "11111111-1111-4111-8111-111111111111", card_type: "Gamerz", sni: "playvalorant.com", wg_private: "", wg_addr: "", registered: true },
@@ -31,13 +31,13 @@ const SLOW = typeof window !== "undefined" && new URLSearchParams(window.locatio
 // and counters that keep climbing, so the roster and its rates can be judged
 // without touching a real network. Nothing here ships.
 const DEMO_DEVICES = [
-  { ip: "192.168.1.2", mac: "9c:69:d3:4c:30:c8", name: "win-studio", self_pc: true, source: "self", protected: true, protected_always: false, live: true },
+  { ip: "192.168.1.2", mac: "9c:69:d3:4c:30:c8", name: "verhafter-pc", self_pc: true, source: "self", protected: true, protected_always: false, live: true },
   { ip: "192.168.1.1", mac: "f0:a9:51:c1:eb:da", name: "Huawei device", self_pc: false, source: "router", protected: true, protected_always: true, live: true },
-  { ip: "192.168.1.3", mac: "04:7c:16:7d:e7:02", name: "Micro-star intl", self_pc: false, source: "vendor", protected: false, protected_always: false, live: true },
-  { ip: "192.168.1.6", mac: "18:1d:ea:e0:56:ff", name: "Ei", self_pc: false, source: "dhcp", protected: false, protected_always: false, live: true },
-  { ip: "192.168.1.23", mac: "b2:8c:39:3a:0e:91", name: "Private address", self_pc: false, source: "mdns", protected: false, protected_always: false, live: true },
-  { ip: "192.168.1.35", mac: "1e:92:58:2f:e9:4f", name: "Private address", self_pc: false, source: "vendor", protected: false, protected_always: false, live: false },
-  { ip: "192.168.1.46", mac: "82:d0:c2:a6:fe:c8", name: "private device", self_pc: false, source: "vendor", protected: false, protected_always: false, live: true },
+  { ip: "192.168.1.3", mac: "b2:8c:39:3a:0e:92", name: "Pixel 9", self_pc: false, source: "router", protected: false, protected_always: false, live: true },
+  { ip: "192.168.1.6", mac: "18:1d:ea:e0:56:ff", name: "WIN-1734L96PVNJ", self_pc: false, source: "router", protected: false, protected_always: false, live: true },
+  { ip: "192.168.1.23", mac: "b2:8c:39:3a:0e:91", name: "V2514", self_pc: false, source: "router", protected: false, protected_always: false, live: true },
+  { ip: "192.168.1.35", mac: "1e:92:58:2f:e9:4f", name: "thabet-s-A53", self_pc: false, source: "router", protected: false, protected_always: false, live: false },
+  { ip: "192.168.1.46", mac: "82:d0:c2:a6:fe:c8", name: "uplus-haier-tv", self_pc: false, source: "router", protected: false, protected_always: false, live: true },
 ]
 
 const DEMO_RATE: Record<string, [number, number]> = {
@@ -67,6 +67,7 @@ let npcapInstalled = NPCAP_MODE === "on" || NPCAP_MODE === "claimfail"
 // real to show. A claim on the router or on this machine is refused with the
 // kind of message the engine sends, so the failure path is visible too.
 let routedDevice: { ip: string; mac: string } | null = null
+let demoActive: LanStatus | null = null
 
 const DEMO_DESTINATIONS = [
   { process: "VALORANT", host: "162.249.72.1", up: 412_000, down: 8_640_000 },
@@ -118,7 +119,44 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
     case "lan_traffic":
       return demoTraffic() as T
     case "lan_status":
-      return null as T
+      if (!demoActive) return null as T
+      demoTraffic()
+      if (demoCounters[demoActive.ip]) {
+        demoActive.up_bytes = demoCounters[demoActive.ip].up
+        demoActive.down_bytes = demoCounters[demoActive.ip].down
+      }
+      return { ...demoActive } as T
+    case "lan_start": {
+      if (!npcapInstalled) throw new Error("Npcap is not installed")
+      const ip = String(args?.ip || "")
+      const dev = DEMO_DEVICES.find((d) => d.ip === ip)
+      if (!dev) throw new Error("that device is no longer on the network")
+      if (dev.self_pc) throw new Error("this PC cannot be controlled")
+      if (dev.protected_always)
+        throw new Error("the router cannot be controlled: its hardware address holds the gateway")
+      demoActive = {
+        ip,
+        mac: String(args?.mac || dev.mac),
+        down_kbps: 0,
+        up_kbps: 0,
+        blocked: Boolean(args?.blocked),
+        up_bytes: 0,
+        down_bytes: 0,
+      }
+      return true as T
+    }
+    case "lan_stop":
+      demoActive = null
+      return true as T
+    case "lan_limits":
+      if (demoActive) {
+        demoActive.down_kbps = Math.max(0, Number(args?.downKbps) || 0)
+        demoActive.up_kbps = Math.max(0, Number(args?.upKbps) || 0)
+      }
+      return true as T
+    case "lan_block":
+      if (demoActive) demoActive.blocked = Boolean(args?.on)
+      return true as T
     case "lan_guard":
       return { watching: true, attacker_mac: "" } as T
     case "lan_claim_ready":
