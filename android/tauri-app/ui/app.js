@@ -182,6 +182,15 @@ const STR = {
     histSub: "آخر القياسات", appsSub: "التطبيقات التي تمر عبر النفق",
   },
 };
+// Phone-shell labels added with the 2026 redesign.
+STR.en.brandMobile = "Mobile";
+STR.en.session = "Session";
+STR.en.updApp = "App update";
+STR.en.runOne = "run";
+STR.ar.brandMobile = "الجوال";
+STR.ar.session = "الجلسة";
+STR.ar.updApp = "تحديث التطبيق";
+STR.ar.runOne = "تشغيل";
 let lang = localStorage.getItem("qc-lang") || "en";
 function t(k) { return (STR[lang] && STR[lang][k]) || STR.en[k] || k; }
 // Card-type display name follows the UI language.
@@ -693,6 +702,15 @@ function renderAppsList(filter) {
       if (vpnOn) bar(true, t("appsPicked"));
     });
     row.setAttribute("role", "checkbox");
+    // A letter tile makes a long list scannable without loading app icons.
+    const label = String(appDisplay(a) || "?").trim();
+    const ico = document.createElement("span");
+    ico.className = "app-ico";
+    ico.textContent = (label[0] || "?").toUpperCase();
+    let hue = 0;
+    for (const ch of String(a.pkg || label)) hue = (hue + ch.charCodeAt(0)) % 360;
+    ico.style.setProperty("--h", String(hue));
+    row.prepend(ico);
     list.append(row);
   }
 }
@@ -1382,6 +1400,26 @@ function spPaintTiles() {
   set("sp-down", spPhase === "download" ? (live == null ? "-" : spNum(live, "mbps")) : (spLast.down == null ? "-" : spNum(spLast.down, "mbps")));
   set("sp-up", spPhase === "upload" ? (live == null ? "-" : spNum(live, "mbps")) : (spLast.up == null ? "-" : spNum(spLast.up, "mbps")));
 }
+// The live signal field: one bar per sample, newest at the right, scaled
+// against the peak of the current run. It is the measurement, not decoration.
+const spBarsEl = $("sp-bars");
+const SP_BAR_COUNT = 40;
+if (spBarsEl) {
+  for (let i = 0; i < SP_BAR_COUNT; i++) spBarsEl.append(document.createElement("span"));
+}
+function paintSpeedBars() {
+  if (!spBarsEl) return;
+  spBarsEl.dataset.phase = spPhase;
+  const bars = spBarsEl.children;
+  const arr = spSamples.slice(-bars.length);
+  const max = Math.max(1, spPeak, ...arr);
+  for (let i = 0; i < bars.length; i++) {
+    const idx = arr.length - bars.length + i;
+    const v = idx >= 0 ? arr[idx] : 0;
+    bars[i].style.height = (v > 0 ? Math.max(6, Math.round((v / max) * 100)) : 8) + "%";
+    bars[i].style.opacity = v > 0 ? String(0.55 + 0.45 * (v / max)) : "0.3";
+  }
+}
 let spPaintQueued = false;
 function spPaintReadout() {
   // Samples arrive faster than a phone screen draws; queue one paint per
@@ -1406,6 +1444,7 @@ function spPaintNow() {
     }
   }
   spPaintTiles();
+  paintSpeedBars();
 }
 function spPush(v, force) {
   const now = performance.now();
@@ -1576,7 +1615,7 @@ function armThen(el, fn) {
 function paintHistButton() {
   const n = spLoad().length;
   const sub = $("hist-sub");
-  if (sub) sub.textContent = n ? n + " " + t("runs") : t("spNone");
+  if (sub) sub.textContent = n ? n + " " + t(n === 1 ? "runOne" : "runs") : t("spNone");
 }
 // One run is one row: when and where, the download figure, and the rest of the
 // reading as one quiet line under it. No table, no chart.

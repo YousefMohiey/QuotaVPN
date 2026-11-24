@@ -134,31 +134,48 @@ class TunnelPlugin(private val activity: Activity) : Plugin(activity) {
             try {
                 val current = activity.packageManager
                     .getPackageInfo(activity.packageName, 0).versionName ?: "0"
+                // Releases are not phone-only: a Windows build can be the
+                // newest release and carry no APK. Walk down the release list
+                // and take the newest one that actually has the phone asset,
+                // otherwise the phone would announce an update it cannot
+                // install and hide the button.
                 val conn = java.net.URL(
-                    "https://api.github.com/repos/YousefMohiey/QuotaVPN/releases/latest",
+                    "https://api.github.com/repos/YousefMohiey/QuotaVPN/releases?per_page=30",
                 ).openConnection() as java.net.HttpURLConnection
                 conn.setRequestProperty("Accept", "application/vnd.github+json")
                 conn.setRequestProperty("User-Agent", "quotacards-updater")
                 conn.connectTimeout = 15000
                 conn.readTimeout = 15000
                 val body = conn.inputStream.bufferedReader().use { it.readText() }
-                val v = org.json.JSONObject(body)
-                val tag = v.optString("tag_name").trimStart('v', 'V')
+                val releases = org.json.JSONArray(body)
+                var tag = ""
                 var apk = ""
-                v.optJSONArray("assets")?.let { arr ->
-                    for (i in 0 until arr.length()) {
-                        val a = arr.getJSONObject(i)
-                        if (a.optString("name") == "QuotaVPN-mobile-signed.apk") {
-                            apk = a.optString("browser_download_url")
+                var html = ""
+                for (r in 0 until releases.length()) {
+                    val rel = releases.getJSONObject(r)
+                    if (rel.optBoolean("draft") || rel.optBoolean("prerelease")) continue
+                    var asset = ""
+                    rel.optJSONArray("assets")?.let { assets ->
+                        for (i in 0 until assets.length()) {
+                            val a = assets.getJSONObject(i)
+                            if (a.optString("name") == "QuotaVPN-mobile-signed.apk") {
+                                asset = a.optString("browser_download_url")
+                            }
                         }
+                    }
+                    if (asset.isNotEmpty()) {
+                        tag = rel.optString("tag_name").trimStart('v', 'V')
+                        apk = asset
+                        html = rel.optString("html_url")
+                        break
                     }
                 }
                 val out = JSObject()
                 out.put("current", current)
-                out.put("latest", tag)
-                out.put("available", isNewer(tag, current))
+                out.put("latest", if (tag.isEmpty()) current else tag)
+                out.put("available", tag.isNotEmpty() && isNewer(tag, current))
                 out.put("apkUrl", apk)
-                out.put("url", v.optString("html_url"))
+                out.put("url", html)
                 activity.runOnUiThread { invoke.resolve(out) }
             } catch (e: Exception) {
                 activity.runOnUiThread { invoke.reject("check failed: ${e.message}") }

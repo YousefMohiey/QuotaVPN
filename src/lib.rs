@@ -12,6 +12,10 @@ pub mod lan_ask;
 #[cfg(target_os = "windows")]
 pub mod dhcp;
 pub mod qvreg;
+// The LAN control surface drives the PC relay and its ledger. It imports
+// `wpcap` and the Windows capture helpers, so it is Windows-only; Android and
+// Linux never call it. Leaving it ungated is what broke the phone build.
+#[cfg(target_os = "windows")]
 pub mod lan_ctrl;
 #[cfg(target_os = "windows")]
 pub mod lan_names;

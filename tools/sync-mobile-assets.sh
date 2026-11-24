@@ -11,7 +11,8 @@ if [ ! -d "$DST" ]; then echo "staging dir missing: $DST" >&2; exit 1; fi
 for f in app.js index.html style.css; do
   cp "$SRC/$f" "$DST/$f"
 done
-cp -r "$SRC/fonts" "$DST/"
+mkdir -p "$DST/fonts"
+cp "$SRC/fonts/"* "$DST/fonts/"
 cp "$SRC/icon.png" "$DST/icon.png"
 cp "$SRC/logo.png" "$DST/logo.png"
 echo "synced $SRC -> $DST"

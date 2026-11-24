@@ -18,8 +18,8 @@ bash tools/build-apk.sh
 
 That sets the toolchain env, syncs the shared assets, builds, zipaligns and signs with the release keystore, then verifies the signature. Output: `android/QuotaVPN-mobile-signed.apk`.
 
-Needs Rust stable with the Android targets, Android SDK 35 + NDK 28, and JDK 23. Go and gomobile are only needed when regenerating `libbox.aar`.
+Needs Rust stable with the Android targets, an Android SDK with platform 36 and NDK 28.2, and a JDK 17 or newer (JDK 23 is what this host builds with). The script picks the newest installed build-tools, so 35 and 36 both work. Go and gomobile are only needed when regenerating `libbox.aar`.
 
 ## Updates
 
-The app checks GitHub Releases for the signed APK and opens the installer (Settings, Updates, one confirmation tap).
+The app checks GitHub Releases for the signed APK and opens the installer (Settings, Updates, one confirmation tap). It walks the release list for the newest release that actually carries `QuotaVPN-mobile-signed.apk`, so a Windows-only release cannot announce an update the phone cannot install.

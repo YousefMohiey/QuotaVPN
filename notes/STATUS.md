@@ -25,6 +25,13 @@
 > **0.7.3 note:** the delayed WebView2 suspend now rechecks the current memory state after its
 > grace period. A rapid minimize and restore can no longer be suspended after the resume, which
 > is what left a white window. 0.7.3 is the current release.
+>
+> **0.7.3 phone note:** the Android app is 0.7.3 with a new black-glass UI: a central power ring
+> with the route pill above it, a live session strip, a signal field on Speed, letter tiles in
+> Apps, and one floating navigation bar. The build gate that `lan_ctrl` opened on Android is
+> closed; the phone still uses the legacy SSH path behind `legacy-ssh`. The phone updater now
+> scans releases for the newest one that actually carries `QuotaVPN-mobile-signed.apk`, instead
+> of trusting the newest Windows release.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.

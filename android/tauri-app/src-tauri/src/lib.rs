@@ -57,6 +57,7 @@ fn gen_keypair() -> Result<(String, String), String> {
 }
 
 fn initial_config() -> AppConfig {
+    AppConfig::migrate_dirs();
     let mut cfg = AppConfig::load();
     if cfg.private_key.is_empty() {
         if let Ok((priv_pem, pub_line)) = gen_keypair() {
@@ -66,8 +67,11 @@ fn initial_config() -> AppConfig {
         }
     }
     // Zero-setup: baked-in builds point at the owner's server, nothing to type.
+    // The DuckDNS name moved from quotacards to quotavpn; the old one is dead.
     if let Some(emb) = EMBED_KEY {
-        let points_at_mine = cfg.server_ip.is_empty() || cfg.server_ip == DEFAULT_HOST;
+        let points_at_mine = cfg.server_ip.is_empty()
+            || cfg.server_ip == DEFAULT_HOST
+            || cfg.server_ip == "quotacards.duckdns.org";
         if points_at_mine && cfg.private_key != emb {
             cfg.server_ip = DEFAULT_HOST.to_string();
             cfg.ssh_user = DEFAULT_USER.to_string();
@@ -76,6 +80,10 @@ fn initial_config() -> AppConfig {
             cfg.synced = false;
             cfg.save();
         }
+    }
+    if cfg.server_ip == "quotacards.duckdns.org" {
+        cfg.server_ip = DEFAULT_HOST.to_string();
+        cfg.save();
     }
     // migrate old cards (no per-card SNI) to a sane default
     let mut dirty = false;
@@ -196,6 +204,7 @@ async fn generate_card(
         sni: sni.clone(),
         wg_private: String::new(),
         wg_addr: String::new(),
+        registered: false,
     };
     if let Err(e) = server::add_client(&host, port, &user, &key, &uuid).await {
         return Ok(CmdResult { ok: false, msg: format!("Failed: {e}") });

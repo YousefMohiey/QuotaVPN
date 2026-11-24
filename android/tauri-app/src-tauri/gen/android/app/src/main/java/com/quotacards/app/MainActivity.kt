@@ -1,10 +1,12 @@
 package com.quotacards.app
 
+import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebView
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -12,7 +14,13 @@ import com.quotacards.tunnel.TunnelService
 
 class MainActivity : TauriActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
-    enableEdgeToEdge()
+    // The app is dark in every system state: force light system-bar icons
+    // rather than letting a light phone theme paint dark icons on the night
+    // field. The content root is then padded by the status-bar height.
+    enableEdgeToEdge(
+      statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+      navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+    )
     super.onCreate(savedInstanceState)
     // Edge-to-edge draws the WebView under the status bar - push the content
     // below it so the app header never sits under the clock/battery icons.

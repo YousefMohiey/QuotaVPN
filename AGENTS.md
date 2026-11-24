@@ -75,9 +75,9 @@ Windows, run from git-bash. The toolchain this project was developed against:
   built exe for the dependency before it publishes.
 - **Version lives in four files**: `desktop/src-tauri/{tauri.conf.json,Cargo.toml}` and
   `android/tauri-app/src-tauri/{tauri.conf.json,Cargo.toml}`. A normal release bumps all four
-  together. The 0.7.x migration is deliberately split: the desktop is 0.7.3 and the phone stays
-  at 0.6.18 until its own credential migration lands. Do not bump the phone to a version that
-  has no tested APK behind it.
+  together. The desktop and the phone are both 0.7.3. The phone still compiles the legacy SSH
+  control plane (`legacy-ssh`) until its own credential migration lands; do not bump the phone
+  to a version that has no tested APK behind it.
 - **Releases**: bump, build the installer and the APK, then publish the GitHub release with the
   updater feed. The feed asset must be named exactly `latest.json`; the app reads
   `releases/latest/download/latest.json`. Ship both platforms at the same version. The feed also
@@ -156,18 +156,22 @@ answer true because there is nothing to install. The release job fails if the bi
 
 ## Current state
 
-**The latest published release is v0.7.3, Windows only.** This tree carries the 0.7.0 credential
-migration (`notes/HANDOFF-2026-11-22.md`): the desktop imports a server-issued `qv1:` secret into a
-DPAPI-sealed per-card store (`qc1:` is still accepted), talks to the card API over HTTPS, and no
-longer compiles the SSH control plane. The phone stays at 0.6.18 for now; its `server.rs`/`ssh.rs`
-path is behind `legacy-ssh`. The 0.7.3 installer is published and signed for the updater:
-`QuotaVPN_0.7.3_x64-setup.exe`. The Network page ships in this build, carried by the layer-2 relay.
-0.7.3 fixes the white window after a rapid minimize and restore; 0.7.2 fixes Npcap detection
-without WinPcap-compatible mode; 0.7.1 and 0.7.0 remain published.
+**The latest published release is v0.7.3, Windows and Android.** This tree carries the 0.7.0
+credential migration (`notes/HANDOFF-2026-11-22.md`): the desktop imports a server-issued `qv1:`
+secret into a DPAPI-sealed per-card store (`qc1:` is still accepted), talks to the card API over
+HTTPS, and no longer compiles the SSH control plane. The phone is 0.7.3 too; its
+`server.rs`/`ssh.rs` path is still behind `legacy-ssh`. The release carries the Windows setup
+`QuotaVPN_0.7.3_x64-setup.exe` and the phone APK `QuotaVPN-mobile-signed.apk` (the name the phone
+updater looks for). The standalone `QuotaVPN.exe` is no longer uploaded as a release asset. The
+phone UI is the 2026 black-glass rebuild: a central power ring, a live session strip, a signal
+field on Speed, and one floating navigation bar. The Network page ships in the Windows build,
+carried by the layer-2 relay. 0.7.3 fixes the white window after a rapid minimize and restore;
+0.7.2 fixes Npcap detection without WinPcap-compatible mode; 0.7.1 and 0.7.0 remain published.
 
 `notes/HANDOFF-2026-11-16.md` is the change log from 0.6.5 to 0.6.17. The Windows installer is
 built locally on this PC and signed with the updater key at `C:/Tools/qc-updater.key`;
-`latest.json` is composed by hand from the installer, `.sig` and `QuotaVPN.exe`. The
+`latest.json` is composed by hand from the installer, `.sig` and the locally built
+`QuotaVPN.exe` (the exe is used for the build stamp, not shipped as a release asset). The
 `signed-release` workflow is a manual fallback only; tags do not start it. Its 0.7.1 attempt failed
 on a transient NSIS download. The feed is served from
 `raw.githubusercontent.com/.../master/latest.json`, committed to the branch on every release,

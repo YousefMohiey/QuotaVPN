@@ -43,8 +43,14 @@ if [ -z "${JAVA_HOME:-}" ]; then
   done
 fi
 export JAVA_HOME="${JAVA_HOME:?JDK not found; set JAVA_HOME}"
-BT="$ANDROID_HOME/build-tools/35.0.0"
-TARGET=aarch64
+# Newest installed build-tools: 35.0.0 is not on every host and the alignment
+# and signing tools are stable across 35 and 36.
+BT="$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | sort -V | tail -1)"
+[ -n "$BT" ] || { echo "Android build-tools not found under $ANDROID_HOME"; exit 1; }
+# Phones are arm64. An x86_64 host emulator is the local test target; name its
+# APK differently so a test build can never overwrite the release package.
+TARGET="${TARGET:-aarch64}"
+OUT_NAME="${OUT_NAME:-QuotaVPN-mobile-signed.apk}"
 
 export CC_aarch64_linux_android="$NDK/toolchains/llvm/prebuilt/windows-x86_64/bin/aarch64-linux-android35-clang.cmd"
 export AR_aarch64_linux_android="$NDK/toolchains/llvm/prebuilt/windows-x86_64/bin/llvm-ar.exe"
@@ -84,7 +90,7 @@ fi
 # Native .exe tools cannot read MSYS /c/... paths; hand them Windows paths.
 UNSIGNED_W="$(cygpath -w "$UNSIGNED")"
 ALIGNED_W="$(cygpath -w "$ROOT/android/app-aligned.apk")"
-OUT_W="$(cygpath -w "$ROOT/android/QuotaVPN-mobile-signed.apk")"
+OUT_W="$(cygpath -w "$ROOT/android/$OUT_NAME")"
 
 . /c/Tools/qc-keystore-pass.txt
 KS="C:/Tools/qc-release.keystore"
@@ -108,5 +114,5 @@ rm -f "$ROOT/android/app-aligned.apk"
 
 "$BT/apksigner.bat" verify "$OUT_W" && echo SIGN_VERIFY_OK
 "$BT/aapt.exe" dump badging "$OUT_W" | head -1
-ls -la "$ROOT/android/QuotaVPN-mobile-signed.apk"
+ls -la "$ROOT/android/$OUT_NAME"
 echo APK_BUILD_DONE

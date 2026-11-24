@@ -1,0 +1,13 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. The app is a night surface even when the
+         phone is in a light theme, so the window and both system bars are
+         dark from the first frame. -->
+    <style name="Theme.quotacards_tauri" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">#05070b</item>
+        <item name="android:colorBackground">#05070b</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>
