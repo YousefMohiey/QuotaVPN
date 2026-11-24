@@ -136,12 +136,12 @@ The router remains the optional second path, for names now and for upload contro
 `router_huawei.rs` logs in for the session only, never stores the password, and dumps the QoS and
 MAC-filter pages. Names stay hidden until that login.
 
-**The upload half can bypass the relay.** A phone that pins its gateway's hardware address
-ignores the gateway-shaped ARP, so its uploads go straight to the router while its downloads come
-through the PC. Download caps and Block still work, because the router accepts the claim for the
-device. `Network.tsx` detects the case (`down_bytes` has moved, `up_bytes` has not) and disables
-the upload field with an explanation. Do not claim upload caps work on such a device; the
-router's QoS is the only place to enforce them.
+**The upload half works when the device accepts the claim.** The relay sends three forms of the
+gateway claim to the device: a targeted reply, a gratuitous reply, and a gratuitous request. Some
+stacks ignore the first and take one of the others; the 2514 does. A device that ignores all three
+keeps its uploads on the direct path; `Network.tsx` detects `up_bytes == 0` and disables the
+upload field with an explanation. Do not claim upload caps on such a device; the router's QoS is
+the only enforcement point.
 
 **No scheduled tasks, ever.** `Behavior:Win32/Persistence.A!ml` named
 `C:\Windows\System32\Tasks\QuotaVPN Network ...` and quarantined the app twice, once from the

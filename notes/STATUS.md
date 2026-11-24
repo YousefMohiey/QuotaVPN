@@ -6,9 +6,10 @@
 >
 > **0.7.1 note:** the Network page is carried by a layer-2 relay on Npcap, not the retired
 > WinDivert forward pipeline. The PC's gateway entry is pinned for the session, so a session
-> cannot take the PC's own connection down. Download caps and Block work without a router login;
-> uploads can bypass on phones that pin the gateway ARP. See the 23 November update in
-> `notes/HANDOFF-2026-11-22.md`. Private build only.
+> cannot take the PC's own connection down. The relay sends three ARP forms to the device; a
+> device that accepts one carries both directions, so download and upload caps and Block work
+> without a router login. A device that ignores all three bypasses uploads and the page says so.
+> Private build only.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.

