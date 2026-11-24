@@ -98,7 +98,7 @@ function WeQuotaRows() {
                   type="button"
                   onClick={() => void quotaRefresh(true)}
                   disabled={busy}
-                  className="flex h-10 items-center gap-2 whitespace-nowrap rounded-[9px] border border-line bg-white/[0.03] px-4 text-[13px] text-txt transition-colors hover:border-[var(--brand-line)]"
+                  className="press flex h-10 items-center gap-2 whitespace-nowrap rounded-[9px] border border-line bg-white/[0.03] px-4 text-[13px] text-txt transition-colors hover:border-[var(--brand-line)]"
                 >
                   {busy ? <Loader2 className="size-3 animate-spin" aria-hidden /> : <RefreshCw className="size-3" aria-hidden />}
                   {t("weRefresh")}
@@ -107,7 +107,7 @@ function WeQuotaRows() {
               <button
                 type="button"
                 onClick={() => void quotaLogout()}
-                className="flex h-10 items-center whitespace-nowrap rounded-[9px] border border-line bg-transparent px-4 text-[13px] text-txt2 transition-colors hover:border-[var(--red-line)] hover:text-txt"
+                className="press flex h-10 items-center whitespace-nowrap rounded-[9px] border border-line bg-transparent px-4 text-[13px] text-txt2 transition-colors hover:border-[var(--red-line)] hover:text-txt"
               >
                 {t("weUnlink")}
               </button>
@@ -348,7 +348,7 @@ export function Settings() {
                 type="button"
                 onClick={() => void checkUpdates()}
                 disabled={checking}
-                className="flex h-10 items-center gap-2 whitespace-nowrap rounded-[9px] border border-line bg-white/[0.03] px-4 text-[13px] text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
+                className="press flex h-10 items-center gap-2 whitespace-nowrap rounded-[9px] border border-line bg-white/[0.03] px-4 text-[13px] text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
               >
                 {checking ? <Loader2 className="size-3 animate-spin" aria-hidden /> : <RefreshCw className="size-3" aria-hidden />}
                 {checking ? t("upChecking") : t("upCheck")}
@@ -358,7 +358,7 @@ export function Settings() {
                   type="button"
                   onClick={() => void applyUpdate()}
                   disabled={installing}
-                  className="flex h-10 items-center whitespace-nowrap rounded-[9px] bg-[var(--brand)] px-4 text-[13px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
+                  className="press flex h-10 items-center whitespace-nowrap rounded-[9px] bg-[var(--brand)] px-4 text-[13px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
                 >
                   {installing ? (updatePct !== null ? `${updatePct}%` : t("upInstalling")) : t("upGet")}
                 </button>

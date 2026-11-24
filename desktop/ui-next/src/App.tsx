@@ -115,7 +115,7 @@ export default function App() {
       if (e.button !== 0) return
       const el = e.target as HTMLElement | null
       if (!el) return
-      if (el.closest('button, a, input, textarea, select, [role="button"], [role="dialog"], [data-no-drag], [contenteditable="true"]')) return
+      if (el.closest('button, a, input, textarea, select, [role="button"], [role="dialog"], [data-slot="dialog-overlay"], [data-no-drag], [contenteditable="true"]')) return
       // A press on a scrollbar must scroll, not move the window.
       const r = el.getBoundingClientRect()
       if (el.scrollHeight > el.clientHeight && e.clientX >= r.left + el.clientWidth - 18) return

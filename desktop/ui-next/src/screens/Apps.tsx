@@ -302,7 +302,7 @@ export function Apps({ onBack }: { onBack: () => void }) {
                 type="button"
                 disabled={filtered.length === 0}
                 onClick={selectMatches}
-                className="h-9 whitespace-nowrap rounded-[7px] border border-[var(--brand-line)] px-3 text-[12.5px] text-brand-strong transition-colors hover:bg-[var(--brand-bg)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                className="press h-9 whitespace-nowrap rounded-[7px] border border-[var(--brand-line)] px-3 text-[12.5px] text-brand-strong transition-colors hover:bg-[var(--brand-bg)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
               >
                 {q
                   ? t("appsSelectMatches").replace("{m}", String(filtered.length))
@@ -312,7 +312,7 @@ export function Apps({ onBack }: { onBack: () => void }) {
                 type="button"
                 disabled={apps.length === 0}
                 onClick={() => setApps([])}
-                className="h-9 whitespace-nowrap rounded-[7px] border border-line px-3 text-[12.5px] text-[rgb(207_112_120/0.8)] transition-colors hover:border-[var(--red-line)] hover:bg-[var(--red-bg)] hover:text-[var(--red)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line disabled:hover:bg-transparent disabled:hover:text-[rgb(207_112_120/0.8)]"
+                className="press h-9 whitespace-nowrap rounded-[7px] border border-line px-3 text-[12.5px] text-[rgb(207_112_120/0.8)] transition-colors hover:border-[var(--red-line)] hover:bg-[var(--red-bg)] hover:text-[var(--red)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line disabled:hover:bg-transparent disabled:hover:text-[rgb(207_112_120/0.8)]"
               >
                 {t("appsClearSel")}
               </button>

@@ -810,7 +810,7 @@ export function Speed() {
               <span className="min-w-0 flex-1 truncate text-[13px]" dir="auto">
                 {picking ? t("findingServer") : srv.label}
               </span>
-              <ChevronDown className="size-3.5 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
+              <ChevronDown className="size-4 shrink-0 text-txt3 transition-[color,translate] duration-200 group-hover:translate-y-0.5 group-hover:text-brand-strong" aria-hidden />
             </button>
             <button
               type="button"
@@ -818,9 +818,13 @@ export function Speed() {
               disabled={refreshing}
               aria-label={t("refresh")}
               title={t("refresh")}
-              className="press grid size-7 shrink-0 place-items-center rounded-full text-txt3 transition-colors hover:text-brand-strong disabled:cursor-wait"
+              className="press group grid size-7 shrink-0 place-items-center rounded-full text-txt3 transition-colors hover:text-brand-strong disabled:cursor-wait"
             >
-              {refreshing ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : <RefreshCw className="size-3.5" aria-hidden />}
+              {refreshing ? (
+                <Loader2 className="size-3.5 animate-spin" aria-hidden />
+              ) : (
+                <RefreshCw className="size-3.5 transition-transform duration-300 group-hover:rotate-90" aria-hidden />
+              )}
             </button>
           </div>
           <span className="truncate text-[12px] text-txt3" dir="auto">{srv.detail || srv.host}</span>
@@ -927,14 +931,21 @@ function ReadingCard({
       disabled={disabled}
       title={label}
       className={cn(
-        "press flex min-h-0 min-w-0 flex-1 flex-col justify-center gap-2.5 rounded-[10px] px-3.5 py-3.5 text-start transition-colors",
+        "press group flex min-h-0 min-w-0 flex-1 flex-col justify-center gap-2.5 rounded-[10px] px-3.5 py-3.5 text-start transition-[background-color,box-shadow]",
         live ? "bg-[var(--brand-bg)]" : "bg-white/[0.035]",
-        !disabled && !live && "hover:bg-white/[0.055]",
+        !disabled && !live && "hover:bg-white/[0.055] hover:ring-1 hover:ring-inset hover:ring-[var(--brand-line)]/30",
         disabled && "cursor-default",
       )}
     >
       <span className="flex min-w-0 items-center gap-2">
-        <Icon className={cn("size-3.5 shrink-0", live ? "text-brand-strong" : "text-txt3")} strokeWidth={1.7} aria-hidden />
+        <Icon
+          className={cn(
+            "size-3.5 shrink-0 transition-colors",
+            live ? "text-brand-strong" : "text-txt3 group-hover:text-brand-strong",
+          )}
+          strokeWidth={1.7}
+          aria-hidden
+        />
         <span className="min-w-0 flex-1 truncate text-[11px] font-medium uppercase tracking-[0.09em] text-txt2">{label}</span>
         {live ? <span className="net-live-dot size-1.5 shrink-0 rounded-full bg-brand-strong" aria-hidden /> : null}
       </span>

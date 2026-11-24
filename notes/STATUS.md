@@ -13,7 +13,8 @@
 > devices appear immediately. An explicit Refresh scans for sleeping devices in the background.
 > The caps are two labelled boxes with an apply action, the header is one row, and the rest of the
 > app now carries the same state motion. The action is Monitor, and idle devices are hidden while
-> router names are on, with a Show idle link. Private build only.
+> router names are on, with a Show idle link. Dialogs rise and close on a backdrop press, and the
+> Home cells carry larger moving chevrons. Private build only.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.

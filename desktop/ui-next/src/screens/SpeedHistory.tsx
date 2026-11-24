@@ -119,7 +119,7 @@ function RunCard({
               <Trash2 className="size-3.5" aria-hidden />
             </button>
             <ChevronRight
-              className="size-4 shrink-0 text-txt3 transition-[color,transform] duration-200 group-hover:translate-x-0.5 group-hover:text-brand-strong"
+              className="size-4 shrink-0 text-txt3 transition-[color,translate] duration-200 group-hover:translate-x-0.5 group-hover:text-brand-strong"
               aria-hidden
             />
           </>

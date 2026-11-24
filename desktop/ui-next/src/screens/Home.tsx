@@ -225,7 +225,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     void ensurePresetCard(kind).finally(() => setCreating(null))
                   }}
                   className={cn(
-                    "press relative flex min-h-0 min-w-0 items-center gap-2.5 overflow-hidden rounded-[10px] px-3 py-2.5 text-start transition-colors duration-150 disabled:cursor-wait disabled:opacity-70",
+                    "press group/preset relative flex min-h-0 min-w-0 items-center gap-2.5 overflow-hidden rounded-[10px] px-3 py-2.5 text-start transition-colors duration-150 disabled:cursor-wait disabled:opacity-70",
                     isActive ? "text-txt" : "text-txt2 hover:bg-white/[0.03] hover:text-txt",
                   )}
                 >
@@ -239,8 +239,8 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   ) : null}
                   <span
                     className={cn(
-                      "relative grid size-8 shrink-0 place-items-center rounded-[9px] bg-white/[0.04] transition-colors duration-150",
-                      isActive ? "text-brand-strong" : "text-txt3",
+                      "relative grid size-8 shrink-0 place-items-center rounded-[9px] bg-white/[0.04] transition-colors duration-150 group-hover/preset:bg-white/[0.07]",
+                      isActive ? "text-brand-strong" : "text-txt3 group-hover/preset:text-brand-strong",
                     )}
                   >
                     <Icon className="size-4" aria-hidden />
@@ -293,11 +293,25 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
         {cells.slice(0, 3).map((c, i) => (
           <div
             key={c.id}
-            className={cn("flex min-w-0 flex-col justify-center gap-2 px-5 py-4", i < 2 && "border-e border-line")}
+            className={cn(
+              "group/cell flex min-w-0 flex-col justify-center gap-2 px-5 py-4",
+              i < 2 && "border-e border-line",
+              c.onClick && "transition-colors duration-200 hover:bg-white/[0.02]",
+            )}
           >
             <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
-              {c.icon ? <c.icon className="size-3.5 shrink-0 text-txt3" aria-hidden /> : null}
-              <span className="truncate">{c.label}</span>
+              {c.icon ? (
+                <c.icon
+                  className={cn(
+                    "size-3.5 shrink-0 text-txt3",
+                    c.onClick && "transition-colors duration-200 group-hover/cell:text-brand-strong",
+                  )}
+                  aria-hidden
+                />
+              ) : null}
+              <span className={cn("truncate", c.onClick && "transition-colors duration-200 group-hover/cell:text-txt")}>
+                {c.label}
+              </span>
             </span>
             {c.id === "domain" && customOpen ? (
               <div className="flex w-full min-w-0 items-center gap-1.5">
@@ -322,13 +336,21 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 type="button"
                 onClick={c.onClick}
                 aria-busy={c.id === "domain" ? domainBusy : undefined}
-                className="press group flex min-w-0 items-center justify-between gap-2 text-start text-txt transition-colors duration-150"
+                className="press flex min-w-0 items-center justify-between gap-2 text-start text-txt transition-colors duration-150"
               >
                 {c.body}
                 {c.chevron === "down" ? (
-                  <ChevronDown className="size-3.5 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
+                  <ChevronDown
+                    className="size-5 shrink-0 text-txt2 transition-[color,translate] duration-200 group-hover/cell:translate-y-0.5 group-hover/cell:text-brand-strong"
+                    strokeWidth={2.2}
+                    aria-hidden
+                  />
                 ) : (
-                  <ChevronRight className="size-3.5 shrink-0 text-txt3 transition-colors group-hover:text-brand-strong" aria-hidden />
+                  <ChevronRight
+                    className="size-5 shrink-0 text-txt2 transition-[color,translate] duration-200 group-hover/cell:translate-x-0.5 group-hover/cell:text-brand-strong"
+                    strokeWidth={2.2}
+                    aria-hidden
+                  />
                 )}
               </button>
             ) : (
@@ -364,3 +386,4 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
     </div>
   )
 }
+

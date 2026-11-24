@@ -748,7 +748,7 @@ export function Network() {
                       </div>
                       <span
                         className={cn(
-                          "relative z-10 grid size-6 place-items-center rounded-[6px] transition-transform group-hover:translate-x-0.5",
+                          "relative z-10 grid size-6 place-items-center rounded-[6px] transition-[translate] duration-200 group-hover:translate-x-0.5",
                           isSel ? "text-brand-strong" : "text-txt3",
                         )}
                         aria-hidden

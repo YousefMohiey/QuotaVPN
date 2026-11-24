@@ -346,6 +346,69 @@
   box-shadow: 0 30px 80px rgb(0 0 0 / 0.5);
 }
 
+/* A dialog arrives from just below its resting place and settles, on the
+   individual translate/scale properties so the -50% centering survives. */
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    translate: -50% calc(-50% + 9px);
+    scale: 0.96;
+  }
+  to {
+    opacity: 1;
+    translate: -50% -50%;
+    scale: 1;
+  }
+}
+@keyframes dialog-out {
+  from {
+    opacity: 1;
+    translate: -50% -50%;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    translate: -50% calc(-50% + 3px);
+    scale: 0.985;
+  }
+}
+.dialog-surface[data-state="open"] {
+  animation: dialog-in 220ms ease-out;
+}
+.dialog-surface[data-state="closed"] {
+  animation: dialog-out 140ms ease-in;
+}
+@keyframes dialog-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes dialog-overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.dialog-overlay[data-state="open"] {
+  animation: dialog-overlay-in 220ms ease-out;
+}
+.dialog-overlay[data-state="closed"] {
+  animation: dialog-overlay-out 140ms ease-in;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dialog-surface[data-state="open"],
+  .dialog-surface[data-state="closed"],
+  .dialog-overlay[data-state="open"],
+  .dialog-overlay[data-state="closed"] {
+    animation: none;
+  }
+}
+
 /* Lists inside dialogs and pickers: a scrollbar that belongs to the theme
    instead of the OS default. */
 .qc-scroll {
@@ -587,3 +650,5 @@
   .net-live-dot, .net-wait, .net-ping { animation: none; }
   .net-bar { transition: none; }
 }
+
+

@@ -59,12 +59,12 @@ export function WeQuotaCard() {
                   onClick={() => void quotaRefresh(true)}
                   aria-label={t("weRefresh")}
                   disabled={quota.phase === "busy"}
-                  className="press grid size-7 shrink-0 place-items-center rounded-full text-txt3 transition-colors hover:text-brand-strong disabled:cursor-wait"
+                  className="press group grid size-7 shrink-0 place-items-center rounded-full text-txt3 transition-colors hover:text-brand-strong disabled:cursor-wait"
                 >
                   {quota.phase === "busy" ? (
                     <Loader2 className="size-3.5 animate-spin" aria-hidden />
                   ) : (
-                    <RefreshCw className="size-3.5" aria-hidden />
+                    <RefreshCw className="size-3.5 transition-transform duration-300 group-hover:rotate-90" aria-hidden />
                   )}
                 </button>
               </Tip>
@@ -181,7 +181,7 @@ export function WeQuotaCard() {
           <button
             type="button"
             onClick={() => setQuotaOpen(true)}
-            className="mt-4 flex h-10 shrink-0 items-center rounded-[10px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-5 text-[13.5px] font-medium text-[var(--brand-strong)] transition-colors hover:border-[var(--brand-strong)]"
+            className="press mt-4 flex h-10 shrink-0 items-center rounded-[10px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-5 text-[13.5px] font-medium text-[var(--brand-strong)] transition-colors hover:border-[var(--brand-strong)]"
           >
             {t("weLink")}
           </button>
