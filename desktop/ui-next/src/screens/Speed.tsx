@@ -794,10 +794,14 @@ export function Speed() {
 
       {/* where the run is pointed, who hosts it, what you are on */}
       <section className="grid shrink-0 grid-cols-3 overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
-        <div className="flex min-w-0 flex-col justify-center gap-2 px-5 py-4">
+        <div className="group/server flex min-w-0 flex-col justify-center gap-2 px-5 py-4 transition-colors duration-200 hover:bg-white/[0.02]">
           <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
-            <Server className="size-3.5 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
-            <span className="truncate">{t("selServer")}</span>
+            <Server
+              className="size-4 shrink-0 text-txt3 transition-colors duration-200 group-hover/server:text-brand-strong"
+              strokeWidth={1.8}
+              aria-hidden
+            />
+            <span className="truncate transition-colors duration-200 group-hover/server:text-txt">{t("selServer")}</span>
           </span>
           <div className="flex min-w-0 items-center gap-2">
             <button
@@ -810,7 +814,11 @@ export function Speed() {
               <span className="min-w-0 flex-1 truncate text-[13px]" dir="auto">
                 {picking ? t("findingServer") : srv.label}
               </span>
-              <ChevronDown className="size-4 shrink-0 text-txt3 transition-[color,translate] duration-200 group-hover:translate-y-0.5 group-hover:text-brand-strong" aria-hidden />
+              <ChevronDown
+                className="size-5 shrink-0 text-txt2 transition-[color,translate] duration-200 group-hover:translate-y-0.5 group-hover:text-brand-strong"
+                strokeWidth={2.2}
+                aria-hidden
+              />
             </button>
             <button
               type="button"
@@ -818,12 +826,12 @@ export function Speed() {
               disabled={refreshing}
               aria-label={t("refresh")}
               title={t("refresh")}
-              className="press group grid size-7 shrink-0 place-items-center rounded-full text-txt3 transition-colors hover:text-brand-strong disabled:cursor-wait"
+              className="press group grid size-8 shrink-0 place-items-center rounded-full text-txt3 transition-colors hover:text-brand-strong disabled:cursor-wait"
             >
               {refreshing ? (
-                <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                <Loader2 className="size-4 animate-spin" aria-hidden />
               ) : (
-                <RefreshCw className="size-3.5 transition-transform duration-300 group-hover:rotate-90" aria-hidden />
+                <RefreshCw className="size-4 transition-transform duration-300 group-hover:rotate-90" aria-hidden />
               )}
             </button>
           </div>
@@ -832,7 +840,7 @@ export function Speed() {
 
         <div className="flex min-w-0 flex-col justify-center gap-2 border-s border-line px-5 py-4">
           <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
-            <Cloud className="size-3.5 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
+            <Cloud className="size-4 shrink-0 text-txt3" strokeWidth={1.8} aria-hidden />
             <span className="truncate">{t("hostedBy")}</span>
           </span>
           <span className="truncate text-[13px] font-medium text-txt" dir="auto">{sponsor}</span>
@@ -843,7 +851,7 @@ export function Speed() {
 
         <div className="flex min-w-0 flex-col justify-center gap-2 border-s border-line px-5 py-4">
           <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
-            <Wifi className="size-3.5 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
+            <Wifi className="size-4 shrink-0 text-txt3" strokeWidth={1.8} aria-hidden />
             <span className="truncate">{t("yourConn")}</span>
           </span>
           <span className="truncate text-[13px] font-medium text-txt" dir="auto">
