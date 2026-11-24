@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "motion/react"
+import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { ArrowDownToLine, Gauge, History as HistoryIcon, Home as HomeIcon, Settings as SettingsIcon, Wifi } from "lucide-react"
 import type { ComponentType } from "react"
 import { ValorantMark } from "@/components/ValorantMark"
@@ -24,6 +24,7 @@ const PRIMARY: Array<{ id: Tab; icon: ComponentType<{ className?: string; stroke
     step above the page, one hairline to the right, nothing else. */
 export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
   const { t } = useI18n()
+  const calm = useReducedMotion()
   const { version, update, updateState } = useApp()
   // The tunnel exists on Linux; the network scanner, the speed test and the
   // voice helper do not. Leave their doors out rather than open them onto
@@ -90,12 +91,24 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
             onClick={() => onTab(id)}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex h-12 items-center gap-3 rounded-[10px] px-3 text-[15px] transition-colors duration-150",
-              active ? "bg-white/[0.055] font-medium text-txt" : "text-txt2 hover:bg-white/[0.03] hover:text-txt",
+              "relative flex h-12 items-center gap-3 rounded-[10px] px-3 text-[15px] transition-colors duration-150",
+              active ? "font-medium text-txt" : "text-txt2 hover:bg-white/[0.03] hover:text-txt",
             )}
           >
-            <Icon className={cn("size-[22px] shrink-0", active ? "text-brand-strong" : "text-txt2")} strokeWidth={1.8} aria-hidden />
-            <span className="truncate">{t(key)}</span>
+            {active ? (
+              <motion.span
+                layoutId="nav-active"
+                aria-hidden
+                className="absolute inset-0 rounded-[10px] bg-white/[0.055]"
+                transition={calm ? { duration: 0 } : { type: "spring", stiffness: 480, damping: 42 }}
+              />
+            ) : null}
+            <Icon
+              className={cn("relative z-10 size-[22px] shrink-0", active ? "text-brand-strong" : "text-txt2")}
+              strokeWidth={1.8}
+              aria-hidden
+            />
+            <span className="relative z-10 truncate">{t(key)}</span>
           </button>
         ))}
       </nav>

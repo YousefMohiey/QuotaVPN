@@ -239,7 +239,7 @@ export default function App() {
                 {tab === "speed" && <Speed />}
                 {tab === "network" && <Network />}
                 {tab === "voice" && <Voice />}
-                {tab === "history" && <SpeedHistory onOpenResult={openResult} />}
+                {tab === "history" && <SpeedHistory onOpenResult={openResult} onOpenSpeed={() => go("speed")} />}
                 {tab === "result" && <SpeedResult runAt={resultAt} onBack={back} />}
                 {tab === "settings" && <Settings />}
                 {tab === "apps" && <Apps onBack={back} />}

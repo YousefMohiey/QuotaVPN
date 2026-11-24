@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { Download, Languages, Loader2, MonitorPlay, RefreshCw, ShieldOff } from "lucide-react"
 import { Toggle } from "@/components/Toggle"
 import { Segmented } from "@/components/Segmented"
@@ -19,7 +20,7 @@ import { cn } from "@/lib/utils"
 function Section({ label, gap, children }: { label: string; gap?: boolean; children: React.ReactNode }) {
   return (
     <section className={cn("flex flex-col", gap && "mt-8")}>
-      <h2 className="mb-0 border-b border-line pb-2 text-[11.5px] font-semibold uppercase leading-none tracking-[0.14em] text-txt2">
+      <h2 className="mb-0 border-b border-line pb-2 text-[12px] font-semibold uppercase leading-none tracking-[0.14em] text-txt2">
         {label}
       </h2>
       <div>{children}</div>
@@ -56,7 +57,7 @@ function Row({
         <Icon className="size-6" strokeWidth={1.7} aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
-        <h3 className="text-[14px] font-medium text-txt">{title}</h3>
+        <h3 className="text-[16.5px] font-medium text-txt">{title}</h3>
         {body ? <p className="mt-1 break-words text-[13px] leading-relaxed text-txt2">{body}</p> : null}
         {note ? <div className="mt-1 text-[12.5px] leading-snug text-txt3">{note}</div> : null}
       </div>
@@ -128,6 +129,7 @@ function WeQuotaRows() {
 }
 
 export function Settings() {
+  const calm = useReducedMotion()
   const [killArmed, setKillArmed] = useState(false)
   const [killBlocked, setKillBlocked] = useState(false)
   // The command now reports when the firewall rule did not move, instead of
@@ -315,7 +317,7 @@ export function Settings() {
               <span
                 aria-hidden
                 className={cn(
-                  "size-1.5 shrink-0 rounded-full",
+                  "size-1.5 shrink-0 rounded-full transition-colors",
                   updateState === "latest"
                     ? "bg-[var(--green)]"
                     : updateState === "error"
@@ -323,9 +325,21 @@ export function Settings() {
                       : updateState === "idle"
                         ? "bg-[var(--line-strong)]"
                         : "bg-[var(--brand-vivid)]",
+                  updateState === "checking" && "motion-safe:animate-pulse",
                 )}
               />
-              <span className="truncate">{updateText}</span>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={updateText}
+                  initial={calm ? false : { opacity: 0, y: 2 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={calm ? { opacity: 0 } : { opacity: 0, y: -2 }}
+                  transition={{ duration: calm ? 0 : 0.14, ease: "easeOut" }}
+                  className="truncate"
+                >
+                  {updateText}
+                </motion.span>
+              </AnimatePresence>
             </span>
           }
           control={

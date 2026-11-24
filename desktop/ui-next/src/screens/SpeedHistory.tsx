@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react"
-import { Activity, ArrowDown, ArrowUp, Check, ChevronRight, History as HistoryIcon, Trash2 } from "lucide-react"
+import { Activity, ArrowDown, ArrowUp, Check, ChevronRight, Gauge, History as HistoryIcon, Trash2 } from "lucide-react"
+import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,7 @@ function RunCard({
   serverLabel: string
 }) {
   const { t } = useI18n()
+  const calm = useReducedMotion()
   const num = (v: number | null, digits = 1) => (v === null ? "-" : v >= 100 ? v.toFixed(0) : v.toFixed(digits))
   const time = new Date(h.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
   const cells: Array<{ icon: typeof ArrowDown | null; label: string; value: string; unit: string }> = [
@@ -47,7 +49,11 @@ function RunCard({
     { icon: null, label: t("jitter"), value: num(h.jitter, 0), unit: t("ms") },
   ]
   return (
-    <div
+    <motion.div
+      layout
+      initial={false}
+      exit={calm ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: -4 }}
+      transition={{ duration: calm ? 0 : 0.16, ease: "easeOut" }}
       className={cn(
         "group relative rounded-[14px] border border-line bg-[var(--panel)] transition-colors hover:border-line-strong",
         picked && "border-[var(--brand-line)] bg-[var(--brand-bg)]",
@@ -91,7 +97,15 @@ function RunCard({
             )}
             aria-hidden
           >
-            {picked && <Check className="size-3 text-brand-strong" />}
+            {picked && (
+              <motion.span
+                initial={calm ? false : { scale: 0.6, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={calm ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 30 }}
+              >
+                <Check className="size-3 text-brand-strong" />
+              </motion.span>
+            )}
           </span>
         ) : (
           <>
@@ -111,7 +125,7 @@ function RunCard({
           </>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }
 
@@ -119,7 +133,7 @@ function RunCard({
     summary of the bests on top. Selection turns the rows into checkboxes so
     one, several or everything can go, and nothing is removed without a
     confirmation. */
-export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => void }) {
+export function SpeedHistory({ onOpenResult, onOpenSpeed }: { onOpenResult: (at: number) => void; onOpenSpeed: () => void }) {
   const { t } = useI18n()
   const [history, setHistory] = useState<Run[]>(() => loadHistory())
   const [selMode, setSelMode] = useState(false)
@@ -236,11 +250,23 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
 
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
             {history.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-                <span className="grid size-12 place-items-center rounded-full bg-white/[0.04] text-txt3">
-                  <HistoryIcon className="size-5" strokeWidth={1.7} aria-hidden />
+              <div className="flex h-full flex-col items-center justify-center gap-5 text-center">
+                <span className="relative grid size-16 place-items-center rounded-full border border-line bg-white/[0.03]">
+                  <span className="net-ping absolute inset-0 rounded-full border border-[var(--brand-line)]/50" aria-hidden />
+                  <HistoryIcon className="size-7 text-txt2" strokeWidth={1.6} aria-hidden />
                 </span>
-                <p className="max-w-[300px] text-[12.5px] leading-relaxed text-txt2">{t("histEmpty")}</p>
+                <div>
+                  <h2 className="font-display text-[22px] font-semibold leading-tight text-txt">{t("histEmptyTitle")}</h2>
+                  <p className="mx-auto mt-1.5 max-w-[320px] text-[13px] leading-relaxed text-txt2">{t("histEmptyBody")}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={onOpenSpeed}
+                  className="press flex h-10 items-center gap-2 rounded-[10px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-4 text-[13px] font-medium text-brand-strong transition-colors hover:bg-[var(--brand)]/20"
+                >
+                  <Gauge className="size-4" strokeWidth={1.8} aria-hidden />
+                  {t("histEmptyAction")}
+                </button>
               </div>
             ) : (
               <div className="flex flex-col gap-4">
@@ -251,21 +277,23 @@ export function SpeedHistory({ onOpenResult }: { onOpenResult: (at: number) => v
                       <span className="h-px flex-1 bg-[var(--line)]" aria-hidden />
                     </div>
                     <div className="mt-2.5 flex flex-col gap-2">
-                      {d.runs.map((h) => {
-                        const on = picked.includes(h.at)
-                        return (
-                          <RunCard
-                            key={h.at}
-                            h={h}
-                            select={selMode}
-                            picked={on}
-                            onAct={() => (selMode ? toggle(h.at) : onOpenResult(h.at))}
-                            onDelete={() => setPending({ kind: "one", at: h.at })}
-                            deleteLabel={t("delete")}
-                            serverLabel={t("targetServer")}
-                          />
-                        )
-                      })}
+                      <AnimatePresence initial={false}>
+                        {d.runs.map((h) => {
+                          const on = picked.includes(h.at)
+                          return (
+                            <RunCard
+                              key={h.at}
+                              h={h}
+                              select={selMode}
+                              picked={on}
+                              onAct={() => (selMode ? toggle(h.at) : onOpenResult(h.at))}
+                              onDelete={() => setPending({ kind: "one", at: h.at })}
+                              deleteLabel={t("delete")}
+                              serverLabel={t("targetServer")}
+                            />
+                          )
+                        })}
+                      </AnimatePresence>
                     </div>
                   </div>
                 ))}

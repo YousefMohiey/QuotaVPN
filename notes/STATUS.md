@@ -11,7 +11,8 @@
 > without a router login. A device that ignores all three bypasses uploads and the page says so.
 > The page is one roster and one detail rail; it reads the neighbour and router tables at once, so
 > devices appear immediately. An explicit Refresh scans for sleeping devices in the background.
-> Private build only.
+> The caps are two labelled boxes with an apply action, the header is one row, and the rest of the
+> app now carries the same state motion. Private build only.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.

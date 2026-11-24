@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { Activity, ArrowDown, ArrowUp, ChevronDown, Cloud, Gauge, Gamepad2, Loader2, RefreshCw, Server, Tv, Video, Wifi } from "lucide-react"
 import { PickerDialog } from "@/components/PickerDialog"
 import { SpeedDial } from "@/components/SpeedDial"
@@ -127,6 +128,7 @@ export function saveHistory(runs: Run[]) {
 
 export function Speed() {
   const { t } = useI18n()
+  const calm = useReducedMotion()
   const { card, hardRefresh, refreshing } = useApp()
 
   const [phase, setPhase] = useState<Phase>("idle")
@@ -674,36 +676,54 @@ export function Speed() {
 
           {/* the run's own control strip: the dial stays a gauge, and the
               stop sits beside the line that says what is being measured */}
-          {running ? (
-            <div className="flex w-full max-w-[372px] items-center gap-2.5 rounded-[10px] border border-line bg-white/[0.03] py-1.5 pe-1.5 ps-3">
-              <span className="relative grid size-2 shrink-0 place-items-center">
-                <span className="absolute size-2 rounded-full bg-brand-strong opacity-50 motion-safe:animate-ping" aria-hidden />
-                <span className="size-1.5 rounded-full bg-brand-strong" aria-hidden />
-              </span>
-              <span className="min-w-0 flex-1 truncate text-[12px] text-txt2">
-                <span className="font-medium text-brand-strong">{t("measuring")}</span>
-                <span className="text-txt3"> · </span>
-                {hint || t("speedTag")}
-              </span>
-              <button
-                type="button"
-                onClick={stop}
-                className="press flex h-8 shrink-0 items-center gap-2 rounded-[7px] border border-[var(--red-line)] bg-[rgb(207_112_120_/_0.12)] px-2.5 text-[12px] font-medium text-[var(--red)] transition-colors hover:bg-[rgb(207_112_120_/_0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/50"
-              >
-                <span className="size-2 rounded-[2px] bg-[var(--red)]" aria-hidden />
-                {t("stop")}
-              </button>
-            </div>
-          ) : (
-            <div className="flex min-w-0 flex-col items-center gap-1 text-center">
-              <span className={cn("truncate font-display text-[23px] font-semibold leading-tight tracking-[-0.02em]", "text-txt")}>
-                {phase === "done" ? t("doneLabel") : t("idle")}
-              </span>
-              <span className="max-w-[380px] text-[12px] leading-snug text-txt2">
-                {phase === "done" ? t("startAgain") : hint || t("speedTag")}
-              </span>
-            </div>
-          )}
+          <div className="flex min-h-[46px] w-full items-center justify-center">
+            <AnimatePresence mode="wait" initial={false}>
+              {running ? (
+                <motion.div
+                  key="running"
+                  initial={calm ? false : { opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={calm ? { opacity: 0 } : { opacity: 0, y: -4 }}
+                  transition={{ duration: calm ? 0 : 0.16, ease: "easeOut" }}
+                  className="flex w-full max-w-[372px] items-center gap-2.5 rounded-[10px] border border-line bg-white/[0.03] py-1.5 pe-1.5 ps-3"
+                >
+                  <span className="relative grid size-2 shrink-0 place-items-center">
+                    <span className="absolute size-2 rounded-full bg-brand-strong opacity-50 motion-safe:animate-ping" aria-hidden />
+                    <span className="size-1.5 rounded-full bg-brand-strong" aria-hidden />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[12px] text-txt2">
+                    <span className="font-medium text-brand-strong">{t("measuring")}</span>
+                    <span className="text-txt3"> · </span>
+                    {hint || t("speedTag")}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={stop}
+                    className="press flex h-8 shrink-0 items-center gap-2 rounded-[7px] border border-[var(--red-line)] bg-[rgb(207_112_120_/_0.12)] px-2.5 text-[12px] font-medium text-[var(--red)] transition-colors hover:bg-[rgb(207_112_120_/_0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/50"
+                  >
+                    <span className="size-2 rounded-[2px] bg-[var(--red)]" aria-hidden />
+                    {t("stop")}
+                  </button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="idle"
+                  initial={calm ? false : { opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={calm ? { opacity: 0 } : { opacity: 0, y: -4 }}
+                  transition={{ duration: calm ? 0 : 0.16, ease: "easeOut" }}
+                  className="flex min-w-0 flex-col items-center gap-1 text-center"
+                >
+                  <span className={cn("truncate font-display text-[23px] font-semibold leading-tight tracking-[-0.02em]", "text-txt")}>
+                    {phase === "done" ? t("doneLabel") : t("idle")}
+                  </span>
+                  <span className="max-w-[380px] text-[12px] leading-snug text-txt2">
+                    {phase === "done" ? t("startAgain") : hint || t("speedTag")}
+                  </span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           <div className="grid w-full max-w-[440px] shrink-0 grid-cols-2 overflow-hidden rounded-[10px] bg-white/[0.03]">
             <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-2.5">
@@ -915,7 +935,8 @@ function ReadingCard({
     >
       <span className="flex min-w-0 items-center gap-2">
         <Icon className={cn("size-3.5 shrink-0", live ? "text-brand-strong" : "text-txt3")} strokeWidth={1.7} aria-hidden />
-        <span className="truncate text-[11px] font-medium uppercase tracking-[0.09em] text-txt2">{label}</span>
+        <span className="min-w-0 flex-1 truncate text-[11px] font-medium uppercase tracking-[0.09em] text-txt2">{label}</span>
+        {live ? <span className="net-live-dot size-1.5 shrink-0 rounded-full bg-brand-strong" aria-hidden /> : null}
       </span>
       <span className="flex min-w-0 items-baseline gap-1.5">
         <span

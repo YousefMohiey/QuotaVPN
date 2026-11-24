@@ -546,22 +546,52 @@ export function Network() {
 
   return (
     <div className="net-page flex h-full min-h-0 w-full flex-col gap-3">
-      <header className="flex shrink-0 items-center justify-between gap-5">
+      <header className="flex shrink-0 items-center justify-between gap-4">
         <div className="flex min-w-0 items-baseline gap-3">
           <h1 className="font-display text-[30px] font-semibold leading-none tracking-[-0.02em] text-txt">
             {t("netTitle")}
           </h1>
           <span className="text-[13px] text-txt3">{t("netCount").replace("{n}", String(devices.length))}</span>
         </div>
-        <button
-          type="button"
-          onClick={refresh}
-          disabled={scanning}
-          className="press flex h-10 items-center gap-2 rounded-[10px] border border-line px-4 text-[13px] text-txt2 hover:border-[var(--brand-line)] hover:text-txt disabled:opacity-50"
-        >
-          <RefreshCw className={cn("size-4", scanning && "animate-spin")} aria-hidden />
-          {t("netRefresh")}
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {snap?.router_linked ? (
+            <>
+              <span className="flex h-10 items-center gap-2 rounded-[10px] border border-[var(--green-line)] bg-[var(--green)]/[0.06] px-3 text-[13px] text-[var(--green)]">
+                <RouterIcon className="size-4" aria-hidden />
+                {t("netRouterSaved")}
+              </span>
+              <button
+                type="button"
+                aria-label={t("netNamesUnlink")}
+                title={t("netNamesUnlink")}
+                onClick={() => {
+                  void api.routerUnlink().then(() => load(false))
+                }}
+                className="press grid size-10 place-items-center rounded-[10px] border border-line text-txt3 hover:border-[var(--red)]/40 hover:text-[var(--red)]"
+              >
+                <X className="size-4" aria-hidden />
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setRouterOpen(true)}
+              className="press flex h-10 items-center gap-2 rounded-[10px] border border-[var(--brand-line)]/50 bg-[var(--brand)]/[0.06] px-3 text-[13px] font-medium text-brand-strong hover:bg-[var(--brand)]/[0.12]"
+            >
+              <LockKeyhole className="size-4" aria-hidden />
+              {t("netNamesLink")}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={refresh}
+            disabled={scanning}
+            className="press flex h-10 items-center gap-2 rounded-[10px] border border-line px-4 text-[13px] text-txt2 hover:border-[var(--brand-line)] hover:text-txt disabled:opacity-50"
+          >
+            <RefreshCw className={cn("size-4", scanning && "animate-spin")} aria-hidden />
+            {t("netRefresh")}
+          </button>
+        </div>
       </header>
 
       {guardAlert ? (
@@ -570,47 +600,6 @@ export function Network() {
           {t("netGuardAlert").replace("{mac}", snap?.guard.attacker_mac ?? "")}
         </div>
       ) : null}
-
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line/70 pb-2.5">
-        <div className="flex min-w-0 items-center gap-2">
-          <span
-            className={cn(
-              "grid size-7 place-items-center rounded-[8px] border",
-              snap?.router_linked ? "border-[var(--green-line)] bg-[var(--green)]/10" : "border-line bg-white/[0.03]",
-            )}
-          >
-            {snap?.router_linked ? (
-              <RouterIcon className="size-4 text-[var(--green)]" aria-hidden />
-            ) : (
-              <LockKeyhole className="size-4 text-txt3" aria-hidden />
-            )}
-          </span>
-          <span className="truncate text-[13px] text-txt2">
-            {snap?.router_linked ? t("netRouterSaved") : t("netNamesHidden")}
-          </span>
-        </div>
-        {snap?.router_linked ? (
-          <button
-            type="button"
-            onClick={() => {
-              void api.routerUnlink().then(() => load(false))
-            }}
-            className="press h-8 rounded-[8px] border border-line px-3 text-[12px] text-txt3 hover:text-txt"
-          >
-            {t("netNamesUnlink")}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setRouterOpen(true)}
-            className="press flex h-8 items-center gap-1.5 rounded-[8px] bg-[var(--brand)]/15 px-3 text-[12px] font-medium text-brand-strong hover:bg-[var(--brand)]/25"
-          >
-            <LockKeyhole className="size-3.5" aria-hidden />
-            {t("netNamesLink")}
-            <ChevronRight className="size-3.5" aria-hidden />
-          </button>
-        )}
-      </div>
 
       {error && !selectedDevice ? (
         <div className="shrink-0 rounded-[9px] border border-[var(--red)]/30 bg-[var(--red)]/[0.06] px-3 py-2 text-[12.5px] leading-snug text-[var(--red)]">
@@ -912,59 +901,63 @@ export function Network() {
                   </div>
                 ) : null}
 
-                <div className="grid gap-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-txt3">
-                      {t("netLimitTitle")}
-                    </span>
-                    <span className="text-[12px] text-txt3">{t("netCapsHint")}</span>
-                  </div>
-                  <label className="flex items-center justify-between gap-2 border-b border-line/60 py-2.5">
-                    <span className="text-[13px] text-txt2">{t("netDownload")}</span>
-                    <span className="flex items-center gap-2">
-                      <Input
-                        value={down}
-                        onChange={(e) => setDown(e.target.value.replace(/[^0-9]/g, ""))}
-                        inputMode="numeric"
-                        placeholder="0"
-                        aria-label={t("netDownload")}
-                        className="h-9 w-24 border-0 bg-transparent text-right font-mono text-[14px]"
-                        dir="ltr"
-                      />
-                      <span className="text-[12px] text-txt3">KB/s</span>
-                    </span>
-                  </label>
-                  <label className="flex items-center justify-between gap-2 border-b border-line/60 py-2.5">
-                    <span className="text-[13px] text-txt2">{t("netUpload")}</span>
-                    <span className="flex items-center gap-2">
-                      <Input
-                        value={up}
-                        onChange={(e) => setUp(e.target.value.replace(/[^0-9]/g, ""))}
-                        inputMode="numeric"
-                        placeholder="0"
-                        aria-label={t("netUpload")}
-                        disabled={uploadsBypass}
-                        className="h-9 w-24 border-0 bg-transparent text-right font-mono text-[14px] disabled:opacity-40"
-                        dir="ltr"
-                      />
-                      <span className="text-[12px] text-txt3">KB/s</span>
-                    </span>
-                  </label>
-                  {uploadsBypass ? (
-                    <p className="text-[12px] leading-snug text-[var(--amber)]">{t("netUploadBypass")}</p>
-                  ) : null}
-                  {activeHere ? (
+                {!selectedDevice.protected ? (
+                  <div className="grid gap-2.5 rounded-[12px] border border-line/70 bg-white/[0.02] p-3.5">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-txt3">
+                        {t("netLimitTitle")}
+                      </span>
+                      <span className="text-[11.5px] text-txt3">{t("netCapsHint")}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="rounded-[10px] border border-line bg-[var(--panel)] px-3 py-2 transition-colors focus-within:border-[var(--brand-line)] focus-within:bg-[var(--brand)]/[0.04]">
+                        <span className="block text-[11.5px] text-txt3">{t("netDownload")}</span>
+                        <span className="mt-0.5 flex items-baseline gap-1">
+                          <Input
+                            value={down}
+                            onChange={(e) => setDown(e.target.value.replace(/[^0-9]/g, ""))}
+                            inputMode="numeric"
+                            placeholder="0"
+                            aria-label={t("netLimitDown")}
+                            className="h-6 min-w-0 flex-1 border-0 bg-transparent p-0 text-right font-mono text-[15px] text-txt focus-visible:ring-0"
+                            dir="ltr"
+                          />
+                          <span className="shrink-0 text-[11px] text-txt3">KB/s</span>
+                        </span>
+                      </label>
+                      <label className="rounded-[10px] border border-line bg-[var(--panel)] px-3 py-2 transition-colors focus-within:border-[var(--brand-line)] focus-within:bg-[var(--brand)]/[0.04]">
+                        <span className="block text-[11.5px] text-txt3">{t("netUpload")}</span>
+                        <span className="mt-0.5 flex items-baseline gap-1">
+                          <Input
+                            value={up}
+                            onChange={(e) => setUp(e.target.value.replace(/[^0-9]/g, ""))}
+                            inputMode="numeric"
+                            placeholder="0"
+                            aria-label={t("netLimitUp")}
+                            disabled={uploadsBypass}
+                            className="h-6 min-w-0 flex-1 border-0 bg-transparent p-0 text-right font-mono text-[15px] text-txt focus-visible:ring-0 disabled:opacity-40"
+                            dir="ltr"
+                          />
+                          <span className="shrink-0 text-[11px] text-txt3">KB/s</span>
+                        </span>
+                      </label>
+                    </div>
+                    {uploadsBypass ? (
+                      <p className="text-[12px] leading-snug text-[var(--amber)]">{t("netUploadBypass")}</p>
+                    ) : null}
                     <button
                       type="button"
                       onClick={() => void applyCaps()}
                       disabled={!ready || busy !== null}
-                      className="press flex h-10 items-center justify-center gap-1.5 rounded-[9px] bg-[var(--brand)]/15 text-[13px] font-medium text-brand-strong hover:bg-[var(--brand)]/25 disabled:opacity-50"
+                      className="press flex h-9 items-center justify-center gap-1.5 rounded-[9px] bg-[var(--brand)]/15 text-[13px] font-medium text-brand-strong hover:bg-[var(--brand)]/25 disabled:opacity-50"
                     >
-                      {busy === "caps" ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : null}
-                      {t("netLimitApply")}
+                      {busy === "caps" || busy === "control" ? (
+                        <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                      ) : null}
+                      {activeHere ? t("netLimitApply") : t("netLimitApplyStart")}
                     </button>
-                  ) : null}
-                </div>
+                  </div>
+                ) : null}
               </div>
 
               <div className="shrink-0 border-t border-line p-4">

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Check, ChevronRight, Search } from "lucide-react"
+import { motion, useReducedMotion } from "motion/react"
 import { Segmented } from "@/components/Segmented"
 import { useApp, type AppsMode } from "@/state/app"
 import { useI18n } from "@/lib/i18n"
@@ -15,6 +16,7 @@ type Row = { pkg: string; label: string }
 // the tap.
 export function Apps({ onBack }: { onBack: () => void }) {
   const { t } = useI18n()
+  const calm = useReducedMotion()
   const { appsMode, setAppsMode, apps, setApps, loadApps } = useApp()
   const [list, setList] = useState<Row[]>([])
   const [loading, setLoading] = useState(true)
@@ -143,11 +145,26 @@ export function Apps({ onBack }: { onBack: () => void }) {
           }}
         >
           {filtered.length === 0 ? (
-            <p className="px-5 py-8 text-[12.5px] text-txt3">{loading ? t("appsLoading") : t("appsEmpty")}</p>
+            <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 px-6 text-center">
+              <span className="grid size-12 place-items-center rounded-full border border-line bg-white/[0.03] text-txt3">
+                <Search className="size-5" strokeWidth={1.7} aria-hidden />
+              </span>
+              <p className="text-[13px] text-txt2">{loading ? t("appsLoading") : t("appsEmpty")}</p>
+              {!loading && q ? (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="press flex h-9 items-center gap-1.5 rounded-[9px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-3.5 text-[12.5px] font-medium text-brand-strong transition-colors hover:bg-[var(--brand)]/20"
+                >
+                  {t("appsClearSearch")}
+                </button>
+              ) : null}
+            </div>
           ) : (
             <div className="flex flex-col">
               {filtered.map((row, i) => {
                 const on = appsMode === "all" || apps.includes(row.pkg)
+                const tinted = appsMode !== "all" && on
                 const focused = i === activeIdx && listActive
                 const icon = iconOf(row.pkg)
                 return (
@@ -181,8 +198,8 @@ export function Apps({ onBack }: { onBack: () => void }) {
                       }
                     }}
                     className={cn(
-                      "flex w-full scroll-mt-2 items-center gap-3 border-b border-line px-5 py-2 text-start transition-colors last:border-b-0 hover:bg-white/[0.03] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-line)]",
-                      on ? "bg-[var(--brand-bg)]" : focused && "bg-white/[0.04]",
+                      "flex w-full scroll-mt-2 items-center gap-3 border-b border-line px-5 py-2.5 text-start transition-colors last:border-b-0 hover:bg-white/[0.03] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-line)]",
+                      tinted ? "bg-[var(--brand)]/[0.055]" : focused && "bg-white/[0.04]",
                     )}
                   >
                     <span
@@ -196,7 +213,7 @@ export function Apps({ onBack }: { onBack: () => void }) {
                       )}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className={cn("block truncate text-[12.5px]", on ? "text-txt" : "text-txt2")} dir="auto">
+                      <span className={cn("block truncate text-[13px]", on ? "text-txt" : "text-txt2")} dir="auto">
                         {row.label}
                       </span>
                       <span className="block truncate text-[11.5px] text-txt3" dir="auto">
@@ -210,7 +227,15 @@ export function Apps({ onBack }: { onBack: () => void }) {
                         on ? "border-[var(--brand-line)] bg-[var(--brand-bg)]" : "border-line-strong",
                       )}
                     >
-                      {on && <Check className="size-3 text-brand-strong" strokeWidth={3} aria-hidden />}
+                      {on && (
+                        <motion.span
+                          initial={calm ? false : { scale: 0.6, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={calm ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 30 }}
+                        >
+                          <Check className="size-3 text-brand-strong" strokeWidth={3} aria-hidden />
+                        </motion.span>
+                      )}
                     </span>
                   </button>
                 )
@@ -269,26 +294,30 @@ export function Apps({ onBack }: { onBack: () => void }) {
 
         <div className="flex min-w-0 flex-col gap-2">
           <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">{t("appsBulkLbl")}</span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={bulkOff || filtered.length === 0}
-              onClick={selectMatches}
-              className="h-9 whitespace-nowrap rounded-[7px] border border-[var(--brand-line)] px-3 text-[12.5px] text-brand-strong transition-colors hover:bg-[var(--brand-bg)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-            >
-              {q
-                ? t("appsSelectMatches").replace("{m}", String(filtered.length))
-                : t("appsSelectAll").replace("{t}", String(list.length))}
-            </button>
-            <button
-              type="button"
-              disabled={bulkOff || apps.length === 0}
-              onClick={() => setApps([])}
-              className="h-9 whitespace-nowrap rounded-[7px] border border-line px-3 text-[12.5px] text-[rgb(207_112_120/0.8)] transition-colors hover:border-[var(--red-line)] hover:bg-[var(--red-bg)] hover:text-[var(--red)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line disabled:hover:bg-transparent disabled:hover:text-[rgb(207_112_120/0.8)]"
-            >
-              {t("appsClearSel")}
-            </button>
-          </div>
+          {bulkOff ? (
+            <span className="flex h-9 items-center text-[12px] leading-snug text-txt3">{t("appsBulkOff")}</span>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={filtered.length === 0}
+                onClick={selectMatches}
+                className="h-9 whitespace-nowrap rounded-[7px] border border-[var(--brand-line)] px-3 text-[12.5px] text-brand-strong transition-colors hover:bg-[var(--brand-bg)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+              >
+                {q
+                  ? t("appsSelectMatches").replace("{m}", String(filtered.length))
+                  : t("appsSelectAll").replace("{t}", String(list.length))}
+              </button>
+              <button
+                type="button"
+                disabled={apps.length === 0}
+                onClick={() => setApps([])}
+                className="h-9 whitespace-nowrap rounded-[7px] border border-line px-3 text-[12.5px] text-[rgb(207_112_120/0.8)] transition-colors hover:border-[var(--red-line)] hover:bg-[var(--red-bg)] hover:text-[var(--red)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line disabled:hover:bg-transparent disabled:hover:text-[rgb(207_112_120/0.8)]"
+              >
+                {t("appsClearSel")}
+              </button>
+            </div>
+          )}
         </div>
       </section>
 

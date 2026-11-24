@@ -1,4 +1,4 @@
-import { motion } from "motion/react"
+import { motion, useReducedMotion } from "motion/react"
 import { cn } from "@/lib/utils"
 import { Tip } from "@/components/Tip"
 
@@ -21,6 +21,7 @@ export function Segmented<T extends string>({
   fill?: boolean
   boxed?: boolean
 }) {
+  const calm = useReducedMotion()
   return (
     <div
       className={cn(
@@ -61,7 +62,7 @@ export function Segmented<T extends string>({
                   "absolute inset-0",
                   boxed ? "rounded-[8px] border border-[var(--brand-line)] bg-[var(--brand-bg)]" : "rounded-[6px] bg-white/[0.1]",
                 )}
-                transition={{ type: "spring", stiffness: 520, damping: 40 }}
+                transition={calm ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 40 }}
               />
             )}
             <span className="relative truncate" dir="auto">{o.label}</span>

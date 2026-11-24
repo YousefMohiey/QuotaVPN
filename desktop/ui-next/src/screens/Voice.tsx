@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { Mic } from "lucide-react"
-import { motion, useReducedMotion } from "motion/react"
+import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { ValorantMark } from "@/components/ValorantMark"
 import { useI18n } from "@/lib/i18n"
 import { useApp } from "@/state/app"
@@ -95,6 +95,14 @@ export function Voice() {
               ? t("voiceUnhealthy")
               : t("voiceChecking")
           : t("voiceOffSub")
+  const stateTitle = working && shownOn
+    ? t("voiceConnecting")
+    : noCard
+      ? t("voiceOffTitle")
+      : shownOn
+        ? t("voiceActive")
+        : t("voiceOffTitle")
+  const stateKey = working ? "working" : noCard ? "nocard" : shownOn ? "on" : "off"
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1180px] flex-col">
@@ -137,20 +145,23 @@ export function Voice() {
             <div className="flex min-h-0 flex-1 items-center justify-between gap-10 py-4">
               {/* the state, left aligned, with a rule under it */}
               <div className="flex min-w-0 flex-1 flex-col gap-2">
-                <span
-                  className={cn(
-                    "font-display text-[38px] font-semibold uppercase leading-none tracking-[0.01em] transition-colors duration-200",
-                    healthy ? "text-[var(--green)]" : "text-txt",
-                  )}
-                >
-                  {working && shownOn
-                    ? t("voiceConnecting")
-                    : noCard
-                      ? t("voiceOffTitle")
-                      : shownOn
-                        ? t("voiceActive")
-                        : t("voiceOffTitle")}
-                </span>
+                <div className="flex min-h-[38px] items-center">
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.span
+                      key={stateKey}
+                      initial={calm ? false : { opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={calm ? { opacity: 0 } : { opacity: 0, y: -4 }}
+                      transition={{ duration: calm ? 0 : 0.16, ease: "easeOut" }}
+                      className={cn(
+                        "font-display text-[38px] font-semibold uppercase leading-none tracking-[0.01em] transition-colors duration-200",
+                        healthy ? "text-[var(--green)]" : "text-txt",
+                      )}
+                    >
+                      {stateTitle}
+                    </motion.span>
+                  </AnimatePresence>
+                </div>
                 <span className="max-w-[430px] text-[13px] leading-snug text-txt2">{stateWord}</span>
                 {msg && msg !== stateWord ? (
                   <span className="max-w-[440px] text-[12px] leading-snug text-txt3" role="status">{msg}</span>

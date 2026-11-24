@@ -20,6 +20,24 @@ import { cn } from "@/lib/utils"
 // Home, the console: the profiles are a switch on the left, the command bar and
 // the six settings cells hold the centre, the WE line takes the right column.
 // One action, one reading, no dead space.
+
+/** A reading that fades when its value lands, so async geo does not pop. */
+function SwapText({ text, className, dir }: { text: string; className?: string; dir?: "auto" }) {
+  const calm = useReducedMotion()
+  return (
+    <motion.span
+      key={text}
+      initial={calm ? false : { opacity: 0, y: 2 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: calm ? 0 : 0.16, ease: "easeOut" }}
+      className={className}
+      dir={dir}
+    >
+      {text}
+    </motion.span>
+  )
+}
+
 export function Home({ onOpenApps }: { onOpenApps: () => void }) {
   const { t } = useI18n()
   // motion is a report on state, never a decoration: with reduced motion the
@@ -122,14 +140,14 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
           className="press group inline-flex min-w-0 items-center gap-1.5 text-[12.5px] tabular-nums transition-colors"
         >
           <span className={cn("truncate", copied ? "text-[var(--green)]" : "text-txt")} dir="auto">
-            {copied ? t("copied") : ipText}
+            <SwapText text={copied ? t("copied") : ipText} />
           </span>
           <Copy className="size-3 shrink-0 text-txt2 transition-colors group-hover:text-brand-strong" aria-hidden />
         </button>
       </Tip>
     ) },
-    { id: "location", label: t("yourLocation"), icon: MapPin, cls: "col-span-2 border-e border-line", body: <span className="truncate text-[12.5px] text-txt" dir="auto">{geo?.place || "-"}</span> },
-    { id: "isp", label: t("ispLbl"), icon: Building2, cls: "col-span-2", body: <span className="truncate text-[12.5px] text-txt" dir="auto">{geo?.isp || "-"}</span> },
+    { id: "location", label: t("yourLocation"), icon: MapPin, cls: "col-span-2 border-e border-line", body: <span className="truncate text-[12.5px] text-txt" dir="auto"><SwapText text={geo?.place || "-"} /></span> },
+    { id: "isp", label: t("ispLbl"), icon: Building2, cls: "col-span-2", body: <span className="truncate text-[12.5px] text-txt" dir="auto"><SwapText text={geo?.isp || "-"} /></span> },
   ]
 
   return (
@@ -248,7 +266,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                  className="press group flex min-w-0 items-center gap-1.5 text-[13px] tabular-nums transition-colors"
                >
                  <span className={cn("truncate", copied ? "text-[var(--green)]" : "text-txt")} dir="auto">
-                   {copied ? t("copied") : ipText}
+                   <SwapText text={copied ? t("copied") : ipText} />
                  </span>
                  <Copy className="size-3 shrink-0 text-txt2 transition-colors group-hover:text-brand-strong" aria-hidden />
                </button>
@@ -258,12 +276,12 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
               <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("yourLocation")}</span>
               <span className="flex min-w-0 max-w-full items-center gap-1 text-[13px] text-txt">
                 <span className="shrink-0" aria-hidden>{geo?.place ? flagFor(geo.place) : ""}</span>
-                <span className="truncate" dir="auto">{geo?.place || "-"}</span>
+                <span className="truncate" dir="auto"><SwapText text={geo?.place || "-"} /></span>
               </span>
             </span>
             <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-2.5">
               <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("ispLbl")}</span>
-              <span className="truncate text-[13px] text-txt" dir="auto">{geo?.isp || "-"}</span>
+              <span className="truncate text-[13px] text-txt" dir="auto"><SwapText text={geo?.isp || "-"} /></span>
             </span>
           </div>
         </section>
