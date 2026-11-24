@@ -85,7 +85,9 @@ impl Wpcap {
     pub fn load() -> Option<Wpcap> {
         #[cfg(windows)]
         {
-            use windows_sys::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryW};
+            use windows_sys::Win32::System::LibraryLoader::{
+                GetProcAddress, LoadLibraryExW, LoadLibraryW, LOAD_WITH_ALTERED_SEARCH_PATH,
+            };
 
             fn wide(s: &str) -> Vec<u16> {
                 std::ffi::OsStr::new(s)
@@ -100,7 +102,17 @@ impl Wpcap {
                 r"C:\Windows\System32\wpcap.dll",
                 "wpcap.dll",
             ] {
-                let h = unsafe { LoadLibraryW(wide(path).as_ptr()) };
+                // Npcap without WinPcap-compatible mode keeps Packet.dll beside
+                // wpcap.dll in System32\Npcap. A plain LoadLibrary on the full
+                // path does not search that folder for the dependency, so the
+                // driver reads as missing even when it is installed.
+                let h = unsafe {
+                    if path.contains('\\') {
+                        LoadLibraryExW(wide(path).as_ptr(), std::ptr::null_mut(), LOAD_WITH_ALTERED_SEARCH_PATH)
+                    } else {
+                        LoadLibraryW(wide(path).as_ptr())
+                    }
+                };
                 if !h.is_null() {
                     handle = h;
                     break;

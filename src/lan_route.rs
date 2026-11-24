@@ -443,8 +443,19 @@ pub fn adapter() -> Result<Adapter, String> {
 #[link(name = "kernel32")]
 unsafe extern "system" {
     fn LoadLibraryW(name: *const u16) -> *mut std::ffi::c_void;
+    fn LoadLibraryExW(
+        name: *const u16,
+        file: *mut std::ffi::c_void,
+        flags: u32,
+    ) -> *mut std::ffi::c_void;
     fn GetProcAddress(module: *mut std::ffi::c_void, name: *const u8) -> *mut std::ffi::c_void;
 }
+
+/// Search the folder of the DLL for its dependencies. Npcap without
+/// WinPcap-compatible mode keeps Packet.dll beside wpcap.dll in
+/// System32\Npcap, and a plain LoadLibrary on the full path does not look
+/// there, so the driver looks missing even when it is installed.
+const LOAD_WITH_ALTERED_SEARCH_PATH: u32 = 0x0000_0008;
 
 #[repr(C)]
 struct PcapIf {
@@ -652,7 +663,17 @@ fn load_npcap() -> Option<Npcap> {
     ];
     for candidate in CANDIDATES {
         let wide: Vec<u16> = candidate.encode_utf16().chain(std::iter::once(0)).collect();
-        let module = unsafe { LoadLibraryW(wide.as_ptr()) };
+        let module = unsafe {
+            if candidate.contains('\\') {
+                LoadLibraryExW(
+                    wide.as_ptr(),
+                    std::ptr::null_mut(),
+                    LOAD_WITH_ALTERED_SEARCH_PATH,
+                )
+            } else {
+                LoadLibraryW(wide.as_ptr())
+            }
+        };
         if module.is_null() {
             continue;
         }
