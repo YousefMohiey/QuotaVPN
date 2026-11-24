@@ -1,12 +1,12 @@
 {
-    "version":  "0.7.2",
-    "build":  "2514d16",
-    "notes":  "Windows 0.7.2: Npcap detection fixed\n\nThe phone stays on 0.6.18.\n\nNpcap installed without \"WinPcap API-compatible Mode\" keeps wpcap.dll and Packet.dll together in C:\\Windows\\System32\\Npcap. The driver check and the capture loader now search that folder for dependencies, so the Network page no longer says Npcap is missing when it is installed.\n\nEverything from 0.7.1 is included: the layer-2 Network page, one device at a time, Monitor, download and upload caps, Block, router names, online-only, the page motion, dialogs, and the Speed detail copy.\n\nIf 0.7.1 still shows the Npcap card, update to 0.7.2 and restart the app once. Devices can still be discovered without Npcap; monitoring, caps and Block need it.\n\nThe installer is unsigned, so SmartScreen warns on first run. 0.7.1 installs update in place; cards and settings are kept.\n",
-    "pub_date":  "2026-11-24T20:53:59Z",
+    "version":  "0.7.3",
+    "build":  "de8030f",
+    "notes":  "Windows 0.7.3: the white screen is fixed\n\nRapid minimize and restore could leave the window white. The memory-saving suspend started a short timer when minimized; if the window came back before the timer, the suspend still ran after the resume and hid the page. It now rechecks and abandons the stale suspend.\n\n0.7.2\u0027s Npcap fix is included: Npcap installed without WinPcap-compatible mode is found.\n\nThe phone stays on 0.6.18. Windows only. The installer is unsigned; SmartScreen warns. 0.7.2 and earlier update in place.\n",
+    "pub_date":  "2026-11-24T21:22:56Z",
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSUtab096aENFSTdJWVVVRGZqVVd3NmJsaWNNMk1pK0hGMnZjYWI3SlVZVFRGRGFBM3RYQ0tncEpvMVBGaTV4SHJaRnR1cmc5ZDdRaXdlYWwyd3psdFFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NTUzNTk4CWZpbGU6UXVvdGFWUE5fMC43LjJfeDY0LXNldHVwLmV4ZQpPWlNYS3FUOFdUY0V6SHh3dnc0S0NkVExoZ3dFRTFtc1lLUFhzbUhabkNrYnA3M3l5ZENXb2l0bERqcjdpcVRDMUM2UzJQeVp4OWlJUjdBNWJCeGNCdz09Cg==",
-                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.2/QuotaVPN_0.7.2_x64-setup.exe"
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSU15VDgwVHoxbnROYnk2VEpOaGUrQTBJZjJFTlQ4MXpqWlQ4WUNpQit0UEdxTDB0aEtaMEVYKzBhYjZSSzg2bWl3clVIcmVleTB6NUdQZzVBVFl3WFFvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NTU1MzU1CWZpbGU6UXVvdGFWUE5fMC43LjNfeDY0LXNldHVwLmV4ZQp0YjcyRDFiM0JEbjcxSFI2QkFSdzFCQzZDNkpIR0tGSXAvbSs0TFJ2dEJKc2dISmppUEwweTBYYlBXZTVCQnlDZVFDUzlvaytFdXpzOGlrYitRQjNBZz09Cg==",
+                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.3/QuotaVPN_0.7.3_x64-setup.exe"
                                          }
                   }
 }

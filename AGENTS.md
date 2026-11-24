@@ -75,7 +75,7 @@ Windows, run from git-bash. The toolchain this project was developed against:
   built exe for the dependency before it publishes.
 - **Version lives in four files**: `desktop/src-tauri/{tauri.conf.json,Cargo.toml}` and
   `android/tauri-app/src-tauri/{tauri.conf.json,Cargo.toml}`. A normal release bumps all four
-  together. The 0.7.x migration is deliberately split: the desktop is 0.7.2 and the phone stays
+  together. The 0.7.x migration is deliberately split: the desktop is 0.7.3 and the phone stays
   at 0.6.18 until its own credential migration lands. Do not bump the phone to a version that
   has no tested APK behind it.
 - **Releases**: bump, build the installer and the APK, then publish the GitHub release with the
@@ -156,14 +156,14 @@ answer true because there is nothing to install. The release job fails if the bi
 
 ## Current state
 
-**The latest published release is v0.7.2, Windows only.** This tree carries the 0.7.0 credential
+**The latest published release is v0.7.3, Windows only.** This tree carries the 0.7.0 credential
 migration (`notes/HANDOFF-2026-11-22.md`): the desktop imports a server-issued `qv1:` secret into a
 DPAPI-sealed per-card store (`qc1:` is still accepted), talks to the card API over HTTPS, and no
 longer compiles the SSH control plane. The phone stays at 0.6.18 for now; its `server.rs`/`ssh.rs`
-path is behind `legacy-ssh`. The 0.7.2 installer is published and signed for the updater:
-`QuotaVPN_0.7.2_x64-setup.exe`. The Network page ships in this build, carried by the layer-2 relay.
-0.7.2 fixes Npcap detection when Npcap is installed without WinPcap-compatible mode; 0.7.1 and
-0.7.0 remain published.
+path is behind `legacy-ssh`. The 0.7.3 installer is published and signed for the updater:
+`QuotaVPN_0.7.3_x64-setup.exe`. The Network page ships in this build, carried by the layer-2 relay.
+0.7.3 fixes the white window after a rapid minimize and restore; 0.7.2 fixes Npcap detection
+without WinPcap-compatible mode; 0.7.1 and 0.7.0 remain published.
 
 `notes/HANDOFF-2026-11-16.md` is the change log from 0.6.5 to 0.6.17. The Windows installer is
 built locally on this PC and signed with the updater key at `C:/Tools/qc-updater.key`;

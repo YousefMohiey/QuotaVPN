@@ -20,7 +20,11 @@
 > **0.7.2 note:** the driver check and the capture loader now load `wpcap.dll` from
 > `C:\Windows\System32\Npcap` with that folder on the dependency search path. Npcap installed
 > without WinPcap-compatible mode keeps `Packet.dll` beside it, so the old load made a working
-> driver look missing. 0.7.2 is the current release.
+> driver look missing.
+>
+> **0.7.3 note:** the delayed WebView2 suspend now rechecks the current memory state after its
+> grace period. A rapid minimize and restore can no longer be suspended after the resume, which
+> is what left a white window. 0.7.3 is the current release.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.
