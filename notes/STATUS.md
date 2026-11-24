@@ -15,7 +15,7 @@
 > app now carries the same state motion. The action is Monitor, and idle devices are hidden while
 > router names are on, with a Show idle link. Dialogs rise and close on a backdrop press, the Home
 > cells and Speed band carry larger moving chevrons and icons, the Speed host and IP copy, and pages
-> slide in the direction of the rail. Network now sits before Speed. Private build only.
+> slide in the direction of the rail. Network now sits before Speed. Published 24 November 2026.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.

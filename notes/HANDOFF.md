@@ -173,7 +173,9 @@ server (`/speed/down`, `/speed/up`) plus public ping targets.
 - Signing material lives outside the repo on the build machine: the release keystore
   (`C:/Tools/qc-release.keystore` plus its password file), the updater key
   (`C:/Tools/qc-updater.key`, `.pub`, password file), and the APK signing passwords. None of it
-  belongs in git, and none of it may appear in logs or transcripts.
+  belongs in git, and none of it may appear in logs or transcripts. The updater key was restored
+  from `MIGRATION.zip` on 24 November 2026; its public half matches `tauri.conf.json`. The archive
+  is now at `C:/Tools/MIGRATION-2026-11-22.zip`.
 - The repo contains only the public half of the old embed key (`embed/quotacards-embed.pem.pub`),
   plus `licenses`/`README` text. The private half was never tracked and the Windows build no
   longer embeds it.
