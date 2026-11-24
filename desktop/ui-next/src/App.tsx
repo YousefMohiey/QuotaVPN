@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { isTauri } from "@/lib/ipc"
-import { AnimatePresence, motion } from "motion/react"
+import { AnimatePresence, motion, useReducedMotion, type Variants } from "motion/react"
 import { Sidebar, type Tab } from "@/components/Sidebar"
 import { WindowControls } from "@/components/WindowControls"
 import { QuotaToast } from "@/components/QuotaToast"
@@ -17,6 +17,17 @@ import { Apps } from "@/screens/Apps"
 
 const EASE_OUT = [0.1, 0.9, 0.2, 1] as const
 const TABS: Tab[] = ["home", "speed", "voice", "network", "history", "result", "apps", "settings"]
+/** Where each place sits in the rail; the page slide follows the same order. */
+const TAB_ORDER: Record<Tab, number> = {
+  home: 0,
+  voice: 1,
+  apps: 1.5,
+  speed: 2,
+  network: 3,
+  history: 4,
+  result: 4.5,
+  settings: 5,
+}
 
 export default function App() {
   // The hash is the router: #speed, #settings, #apps. Small, but it
@@ -25,6 +36,9 @@ export default function App() {
     const h = (typeof location !== "undefined" ? location.hash.slice(1) : "") as Tab
     return TABS.includes(h) ? h : "home"
   })
+  // +1 when the move goes down the rail, -1 when it comes back up.
+  const [dir, setDir] = useState(1)
+  const calm = useReducedMotion()
   // The stored run opened in the result view, if any.
   const [resultAt, setResultAt] = useState<number | null>(null)
   const tabRef = useRef(tab)
@@ -34,7 +48,9 @@ export default function App() {
   // Every move becomes a real history entry, so the shell's own back and
   // forward (mouse buttons, keyboard) walk the app instead of doing nothing.
   const go = (t: Tab) => {
-    if (t === tabRef.current) return
+    const from = tabRef.current
+    if (t === from) return
+    setDir(TAB_ORDER[t] >= TAB_ORDER[from] ? 1 : -1)
     const steps = trail.current
     ahead.current = []
     steps.push(t)
@@ -60,6 +76,7 @@ export default function App() {
       ahead.current.push(tabRef.current)
       steps.pop()
       const prev = steps[steps.length - 1]
+      setDir(-1)
       setTab(prev)
       try {
         history.replaceState(null, "", "#" + prev)
@@ -69,6 +86,7 @@ export default function App() {
       return
     }
     if (tabRef.current !== "home") {
+      setDir(-1)
       setTab("home")
       try {
         history.replaceState(null, "", "#home")
@@ -83,6 +101,7 @@ export default function App() {
     const next = ahead.current.pop()
     if (!next) return
     trail.current.push(next)
+    setDir(1)
     setTab(next)
     try {
       history.replaceState(null, "", "#" + next)
@@ -157,6 +176,7 @@ export default function App() {
       lastPop.current = Date.now()
       const h = location.hash.slice(1) as Tab
       const next = TABS.includes(h) ? h : "home"
+      setDir(TAB_ORDER[next] >= TAB_ORDER[tabRef.current] ? 1 : -1)
       setTab(next)
     }
     const onKey = (e: KeyboardEvent) => {
@@ -201,6 +221,27 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const pageVariants: Variants = useMemo(
+    () =>
+      calm
+        ? {
+            enter: { opacity: 0 },
+            center: { opacity: 1 },
+            exit: { opacity: 0 },
+          }
+        : {
+            enter: (d: number) => ({ opacity: 0, x: d * 24, scale: 0.99 }),
+            center: { opacity: 1, x: 0, scale: 1 },
+            exit: (d: number) => ({
+              opacity: 0,
+              x: d * -16,
+              scale: 0.995,
+              transition: { duration: 0.15, ease: EASE_OUT },
+            }),
+          },
+    [calm],
+  )
+
   return (
     <>
       {/* the night scene the glass refracts: fixed, inert, behind everything */}
@@ -213,7 +254,7 @@ export default function App() {
       <WindowControls />
       <div className="relative z-10 flex h-full">
         <Sidebar tab={tab} onTab={go} />
-        <main id="content" className="min-w-0 flex-1 overflow-y-auto scroll-pb-6">
+        <main id="content" className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden scroll-pb-6">
           {/* Omen rides here, outside the page-slide animation, as ONE image
               with its own real transparency: no cover cropping, no mask
               ramp, no filter, no overlay. Nothing left that can band, seam,
@@ -226,14 +267,16 @@ export default function App() {
             className="pointer-events-none sticky top-0 z-20 -mb-12 h-12 bg-gradient-to-b from-[var(--bg)] via-[var(--bg)]/85 to-transparent"
           />
           <div className="relative mx-auto h-full w-full max-w-[1120px] px-7 pb-5 pt-12">
-            <AnimatePresence mode="popLayout" initial={false}>
+            <AnimatePresence mode="popLayout" initial={false} custom={dir}>
               <motion.div
                 key={tab}
+                custom={dir}
                 className="h-full"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6, transition: { duration: 0.1 } }}
-                transition={{ duration: 0.2, ease: EASE_OUT }}
+                variants={pageVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: calm ? 0.12 : 0.24, ease: EASE_OUT }}
               >
                 {tab === "home" && <Home onOpenApps={() => go("apps")} />}
                 {tab === "speed" && <Speed />}

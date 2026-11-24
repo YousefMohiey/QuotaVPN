@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
-import { Activity, ArrowDown, ArrowUp, ChevronDown, Cloud, Gauge, Gamepad2, Loader2, RefreshCw, Server, Tv, Video, Wifi } from "lucide-react"
+import { Activity, ArrowDown, ArrowUp, Check, ChevronDown, Cloud, Copy, Gauge, Gamepad2, Loader2, RefreshCw, Server, Tv, Video, Wifi } from "lucide-react"
 import { PickerDialog } from "@/components/PickerDialog"
 import { SpeedDial } from "@/components/SpeedDial"
 import { useApp } from "@/state/app"
 import { useI18n, type StrKey } from "@/lib/i18n"
+import { copyText } from "@/lib/clipboard"
 import { measureDownload, measurePing, measureUpload } from "@/lib/speedtest"
 import { CLOUDFLARE, loadPool, pickFastest, type SpeedServer } from "@/lib/speedservers"
 import { isTauri, netInfo, onSpeedPhase, onSpeedResult, onSpeedTick, speedDown, speedLatency, speedUp, speedtestCli, speedtestCliReady, type CliSpeed, speedCancel } from "@/lib/ipc"
@@ -142,6 +143,7 @@ export function Speed() {
   const [hint, setHint] = useState("")
   const [history, setHistory] = useState<Run[]>(() => loadHistory())
   const [netInfo, setNetInfo] = useState<NetInfo | null>(null)
+  const [copied, setCopied] = useState<"host" | "ip" | null>(null)
   const [pool, setPool] = useState<SpeedServer[]>([CLOUDFLARE])
   const [picked, setPicked] = useState<SpeedServer | null>(null)
   // True while the server list is loading and the nearest one is being found,
@@ -637,6 +639,15 @@ export function Speed() {
   const dialIcon = phase === "ping" ? Activity : phase === "download" ? ArrowDown : phase === "upload" ? ArrowUp : Gauge
   const srv = picked ?? CLOUDFLARE
   const sponsor = srv.label.includes(" · ") ? srv.label.split(" · ")[0].trim() : srv.label
+  const hostText = srv.id === "cloudflare" ? "speed.cloudflare.com" : srv.host
+
+  const copyValue = async (kind: "host" | "ip", value: string | null | undefined) => {
+    if (!value) return
+    if (await copyText(value)) {
+      setCopied(kind)
+      window.setTimeout(() => setCopied(null), 1400)
+    }
+  }
 
   const chooseServer = async (id: string) => {
     if (id === "auto") {
@@ -838,28 +849,70 @@ export function Speed() {
           <span className="truncate text-[12px] text-txt3" dir="auto">{srv.detail || srv.host}</span>
         </div>
 
-        <div className="flex min-w-0 flex-col justify-center gap-2 border-s border-line px-5 py-4">
+        <div className="group/host flex min-w-0 flex-col justify-center gap-2 border-s border-line px-5 py-4 transition-colors duration-200 hover:bg-white/[0.02]">
           <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
-            <Cloud className="size-4 shrink-0 text-txt3" strokeWidth={1.8} aria-hidden />
-            <span className="truncate">{t("hostedBy")}</span>
+            <Cloud
+              className="size-4 shrink-0 text-txt3 transition-colors duration-200 group-hover/host:text-brand-strong"
+              strokeWidth={1.8}
+              aria-hidden
+            />
+            <span className="truncate transition-colors duration-200 group-hover/host:text-txt">{t("hostedBy")}</span>
           </span>
           <span className="truncate text-[13px] font-medium text-txt" dir="auto">{sponsor}</span>
-          <span className="truncate text-[12px] text-txt3" dir="auto">
-            {srv.id === "cloudflare" ? "speed.cloudflare.com" : srv.host}
-          </span>
+          <button
+            type="button"
+            onClick={() => void copyValue("host", hostText)}
+            aria-label={`${t("copy")} ${hostText}`}
+            title={t("copy")}
+            className="press group/hostcopy flex min-w-0 items-center gap-1.5 text-start text-[12px] text-txt3 transition-colors hover:text-txt"
+          >
+            <span className="truncate" dir="auto">{hostText}</span>
+            {copied === "host" ? (
+              <Check className="net-check-in size-3.5 shrink-0 text-[var(--green)]" aria-hidden />
+            ) : (
+              <Copy className="size-3.5 shrink-0 opacity-60 transition-opacity group-hover/hostcopy:opacity-100" aria-hidden />
+            )}
+          </button>
         </div>
 
-        <div className="flex min-w-0 flex-col justify-center gap-2 border-s border-line px-5 py-4">
+        <div className="group/conn flex min-w-0 flex-col justify-center gap-2 border-s border-line px-5 py-4 transition-colors duration-200 hover:bg-white/[0.02]">
           <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
-            <Wifi className="size-4 shrink-0 text-txt3" strokeWidth={1.8} aria-hidden />
-            <span className="truncate">{t("yourConn")}</span>
+            <Wifi
+              className="size-4 shrink-0 text-txt3 transition-colors duration-200 group-hover/conn:text-brand-strong"
+              strokeWidth={1.8}
+              aria-hidden
+            />
+            <span className="truncate transition-colors duration-200 group-hover/conn:text-txt">{t("yourConn")}</span>
           </span>
           <span className="truncate text-[13px] font-medium text-txt" dir="auto">
-            {netInfo ? netInfo.isp || netInfo.ip : "-"}
+            {netInfo ? netInfo.isp || "-" : "-"}
           </span>
-          <span className="truncate text-[12px] text-txt3" dir="auto">
-            {netInfo ? [netInfo.isp ? netInfo.ip : "", netInfo.place].filter(Boolean).join(" · ") : ""}
-          </span>
+          {netInfo?.ip ? (
+            <span className="flex min-w-0 items-center gap-1.5 text-[12px] text-txt3">
+              <button
+                type="button"
+                onClick={() => void copyValue("ip", netInfo.ip)}
+                aria-label={`${t("copy")} ${netInfo.ip}`}
+                title={t("copy")}
+                className="press group/ipcopy flex min-w-0 items-center gap-1 text-txt3 transition-colors hover:text-txt"
+              >
+                <span className="truncate" dir="auto">{netInfo.ip}</span>
+                {copied === "ip" ? (
+                  <Check className="net-check-in size-3.5 shrink-0 text-[var(--green)]" aria-hidden />
+                ) : (
+                  <Copy className="size-3.5 shrink-0 opacity-60 transition-opacity group-hover/ipcopy:opacity-100" aria-hidden />
+                )}
+              </button>
+              {netInfo.place ? (
+                <>
+                  <span className="shrink-0 text-txt3/50" aria-hidden>·</span>
+                  <span className="truncate" dir="auto">{netInfo.place}</span>
+                </>
+              ) : null}
+            </span>
+          ) : (
+            <span className="text-[12px] text-txt3">-</span>
+          )}
         </div>
       </section>
 
