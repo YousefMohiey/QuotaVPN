@@ -279,6 +279,7 @@ export const ar = {
   "netActiveCapped": "{down} كيلوبايت/ث تحميل، {up} كيلوبايت/ث رفع",
   "netUnblock": "إلغاء الحجب",
   "netScanning": "جارٍ الفحص",
+  "netScanningSleepers": "جارٍ البحث عن الأجهزة النائمة. القائمة جاهزة للاستخدام.",
   "netEmpty": "لم يستجب أي جهاز",
   "netFail": "فشل الفحص",
   "netCount": "{n} جهاز",

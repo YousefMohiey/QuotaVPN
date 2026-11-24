@@ -239,6 +239,7 @@ export function Network() {
   const [driverMsg, setDriverMsg] = useState("")
   const [npcapBusy, setNpcapBusy] = useState(false)
   const [rates, setRates] = useState({ up: 0, down: 0 })
+  const [scanBusy, setScanBusy] = useState(false)
   const lastRate = useRef<{ t: number; up: number; down: number } | null>(null)
   const activeRef = useRef<LanStatus | null>(null)
   activeRef.current = active
@@ -276,9 +277,23 @@ export function Network() {
     }
   }, [])
 
+  const scan = useCallback(async () => {
+    if (scanBusy) return
+    setScanBusy(true)
+    try {
+      await api.lanScan()
+      await load(true)
+    } catch (e) {
+      setError(String(e))
+    } finally {
+      setScanBusy(false)
+    }
+  }, [load, scanBusy])
+
   const refresh = useCallback(() => {
     void load(false)
-  }, [load])
+    void scan()
+  }, [load, scan])
 
   useEffect(() => {
     let alive = true
@@ -578,7 +593,7 @@ export function Network() {
           <button
             type="button"
             onClick={() => {
-              void api.routerUnlink().then(() => refresh())
+              void api.routerUnlink().then(() => load(false))
             }}
             className="press h-8 rounded-[8px] border border-line px-3 text-[12px] text-txt3 hover:text-txt"
           >
@@ -600,6 +615,13 @@ export function Network() {
       {error && !selectedDevice ? (
         <div className="shrink-0 rounded-[9px] border border-[var(--red)]/30 bg-[var(--red)]/[0.06] px-3 py-2 text-[12.5px] leading-snug text-[var(--red)]">
           {error}
+        </div>
+      ) : null}
+
+      {scanBusy ? (
+        <div className="flex shrink-0 items-center gap-2 rounded-[9px] border border-[var(--brand-line)]/50 bg-[var(--brand)]/[0.05] px-3 py-2 text-[12px] text-brand-strong">
+          <Loader2 className="size-3.5 animate-spin" aria-hidden />
+          {t("netScanningSleepers")}
         </div>
       ) : null}
 
@@ -1034,7 +1056,7 @@ export function Network() {
         onOpenChange={setRouterOpen}
         onLinked={() => {
           setError("")
-          refresh()
+          void load(false)
         }}
       />
     </div>

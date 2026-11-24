@@ -90,6 +90,8 @@ export type LanDevice = {
 
 /** Who is on this network. Scans the subnet and reads the neighbour table. */
 export const lanKnown = (): Promise<LanDevice[]> => call<LanDevice[]>("lan_known")
+/** Wake sleeping devices in the background; the list stays on screen. */
+export const lanScan = (): Promise<boolean> => call<boolean>("lan_scan")
 
 /** The wire this machine sits on, or null when the driver is missing. */
 export type LanWire = { device: string; adapter: string; mac: string; ip: string; gateway_ip: string; gateway_mac: string }
@@ -284,6 +286,7 @@ async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
 export const api = {
   state: () => call<UiState>("get_state"),
   lanKnown: (): Promise<LanDevice[]> => call<LanDevice[]>("lan_known"),
+  lanScan: (): Promise<boolean> => call<boolean>("lan_scan"),
   lanWire: (): Promise<LanWire | null> => call<LanWire | null>("lan_wire"),
   lanStart: (ip: string, mac: string, blocked: boolean): Promise<boolean> =>
     call<boolean>("lan_start", { ip, mac, blocked }),

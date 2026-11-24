@@ -9,8 +9,9 @@
 > cannot take the PC's own connection down. The relay sends three ARP forms to the device; a
 > device that accepts one carries both directions, so download and upload caps and Block work
 > without a router login. A device that ignores all three bypasses uploads and the page says so.
-> The page is one roster and one detail rail; it reads the neighbour and router tables instead of
-> the sixteen second sweep, so devices appear at once. Private build only.
+> The page is one roster and one detail rail; it reads the neighbour and router tables at once, so
+> devices appear immediately. An explicit Refresh scans for sleeping devices in the background.
+> Private build only.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.

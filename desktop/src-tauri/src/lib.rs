@@ -2511,6 +2511,30 @@ fn lan_known(cfg: tauri::State<'_, State>) -> Vec<quotacards::lan::Device> {
 /// than "everybody awake". A router-only row is a lease, not a live sighting;
 /// the screen labels it as such.
 #[cfg(windows)]
+static LAN_SWEEP: std::sync::OnceLock<std::sync::Mutex<Vec<quotacards::lan::Device>>> =
+    std::sync::OnceLock::new();
+#[cfg(windows)]
+static LAN_SWEEP_BUSY: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// Wake the sleeping devices, in the background. The page's roster is already
+/// on screen from the neighbour and router tables; this runs only when the
+/// owner presses Refresh, and the result is kept for the next snapshot.
+#[tauri::command]
+#[cfg(windows)]
+async fn lan_scan() -> Result<bool, String> {
+    if LAN_SWEEP_BUSY.swap(true, std::sync::atomic::Ordering::SeqCst) {
+        return Ok(false);
+    }
+    let found = tauri::async_runtime::spawn_blocking(quotacards::lan::scan).await;
+    LAN_SWEEP_BUSY.store(false, std::sync::atomic::Ordering::SeqCst);
+    let list = found.map_err(|e| e.to_string())?;
+    let slot = LAN_SWEEP.get_or_init(|| std::sync::Mutex::new(Vec::new()));
+    *slot.lock().map_err(|_| "the sweep cache is poisoned".to_string())? = list;
+    Ok(true)
+}
+
+#[cfg(windows)]
 async fn scan_with_router(
     router: &tauri::State<'_, RouterState>,
     cfg: &tauri::State<'_, State>,
@@ -2534,6 +2558,21 @@ async fn scan_with_router(
                 protected_always: true,
                 live: true,
             });
+        }
+    }
+    // The last explicit sweep found the devices that were asleep when the
+    // neighbour table was written. Fold them in before the router names so the
+    // router can still name them.
+    if let Some(slot) = LAN_SWEEP.get() {
+        if let Ok(cached) = slot.lock() {
+            for d in cached.iter() {
+                let seen = list.iter().any(|x| {
+                    x.ip == d.ip || (!d.mac.is_empty() && x.mac.eq_ignore_ascii_case(&d.mac))
+                });
+                if !seen {
+                    list.push(d.clone());
+                }
+            }
         }
     }
     let mut clients: Vec<router_huawei::RouterClient> = Vec::new();
@@ -3686,6 +3725,7 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         router_clients,
         router_unlink,
         lan_known,
+        lan_scan,
         copy_text,
         kill_switch_state,
         kill_switch_set,

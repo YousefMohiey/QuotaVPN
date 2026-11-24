@@ -276,6 +276,7 @@ export const en = {
   "netActiveCapped": "{down} KB/s down, {up} KB/s up",
   "netUnblock": "Unblock",
   "netScanning": "Scanning",
+  "netScanningSleepers": "Checking for sleeping devices. The list is ready to use.",
   "netEmpty": "No devices answered",
   "netFail": "The scan failed",
   "netCount": "{n} devices",

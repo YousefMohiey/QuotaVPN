@@ -114,6 +114,8 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
     case "lan_known":
     case "lan_devices":
       return DEMO_DEVICES as T
+    case "lan_scan":
+      return true as T
     case "lan_monitor_active":
       return true as T
     case "lan_traffic":
