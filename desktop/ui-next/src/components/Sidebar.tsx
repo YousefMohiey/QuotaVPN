@@ -15,12 +15,12 @@ const EASE_OUT = [0.1, 0.9, 0.2, 1] as const
 const PRIMARY: Array<{ id: Tab; icon: ComponentType<{ className?: string; strokeWidth?: number; "aria-hidden"?: boolean }>; key: StrKey }> = [
   { id: "home", icon: HomeIcon, key: "tabHome" },
   { id: "voice", icon: ValorantMark, key: "tabVoice" },
-  { id: "speed", icon: Gauge, key: "tabSpeed" },
   { id: "network", icon: Wifi, key: "tabNetwork" },
+  { id: "speed", icon: Gauge, key: "tabSpeed" },
   { id: "history", icon: HistoryIcon, key: "history" },
 ]
 
-/** The rail: identity, the four places, the live state, settings. One tone
+/** The rail: identity, the five places, the live state, settings. One tone
     step above the page, one hairline to the right, nothing else. */
 export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
   const { t } = useI18n()

@@ -15,15 +15,15 @@ import { SpeedResult } from "@/screens/SpeedResult"
 import { Settings } from "@/screens/Settings"
 import { Apps } from "@/screens/Apps"
 
-const EASE_OUT = [0.1, 0.9, 0.2, 1] as const
-const TABS: Tab[] = ["home", "speed", "voice", "network", "history", "result", "apps", "settings"]
+const EASE_OUT = [0.4, 0, 0.2, 1] as const
+const TABS: Tab[] = ["home", "voice", "network", "speed", "history", "result", "apps", "settings"]
 /** Where each place sits in the rail; the page slide follows the same order. */
 const TAB_ORDER: Record<Tab, number> = {
   home: 0,
   voice: 1,
   apps: 1.5,
-  speed: 2,
-  network: 3,
+  network: 2,
+  speed: 3,
   history: 4,
   result: 4.5,
   settings: 5,
@@ -236,7 +236,7 @@ export default function App() {
               opacity: 0,
               x: d * -16,
               scale: 0.995,
-              transition: { duration: 0.15, ease: EASE_OUT },
+              transition: { duration: 0.2, ease: EASE_OUT },
             }),
           },
     [calm],
@@ -276,7 +276,7 @@ export default function App() {
                 initial="enter"
                 animate="center"
                 exit="exit"
-                transition={{ duration: calm ? 0.12 : 0.24, ease: EASE_OUT }}
+                transition={{ duration: calm ? 0.12 : 0.3, ease: EASE_OUT }}
               >
                 {tab === "home" && <Home onOpenApps={() => go("apps")} />}
                 {tab === "speed" && <Speed />}
