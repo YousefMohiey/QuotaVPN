@@ -255,6 +255,7 @@ export const ar = {
   "netMonitor": "مراقبة",
   "netRoute": "تمرير عبر الشبكة الخاصة",
   "netPickDevice": "اختر جهازاً",
+  "netPickBody": "اختر جهازاً واحداً لرؤية حركته، أو تحديد حد، أو حظره.",
   "netDiagnose": "تشخيص",
   "netDiagnoseBusy": "جارٍ التشخيص",
   "netDiagnoseCopy": "نسخ التقرير",

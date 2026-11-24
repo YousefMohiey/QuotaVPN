@@ -2515,16 +2515,42 @@ async fn scan_with_router(
     router: &tauri::State<'_, RouterState>,
     cfg: &tauri::State<'_, State>,
 ) -> Result<Vec<quotacards::lan::Device>, String> {
-    let mut list = tauri::async_runtime::spawn_blocking(quotacards::lan::scan)
-        .await
-        .unwrap_or_default();
+    // Fast roster: the neighbour table plus, when the router session is live,
+    // its client table. The 254-address sweep is not here: it takes up to
+    // sixteen seconds, and a page that waits for it reads as broken. The sweep
+    // remains a headless diagnostic; the page uses what the network already
+    // knows.
+    let mut list = quotacards::lan::known();
+    let wire = quotacards::lan_ctrl::wire();
+    if let Some(w) = wire.as_ref() {
+        if !list.iter().any(|d| d.ip == w.ip) {
+            list.push(quotacards::lan::Device {
+                ip: w.ip.clone(),
+                mac: w.mac.clone(),
+                name: String::new(),
+                self_pc: true,
+                name_source: "self".into(),
+                protected: true,
+                protected_always: true,
+                live: true,
+            });
+        }
+    }
     let mut clients: Vec<router_huawei::RouterClient> = Vec::new();
     // Never wait for the lock: a router session that is mid-poll held it for
     // the whole scan once, and the page sat on "Scanning" forever. A skipped
     // enrichment costs names, never the list.
     if let Ok(guard) = router.0.try_lock() {
         if let Some(session) = guard.as_ref() {
-            if let Ok(found) = session.clients().await {
+            // A router page can sit for its own twelve second timeout, and the
+            // page must not wait for it. The local roster is already complete;
+            // names are an enrichment, and a slow router costs one round.
+            if let Ok(Ok(found)) = tokio::time::timeout(
+                std::time::Duration::from_millis(1200),
+                session.clients(),
+            )
+            .await
+            {
                 clients = found;
             }
         }
@@ -2569,7 +2595,6 @@ async fn scan_with_router(
     // renewed while the relay carried it can carry the relay's source address.
     // Tidy once so one device is one row and the two fixed addresses are true,
     // then mark protection on the rows that survived.
-    let wire = quotacards::lan_ctrl::wire();
     if let Some(w) = wire.as_ref() {
         list = quotacards::lan::tidy_roster(
             list,

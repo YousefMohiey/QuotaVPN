@@ -252,6 +252,7 @@ export const en = {
   "netMonitor": "Monitor",
   "netRoute": "Route via VPN",
   "netPickDevice": "Pick a device",
+  "netPickBody": "Choose one device to see its traffic, set a limit, or block it.",
   "netDiagnose": "Diagnose",
   "netDiagnoseBusy": "Diagnosing",
   "netDiagnoseCopy": "Copy report",

@@ -129,8 +129,9 @@ rows can never collide into duplicate React children.
 Npcap is the only packet driver the control path needs. The free installer has no silent mode, so
 the app runs its wizard. The relay opens non-promiscuous on purpose: promiscuous mode is the
 setting Npcap's own guide says to turn off when a wireless adapter misbehaves. Discovery and
-naming never need the driver: they use `arp -a`, a ping sweep, a UDP socket on 67 when elevated,
-and unicast mDNS queries.
+naming never need the driver: the Network page reads `arp -a` and, when signed in, the router's
+client table; the 254-address ping sweep is a headless diagnostic (`--lan-probe`) and never page
+load. The DHCP and mDNS listeners still supply names.
 
 The router remains the optional second path, for names now and for upload control later.
 `router_huawei.rs` logs in for the session only, never stores the password, and dumps the QoS and
