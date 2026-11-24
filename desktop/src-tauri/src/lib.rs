@@ -3338,6 +3338,13 @@ fn set_webview_memory_low(app: &tauri::AppHandle, low: bool) {
         // as visible.
         if low {
             std::thread::sleep(std::time::Duration::from_millis(900));
+            // The window can be restored before this fires. A suspend that
+            // lands after the resume leaves a white, hidden page, which is
+            // what repeated minimize/maximize produced. Recheck the current
+            // intent and abandon the stale request.
+            if !WEBVIEW_LOW.load(std::sync::atomic::Ordering::SeqCst) {
+                return;
+            }
         }
         let _ = w.with_webview(move |pw| {
             #[cfg(windows)]

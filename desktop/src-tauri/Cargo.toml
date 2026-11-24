@@ -1,6 +1,6 @@
 [package]
 name = "quotacards-desktop"
-version = "0.7.2"
+version = "0.7.3"
 default-run = "QuotaVPN"
 edition = "2021"
 
@@ -66,3 +66,5 @@ required-features = ["tools"]
 # The bare exe is served as a test download and folded into the installer:
 # keep it lean (the default profile left ~17 MB of symbol table in it).
 strip = true
+
+
