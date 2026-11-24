@@ -75,7 +75,7 @@ Windows, run from git-bash. The toolchain this project was developed against:
   built exe for the dependency before it publishes.
 - **Version lives in four files**: `desktop/src-tauri/{tauri.conf.json,Cargo.toml}` and
   `android/tauri-app/src-tauri/{tauri.conf.json,Cargo.toml}`. A normal release bumps all four
-  together. The 0.7.x migration is deliberately split: the desktop is 0.7.1 and the phone stays
+  together. The 0.7.x migration is deliberately split: the desktop is 0.7.2 and the phone stays
   at 0.6.18 until its own credential migration lands. Do not bump the phone to a version that
   has no tested APK behind it.
 - **Releases**: bump, build the installer and the APK, then publish the GitHub release with the
@@ -156,24 +156,25 @@ answer true because there is nothing to install. The release job fails if the bi
 
 ## Current state
 
-**The latest published release is v0.7.1, Windows only.** This tree carries the 0.7.0 credential
+**The latest published release is v0.7.2, Windows only.** This tree carries the 0.7.0 credential
 migration (`notes/HANDOFF-2026-11-22.md`): the desktop imports a server-issued `qv1:` secret into a
 DPAPI-sealed per-card store (`qc1:` is still accepted), talks to the card API over HTTPS, and no
 longer compiles the SSH control plane. The phone stays at 0.6.18 for now; its `server.rs`/`ssh.rs`
-path is behind `legacy-ssh`. The 0.7.1 installer is published and signed for the updater:
-`QuotaVPN_0.7.1_x64-setup.exe`. The Network page ships in this build, carried by the layer-2 relay;
-0.7.0 remains the previous signed release.
+path is behind `legacy-ssh`. The 0.7.2 installer is published and signed for the updater:
+`QuotaVPN_0.7.2_x64-setup.exe`. The Network page ships in this build, carried by the layer-2 relay.
+0.7.2 fixes Npcap detection when Npcap is installed without WinPcap-compatible mode; 0.7.1 and
+0.7.0 remain published.
 
 `notes/HANDOFF-2026-11-16.md` is the change log from 0.6.5 to 0.6.17. The Windows installer is
 built locally on this PC and signed with the updater key at `C:/Tools/qc-updater.key`;
 `latest.json` is composed by hand from the installer, `.sig` and `QuotaVPN.exe`. The
-`signed-release` workflow remains a fallback from a `v*` tag; its 0.7.1 attempt failed on a
-transient NSIS download. The feed is served from
+`signed-release` workflow is a manual fallback only; tags do not start it. Its 0.7.1 attempt failed
+on a transient NSIS download. The feed is served from
 `raw.githubusercontent.com/.../master/latest.json`, committed to the branch on every release,
 because that URL answers 200 with no redirect; the release asset is the second endpoint. There is
 no code signing and there is no signing provider wired up: every installer is unsigned, which is
 why SmartScreen warns and heuristic engines sometimes quarantine it. The broken 0.6.6 to 0.6.8
-releases were removed from the Releases page on 24 November 2026, leaving 0.7.0 and 0.7.1; their
+releases were removed from the Releases page on 24 November 2026, leaving 0.7.0 and later; their
 tags remain, so do not rebuild from them. `notes/defender.md` has the whole sequence and the
 false-positive report.
 

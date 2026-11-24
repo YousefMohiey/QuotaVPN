@@ -16,6 +16,11 @@
 > router names are on, with a Show idle link. Dialogs rise and close on a backdrop press, the Home
 > cells and Speed band carry larger moving chevrons and icons, the Speed host and IP copy, and pages
 > slide in the direction of the rail. Network now sits before Speed. Published 24 November 2026.
+>
+> **0.7.2 note:** the driver check and the capture loader now load `wpcap.dll` from
+> `C:\Windows\System32\Npcap` with that folder on the dependency search path. Npcap installed
+> without WinPcap-compatible mode keeps `Packet.dll` beside it, so the old load made a working
+> driver look missing. 0.7.2 is the current release.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.

@@ -10,10 +10,9 @@
 name: signed-release
 
 on:
+  # Releases are built and signed on the owner's PC. This workflow is a manual
+  # fallback only; creating a v* tag must not start a GitHub build.
   workflow_dispatch:
-  push:
-    tags:
-      - "v*"
 
 permissions:
   contents: write
