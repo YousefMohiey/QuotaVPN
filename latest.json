@@ -1,12 +1,12 @@
 {
-    "version":  "0.7.3",
-    "build":  "de8030f",
-    "notes":  "Windows 0.7.3: the white screen is fixed\n\nRapid minimize and restore could leave the window white. The memory-saving suspend started a short timer when minimized; if the window came back before the timer, the suspend still ran after the resume and hid the page. It now rechecks and abandons the stale suspend.\n\n0.7.2\u0027s Npcap fix is included: Npcap installed without WinPcap-compatible mode is found.\n\nThe phone stays on 0.6.18. Windows only. The installer is unsigned; SmartScreen warns. 0.7.2 and earlier update in place.\n",
-    "pub_date":  "2026-11-24T21:22:56Z",
+    "version":  "0.7.4",
+    "build":  "2133a1a",
+    "notes":  "Windows and Android 0.7.4. This replaces 0.7.3. The phone UI is the previous one again, with the short-screen scroll fixes, the launcher icon and the desktop display face. Windows carries the 0.7.3 white-window fix, the 0.7.2 Npcap fix. The standalone QuotaVPN.exe is not published. The Windows installer is unsigned.\n",
+    "pub_date":  "2026-11-25T01:03:41Z",
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSU15VDgwVHoxbnROYnk2VEpOaGUrQTBJZjJFTlQ4MXpqWlQ4WUNpQit0UEdxTDB0aEtaMEVYKzBhYjZSSzg2bWl3clVIcmVleTB6NUdQZzVBVFl3WFFvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NTU1MzU1CWZpbGU6UXVvdGFWUE5fMC43LjNfeDY0LXNldHVwLmV4ZQp0YjcyRDFiM0JEbjcxSFI2QkFSdzFCQzZDNkpIR0tGSXAvbSs0TFJ2dEJKc2dISmppUEwweTBYYlBXZTVCQnlDZVFDUzlvaytFdXpzOGlrYitRQjNBZz09Cg==",
-                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.3/QuotaVPN_0.7.3_x64-setup.exe"
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSUpzTzZycExZeTMrT1oyaEZOUy9pUVVETXF2elZkUTQzMU56eldCRmdiYUVtVlExa0htTER4R1l1Q25UNUNBSTU4dlU3SEZDc1hlTndqMzl2YmllN1EwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NTY4NjA5CWZpbGU6UXVvdGFWUE5fMC43LjRfeDY0LXNldHVwLmV4ZQpQRStlK0RYS3lXWUFQQmxYd2ZlNXpZU0I0eHRWOUlGOEJCUGMxZTZDdnowVDJWbURGSHUxeW5ieW1IdU1DcFc5VTU2L0NUaDlxNytPL3NTWGdxaG1Edz09Cg==",
+                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.4/QuotaVPN_0.7.4_x64-setup.exe"
                                          }
                   }
 }
