@@ -3678,7 +3678,7 @@ dependencies = [
 
 [[package]]
 name = "quotacards-tauri"
-version = "0.7.4"
+version = "0.7.5"
 dependencies = [
  "quotacards",
  "rand_core 0.6.4",

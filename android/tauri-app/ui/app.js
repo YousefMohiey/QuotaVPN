@@ -396,7 +396,26 @@ function goTab(name, push) {
     tabHist.push(name);
     try { history.pushState({ tab: name }, ""); } catch (e) {}
   }
+  requestAnimationFrame(paintTabIndicator);
 }
+
+// The active pill is one surface that slides between tabs; the buttons only
+// carry the colour change. Measuring the real button keeps it correct in both
+// languages and after a rotation.
+function paintTabIndicator() {
+  const bar = document.querySelector(".tabbar");
+  if (!bar) return;
+  const ind = bar.querySelector(".tab-ind");
+  const active = bar.querySelector("button.on");
+  if (!ind || !active) return;
+  const b = bar.getBoundingClientRect();
+  const a = active.getBoundingClientRect();
+  ind.style.width = Math.max(0, Math.round(a.width) - 8) + "px";
+  ind.style.transform = "translateX(" + Math.round(a.left - b.left + 4) + "px)";
+  bar.classList.add("ind-ready");
+}
+window.addEventListener("resize", () => requestAnimationFrame(paintTabIndicator));
+requestAnimationFrame(paintTabIndicator);
 document.querySelectorAll(".tabbar button").forEach((b) => {
   b.onclick = () => goTab(b.dataset.tab);
 });
@@ -412,14 +431,14 @@ try { history.replaceState({ tab: "connect" }, ""); } catch (e) {}
 
 function paintHero() {
   const hero = $("hero");
-  // Three states carry colour: live is green, working is amber, a failure is
-  // red. At rest the stage is graphite, never green.
+  // Three states carry colour: live is green, connecting is brand blue, a
+  // failure is red. At rest the stage is graphite, never green.
   const live = !!vpnOn && !busy;
   const failed = !busy && !vpnOn && !!vpnError;
   hero.classList.toggle("live", live);
   hero.classList.toggle("busy", !!busy);
   hero.classList.toggle("fail", failed);
-  const state = busy ? t("working") : vpnOn ? t("vpnConnected") : t("notConnected");
+  const state = busy ? t("connecting") : vpnOn ? t("vpnConnected") : t("notConnected");
   setTxt("hero-state", state);
   // The caption names the action, so it is not a second copy of the state: it
   // stands down while a tap is still working.
@@ -543,7 +562,7 @@ async function refresh() {
 }
 
 // Probe + diagnostics run silently now: no user-facing server tools.
-async function doProbe(owned) {
+async function doProbe(owned, silent) {
   if (!owned) {
     if (busy) return;
     setBusy(true);
@@ -551,7 +570,7 @@ async function doProbe(owned) {
   try {
     const r = await call("probe_server");
     connected = r.ok;
-    bar(r.ok, r.msg);
+    if (!silent) bar(r.ok, r.msg);
     await refresh();
   } finally { if (!owned) setBusy(false); }
 }
@@ -1162,9 +1181,9 @@ document.querySelectorAll("svg").forEach((s) => s.setAttribute("aria-hidden", "t
   await refresh();
   loadApps();
   autoUpdateCheck();
-  // Auto-connect on open, like the desktop app. The server is built in,
-  // so there is nothing to type - it just connects by itself.
-  if (serverHost && !connected) await doProbe();
+  // The server is built in, so probe it quietly on open. Nothing the user
+  // pressed should move the stage or flash a status line.
+  if (serverHost && !connected) await doProbe(true, true);
   await pollTunnel();
   setInterval(pollTunnel, 4000);
   // Resolve the exit facts once at open, so the home facts strip and the
@@ -1679,6 +1698,8 @@ function spPaintRunState() {
   if (lbl) lbl.textContent = spCtl ? t("measuring") : t("startTest");
   const stop = $("sp-stop");
   if (stop) stop.hidden = !spCtl;
+  const run = $("sp-run") ? $("sp-run").closest(".run") : null;
+  if (run) run.classList.toggle("measuring", !!spCtl);
   document.querySelectorAll(".sstat").forEach((b) => { b.disabled = !!spCtl; });
 }
 

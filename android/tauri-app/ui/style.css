@@ -144,8 +144,11 @@ main {
 
 /* ---------------------------------------------------------------- views */
 .view { display: none; flex: 1; min-height: 0; flex-direction: column; }
-.view.on { display: flex; animation: view-in 200ms var(--ease-smooth-out) both; }
-@keyframes view-in { from { opacity: 0; } to { opacity: 1; } }
+.view.on { display: flex; animation: view-in 240ms var(--ease-smooth-out) both; }
+@keyframes view-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .body {
   flex: 1;
   min-height: 0;
@@ -192,10 +195,10 @@ main {
   place-items: center;
   border-radius: 12px;
   color: var(--txt2);
-  transition: background-color 140ms var(--ease), color 140ms var(--ease);
+  transition: background-color 140ms var(--ease), color 140ms var(--ease), transform 120ms var(--ease);
 }
 .icon-btn svg { width: 20px; height: 20px; }
-.icon-btn:active { background: rgb(255 255 255 / 0.06); }
+.icon-btn:active { background: rgb(255 255 255 / 0.06); transform: scale(0.96); }
 .icon-btn.spin svg { animation: spin 900ms linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .text-btn {
@@ -205,6 +208,7 @@ main {
   color: var(--accent-strong);
 }
 .text-btn.armed { color: var(--red); }
+.text-btn:active { opacity: 0.65; }
 .chev { width: 16px; height: 16px; flex: 0 0 auto; color: var(--txt3); }
 
 /* ---------------------------------------------------------------- home */
@@ -238,7 +242,7 @@ main {
 }
 /* Green only while a session is actually live. */
 .stage.live .state { color: var(--green); }
-.stage.busy .state { color: var(--amber); }
+.stage.busy .state { color: var(--accent-strong); }
 .stage.fail .state { color: var(--red); }
 .route {
   display: inline-flex;
@@ -252,9 +256,9 @@ main {
   box-shadow: inset 0 0 0 1px var(--line);
   font-size: 13px;
   color: var(--txt2);
-  transition: box-shadow 140ms var(--ease);
+  transition: background-color 140ms var(--ease), box-shadow 140ms var(--ease), transform 120ms var(--ease);
 }
-.route:active { box-shadow: inset 0 0 0 1px var(--line-strong); }
+.route:active { background: var(--panel-hi); box-shadow: inset 0 0 0 1px var(--line-strong); transform: scale(0.99); }
 .route .r-pkg { color: var(--txt); font-weight: 600; }
 .route .r-dom { color: var(--txt2); max-width: 42vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .route .r-tr { color: var(--txt3); }
@@ -276,7 +280,27 @@ main {
 .session .s-sep { width: 3px; height: 3px; border-radius: 50%; background: var(--line-strong); }
 .note { font-size: 12px; color: var(--txt3); max-width: 78vw; }
 
-.dial { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.dial { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+/* The PM waiting ring: one thin arc on the control's own rim while the
+   tunnel is negotiated. No glow, no second spinner. */
+.dial::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  width: 184px;
+  height: 184px;
+  margin-left: -92px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0 60%, var(--accent) 80%, var(--accent-strong) 90%, transparent 96%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 1.6px), #000 calc(100% - 1px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 1.6px), #000 calc(100% - 1px));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms var(--ease);
+}
+@keyframes dial-trace { to { transform: rotate(360deg); } }
+.stage.busy .dial::before { opacity: 1; animation: dial-trace 1.35s linear infinite; }
 .dial-btn {
   position: relative;
   width: 168px;
@@ -284,21 +308,37 @@ main {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  color: var(--txt2);
-  background: var(--panel);
-  box-shadow: inset 0 0 0 1px var(--line-strong);
-  transition: color 200ms var(--ease), box-shadow 220ms var(--ease), background-color 200ms var(--ease), transform 120ms var(--ease);
+  color: var(--txt);
+  background: #13161a;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.05),
+    0 22px 48px rgb(0 0 0 / 0.5),
+    0 2px 6px rgb(0 0 0 / 0.4);
+  transition:
+    color 200ms var(--ease),
+    border-color 220ms var(--ease),
+    background-color 220ms var(--ease),
+    box-shadow 220ms var(--ease),
+    transform 120ms var(--ease);
 }
-.dial-btn svg { width: 64px; height: 64px; }
-.dial-btn:active { transform: scale(0.975); }
-.dial-btn:disabled { opacity: 0.7; }
+.dial-btn svg { width: 64px; height: 64px; color: var(--accent-strong); transition: color 200ms var(--ease), transform 160ms var(--ease); }
+.dial-btn:active { transform: scale(0.95); background: #151a20; border-color: var(--accent-line); }
+.dial-btn:active svg { transform: scale(0.92); }
+.dial-btn:disabled { opacity: 0.8; }
+.stage.busy .dial-btn { color: var(--accent-strong); border-color: var(--accent-line); }
+.stage.busy .dial-btn svg { opacity: 0.45; }
 .stage.live .dial-btn {
   color: var(--green);
-  background: var(--green-bg);
-  box-shadow: inset 0 0 0 1px var(--green-line), 0 0 0 8px rgb(95 176 140 / 0.06);
+  background: #101713;
+  border-color: var(--green-line);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.05),
+    inset 0 0 48px rgb(40 160 110 / 0.16),
+    0 22px 48px rgb(0 0 0 / 0.5);
 }
-.stage.busy .dial-btn { color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber-line); }
-.stage.fail .dial-btn { color: var(--red); box-shadow: inset 0 0 0 1px var(--red-line); }
+.stage.live .dial-btn svg { color: var(--green); }
+.stage.fail .dial-btn { color: var(--red); border-color: var(--red-line); }
 .dial-cap { font-family: var(--font-display); font-size: 14px; font-weight: 600; color: var(--txt); }
 .stage.live .dial-cap { color: var(--green); }
 
@@ -331,7 +371,27 @@ main {
   background: var(--bg1);
   border-top: 1px solid var(--line);
 }
+.tabbar .tab-ind {
+  position: absolute;
+  z-index: 0;
+  top: 4px;
+  bottom: calc(var(--inset-b) + 4px);
+  left: 0;
+  width: 0;
+  border-radius: 12px;
+  background: var(--accent-bg);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 250ms var(--ease-smooth-out),
+    width 250ms var(--ease-smooth-out),
+    opacity 160ms var(--ease);
+}
+.tabbar.ind-ready .tab-ind { opacity: 1; }
 .tabbar button {
+  position: relative;
+  z-index: 1;
   flex: 1;
   min-width: 0;
   min-height: 44px;
@@ -342,8 +402,9 @@ main {
   gap: 3px;
   color: var(--txt3);
   font-size: 12px;
-  transition: color 140ms var(--ease);
+  transition: color 160ms var(--ease), transform 120ms var(--ease);
 }
+.tabbar button:active { transform: scale(0.96); }
 .tabbar button svg { width: 22px; height: 22px; }
 .tabbar button.on { color: var(--txt); }
 .tabbar button.on svg { color: var(--accent-strong); }
@@ -361,10 +422,11 @@ main {
   font-weight: 650;
   transition: transform 120ms var(--ease), background-color 140ms var(--ease), opacity 140ms var(--ease);
 }
-.primary { background: var(--accent); color: #fff; }
-.primary:active { transform: scale(0.985); }
+.primary { background: var(--accent); color: #08111f; box-shadow: 0 1px 2px rgb(0 0 0 / 0.3); }
+.primary:active { transform: scale(0.985); background: var(--accent-hi); }
 .primary:disabled { opacity: 0.55; }
 .second { background: var(--panel); color: var(--txt); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.second:active { background: var(--panel-hi); transform: scale(0.985); }
 .chip {
   flex: 0 0 auto;
   min-height: 44px;
@@ -373,9 +435,9 @@ main {
   font-size: 13px;
   color: var(--txt2);
   box-shadow: inset 0 0 0 1px var(--line-strong);
-  transition: background-color 140ms var(--ease), color 140ms var(--ease);
+  transition: background-color 140ms var(--ease), color 140ms var(--ease), transform 120ms var(--ease);
 }
-.chip:active { background: rgb(255 255 255 / 0.05); }
+.chip:active { background: rgb(255 255 255 / 0.05); transform: scale(0.97); }
 .chip.brand { color: var(--accent-strong); box-shadow: inset 0 0 0 1px var(--accent-line); }
 .seg {
   display: flex;
@@ -449,6 +511,8 @@ main {
   min-height: 64px;
 }
 .dest.flat { min-height: 56px; }
+.dest { transition: background-color 140ms var(--ease), transform 120ms var(--ease); }
+.dest:active { background: var(--panel-hi); transform: scale(0.995); }
 .dest .k { grid-column: 1; font-size: 12px; line-height: 1.3; color: var(--txt3); }
 .dest .v { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; min-width: 0; }
 .dest .v .chev { margin-inline-start: auto; }
@@ -484,6 +548,30 @@ main {
 .hint { min-height: 18px; font-size: 12px; color: var(--txt3); text-align: center; }
 .run { display: flex; flex-direction: column; gap: 8px; }
 .run .primary { height: auto; min-height: 52px; padding: 12px 16px; line-height: 1.2; }
+.run.measuring .primary {
+  position: relative;
+  overflow: hidden;
+  opacity: 1;
+  background: var(--accent-bg);
+  color: var(--accent-strong);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+.run.measuring .primary:disabled { opacity: 1; }
+.run.measuring .primary::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 34%;
+  height: 2px;
+  background: var(--accent-strong);
+  animation: run-sweep 1.35s var(--ease) infinite;
+}
+@keyframes run-sweep {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(390%); }
+}
+.run .second { animation: toast-in 180ms var(--ease-smooth-out) both; }
 .rowlink {
   display: flex;
   align-items: center;
@@ -496,6 +584,8 @@ main {
   box-shadow: inset 0 0 0 1px var(--line);
   text-align: start;
 }
+.rowlink { transition: background-color 140ms var(--ease), transform 120ms var(--ease); }
+.rowlink:active { background: var(--panel-hi); transform: scale(0.995); }
 .rowlink .rl-t { font-size: 14px; font-weight: 600; color: var(--txt); }
 .rowlink .rl-s { flex: 1; min-width: 0; font-size: 12px; color: var(--txt3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -579,9 +669,14 @@ main {
   border-radius: 50%;
   box-shadow: inset 0 0 0 1px var(--line-strong);
   color: transparent;
+  transition: background-color 160ms var(--ease), box-shadow 160ms var(--ease), color 160ms var(--ease);
 }
 .opt .check svg { width: 13px; height: 13px; }
 .opt[aria-selected="true"] .check { background: var(--accent-bg); box-shadow: inset 0 0 0 1px var(--accent-line); color: var(--accent-strong); }
+.opt[aria-selected="true"] .check svg { animation: check-in 180ms var(--ease-smooth-out) both; }
+@keyframes check-in { from { transform: scale(0.7); } to { transform: scale(1); } }
+.opt { transition: background-color 140ms var(--ease); }
+.opt:active { background: var(--panel-hi); }
 .apps-list.mode-all .opt .check { opacity: 0.35; }
 
 /* ---------------------------------------------------------------- settings */
@@ -707,8 +802,10 @@ main {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .view.on, .toast, .sheet-back { animation: none; }
+  .view.on, .toast, .sheet-back, .run .second { animation: none; }
   .sheet { transition: none; }
-  .icon-btn.spin svg { animation: none; }
-  .dial-btn, .primary { transition: none; }
+  .tabbar .tab-ind { transition: none; }
+  .stage.busy .dial::before, .run.measuring .primary::after, .icon-btn.spin svg { animation: none; }
+  .opt[aria-selected="true"] .check svg { animation: none; }
+  .dial-btn, .primary, .second, .chip, .dest, .rowlink, .route { transition: none; }
 }

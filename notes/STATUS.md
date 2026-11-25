@@ -35,6 +35,14 @@
 > because `tauri android init` had put the Tauri template icon there. The phone updater still
 > scans for the newest release that carries the APK. The Windows build carries the white-window
 > fix from 0.7.3 and the Npcap fix from 0.7.2.
+>
+> **0.7.5 note:** a motion and interaction pass on the restored phone UI. The bottom bar now has
+> one active pill that slides between tabs, pages crossfade with a 4px lift, the connect disc uses
+> the desktop's `#13161a` face with a single waiting arc while connecting and the desktop green
+> while live, the Start test button uses the desktop primary foreground, the speed control has a
+> real measuring state, and list/picker rows have press feedback and a selected-check pop. The
+> automatic server probe on launch is silent; a connection the user starts says Connecting instead
+> of Working. 0.7.4 remains published; 0.7.3 remains removed.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.

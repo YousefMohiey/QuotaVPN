@@ -76,7 +76,7 @@ Windows, run from git-bash. The toolchain this project was developed against:
   built exe for the dependency before it publishes.
 - **Version lives in four files**: `desktop/src-tauri/{tauri.conf.json,Cargo.toml}` and
   `android/tauri-app/src-tauri/{tauri.conf.json,Cargo.toml}`. A normal release bumps all four
-  together. The desktop and the phone are both 0.7.4. The phone still compiles the legacy SSH
+  together. The desktop and the phone are both 0.7.5. The phone still compiles the legacy SSH
   control plane (`legacy-ssh`) until its own credential migration lands; do not bump the phone
   to a version that has no tested APK behind it.
 - **Releases**: bump, build the installer and the APK, then publish the GitHub release with the
@@ -159,22 +159,23 @@ answer true because there is nothing to install. The release job fails if the bi
 
 ## Current state
 
-**The latest published release is v0.7.4, Windows and Android.** This tree carries the 0.7.0
+**The latest published release is v0.7.5, Windows and Android.** This tree carries the 0.7.0
 credential migration (`notes/HANDOFF-2026-11-22.md`): the desktop imports a server-issued `qv1:`
 secret into a DPAPI-sealed per-card store (`qc1:` is still accepted), talks to the card API over
-HTTPS, and no longer compiles the SSH control plane. The phone is 0.7.4 too; its
+HTTPS, and no longer compiles the SSH control plane. The phone is 0.7.5 too; its
 `server.rs`/`ssh.rs` path is still behind `legacy-ssh`. The release carries the Windows setup
-`QuotaVPN_0.7.4_x64-setup.exe` and the phone APK `QuotaVPN-mobile-signed.apk` (the name the phone
+`QuotaVPN_0.7.5_x64-setup.exe` and the phone APK `QuotaVPN-mobile-signed.apk` (the name the phone
 updater looks for). The standalone `QuotaVPN.exe` is not uploaded as a release asset.
 
-0.7.4 restores the phone UI that shipped before the rejected 0.7.3 rebuild. It is the same dark
-charcoal layout, now with the desktop's Archivo display face, scroll-safe settings and speed
-columns (the old flex columns used to shrink and clip at short heights), a wrapping session strip,
-no text selection caret, and the QuotaVPN launcher icon. The four speed cells become 2x2 on very
-narrow phones. Motion is limited to a short page fade, the sheet slide and the press states. The
-0.7.3 release and tag were removed. 0.7.4 carries the white-window fix from 0.7.3 and the Npcap fix
-from 0.7.2; 0.7.1 and 0.7.0 remain published. The Network page ships in the Windows build, carried
-by the layer-2 relay.
+0.7.4 restored the phone UI that shipped before the rejected 0.7.3 rebuild. 0.7.5 is the motion
+and interaction pass on that same layout: a sliding active pill in the bottom bar, a short page
+crossfade, the desktop's `#13161a` disc with a single waiting arc while connecting, brand blue for
+the connecting state, the desktop primary foreground on the Start test button, press feedback
+across lists and pickers, a selected-check pop, and a real measuring state on Speed (tinted button,
+moving line, Stop). The automatic server probe on launch is silent; a connection the user starts
+says Connecting instead of Working. 0.7.4 remains published; 0.7.3 was removed. 0.7.5 carries the
+white-window fix from 0.7.3 and the Npcap fix from 0.7.2; 0.7.1 and 0.7.0 remain published. The
+Network page ships in the Windows build, carried by the layer-2 relay.
 
 `notes/HANDOFF-2026-11-16.md` is the change log from 0.6.5 to 0.6.17. The Windows installer is
 built locally on this PC and signed with the updater key at `C:/Tools/qc-updater.key`;
