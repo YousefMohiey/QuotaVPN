@@ -1,12 +1,12 @@
 {
-    "version":  "0.7.4",
-    "build":  "2133a1a",
-    "notes":  "Windows and Android 0.7.4. This replaces 0.7.3. The phone UI is the previous one again, with the short-screen scroll fixes, the launcher icon and the desktop display face. Windows carries the 0.7.3 white-window fix, the 0.7.2 Npcap fix. The standalone QuotaVPN.exe is not published. The Windows installer is unsigned.\n",
-    "pub_date":  "2026-11-25T01:03:41Z",
+    "version":  "0.7.5",
+    "build":  "72da9db",
+    "notes":  "Windows and Android 0.7.5. The phone gets the motion pass: sliding tab pill, page crossfade, desktop dial colours with a waiting arc, a real measuring state on Speed, press feedback and no startup Working state. Same layout as 0.7.4. Windows is unchanged. The standalone QuotaVPN.exe is not published. The Windows installer is unsigned.\n",
+    "pub_date":  "2026-11-25T03:11:11Z",
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSUpzTzZycExZeTMrT1oyaEZOUy9pUVVETXF2elZkUTQzMU56eldCRmdiYUVtVlExa0htTER4R1l1Q25UNUNBSTU4dlU3SEZDc1hlTndqMzl2YmllN1EwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NTY4NjA5CWZpbGU6UXVvdGFWUE5fMC43LjRfeDY0LXNldHVwLmV4ZQpQRStlK0RYS3lXWUFQQmxYd2ZlNXpZU0I0eHRWOUlGOEJCUGMxZTZDdnowVDJWbURGSHUxeW5ieW1IdU1DcFc5VTU2L0NUaDlxNytPL3NTWGdxaG1Edz09Cg==",
-                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.4/QuotaVPN_0.7.4_x64-setup.exe"
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSU9Mb2VZYVVwVGp0WG9Kd2FhdXVNNGh4UERGbTcwL2JDaTBGblpreU9kdGtENS9KVUJhS0tpSSsyZVMyVDVoZUw1ajZ1WWpzLy90TEc4Sit1eFlYTUFBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NTc2MjE2CWZpbGU6UXVvdGFWUE5fMC43LjVfeDY0LXNldHVwLmV4ZQpHZGtBMExnRmRLZkcrSXQ2ZkljMWN1b1hlbnFyYklOYTF4aFdYdEdsMzVnN0ZZL0ZmWW85VDBtcEF5NWJkeE05eTRaaHdRYUFWY3dtam56VXNNWTVCZz09Cg==",
+                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.5/QuotaVPN_0.7.5_x64-setup.exe"
                                          }
                   }
 }
