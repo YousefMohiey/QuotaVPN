@@ -50,6 +50,7 @@ fn main() {
         .or_else(|| git_stamp(&root))
         .unwrap_or_else(|| "dev".to_string());
     println!("cargo:rustc-env=QC_BUILD={stamp}");
+    println!("cargo:rerun-if-env-changed=QC_BUILD");
     // Re-read the stamp whenever either side of the ref moves: the HEAD file
     // changes on checkouts, while a commit only advances the branch ref under
     // refs/heads (cargo watches a directory recursively). Watching HEAD alone
