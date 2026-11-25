@@ -77,8 +77,8 @@
   --r-in: 8px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --duration-fast: 250ms;
-  --duration-quick: 150ms;
+  --duration-fast: 320ms;
+  --duration-quick: 220ms;
   --duration-medium: 350ms;
   --font-display: "Archivo", "Cairo", system-ui, -apple-system, Roboto, "Segoe UI", sans-serif;
   --tab-h: 54px;
@@ -144,9 +144,9 @@ main {
 
 /* ---------------------------------------------------------------- views */
 .view { display: none; flex: 1; min-height: 0; flex-direction: column; }
-.view.on { display: flex; animation: view-in 240ms var(--ease-smooth-out) both; }
+.view.on { display: flex; animation: view-in 320ms var(--ease-smooth-out) both; }
 @keyframes view-in {
-  from { opacity: 0; transform: translateY(4px); }
+  from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: translateY(0); }
 }
 .body {
@@ -195,7 +195,7 @@ main {
   place-items: center;
   border-radius: 12px;
   color: var(--txt2);
-  transition: background-color 140ms var(--ease), color 140ms var(--ease), transform 120ms var(--ease);
+  transition: background-color 180ms var(--ease), color 180ms var(--ease), transform 140ms var(--ease);
 }
 .icon-btn svg { width: 20px; height: 20px; }
 .icon-btn:active { background: rgb(255 255 255 / 0.06); transform: scale(0.96); }
@@ -238,7 +238,7 @@ main {
   font-weight: 650;
   letter-spacing: -0.02em;
   color: var(--txt);
-  transition: color 180ms var(--ease);
+  transition: color 240ms var(--ease);
 }
 /* Green only while a session is actually live. */
 .stage.live .state { color: var(--green); }
@@ -297,10 +297,10 @@ main {
   mask: radial-gradient(farthest-side, transparent calc(100% - 1.6px), #000 calc(100% - 1px));
   opacity: 0;
   pointer-events: none;
-  transition: opacity 200ms var(--ease);
+  transition: opacity 260ms var(--ease);
 }
 @keyframes dial-trace { to { transform: rotate(360deg); } }
-.stage.busy .dial::before { opacity: 1; animation: dial-trace 1.35s linear infinite; }
+.stage.busy .dial::before { opacity: 1; animation: dial-trace 1.8s linear infinite; }
 .dial-btn {
   position: relative;
   width: 168px;
@@ -316,13 +316,13 @@ main {
     0 22px 48px rgb(0 0 0 / 0.5),
     0 2px 6px rgb(0 0 0 / 0.4);
   transition:
-    color 200ms var(--ease),
-    border-color 220ms var(--ease),
-    background-color 220ms var(--ease),
-    box-shadow 220ms var(--ease),
-    transform 120ms var(--ease);
+    color 240ms var(--ease),
+    border-color 260ms var(--ease),
+    background-color 260ms var(--ease),
+    box-shadow 260ms var(--ease),
+    transform 140ms var(--ease);
 }
-.dial-btn svg { width: 64px; height: 64px; color: var(--accent-strong); transition: color 200ms var(--ease), transform 160ms var(--ease); }
+.dial-btn svg { width: 64px; height: 64px; color: var(--accent-strong); transition: color 240ms var(--ease), transform 180ms var(--ease); }
 .dial-btn:active { transform: scale(0.95); background: #151a20; border-color: var(--accent-line); }
 .dial-btn:active svg { transform: scale(0.92); }
 .dial-btn:disabled { opacity: 0.8; }
@@ -384,9 +384,9 @@ main {
   opacity: 0;
   pointer-events: none;
   transition:
-    transform 250ms var(--ease-smooth-out),
-    width 250ms var(--ease-smooth-out),
-    opacity 160ms var(--ease);
+    transform 340ms var(--ease-smooth-out),
+    width 340ms var(--ease-smooth-out),
+    opacity 200ms var(--ease);
 }
 .tabbar.ind-ready .tab-ind { opacity: 1; }
 .tabbar button {
@@ -402,7 +402,7 @@ main {
   gap: 3px;
   color: var(--txt3);
   font-size: 12px;
-  transition: color 160ms var(--ease), transform 120ms var(--ease);
+  transition: color 220ms var(--ease), transform 140ms var(--ease);
 }
 .tabbar button:active { transform: scale(0.96); }
 .tabbar button svg { width: 22px; height: 22px; }
@@ -420,7 +420,7 @@ main {
   border-radius: var(--r-md);
   font-size: 15px;
   font-weight: 650;
-  transition: transform 120ms var(--ease), background-color 140ms var(--ease), opacity 140ms var(--ease);
+  transition: transform 160ms var(--ease), background-color 200ms var(--ease), opacity 200ms var(--ease);
 }
 .primary { background: var(--accent); color: #08111f; box-shadow: 0 1px 2px rgb(0 0 0 / 0.3); }
 .primary:active { transform: scale(0.985); background: var(--accent-hi); }
@@ -435,7 +435,7 @@ main {
   font-size: 13px;
   color: var(--txt2);
   box-shadow: inset 0 0 0 1px var(--line-strong);
-  transition: background-color 140ms var(--ease), color 140ms var(--ease), transform 120ms var(--ease);
+  transition: background-color 180ms var(--ease), color 180ms var(--ease), transform 140ms var(--ease);
 }
 .chip:active { background: rgb(255 255 255 / 0.05); transform: scale(0.97); }
 .chip.brand { color: var(--accent-strong); box-shadow: inset 0 0 0 1px var(--accent-line); }
@@ -511,7 +511,7 @@ main {
   min-height: 64px;
 }
 .dest.flat { min-height: 56px; }
-.dest { transition: background-color 140ms var(--ease), transform 120ms var(--ease); }
+.dest { transition: background-color 180ms var(--ease), transform 160ms var(--ease); }
 .dest:active { background: var(--panel-hi); transform: scale(0.995); }
 .dest .k { grid-column: 1; font-size: 12px; line-height: 1.3; color: var(--txt3); }
 .dest .v { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; min-width: 0; }
@@ -538,7 +538,7 @@ main {
   padding: 8px 2px;
   line-height: 1.25;
   background: var(--panel);
-  transition: background-color 140ms var(--ease);
+  transition: background-color 180ms var(--ease);
 }
 .sstat:active { background: var(--panel-hi); }
 .sstat i { font-style: normal; font-size: 12px; line-height: 1.25; color: var(--txt3); }
@@ -565,13 +565,13 @@ main {
   width: 34%;
   height: 2px;
   background: var(--accent-strong);
-  animation: run-sweep 1.35s var(--ease) infinite;
+  animation: run-sweep 2s var(--ease) infinite;
 }
 @keyframes run-sweep {
   from { transform: translateX(-110%); }
   to { transform: translateX(390%); }
 }
-.run .second { animation: toast-in 180ms var(--ease-smooth-out) both; }
+.run .second { animation: toast-in 220ms var(--ease-smooth-out) both; }
 .rowlink {
   display: flex;
   align-items: center;
@@ -584,7 +584,7 @@ main {
   box-shadow: inset 0 0 0 1px var(--line);
   text-align: start;
 }
-.rowlink { transition: background-color 140ms var(--ease), transform 120ms var(--ease); }
+.rowlink { transition: background-color 180ms var(--ease), transform 160ms var(--ease); }
 .rowlink:active { background: var(--panel-hi); transform: scale(0.995); }
 .rowlink .rl-t { font-size: 14px; font-weight: 600; color: var(--txt); }
 .rowlink .rl-s { flex: 1; min-width: 0; font-size: 12px; color: var(--txt3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -669,13 +669,13 @@ main {
   border-radius: 50%;
   box-shadow: inset 0 0 0 1px var(--line-strong);
   color: transparent;
-  transition: background-color 160ms var(--ease), box-shadow 160ms var(--ease), color 160ms var(--ease);
+  transition: background-color 200ms var(--ease), box-shadow 200ms var(--ease), color 200ms var(--ease);
 }
 .opt .check svg { width: 13px; height: 13px; }
 .opt[aria-selected="true"] .check { background: var(--accent-bg); box-shadow: inset 0 0 0 1px var(--accent-line); color: var(--accent-strong); }
-.opt[aria-selected="true"] .check svg { animation: check-in 180ms var(--ease-smooth-out) both; }
+.opt[aria-selected="true"] .check svg { animation: check-in 220ms var(--ease-smooth-out) both; }
 @keyframes check-in { from { transform: scale(0.7); } to { transform: scale(1); } }
-.opt { transition: background-color 140ms var(--ease); }
+.opt { transition: background-color 180ms var(--ease); }
 .opt:active { background: var(--panel-hi); }
 .apps-list.mode-all .opt .check { opacity: 0.35; }
 
@@ -723,7 +723,7 @@ main {
   border-radius: var(--r-md);
   background: var(--panel-hi);
   box-shadow: 0 14px 34px rgb(0 0 0 / 0.55), inset 0 0 0 1px var(--line-strong);
-  animation: toast-in 200ms var(--ease-smooth-out) both;
+  animation: toast-in 240ms var(--ease-smooth-out) both;
 }
 @keyframes toast-in { from { opacity: 0; } to { opacity: 1; } }
 .toast.err { box-shadow: 0 14px 34px rgb(0 0 0 / 0.55), inset 0 0 0 1px var(--red-line); }
@@ -744,7 +744,7 @@ main {
 }
 
 /* ---------------------------------------------------------------- sheet */
-.sheet-back { position: fixed; inset: 0; z-index: 50; background: rgb(0 0 0 / 0.55); animation: veil-in 180ms ease both; }
+.sheet-back { position: fixed; inset: 0; z-index: 50; background: rgb(0 0 0 / 0.55); animation: veil-in 220ms ease both; }
 @keyframes veil-in { from { opacity: 0; } to { opacity: 1; } }
 .sheet {
   position: fixed;

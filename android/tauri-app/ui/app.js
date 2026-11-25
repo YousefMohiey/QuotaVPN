@@ -1030,7 +1030,7 @@ function closeSheet() {
   if (cb) cb.setAttribute("aria-expanded", "false");
   const sh = $("sheet");
   sh.classList.remove("open");
-  sheetHideT = setTimeout(() => { sh.hidden = true; $("sheet-back").hidden = true; }, 200);
+  sheetHideT = setTimeout(() => { sh.hidden = true; $("sheet-back").hidden = true; }, 260);
 }
 const connBtn = $("conn-btn");
 if (connBtn) {
