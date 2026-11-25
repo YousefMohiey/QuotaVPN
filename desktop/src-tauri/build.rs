@@ -5,7 +5,33 @@
 //! data, which is exactly how Explorer ends up showing a pixelated icon.
 //! Degrades to a warning, never a build failure, if no resource compiler
 //! is found.
-use std::{env, fs, path::PathBuf};
+use std::{env, fs, path::Path, path::PathBuf};
+
+/// The short commit, found through PATH first and the usual Git for Windows
+/// location second. The Tauri build can strip PATH down far enough that plain
+/// `git` is missing; falling back to "dev" there gives the updater no identity
+/// and makes it re-offer the same release forever.
+fn git_stamp(root: &Path) -> Option<String> {
+    let mut candidates = vec!["git".to_string()];
+    if cfg!(windows) {
+        candidates.push(r"C:\Program Files\Git\cmd\git.exe".to_string());
+    }
+    for git in candidates {
+        let output = std::process::Command::new(git)
+            .args(["rev-parse", "--short", "HEAD"])
+            .current_dir(root)
+            .output();
+        if let Ok(out) = output {
+            if out.status.success() {
+                let stamp = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                if !stamp.is_empty() {
+                    return Some(stamp);
+                }
+            }
+        }
+    }
+    None
+}
 
 fn main() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
@@ -17,14 +43,11 @@ fn main() {
     // against the feed's "build" field. Falls back to "dev" (git missing,
     // not a checkout), and a dev build is never offered a same-version
     // update because it has no identity to compare.
-    let stamp = std::process::Command::new("git")
-        .args(["rev-parse", "--short", "HEAD"])
-        .current_dir(&root)
-        .output()
+    let stamp = env::var("QC_BUILD")
         .ok()
-        .filter(|o| o.status.success())
-        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-        .filter(|s| !s.is_empty())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_hexdigit()))
+        .or_else(|| git_stamp(&root))
         .unwrap_or_else(|| "dev".to_string());
     println!("cargo:rustc-env=QC_BUILD={stamp}");
     // Re-read the stamp whenever either side of the ref moves: the HEAD file

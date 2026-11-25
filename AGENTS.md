@@ -84,8 +84,10 @@ Windows, run from git-bash. The toolchain this project was developed against:
   `releases/latest/download/latest.json`. Ship both platforms at the same version. The feed also
   carries a `build` stamp (short git hash, written by the publish scripts) so a re-release under
   the same version number still reaches installed apps; commit the bump before creating the
-  release (the tag follows the remote default branch). Confirm the stamp landed: the short hash
-  must appear in the built `release/QuotaVPN.exe` (the setup exe is compressed). A stale
+  release (the tag follows the remote default branch). Set `QC_BUILD` to the same short hash for
+  the Windows build; `build.rs` accepts it first and then searches PATH and Git for Windows for
+  `git`. Confirm the stamp landed: the short hash must appear in the built `release/QuotaVPN.exe`
+  (the setup exe is compressed), and a build that reports `dev` must not be published. A stale
   stamp makes every install re-offer the same release.
 - **Secrets** (keystore, updater key and passwords, the server private key in
   `%APPDATA%/quotacards/config.json`) never enter the repo and never get printed.
