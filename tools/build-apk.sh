@@ -58,6 +58,16 @@ export AR_aarch64_linux_android="$NDK/toolchains/llvm/prebuilt/windows-x86_64/bi
 # The APK packs gen/android/app/src/main/assets - keep it in step with ui/.
 bash "$ROOT/tools/sync-mobile-assets.sh"
 
+# `tauri android init` writes the Tauri template icon into the generated
+# mipmaps. Replace them from the tracked QuotaVPN icon every build so the
+# launcher icon can never silently revert to the default.
+PYTHON_BIN="$(command -v python || command -v python3 || true)"
+if [ -z "$PYTHON_BIN" ]; then
+  echo "python not found; cannot refresh the Android launcher icons" >&2
+  exit 1
+fi
+"$PYTHON_BIN" "$ROOT/tools/android-icons.py"
+
 cd "$ROOT/android/tauri-app/src-tauri"
 node ../../tauri-cli-npm/node_modules/@tauri-apps/cli/tauri.js android build -t "$TARGET" --apk
 
@@ -77,7 +87,6 @@ UNSIGNED="$ROOT/android/tauri-app/src-tauri/gen/android/app/build/outputs/apk/un
 # The tool verifies both conditions and exits non-zero rather than writing a package
 # Android would refuse.
 STRIP="$NDK/toolchains/llvm/prebuilt/windows-x86_64/bin/llvm-strip.exe"
-PYTHON_BIN="$(command -v python || command -v python3 || true)"
 if [ -x "$STRIP" ] && [ -n "$PYTHON_BIN" ]; then
   "$PYTHON_BIN" "$ROOT/tools/apk-strip.py" "$(cygpath -w "$UNSIGNED")" "$STRIP" || {
     echo "PACKAGING FAILED: could not strip the native libraries safely" >&2

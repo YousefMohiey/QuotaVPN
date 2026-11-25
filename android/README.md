@@ -18,7 +18,15 @@ bash tools/build-apk.sh
 
 That sets the toolchain env, syncs the shared assets, builds, zipaligns and signs with the release keystore, then verifies the signature. Output: `android/QuotaVPN-mobile-signed.apk`.
 
+It also runs `tools/android-icons.py` before Gradle. `tauri android init` writes the Tauri template icon into the generated mipmaps, so that step restores the QuotaVPN launcher icon every build.
+
 Needs Rust stable with the Android targets, an Android SDK with platform 36 and NDK 28.2, and a JDK 17 or newer (JDK 23 is what this host builds with). The script picks the newest installed build-tools, so 35 and 36 both work. Go and gomobile are only needed when regenerating `libbox.aar`.
+
+For a local x86_64 emulator, keep the release APK untouched:
+
+```bash
+TARGET=x86_64 OUT_NAME=QuotaVPN-mobile-x86_64.apk bash tools/build-apk.sh
+```
 
 ## Updates
 

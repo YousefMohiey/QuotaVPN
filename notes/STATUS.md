@@ -24,14 +24,17 @@
 >
 > **0.7.3 note:** the delayed WebView2 suspend now rechecks the current memory state after its
 > grace period. A rapid minimize and restore can no longer be suspended after the resume, which
-> is what left a white window. 0.7.3 is the current release.
+> is what left a white window. 0.7.3 was replaced by 0.7.4; its release and tag were removed.
 >
-> **0.7.3 phone note:** the Android app is 0.7.3 with a new black-glass UI: a central power ring
-> with the route pill above it, a live session strip, a signal field on Speed, letter tiles in
-> Apps, and one floating navigation bar. The build gate that `lan_ctrl` opened on Android is
-> closed; the phone still uses the legacy SSH path behind `legacy-ssh`. The phone updater now
-> scans releases for the newest one that actually carries `QuotaVPN-mobile-signed.apk`, instead
-> of trusting the newest Windows release.
+> **0.7.4 note:** 0.7.4 replaces the withdrawn 0.7.3. It restores the phone UI that shipped
+> before the 0.7.3 rebuild, with the fixes that were actually needed: the settings and speed
+> columns scroll instead of shrinking (that flex shrink was the overlap and clipped text on short
+> screens), the session strip wraps, the selection caret is gone, the four-cell speed grid becomes
+> 2x2 on very narrow phones, the display face is Archivo like the desktop, and the launcher icon
+> is the QuotaVPN mark again. `tools/android-icons.py` now writes the mipmaps on every build,
+> because `tauri android init` had put the Tauri template icon there. The phone updater still
+> scans for the newest release that carries the APK. The Windows build carries the white-window
+> fix from 0.7.3 and the Npcap fix from 0.7.2.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.

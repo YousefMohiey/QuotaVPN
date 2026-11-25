@@ -26,7 +26,8 @@ Egypt-proof UDP transport. The phone still runs stock libbox and cannot speak AW
 - `android/tauri-app/` - Tauri 2 Android app, Kotlin `VpnService`, phone UI in `ui/`
   (vanilla HTML/CSS/JS, not React).
 - `android/tauri-plugin-qctunnel/` - the native tunnel plugin, ships `libs/libbox.aar` (27 MB, prebuilt, do not delete).
-- `tools/` - `make-icons.py` (all icon sets, desktop + android), `build-apk.sh`, `sync-mobile-assets.sh`.
+- `tools/` - `make-icons.py` (all icon sets, desktop + android), `android-icons.py` (the Android
+  launcher mipmaps, run by `build-apk.sh`), `build-apk.sh`, `sync-mobile-assets.sh`.
 - `docs/` - `STATUS.md` tracks the current state; read it first.
 
 ## Build and verify
@@ -75,7 +76,7 @@ Windows, run from git-bash. The toolchain this project was developed against:
   built exe for the dependency before it publishes.
 - **Version lives in four files**: `desktop/src-tauri/{tauri.conf.json,Cargo.toml}` and
   `android/tauri-app/src-tauri/{tauri.conf.json,Cargo.toml}`. A normal release bumps all four
-  together. The desktop and the phone are both 0.7.3. The phone still compiles the legacy SSH
+  together. The desktop and the phone are both 0.7.4. The phone still compiles the legacy SSH
   control plane (`legacy-ssh`) until its own credential migration lands; do not bump the phone
   to a version that has no tested APK behind it.
 - **Releases**: bump, build the installer and the APK, then publish the GitHub release with the
@@ -156,17 +157,22 @@ answer true because there is nothing to install. The release job fails if the bi
 
 ## Current state
 
-**The latest published release is v0.7.3, Windows and Android.** This tree carries the 0.7.0
+**The latest published release is v0.7.4, Windows and Android.** This tree carries the 0.7.0
 credential migration (`notes/HANDOFF-2026-11-22.md`): the desktop imports a server-issued `qv1:`
 secret into a DPAPI-sealed per-card store (`qc1:` is still accepted), talks to the card API over
-HTTPS, and no longer compiles the SSH control plane. The phone is 0.7.3 too; its
+HTTPS, and no longer compiles the SSH control plane. The phone is 0.7.4 too; its
 `server.rs`/`ssh.rs` path is still behind `legacy-ssh`. The release carries the Windows setup
-`QuotaVPN_0.7.3_x64-setup.exe` and the phone APK `QuotaVPN-mobile-signed.apk` (the name the phone
-updater looks for). The standalone `QuotaVPN.exe` is no longer uploaded as a release asset. The
-phone UI is the 2026 black-glass rebuild: a central power ring, a live session strip, a signal
-field on Speed, and one floating navigation bar. The Network page ships in the Windows build,
-carried by the layer-2 relay. 0.7.3 fixes the white window after a rapid minimize and restore;
-0.7.2 fixes Npcap detection without WinPcap-compatible mode; 0.7.1 and 0.7.0 remain published.
+`QuotaVPN_0.7.4_x64-setup.exe` and the phone APK `QuotaVPN-mobile-signed.apk` (the name the phone
+updater looks for). The standalone `QuotaVPN.exe` is not uploaded as a release asset.
+
+0.7.4 restores the phone UI that shipped before the rejected 0.7.3 rebuild. It is the same dark
+charcoal layout, now with the desktop's Archivo display face, scroll-safe settings and speed
+columns (the old flex columns used to shrink and clip at short heights), a wrapping session strip,
+no text selection caret, and the QuotaVPN launcher icon. The four speed cells become 2x2 on very
+narrow phones. Motion is limited to a short page fade, the sheet slide and the press states. The
+0.7.3 release and tag were removed. 0.7.4 carries the white-window fix from 0.7.3 and the Npcap fix
+from 0.7.2; 0.7.1 and 0.7.0 remain published. The Network page ships in the Windows build, carried
+by the layer-2 relay.
 
 `notes/HANDOFF-2026-11-16.md` is the change log from 0.6.5 to 0.6.17. The Windows installer is
 built locally on this PC and signed with the updater key at `C:/Tools/qc-updater.key`;
