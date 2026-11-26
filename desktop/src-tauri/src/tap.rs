@@ -29,7 +29,6 @@ const FILE_FLAG_OVERLAPPED: u32 = 0x4000_0000;
 const ERROR_IO_PENDING: u32 = 997;
 const INFINITE: u32 = 0xFFFF_FFFF;
 
-const TAP_IOCTL_GET_VERSION: u32 = 0x0022_0008;
 const TAP_IOCTL_GET_MTU: u32 = 0x0022_000C;
 const TAP_IOCTL_SET_MEDIA_STATUS: u32 = 0x0022_0018;
 
@@ -114,7 +113,6 @@ pub fn marker_path() -> PathBuf {
 pub struct TapIo {
     handle: isize,
     name: String,
-    mac: [u8; 6],
     pending: Option<PendingRead>,
 }
 
@@ -141,7 +139,6 @@ impl TapIo {
         let io = Self {
             handle,
             name,
-            mac,
             pending: None,
         };
         // The adapter only gets a network profile once the media is up.
@@ -156,10 +153,6 @@ impl TapIo {
 
     pub fn name(&self) -> &str {
         &self.name
-    }
-
-    pub fn mac(&self) -> [u8; 6] {
-        self.mac
     }
 
     fn start_read(&mut self) -> Result<(), String> {
@@ -331,27 +324,32 @@ fn open(path: &str) -> Result<isize, String> {
             unsafe { GetLastError() }
         ));
     }
+    // A TAP adapter answers this with its frame size. Asking for the version
+    // instead returns ERROR_INSUFFICIENT_BUFFER on 9.27.0 when the output
+    // buffer is only four bytes.
+    let mut output = [0u8; 16];
     let mut returned = 0u32;
-    let mut version = 0u32;
     let ok = unsafe {
         DeviceIoControl(
             handle,
-            TAP_IOCTL_GET_VERSION,
+            TAP_IOCTL_GET_MTU,
             std::ptr::null(),
             0,
-            &mut version as *mut u32 as *mut u8,
-            4,
+            output.as_mut_ptr(),
+            output.len() as u32,
             &mut returned,
             std::ptr::null_mut(),
         )
     };
     if ok == 0 {
+        let error = unsafe { GetLastError() };
         unsafe {
             CloseHandle(handle);
         }
-        return Err("the Spaces adapter is not a TAP-Windows6 device".into());
+        return Err(format!(
+            "the Spaces adapter is not a TAP-Windows6 device ({error})"
+        ));
     }
-    let _ = version;
     Ok(handle)
 }
 
@@ -399,7 +397,7 @@ fn resolve_guid() -> Result<String, String> {
 
 fn adapter_exists(guid: &str) -> bool {
     run_powershell(&format!(
-        "$a = Get-NetAdapter -InterfaceGuid '{{{guid}}}' -ErrorAction SilentlyContinue; if (-not $a) {{ 'no' }} else {{ 'yes' }}"
+        "$g = '{{{guid}}}'; $a = Get-NetAdapter | Where-Object {{ \"$($_.InterfaceGuid)\" -eq $g }}; if ($a) {{ 'yes' }} else {{ 'no' }}"
     ))
     .map(|out| out.trim() == "yes")
     .unwrap_or(false)
@@ -407,11 +405,15 @@ fn adapter_exists(guid: &str) -> bool {
 
 fn first_tap_adapter() -> Result<String, String> {
     let out = run_powershell(
-        "$a = Get-NetAdapter | Where-Object { $_.InterfaceDescription -like '*TAP-Windows*' } | Sort-Object ifIndex | Select-Object -First 1; if (-not $a) { '' } else { $a.InterfaceGuid }",
+        "$all = @(Get-NetAdapter | Where-Object { $_.InterfaceDescription -like '*TAP-Windows*' }); \
+         $ours = $all | Where-Object { $_.Name -like 'QuotaSpace*' } | Sort-Object ifIndex | Select-Object -First 1; \
+         if ($ours) { $ours.InterfaceGuid } elseif ($all.Count -eq 1) { $all[0].InterfaceGuid } else { '' }",
     )?;
     let guid = out.trim().trim_matches('{').trim_matches('}').to_string();
     if guid.is_empty() {
-        return Err("the Spaces layer-2 adapter is not installed; run the QuotaVPN installer again".into());
+        return Err(
+            "the Spaces layer-2 adapter is not installed; run the QuotaVPN installer again".into(),
+        );
     }
     Ok(guid)
 }
@@ -426,7 +428,9 @@ fn configure(guid: &str, mac: [u8; 6], address: &str, mtu: u32) -> Result<(Strin
     let ip = address.split('/').next().unwrap_or(address).trim();
     let script = format!(
         "$ErrorActionPreference='Stop'; \
-         $a = Get-NetAdapter -InterfaceGuid '{{{guid}}}' -ErrorAction Stop; \
+         $g = '{{{guid}}}'; \
+         $a = Get-NetAdapter | Where-Object {{ \"$($_.InterfaceGuid)\" -eq $g }} | Select-Object -First 1; \
+         if (-not $a) {{ throw 'the Spaces adapter was not found' }}; \
          $name = $a.Name; \
          if ($name -notlike 'QuotaSpace*') {{ \
            $taken = Get-NetAdapter -Name 'QuotaSpaceLAN' -ErrorAction SilentlyContinue; \
@@ -457,8 +461,7 @@ fn set_private(ifindex: i32) {
     ));
 }
 
-fn run_powershell(script: &str) -> Result<String, String> {
-    let output = Command::new("powershell")
+fn run_powershell(script: &str) -> Result<String, String> {    let output = Command::new("powershell")
         .args([
             "-NoProfile",
             "-NonInteractive",
@@ -481,4 +484,34 @@ fn run_powershell(script: &str) -> Result<String, String> {
         return Err(format!("the Spaces adapter command failed: {detail}"));
     }
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Runs only on a machine with the adapter installed and an elevated shell,
+    /// so it is ignored by default. It proves the Rust path that the engine
+    /// uses: configure, media up, read a frame the OS sends by itself.
+    #[test]
+    #[ignore]
+    fn the_adapter_comes_up_and_carries_a_frame() {
+        let mut io = TapIo::new([0x02, 0x51, 0x56, 0x00, 0x00, 0x01], "10.77.99.2/24", 1380)
+            .expect("the Spaces adapter");
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(4);
+        let mut frames = 0;
+        while std::time::Instant::now() < deadline {
+            match io.try_read() {
+                Ok(Some(frame)) => {
+                    if frame.len() >= 14 {
+                        frames += 1;
+                        break;
+                    }
+                }
+                Ok(None) => std::thread::sleep(std::time::Duration::from_millis(10)),
+                Err(error) => panic!("read: {error}"),
+            }
+        }
+        assert!(frames > 0, "no frame arrived from the adapter");
+    }
 }

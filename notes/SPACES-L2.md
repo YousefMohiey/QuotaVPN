@@ -88,6 +88,8 @@ Install shape (all confirmed in M0):
 - NSIS hook, elevated (the manifest already asks for it):
   `devcon.exe install OemVista.inf TAP0901`. No reboot, no trust prompt, because
   the package is signed by Microsoft Windows Hardware Compatibility Publisher.
+  One adapter per install, named `QuotaSpaceLAN`; the engine renames it if the
+  driver install left the default name.
 - Never reuse an adapter that OpenVPN or another product installed. Install our
   own instance and record its GUID under `%APPDATA%\quotavpn\spaces_tap.txt`.
 - Uninstall: `devcon.exe remove TAP0901`, then `pnputil /delete-driver
@@ -225,6 +227,42 @@ for M1.
   per machine.
 
 The probe is `tools/tap-probe.ps1`. It is a diagnostic, not shipped code.
+
+## Progress (26 November 2026)
+
+M0 is done. The driver package, the install and remove commands, and the traps
+are recorded above.
+
+The first code slice is in the tree:
+
+- `desktop/src-tauri/src/tap.rs` opens the recorded adapter, sets the MAC, MTU
+  and address, brings the media up, sets the profile to Private, and implements
+  `PacketIo`. It leaves other products' TAP adapters alone: the GUID is recorded
+  in `spaces_tap.txt`, and a fallback only adopts the sole TAP adapter.
+- `src/spaces_switch.rs` is the learning switch, with tests for unicast,
+  flooding, spoofing, duplicates, control frames and the rate limit.
+- `src/spaces.rs` carries `mode` (`l3` or `l2`) and derives each member's MAC
+  from its id as `02:51:56:xx:xx:xx`.
+- `desktop/src-tauri/src/spaces_direct.rs` picks the TAP adapter and the switch
+  when the space is `l2`, and keeps Wintun plus the old loop for `l3`.
+- `embed/qc-spaces.py` stores and returns `mode`, returns each member's MAC, and
+  has `POST /v1/spaces/{id}/mode` for the owner. The desktop command is
+  `space_set_mode`.
+
+The ignored test `tap::tests::the_adapter_comes_up_and_carries_a_frame` was run
+on this PC against a real adapter and passed, so the Rust device path is proven,
+not just the PowerShell probe.
+
+Still open before this is a usable release:
+
+1. Multi-peer sessions. The switch already takes a peer list; `start` still
+   connects one peer. The next step is to reuse the rendezvous and punch for
+   every online member and hand the vector to the switch.
+2. Installer: ship the driver, create the adapter with `devcon`, name it
+   `QuotaSpaceLAN`, record the GUID, and remove it on uninstall.
+3. UI: show the mode, the adapter and the MAC on the Spaces page, and let the
+   owner switch a space to `l2`.
+4. The application matrix from M4.
 
 ## Milestones
 
