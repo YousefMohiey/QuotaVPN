@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS spaces (
     invite_hash TEXT NOT NULL,
     pass_salt TEXT NOT NULL DEFAULT '',
     pass_hash TEXT NOT NULL DEFAULT '',
+    mode TEXT NOT NULL DEFAULT 'l3',
     created INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS members (
@@ -107,6 +108,12 @@ def new_token():
     return secrets.token_hex(32)
 
 
+def member_mac(member_id):
+    """Must match member_mac in src/spaces.rs: 02:51:56 plus 3 hash bytes."""
+    digest = hashlib.sha256(b"quota-spaces-mac-v1" + member_id.encode()).digest()
+    return "02:51:56:%02x:%02x:%02x" % (digest[0], digest[1], digest[2])
+
+
 def valid_public_key(text):
     try:
         raw = base64.b64decode(text.strip(), validate=True)
@@ -129,6 +136,12 @@ class Store:
         self.db = sqlite3.connect(path, check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         self.db.executescript(SCHEMA)
+        # Older databases predate the layer-2 mode column.
+        columns = {row["name"] for row in self.db.execute("PRAGMA table_info(spaces)")}
+        if "mode" not in columns:
+            self.db.execute(
+                "ALTER TABLE spaces ADD COLUMN mode TEXT NOT NULL DEFAULT 'l3'"
+            )
         self.db.commit()
         self.create_hits = {}
         self.join_fails = {}
@@ -383,6 +396,7 @@ class Store:
             "online": bool(online),
             "self_pc": row["id"] == caller_id,
             "owner": row["id"] == owner_id,
+            "mac": member_mac(row["id"]),
             "last_seen": row["last_seen"],
         }
 
@@ -403,6 +417,7 @@ class Store:
             "id": row["id"],
             "name": row["name"],
             "subnet": f"{SUBNET_BASE}.{row['subnet']}.0/24",
+            "mode": row["mode"] if "mode" in row.keys() else "l3",
         }
 
     def _audit(self, space_id, member_id, action):
@@ -413,9 +428,12 @@ class Store:
 
     # ---------- actions ----------
 
-    def create(self, name, password, device_name, public_key, source):
+    def create(self, name, password, device_name, public_key, source, mode="l3"):
         name = (name or "").strip()
         device_name = (device_name or "").strip()
+        mode = (mode or "l3").strip().lower()
+        if mode not in ("l3", "l2"):
+            return 400, {"error": "the space mode must be l2 or l3"}
         if not valid_name(name):
             return 400, {"error": "give the space a name of 1 to 40 characters"}
         if not valid_name(device_name):
@@ -443,7 +461,7 @@ class Store:
             try:
                 self.db.execute(
                     "INSERT INTO spaces (id, name, subnet, owner, invite_hash, "
-                    "pass_salt, pass_hash, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    "pass_salt, pass_hash, mode, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (
                         space_id,
                         name,
@@ -452,6 +470,7 @@ class Store:
                         invite_hash(space_id, secret),
                         salt,
                         pass_hash(password, salt),
+                        mode,
                         created,
                     ),
                 )
@@ -482,6 +501,7 @@ class Store:
                 "id": space_id,
                 "name": name,
                 "subnet": f"{SUBNET_BASE}.{subnet}.0/24",
+                "mode": mode,
             },
             "member": {
                 "id": member_id,
@@ -784,6 +804,20 @@ class Store:
             self.db.commit()
         return 200, {"invite": f"qvs1:{space['id']}:{secret}"}
 
+    def set_mode(self, member, space, mode):
+        if space["owner"] != member["id"]:
+            return 403, {"error": "only the owner can change the space mode"}
+        mode = (mode or "").strip().lower()
+        if mode not in ("l3", "l2"):
+            return 400, {"error": "the space mode must be l2 or l3"}
+        with self.lock:
+            self.db.execute(
+                "UPDATE spaces SET mode = ? WHERE id = ?", (mode, space["id"])
+            )
+            self._audit(space["id"], member["id"], "mode")
+            self.db.commit()
+        return 200, {"mode": mode}
+
     def delete(self, member, space):
         if space["owner"] != member["id"]:
             return 403, {"error": "only the owner can delete the space"}
@@ -878,6 +912,7 @@ class Handler(BaseHTTPRequestHandler):
                 body.get("device_name", ""),
                 body.get("public_key", ""),
                 self._source(),
+                body.get("mode", "l3"),
             )
             return self._send(code, payload)
         if parts == ["v1", "spaces", "join"]:
@@ -924,6 +959,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(code, payload)
             if action == "invite":
                 code, payload = self.store.rotate_invite(member, space)
+                return self._send(code, payload)
+            if action == "mode":
+                code, payload = self.store.set_mode(
+                    member, space, body.get("mode", "")
+                )
                 return self._send(code, payload)
         return self._send(404, {"error": "not found"})
 

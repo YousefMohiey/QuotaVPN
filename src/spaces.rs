@@ -26,6 +26,9 @@ pub struct SpaceMember {
     pub self_pc: bool,
     #[serde(default)]
     pub owner: bool,
+    /// The member's Ethernet address on a layer-2 space, `02:51:56:..`.
+    #[serde(default)]
+    pub mac: String,
     #[serde(default)]
     pub last_seen: i64,
 }
@@ -52,6 +55,9 @@ pub struct SpaceRecord {
     pub hub_port: u16,
     #[serde(default)]
     pub owner: bool,
+    /// `l3` or `l2`. Empty means the record predates the field and is layer 3.
+    #[serde(default)]
+    pub mode: String,
     /// Invite code, kept only on the owner's install so it can be shown again.
     #[serde(default)]
     pub invite: String,
@@ -75,6 +81,30 @@ impl SpaceRecord {
         };
         tunnel.valid().ok().map(|_| tunnel)
     }
+
+    /// True when this space carries Ethernet frames instead of IP packets.
+    pub fn layer2(&self) -> bool {
+        self.mode.eq_ignore_ascii_case("l2")
+    }
+
+    /// The Ethernet address this member uses on a layer-2 space. Derived from
+    /// the member id, so every PC computes the same value without a round trip
+    /// and the locally administered prefix keeps it out of vendor space.
+    pub fn mac(&self) -> [u8; 6] {
+        member_mac(&self.member_id)
+    }
+}
+
+/// `02:51:56:` plus three bytes of the member id. A space with 16 members has a
+/// collision chance of about one in a million; the coordinator can reject a
+/// duplicate and reissue the id if that ever happens.
+pub fn member_mac(member_id: &str) -> [u8; 6] {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(b"quota-spaces-mac-v1");
+    hasher.update(member_id.as_bytes());
+    let digest = hasher.finalize();
+    [0x02, 0x51, 0x56, digest[0], digest[1], digest[2]]
 }
 
 /// The minimum needed to add a space endpoint to an engine config.
@@ -326,6 +356,14 @@ mod tests {
         t.address = "10.77.7.9/32".into();
         t.subnet = "10.77.7.0/16".into();
         assert!(t.valid().is_err());
+    }
+
+    #[test]
+    fn a_member_mac_is_stable_and_locally_administered() {
+        let a = member_mac("abc123");
+        assert_eq!(a, member_mac("abc123"));
+        assert_eq!(&a[..3], &[0x02, 0x51, 0x56]);
+        assert_ne!(a, member_mac("abc124"));
     }
 
     #[test]

@@ -157,6 +157,8 @@ struct ApiSpace {
     id: String,
     name: String,
     subnet: String,
+    #[serde(default)]
+    mode: String,
 }
 
 #[derive(Deserialize)]
@@ -190,6 +192,8 @@ struct ApiMemberView {
     self_pc: bool,
     #[serde(default)]
     owner: bool,
+    #[serde(default)]
+    mac: String,
     #[serde(default)]
     last_seen: i64,
 }
@@ -324,8 +328,10 @@ fn record_from(
         online: true,
         self_pc: true,
         owner,
+        mac: String::new(),
         last_seen: spaces_now(),
     };
+    let mode = space.mode.clone();
     SpaceRecord {
         id: space.id,
         name: space.name,
@@ -342,6 +348,7 @@ fn record_from(
         invite,
         members: vec![self_member],
         last_seen: spaces_now(),
+        mode,
     }
 }
 
@@ -467,9 +474,51 @@ pub async fn space_join(
     }
 }
 
+/// Switch a space between IP routing (`l3`) and Ethernet (`l2`). The owner is
+/// the only one allowed to change it, and every member picks it up on the next
+/// refresh. A running engine keeps its mode until it is restarted.
 #[tauri::command]
-pub async fn space_refresh(
+pub async fn space_set_mode(
     state: tauri::State<'_, crate::State>,
+    id: String,
+    mode: String,
+) -> Result<SpacesState, String> {
+    let mode = mode.trim().to_ascii_lowercase();
+    if mode != "l2" && mode != "l3" {
+        return Err("the space mode must be l2 or l3".into());
+    }
+    let (token, path) = {
+        let cfg = state.0.lock().unwrap_or_else(|e| e.into_inner());
+        let record = cfg
+            .spaces
+            .iter()
+            .find(|s| s.id == id)
+            .ok_or("that space is not on this PC")?;
+        (
+            record.token.clone(),
+            format!("/v1/spaces/{}/mode", record.id),
+        )
+    };
+    if token.is_empty() {
+        return Err("this space has no access token; join it again".into());
+    }
+    call(
+        reqwest::Method::POST,
+        &path,
+        Some(&token),
+        Some(json!({ "mode": mode })),
+    )
+    .await?;
+    let mut cfg = state.0.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(record) = cfg.spaces.iter_mut().find(|s| s.id == id) {
+        record.mode = mode;
+    }
+    cfg.save();
+    Ok(snapshot(&cfg))
+}
+
+#[tauri::command]
+pub async fn space_refresh(    state: tauri::State<'_, crate::State>,
     id: String,
 ) -> Result<SpacesState, String> {
     refresh(&state, &id).await
@@ -497,6 +546,9 @@ pub(crate) async fn refresh(state: &crate::State, id: &str) -> Result<SpacesStat
     let mut cfg = state.0.lock().unwrap_or_else(|e| e.into_inner());
     if let Some(record) = cfg.spaces.iter_mut().find(|s| s.id.as_str() == id) {
         record.name = parsed.space.name;
+        if !parsed.space.mode.is_empty() {
+            record.mode = parsed.space.mode;
+        }
         record.subnet = if parsed.space.subnet.is_empty() {
             record.subnet.clone()
         } else {
@@ -516,6 +568,7 @@ pub(crate) async fn refresh(state: &crate::State, id: &str) -> Result<SpacesStat
                 online: m.online,
                 self_pc: m.self_pc,
                 owner: m.owner,
+                mac: m.mac,
                 last_seen: m.last_seen,
             })
             .collect();

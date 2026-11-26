@@ -31,6 +31,7 @@ mod router_remember;
 mod spaces;
 #[cfg(windows)]
 mod spaces_direct;
+mod tap;
 pub mod speed;
 #[cfg(windows)]
 mod wintun;
@@ -3894,6 +3895,7 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         spaces::space_delete,
         spaces::space_rotate,
         spaces::space_kick,
+        spaces::space_set_mode,
         spaces_direct::space_direct_start,
         spaces_direct::space_direct_stop,
         spaces_direct::space_direct_status,
@@ -3989,6 +3991,7 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         spaces::space_delete,
         spaces::space_rotate,
         spaces::space_kick,
+        spaces::space_set_mode,
         resolve_host,
         check_update,
         apply_update,

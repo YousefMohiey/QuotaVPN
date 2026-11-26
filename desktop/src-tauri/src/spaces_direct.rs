@@ -10,6 +10,7 @@
 
 use quotacards::spaces_forward;
 use quotacards::spaces_path::{self, PathIdentity};
+use quotacards::spaces_switch::{self, PeerLink};
 use serde::Serialize;
 use serde_json::Value;
 use socket2::{Domain, Protocol, Socket, Type};
@@ -22,6 +23,7 @@ use std::sync::{Arc, Mutex, Once};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
+use crate::tap::TapIo;
 use crate::wintun::WintunIo;
 
 const STUN: &[&str] = &[
@@ -85,6 +87,49 @@ pub struct DirectEngine {
     address: String,
     adapter: String,
     error: Arc<Mutex<Option<String>>>,
+}
+
+/// The adapter behind the engine. Layer-3 spaces keep Wintun; layer-2 spaces
+/// use TAP and the switch.
+enum Adapter {
+    Wintun(WintunIo),
+    Tap(TapIo),
+}
+
+impl quotacards::spaces_forward::PacketIo for Adapter {
+    fn try_read(&mut self) -> Result<Option<Vec<u8>>, String> {
+        match self {
+            Adapter::Wintun(io) => io.try_read(),
+            Adapter::Tap(io) => io.try_read(),
+        }
+    }
+
+    fn write(&mut self, packet: &[u8]) -> Result<(), String> {
+        match self {
+            Adapter::Wintun(io) => io.write(packet),
+            Adapter::Tap(io) => io.write(packet),
+        }
+    }
+}
+
+/// One Noise path, with the label the switch logs.
+struct DirectPeer {
+    label: String,
+    path: spaces_path::DirectPath,
+}
+
+impl PeerLink for DirectPeer {
+    fn label(&self) -> &str {
+        &self.label
+    }
+
+    fn send(&mut self, frame: &[u8]) -> Result<(), String> {
+        self.path.try_send(frame).map(|_| ())
+    }
+
+    fn try_recv(&mut self) -> Result<Option<Vec<u8>>, String> {
+        self.path.try_recv()
+    }
 }
 
 pub struct DirectState(pub Mutex<Option<DirectEngine>>);
@@ -407,7 +452,7 @@ pub async fn start(
         }
     }
 
-    let (token, path, private_key, self_id, address, space_id, owner) = {
+    let (token, path, private_key, self_id, address, space_id, owner, mode, mac) = {
         let cfg = state.0.lock().unwrap_or_else(|e| e.into_inner());
         let record = cfg
             .spaces
@@ -428,8 +473,12 @@ pub async fn start(
             record.address.clone(),
             record.id.clone(),
             record.owner,
+            record.mode.clone(),
+            record.mac(),
         )
     };
+    let l2 = mode.eq_ignore_ascii_case("l2")
+        || std::env::var("QC_SPACES_L2").map(|value| value == "1").unwrap_or(false);
     if address.is_empty() {
         return Err("this space has no local address".into());
     }
@@ -534,7 +583,7 @@ pub async fn start(
     // socket are what Radmin keeps. The punch recreates the mapping.
     helper_stop.store(true, Ordering::Relaxed);
     let _ = helper.join();
-    let (path, io) = tauri::async_runtime::spawn_blocking(move || {
+    let (path, mut io, adapter) = tauri::async_runtime::spawn_blocking(move || {
         let local = PathIdentity::from_private(&private_key)?;
         let public = spaces_path::decode_public(&peer_public)?;
         let local_port = listener
@@ -613,20 +662,40 @@ pub async fn start(
         } else {
             spaces_path::accept_tcp(stream, &local, &public, Duration::from_secs(8))?
         };
-        let io = WintunIo::new(&space_id, &address)?;
-        Ok::<_, String>((path, io))
+        let (adapter, name) = if l2 {
+            let tap = TapIo::new(mac, &address, 1380)?;
+            let name = tap.name().to_string();
+            (Adapter::Tap(tap), name)
+        } else {
+            let wintun = WintunIo::new(&space_id, &address)?;
+            let name = wintun.name().to_string();
+            (Adapter::Wintun(wintun), name)
+        };
+        Ok::<_, String>((path, adapter, name))
     })
     .await
     .map_err(|e| e.to_string())??;
 
-    let adapter = io.name().to_string();
+    let engine_peer = if peer_name.is_empty() {
+        peer_id.to_string()
+    } else {
+        peer_name.clone()
+    };
+    let thread_peer = engine_peer.clone();
     let stop = Arc::new(AtomicBool::new(false));
     let error = Arc::new(Mutex::new(None));
     let stop_for_thread = stop.clone();
     let error_for_thread = error.clone();
     let handle = std::thread::spawn(move || {
-        let mut io = io;
-        let result = spaces_forward::run(path, &mut io, &stop_for_thread);
+        let result = if l2 {
+            let mut peers: Vec<Box<dyn PeerLink>> = vec![Box::new(DirectPeer {
+                label: thread_peer,
+                path,
+            })];
+            spaces_switch::run(&mut io, &mut peers, mac, &stop_for_thread)
+        } else {
+            spaces_forward::run(path, &mut io, &stop_for_thread)
+        };
         if let Err(e) = &result {
             *error_for_thread
                 .lock()
@@ -639,11 +708,7 @@ pub async fn start(
         stop,
         handle: Some(handle),
         space: engine_space,
-        peer: if peer_name.is_empty() {
-            peer_id.to_string()
-        } else {
-            peer_name
-        },
+        peer: engine_peer,
         address: address_for_status,
         adapter: adapter.clone(),
         error,
