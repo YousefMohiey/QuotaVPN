@@ -116,6 +116,10 @@ impl Switch {
         if !self.shape(peer, frame) {
             return false;
         }
+        // A peer sending our own MAC is spoofing or looping.
+        if frame[6..12] == self.local {
+            return false;
+        }
         if self.duplicate(frame) {
             return false;
         }
@@ -187,9 +191,6 @@ impl Switch {
     /// Charge a frame to a peer's budget. Used for both directions.
     pub fn shape(&mut self, peer: usize, frame: &[u8]) -> bool {
         if frame.len() < HEADER || frame.len() > MAX_FRAME || link_only(frame) {
-            return false;
-        }
-        if frame[6..12] == self.local {
             return false;
         }
         match self.buckets.get_mut(peer) {
@@ -388,6 +389,12 @@ mod tests {
         assert_eq!(switch.route(&lldp), Route::Drop);
         let stp = frame([0x01, 0x80, 0xC2, 0x00, 0x00, 0x00], B, 2);
         assert!(!switch.accept_peer_frame(0, &stp));
+    }
+
+    #[test]
+    fn the_switch_accepts_its_own_adapters_frames() {
+        let mut switch = Switch::new(A, 1);
+        assert!(switch.shape(0, &frame([0xFF; 6], A, 1)));
     }
 
     #[test]
