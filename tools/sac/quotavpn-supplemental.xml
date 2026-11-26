@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Supplemental App Control policy that rides on the Smart App Control base
+  policy and allows the QuotaVPN payload by file name. Deploy with:
+
+    citool.exe -up quotavpn-supplemental.xml
+
+  Remove with:
+
+    citool.exe -rp {7C1D2C40-9C2B-4F0E-9E1B-51F0C7A6D001}
+
+  It only adds allows, so it can never block something that ran before.
+  The SAC base policy carries Enabled:Unsigned System Integrity Policy and
+  Enabled:Allow Supplemental Policies, which is what lets a supplement attach.
+
+  The policy still has to be signed, because the SAC base policy is signed, so
+  ConvertFrom-CIPolicy needs an UpdatePolicySigner. Any certificate works for
+  this. tools/sac/deploy-supplemental.ps1 does the whole sequence.
+-->
+<SiPolicy xmlns="urn:schemas-microsoft-com:sipolicy" PolicyType="Supplemental Policy">
+  <VersionEx>1.0.0.0</VersionEx>
+  <PlatformID>{2E07F7E4-194C-4D20-B7C9-6F44A6C5A234}</PlatformID>
+  <Rules><Rule><Option>Enabled:Audit Mode</Option></Rule></Rules>
+
+  <FileRules>
+    <Allow ID="ID_ALLOW_QC_APP" FileName="QuotaVPN.exe" MinimumFileVersion="0.0.0.0" MaximumFileVersion="9999.0.0.0" />
+    <Allow ID="ID_ALLOW_QC_ENGINE" FileName="sing-box.exe" MinimumFileVersion="0.0.0.0" MaximumFileVersion="9999.0.0.0" />
+    <Allow ID="ID_ALLOW_QC_DIVERT" FileName="WinDivert.dll" MinimumFileVersion="0.0.0.0" MaximumFileVersion="9999.0.0.0" />
+    <Allow ID="ID_ALLOW_QC_DIVERT_SYS" FileName="WinDivert64.sys" MinimumFileVersion="0.0.0.0" MaximumFileVersion="9999.0.0.0" />
+    <Allow ID="ID_ALLOW_QC_UNINSTALL" FileName="uninstall.exe" MinimumFileVersion="0.0.0.0" MaximumFileVersion="9999.0.0.0" />
+  </FileRules>
+
+  <Signers>
+    <!-- The TBS hash is filled in by deploy-supplemental.ps1 from the policy
+         certificate, so the file stays valid when the certificate is renewed. -->
+    <Signer ID="ID_SIGNER_QC" Name="QuotaVPN local test">
+      <CertRoot Type="TBS" Value="__POLICY_TBS__" />
+    </Signer>
+  </Signers>
+
+  <SigningScenarios>
+    <SigningScenario Value="131" ID="ID_SIGNINGSCENARIO_KM" FriendlyName="Kernel Mode Signing Scenario">
+      <ProductSigners>
+        <FileRulesRef>
+          <FileRuleRef RuleID="ID_ALLOW_QC_DIVERT_SYS" />
+        </FileRulesRef>
+      </ProductSigners>
+    </SigningScenario>
+    <SigningScenario Value="12" ID="ID_SIGNINGSCENARIO_UM" FriendlyName="User Mode Signing Scenario">
+      <ProductSigners>
+        <FileRulesRef>
+          <FileRuleRef RuleID="ID_ALLOW_QC_APP" />
+          <FileRuleRef RuleID="ID_ALLOW_QC_ENGINE" />
+          <FileRuleRef RuleID="ID_ALLOW_QC_DIVERT" />
+          <FileRuleRef RuleID="ID_ALLOW_QC_UNINSTALL" />
+        </FileRulesRef>
+      </ProductSigners>
+    </SigningScenario>
+  </SigningScenarios>
+
+  <UpdatePolicySigners>
+    <UpdatePolicySigner SignerId="ID_SIGNER_QC" />
+  </UpdatePolicySigners>
+
+  <BasePolicyID>{0283AC0F-FFF1-49AE-ADA1-8A933130CAD6}</BasePolicyID>
+  <PolicyID>{7C1D2C40-9C2B-4F0E-9E1B-51F0C7A6D001}</PolicyID>
+</SiPolicy>

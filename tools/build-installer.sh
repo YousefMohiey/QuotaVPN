@@ -43,3 +43,14 @@ else
 fi
 
 npx --yes @tauri-apps/cli@2 build "${CONFIG_ARGS[@]}" "$@"
+
+# The bundler signs the app binary and the installer. The payload DLLs have to
+# be signed here, and the installer is signed again once they are in place,
+# because a changed payload invalidates nothing on the installer but the order
+# keeps the shipped pair consistent. Only runs when a certificate is set.
+if [ -n "${QC_SIGN_THUMBPRINT:-}" ]; then
+  VERSION="$(node -p "require('./src-tauri/tauri.conf.json').version")"
+  SETUP="$(pwd)/src-tauri/target/release/bundle/nsis/QuotaVPN_${VERSION}_x64-setup.exe"
+  powershell -NoProfile -ExecutionPolicy Bypass -File "$(pwd)/../tools/sign-release.ps1" \
+    -Installer "$SETUP" -Thumbprint "$QC_SIGN_THUMBPRINT" -IncludeSigned
+fi
