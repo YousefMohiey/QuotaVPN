@@ -24,14 +24,12 @@ fn api_slot() -> &'static Mutex<String> {
 }
 
 /// Resolve the coordinator once at startup: the stored address first, then the
-/// environment for older installs, then the built-in default.
+/// built-in public default. A stale QC_SPACES_API from an old LAN test must not
+/// override the stored value, so the environment is not read here.
 pub(crate) fn init_api(cfg: &AppConfig) {
     let mut value = cfg.spaces_api.trim().trim_end_matches('/').to_string();
     if value.is_empty() {
-        value = std::env::var("QC_SPACES_API")
-            .ok()
-            .map(|s| s.trim().trim_end_matches('/').to_string())
-            .unwrap_or_default();
+        value = DEFAULT_API.to_string();
     }
     *api_slot().lock().unwrap_or_else(|e| e.into_inner()) = value;
 }
@@ -41,11 +39,7 @@ pub(crate) fn api_base() -> String {
     if !value.is_empty() {
         return value;
     }
-    std::env::var("QC_SPACES_API")
-        .ok()
-        .map(|s| s.trim().trim_end_matches('/').to_string())
-        .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| DEFAULT_API.to_string())
+    DEFAULT_API.to_string()
 }
 
 fn normalize_api(url: &str) -> Result<String, String> {

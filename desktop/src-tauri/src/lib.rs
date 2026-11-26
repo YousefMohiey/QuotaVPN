@@ -4679,15 +4679,12 @@ pub fn run() {
             // over, nothing to re-enter. (No chdir - that is phone-only.)
             let mut cfg = std::panic::catch_unwind(std::panic::AssertUnwindSafe(initial_config))
                 .unwrap_or_default();
-            // Older test builds used QC_SPACES_API. Adopt it once so the app
-            // keeps working after the variable is gone, and the address can be
-            // changed from the UI instead.
+            // The built-in coordinator is the public one. Do not adopt
+            // QC_SPACES_API here: a stale LAN value from an old test must not
+            // overwrite the stored coordinator. A custom value is changed in
+            // the UI and is kept as the user set it.
             if cfg.spaces_api.is_empty() || cfg.spaces_api == "https://quotavpn.duckdns.org:8445" {
-                let env = std::env::var("QC_SPACES_API")
-                    .ok()
-                    .map(|v| v.trim().trim_end_matches('/').to_string())
-                    .filter(|v| !v.is_empty());
-                cfg.spaces_api = env.unwrap_or_else(|| spaces::DEFAULT_API.to_string());
+                cfg.spaces_api = spaces::DEFAULT_API.to_string();
                 cfg.save();
             }
             spaces::init_api(&cfg);

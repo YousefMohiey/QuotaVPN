@@ -164,10 +164,25 @@ impl AppConfig {
         s
     }
 
+    /// Parse a config, tolerating the UTF-8 BOM that PowerShell and some
+    /// editors add. A BOM previously made serde fail, which reset the whole
+    /// config and lost the cards and spaces.
+    fn parse(text: &str) -> Option<Self> {
+        serde_json::from_str(text.trim_start_matches('\u{feff}')).ok()
+    }
+
     pub fn load() -> Self {
         let p = Self::config_path();
         if let Ok(txt) = std::fs::read_to_string(&p) {
-            if let Ok(c) = serde_json::from_str(&txt) {
+            if let Some(c) = Self::parse(&txt) {
+                return c;
+            }
+        }
+        // A force-kill during the old direct write could truncate the file.
+        // The backup is the last config that parsed before that write.
+        let bak = p.with_extension("json.bak");
+        if let Ok(txt) = std::fs::read_to_string(&bak) {
+            if let Some(c) = Self::parse(&txt) {
                 return c;
             }
         }
@@ -179,8 +194,38 @@ impl AppConfig {
             let _ = std::fs::create_dir_all(dir);
         }
         let p = Self::config_path();
-        if let Ok(txt) = serde_json::to_string_pretty(self) {
-            let _ = std::fs::write(p, txt);
+        let Ok(txt) = serde_json::to_string_pretty(self) else {
+            return;
+        };
+        // Keep the last good file, but never copy a corrupt one over a good
+        // backup. Then replace the main file through a temporary file so a
+        // kill mid-write cannot leave a half-written config.
+        let bak = p.with_extension("json.bak");
+        if let Ok(old) = std::fs::read_to_string(&p) {
+            if Self::parse(&old).is_some() {
+                let _ = std::fs::copy(&p, &bak);
+            }
         }
+        let tmp = p.with_extension("json.tmp");
+        if std::fs::write(&tmp, &txt).is_ok() {
+            if std::fs::rename(&tmp, &p).is_err() {
+                let _ = std::fs::write(&p, &txt);
+                let _ = std::fs::remove_file(&tmp);
+            }
+        } else {
+            let _ = std::fs::write(&p, &txt);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AppConfig;
+
+    #[test]
+    fn a_bom_does_not_reset_the_config() {
+        let text = serde_json::to_string(&AppConfig::default()).expect("config json");
+        let with_bom = format!("\u{feff}{text}");
+        assert!(AppConfig::parse(&with_bom).is_some());
     }
 }
