@@ -556,38 +556,55 @@ pub async fn start(
             }
         } else {
             // The joiner listens. Punch first to open this router for the
-            // owner's address, then create the listener last so it owns the
-            // inbound connection.
+            // owner's address. If the punch connects, both sides own the same
+            // simultaneous-open socket and it must be used as-is. Dropping it
+            // closes the connection the owner is already handshaking on, and
+            // holding it while binding the listener takes the port (10048).
             drop(listener);
-            let _punch = connect_from(local_port, peer_tcp, Duration::from_secs(4));
-            let sock = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP))
-                .map_err(|e| format!("tcp listener: {e}"))?;
-            sock.set_reuse_address(true)
-                .map_err(|e| format!("tcp listener: {e}"))?;
-            sock.bind(&SocketAddr::from((std::net::Ipv4Addr::UNSPECIFIED, local_port)).into())
-                .map_err(|e| format!("tcp listener on {local_port}: {e}"))?;
-            sock.listen(8).map_err(|e| format!("tcp listener: {e}"))?;
-            let listener: TcpListener = sock.into();
-            listener
-                .set_nonblocking(true)
-                .map_err(|e| format!("tcp listener: {e}"))?;
-            let deadline = Instant::now() + connect_timeout;
-            loop {
-                match listener.accept() {
-                    Ok((stream, _)) => break stream,
-                    Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                        if Instant::now() >= deadline {
-                            return Err("the peer did not connect over TCP".into());
+            match connect_from(local_port, peer_tcp, Duration::from_secs(4)) {
+                Ok(stream) => {
+                    quotacards::vpn::app_log(
+                        "spaces direct: joiner used the punched TCP path",
+                    );
+                    stream
+                }
+                Err(_) => {
+                    let sock = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP))
+                        .map_err(|e| format!("tcp listener: {e}"))?;
+                    sock.set_reuse_address(true)
+                        .map_err(|e| format!("tcp listener: {e}"))?;
+                    sock.bind(
+                        &SocketAddr::from((std::net::Ipv4Addr::UNSPECIFIED, local_port)).into(),
+                    )
+                    .map_err(|e| format!("tcp listener on {local_port}: {e}"))?;
+                    sock.listen(8).map_err(|e| format!("tcp listener: {e}"))?;
+                    let listener: TcpListener = sock.into();
+                    listener
+                        .set_nonblocking(true)
+                        .map_err(|e| format!("tcp listener: {e}"))?;
+                    quotacards::vpn::app_log(
+                        "spaces direct: joiner is listening for the TCP connection",
+                    );
+                    let deadline = Instant::now() + connect_timeout;
+                    loop {
+                        match listener.accept() {
+                            Ok((stream, _)) => break stream,
+                            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                                if Instant::now() >= deadline {
+                                    return Err("the peer did not connect over TCP".into());
+                                }
+                                std::thread::sleep(Duration::from_millis(50));
+                            }
+                            Err(e) => return Err(format!("tcp accept: {e}")),
                         }
-                        std::thread::sleep(Duration::from_millis(50));
                     }
-                    Err(e) => return Err(format!("tcp accept: {e}")),
                 }
             }
         };
         stream
             .set_nonblocking(false)
             .map_err(|e| format!("tcp stream: {e}"))?;
+        let _ = stream.set_nodelay(true);
         let path = if initiator {
             spaces_path::connect_tcp(stream, &local, &public, Duration::from_secs(8))?
         } else {
