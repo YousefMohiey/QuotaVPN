@@ -164,6 +164,17 @@ answer true because there is nothing to install. The release job fails if the bi
 
 ## Current state
 
+**Spaces layer 2 (desktop, 0.7.6-exp.5).** A space can carry Ethernet instead of IP. The adapter is
+TAP-Windows6 9.27.0, bundled in `desktop/src-tauri/tap` and installed by the NSIS hook; 9.27.0 is
+the floor because 9.26 and earlier carry CVE-2024-1305. It is GPLv2, so the installer ships
+`GPL-2.0.txt` and the driver source tarball. `desktop/src-tauri/src/tap.rs` opens the recorded
+adapter and configures MAC, MTU, address and profile; `src/spaces_switch.rs` learns MACs, unicasts,
+floods broadcast and multicast, drops spoofed, duplicated and link-local frames, and rate limits
+each peer; `src/spaces_direct.rs` opens one Noise path per member and runs the switch. The space
+record carries `mode` (`l3` or `l2`) and the coordinator stores it, returns each member's MAC and
+accepts `POST /v1/spaces/{id}/mode`. Layer 3 is still the default, the phone is still 0.7.5, and
+`notes/SPACES-L2.md` holds the audit, the plan and the proofs.
+
 **The latest published release is v0.7.5, Windows and Android.** This tree carries the 0.7.0
 credential migration (`notes/HANDOFF-2026-11-22.md`): the desktop imports a server-issued `qv1:`
 secret into a DPAPI-sealed per-card store (`qc1:` is still accepted), talks to the card API over
