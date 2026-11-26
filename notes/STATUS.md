@@ -90,6 +90,12 @@
 > missing field and clears on typing, and an unreachable coordinator is reported with its URL.
 > The pre-release carries the signed installer and its own feed; stable stays at 0.7.5. Notes are
 > in `notes/RELEASE-0.7.7.md`.
+>
+> **Experimental 0.7.8, 26 November 2026:** the space no longer rides the main VPN. Activating a
+> space does not turn the VPN on, and the card offers **Connect directly** to an online member
+> instead of **Connect the VPN**. The direct path carries the space over its own Wintun adapter.
+> The relay remains available only when the user connects the main VPN manually. Notes are in
+> `notes/RELEASE-0.7.8.md`.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.

@@ -640,12 +640,7 @@ export function Spaces() {
     try {
       const next = await api.spaceActivate(space.id)
       adopt(next)
-      if (!vpnOn) {
-        toggle()
-        setNote(t("spacesConnectHint"))
-      } else {
-        setNote(t("spacesReconnectHint"))
-      }
+      setNote("")
     } catch (e) {
       setError(messageOf(e))
     } finally {
@@ -684,20 +679,6 @@ export function Spaces() {
   useEffect(() => {
     if (live) setNote("")
   }, [live])
-
-  const refreshAfterConnect = (delay: number) => {
-    window.setTimeout(() => {
-      void api
-        .spacesState()
-        .then(adopt)
-        .catch(() => undefined)
-    }, delay)
-  }
-
-  const connectVpn = () => {
-    toggle()
-    refreshAfterConnect(4000)
-  }
 
   // Removing the space the live session carries has to end that session;
   // otherwise the old endpoint keeps running with no row to control it.
@@ -770,18 +751,6 @@ export function Spaces() {
     } finally {
       setDirectBusy(false)
     }
-  }
-
-  // A space is written into the engine config at session start, so applying
-  // one to a live session means one stop and one start. The app's own toggle
-  // already knows how to do both; the short gap lets the stop land before the
-  // second press asks for a connect.
-  const reconnect = () => {
-    toggle()
-    window.setTimeout(() => {
-      toggle()
-      refreshAfterConnect(5000)
-    }, 2200)
   }
 
   return (
@@ -1036,32 +1005,47 @@ export function Spaces() {
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-2 text-[13.5px] font-medium text-txt">
-                          {live ? (
+                          {live || direct?.running ? (
                             <Wifi className="size-4 text-brand-strong" aria-hidden />
                           ) : (
                             <WifiOff className="size-4 text-txt3" aria-hidden />
                           )}
                           {live
                             ? t("spacesLive")
-                            : active
-                              ? vpnOn || state?.tunnel_on
-                                ? t("spacesApply")
-                                : t("spacesReady")
-                              : t("spacesOff")}
+                            : direct?.running
+                              ? t("spacesDirectConnected")
+                              : active
+                                ? t("spacesReady")
+                                : t("spacesOff")}
                         </div>
                         {live ? (
                           <span className="flex items-center gap-1.5 text-[12px] text-txt2">
                             <span className="size-1.5 rounded-full bg-[var(--green)]" aria-hidden />
                             {t("spacesLive")}
                           </span>
+                        ) : direct?.running ? (
+                          <span className="flex items-center gap-1.5 font-mono text-[12px] text-txt2">
+                            <span className="size-1.5 rounded-full bg-[var(--green)]" aria-hidden />
+                            {direct.address.split("/")[0]}
+                          </span>
+                        ) : active ? (
+                          <button
+                            type="button"
+                            onClick={() => void startDirect()}
+                            disabled={!probePeer || directBusy}
+                            className="press flex h-9 items-center gap-2 rounded-[8px] bg-[var(--brand)] px-4 text-[12.5px] font-medium text-white hover:brightness-110 disabled:opacity-50"
+                          >
+                            {directBusy ? (
+                              <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                            ) : (
+                              <Cable className="size-3.5" aria-hidden />
+                            )}
+                            {probePeer ? t("spacesConnectDirect") : t("spacesWaitMember")}
+                          </button>
                         ) : (
                           <button
                             type="button"
-                            onClick={() => {
-                              if (!active) return void activate()
-                              if (vpnOn || state?.tunnel_on) return reconnect()
-                              return connectVpn()
-                            }}
+                            onClick={() => void activate()}
                             disabled={busy === "activate"}
                             className="press flex h-9 items-center gap-2 rounded-[8px] bg-[var(--brand)] px-4 text-[12.5px] font-medium text-white hover:brightness-110 disabled:opacity-60"
                           >
@@ -1070,11 +1054,7 @@ export function Spaces() {
                             ) : (
                               <Link2 className="size-3.5" aria-hidden />
                             )}
-                            {active
-                              ? vpnOn || state?.tunnel_on
-                                ? t("spacesReconnect")
-                                : t("spacesConnectVpn")
-                              : t("spacesConnect")}
+                            {t("spacesConnect")}
                           </button>
                         )}
                       </div>
@@ -1082,9 +1062,13 @@ export function Spaces() {
                         {note ||
                           (live
                             ? t("spacesLiveHint")
-                            : active && (vpnOn || state?.tunnel_on)
-                              ? t("spacesReconnectHint")
-                              : t("spacesConnectHint"))}
+                            : direct?.running
+                              ? t("spacesDirectHint")
+                              : active
+                                ? probePeer
+                                  ? t("spacesConnectDirectHint")
+                                  : t("spacesWaitHint")
+                                : t("spacesSelectBody"))}
                       </p>
                     </div>
 
