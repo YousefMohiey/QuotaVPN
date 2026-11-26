@@ -7,6 +7,7 @@ import { useEffect, useState } from "react"
 import { useI18n, type StrKey } from "@/lib/i18n"
 import { api } from "@/lib/ipc"
 import { useApp } from "@/state/app"
+import { useTheme } from "@/state/theme"
 
 export type Tab = "home" | "speed" | "voice" | "history" | "result" | "apps" | "network" | "spaces" | "settings"
 
@@ -27,6 +28,7 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
   const { t } = useI18n()
   const calm = useReducedMotion()
   const { version, update, updateState } = useApp()
+  const { theme, setTheme, themes } = useTheme()
   // The tunnel exists on Linux; the network scanner, the speed test and the
   // voice helper do not. Leave their doors out rather than open them onto
   // a page that cannot work.
@@ -52,10 +54,10 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
         <div className="flex items-center gap-3">
           <img src="./icon.png" alt="" aria-hidden className="size-11 shrink-0" />
           <div className="min-w-0 flex-1">
-            <div className="flex items-baseline gap-1.5">
-              <span className="truncate font-display text-[17px] font-semibold tracking-[-0.01em] text-txt">QuotaVPN</span>
-              {version && <span className="shrink-0 font-mono text-[11px] text-txt3">v{version}</span>}
+            <div className="truncate font-display text-lg font-semibold tracking-[-0.01em] text-txt">
+              QuotaVPN
             </div>
+            {version && <div className="mt-0.5 truncate font-mono text-xs text-txt3">v{version}</div>}
           </div>
         </div>
 
@@ -73,10 +75,10 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
             >
               <ArrowDownToLine className="size-3.5 shrink-0 text-brand-strong" aria-hidden />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[11px] font-medium text-brand-strong" dir="auto">
+                <span className="block truncate text-xs font-medium text-brand-strong" dir="auto">
                   {t("updRemind")} · v{update.latest}
                 </span>
-                <span className="block truncate text-[11px] text-txt3" dir="auto">
+                <span className="block truncate text-xs text-txt3" dir="auto">
                   {update.notes || t("updRemindSub")}
                 </span>
               </span>
@@ -92,15 +94,15 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
             onClick={() => onTab(id)}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "relative flex h-12 items-center gap-3 rounded-[10px] px-3 text-[15px] transition-colors duration-150",
-              active ? "font-medium text-txt" : "text-txt2 hover:bg-white/[0.03] hover:text-txt",
+              "relative flex h-12 items-center gap-3 rounded-[10px] px-3 text-sm transition-colors duration-200",
+              active ? "font-medium text-txt" : "text-txt2 hover:bg-[var(--surface-2)] hover:text-txt",
             )}
           >
             {active ? (
               <motion.span
                 layoutId="nav-active"
                 aria-hidden
-                className="absolute inset-0 rounded-[10px] bg-white/[0.055]"
+                className="absolute inset-0 rounded-[10px] bg-[var(--surface-3)]"
                 transition={calm ? { duration: 0 } : { type: "spring", stiffness: 480, damping: 42 }}
               />
             ) : null}
@@ -114,7 +116,33 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
         ))}
       </nav>
 
-      {/* the live state sits in the hero; the rail keeps only the places */}
+      {/* the live state sits in the hero; the rail keeps the places and the
+          one control that changes the whole room */}
+      <div className="mt-auto px-4 pb-5 pt-6">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs font-medium text-txt3">{t("theme")}</span>
+          <div className="flex items-center gap-2" role="group" aria-label={t("theme")}>
+            {themes.map((option) => {
+              const active = option.id === theme
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setTheme(option.id)}
+                  aria-label={t(option.labelKey)}
+                  aria-pressed={active}
+                  title={t(option.labelKey)}
+                  className={cn(
+                    "size-6 rounded-full border border-white/20 transition-transform duration-200 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--side)]",
+                    active && "ring-2 ring-[var(--brand-strong)] ring-offset-2 ring-offset-[var(--side)]",
+                  )}
+                  style={{ background: option.accent }}
+                />
+              )
+            })}
+          </div>
+        </div>
+      </div>
     </aside>
   )
 }

@@ -53,7 +53,12 @@
 > the relay fallback. A Windows PC and a Linux peer on the VPS connected `DirectUdp` at
 > about 49 ms. The Spaces card shows only connected LAN peers, with `Direct` or `Relayed`
 > and RTT, and filters the stale offline identity left by an earlier install. The old
-> direct LAN and probe controls are gone from the screen. Stable stays at 0.7.5.
+> direct LAN and probe controls are gone from the screen. The window now uses Manrope
+> and Geist Mono over flat surfaces with one accent halo, and four themes (Obsidian,
+> Ember, Mint and Violet) are chosen from Settings > Appearance or the swatches at the
+> foot of the rail. Spaces is a LAN-first layout: a space chip row, a wide LAN card,
+> a space card for the invite and members, and a play-together rail. Stable stays at
+> 0.7.5.
 >
 > **Spaces (unreleased, 25 November 2026):** the first slice of a private virtual LAN. The desktop
 > has a Spaces screen, the core has the invite/key/endpoint model, and `embed/qc-spaces.py` is the

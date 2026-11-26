@@ -65,9 +65,12 @@ Windows, run from git-bash. The toolchain this project was developed against:
   before hand-rolling an animation, check Motion. Do not add another UI library.
 - **No dropdown menus.** Choices use the searchable list picker (`components/PickerDialog.tsx`)
   with a check on the current value.
-- **Theme**: luminous night scene behind everything, every surface a frosted glass pane
-  (`index.css` tokens, `.scene`, `.glass*`). Keep `backdrop-filter` free of the `-webkit-` twin:
-  Vite's minifier keeps only that one and Chromium then ignores it, killing the blur.
+- **Theme**: flat near-black surfaces over one accent halo (`index.css` tokens, `.scene`);
+  `.glass*` is for dialogs and popovers, not every pane. Four themes (obsidian, ember, mint,
+  violet) come from `src/state/theme.tsx` and are chosen in Settings > Appearance or from the
+  swatches at the foot of the rail. One primary typeface, Manrope, plus Geist Mono for addresses
+  and latency; no Inter, no Roboto, no italics. Keep `backdrop-filter` free of the `-webkit-`
+  twin: Vite's minifier keeps only that one and Chromium then ignores it, killing the blur.
 - **All user-visible strings go through `src/lib/i18n/{en,ar}.ts`** (formal Modern Standard Arabic,
   RTL). Never mirror the layout in Arabic, only the text direction.
 - **Never emit em-dashes** in code, UI strings, or docs. Plain hyphens only. The user treats

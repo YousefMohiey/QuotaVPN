@@ -247,13 +247,8 @@ export default function App() {
 
   return (
     <>
-      {/* the night scene the glass refracts: fixed, inert, behind everything */}
-      <div className="scene" aria-hidden>
-        <span className="orb orb-a" />
-        <span className="orb orb-b" />
-        <span className="orb orb-c" />
-        <span className="orb orb-d" />
-      </div>
+      {/* one theme-tinted ambient light, fixed behind every surface */}
+      <div className="scene" aria-hidden />
       <WindowControls />
       <div className="relative z-10 flex h-full">
         <Sidebar tab={tab} onTab={go} />

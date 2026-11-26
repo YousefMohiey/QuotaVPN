@@ -4,6 +4,7 @@ import { MotionConfig } from "motion/react"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { I18nProvider } from "@/lib/i18n"
 import { AppStateProvider } from "@/state/app"
+import { ThemeProvider } from "@/state/theme"
 import App from "./App"
 import "./index.css"
 
@@ -19,13 +20,15 @@ createRoot(document.getElementById("root")!).render(
         the dial to travel, so the OS preference is deliberately not
         consulted here. */}
     <MotionConfig reducedMotion="never">
-      <I18nProvider>
-        <AppStateProvider>
-          <TooltipProvider>
-            <App />
-          </TooltipProvider>
-        </AppStateProvider>
-      </I18nProvider>
+      <ThemeProvider>
+        <I18nProvider>
+          <AppStateProvider>
+            <TooltipProvider>
+              <App />
+            </TooltipProvider>
+          </AppStateProvider>
+        </I18nProvider>
+      </ThemeProvider>
     </MotionConfig>
   </StrictMode>,
 )

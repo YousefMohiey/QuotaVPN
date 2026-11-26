@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
-import { Download, Languages, Loader2, MonitorPlay, RefreshCw, ShieldOff } from "lucide-react"
+import { Download, Languages, Loader2, MonitorPlay, Palette, RefreshCw, ShieldOff } from "lucide-react"
 import { Toggle } from "@/components/Toggle"
 import { Segmented } from "@/components/Segmented"
 import { Tip } from "@/components/Tip"
 import { useApp } from "@/state/app"
+import { useTheme } from "@/state/theme"
 import { fmtQuota, quotaLogout, quotaRefresh, useQuota } from "@/state/quota"
 import { WeQuotaDialog } from "@/components/WeQuotaDialog"
 import { WeMark } from "@/components/WeMark"
@@ -20,7 +21,7 @@ import { cn } from "@/lib/utils"
 function Section({ label, gap, children }: { label: string; gap?: boolean; children: React.ReactNode }) {
   return (
     <section className={cn("flex flex-col", gap && "mt-8")}>
-      <h2 className="mb-0 border-b border-line pb-2 text-[12px] font-semibold uppercase leading-none tracking-[0.14em] text-txt2">
+      <h2 className="mb-0 border-b border-line pb-2 text-xs font-semibold uppercase leading-none tracking-[0.14em] text-txt2">
         {label}
       </h2>
       <div>{children}</div>
@@ -52,14 +53,14 @@ function Row({
   control: React.ReactNode
 }) {
   return (
-    <div className="group flex h-[76px] items-center gap-4 border-b border-line transition-colors duration-150 last:border-b-0 hover:bg-white/[0.018] max-[760px]:h-auto max-[760px]:flex-wrap max-[760px]:gap-y-3 max-[760px]:py-4">
+    <div className="group flex h-20 items-center gap-4 border-b border-line transition-colors duration-150 last:border-b-0 hover:bg-white/[0.018] max-[760px]:h-auto max-[760px]:flex-wrap max-[760px]:gap-y-3 max-[760px]:py-4">
       <span className="grid size-10 shrink-0 place-items-center text-txt2">
         <Icon className="size-6" strokeWidth={1.7} aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
-        <h3 className="text-[16.5px] font-medium text-txt">{title}</h3>
-        {body ? <p className="mt-1 break-words text-[13px] leading-relaxed text-txt2">{body}</p> : null}
-        {note ? <div className="mt-1 text-[12.5px] leading-snug text-txt3">{note}</div> : null}
+        <h3 className="text-base font-medium text-txt">{title}</h3>
+        {body ? <p className="mt-1 break-words text-sm leading-relaxed text-txt2">{body}</p> : null}
+        {note ? <div className="mt-1 text-xs leading-snug text-txt3">{note}</div> : null}
       </div>
       <div className="flex shrink-0 items-center gap-2 max-[760px]:w-full max-[760px]:justify-start">{control}</div>
     </div>
@@ -83,7 +84,7 @@ function WeQuotaRows() {
         body={
           q.linked && remaining ? (
             <span className="flex items-baseline gap-1.5">
-              <span className="font-display text-[16px] font-semibold tabular-nums text-txt">{fmtQuota(remaining.remain)}</span>
+              <span className="font-display text-base font-semibold tabular-nums text-txt">{fmtQuota(remaining.remain)}</span>
               {t("weLeftShort")}
             </span>
           ) : (
@@ -98,7 +99,7 @@ function WeQuotaRows() {
                   type="button"
                   onClick={() => void quotaRefresh(true)}
                   disabled={busy}
-                  className="press flex h-10 items-center gap-2 whitespace-nowrap rounded-[9px] border border-line bg-white/[0.03] px-4 text-[13px] text-txt transition-colors hover:border-[var(--brand-line)]"
+                  className="press flex h-10 items-center gap-2 whitespace-nowrap rounded-[9px] border border-line bg-white/[0.03] px-4 text-sm text-txt transition-colors hover:border-[var(--brand-line)]"
                 >
                   {busy ? <Loader2 className="size-3 animate-spin" aria-hidden /> : <RefreshCw className="size-3" aria-hidden />}
                   {t("weRefresh")}
@@ -107,7 +108,7 @@ function WeQuotaRows() {
               <button
                 type="button"
                 onClick={() => void quotaLogout()}
-                className="press flex h-10 items-center whitespace-nowrap rounded-[9px] border border-line bg-transparent px-4 text-[13px] text-txt2 transition-colors hover:border-[var(--red-line)] hover:text-txt"
+                className="press flex h-10 items-center whitespace-nowrap rounded-[9px] border border-line bg-transparent px-4 text-sm text-txt2 transition-colors hover:border-[var(--red-line)] hover:text-txt"
               >
                 {t("weUnlink")}
               </button>
@@ -116,7 +117,7 @@ function WeQuotaRows() {
             <button
               type="button"
               onClick={() => setQuotaOpen(true)}
-              className="press flex h-10 items-center rounded-[9px] bg-[var(--brand)] px-5 text-[13px] font-medium text-white transition-[filter] hover:brightness-110"
+              className="press flex h-10 items-center rounded-[9px] bg-[var(--brand)] px-5 text-sm font-medium text-white transition-[filter] hover:brightness-110"
             >
               {t("weLink")}
             </button>
@@ -152,6 +153,7 @@ export function Settings() {
   }, [])
 
   const { t, lang, setLang } = useI18n()
+  const { theme, setTheme, themes } = useTheme()
   const { update, updateState, updateError, checkUpdates, applyUpdate, updatePct, version, updateChannel, setUpdateChannel } =
     useApp()
   const [startup, setStartup] = useState(() => {
@@ -227,11 +229,49 @@ export function Settings() {
 
   return (
     <div className="flex w-full flex-col pb-6">
-      <Section label={t("setAppGroup")}>
+      <Section label={t("setAppearanceGroup")}>
+        <Row
+          icon={Palette}
+          title={t("themeTitle")}
+          body={t("themeBody")}
+          control={
+            <div className="flex items-center gap-3">
+              {themes.map((option) => {
+                const active = option.id === theme
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setTheme(option.id)}
+                    aria-pressed={active}
+                    aria-label={t(option.labelKey)}
+                    className="group flex min-w-12 flex-col items-center gap-1.5"
+                  >
+                    <span
+                      className={cn(
+                        "grid size-8 place-items-center rounded-full border transition-transform duration-200 group-hover:scale-105",
+                        active ? "border-white/60" : "border-white/15",
+                      )}
+                      style={{ background: option.accent }}
+                    >
+                      {active ? <span className="size-2 rounded-full bg-white" /> : null}
+                    </span>
+                    <span className={cn("text-xs", active ? "text-txt" : "text-txt3")}>
+                      {t(option.labelKey)}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          }
+        />
+      </Section>
+
+      <Section label={t("setAppGroup")} gap>
         <Row
           icon={Languages}
           title={t("language")}
-          body={lang === "ar" ? "عربي" : "English"}
+          body={lang === "ar" ? "Ø¹Ø±Ø¨ÙŠ" : "English"}
           control={
             <Segmented
               boxed
@@ -241,7 +281,7 @@ export function Settings() {
               onChange={(l) => setLang(l)}
               options={[
                 { value: "en", label: "EN" },
-                { value: "ar", label: "عربي" },
+                { value: "ar", label: "Ø¹Ø±Ø¨ÙŠ" },
               ]}
             />
           }
@@ -279,7 +319,7 @@ export function Settings() {
                       .then(() => window.setTimeout(refreshKill, 2500))
                       .catch(() => setKillMsg(t("killFail")))
                   }
-                  className="press h-8 rounded-[8px] border border-[var(--red-line)] bg-[var(--red-bg)] px-2.5 text-[12px] text-[var(--red)]"
+                  className="press h-8 rounded-[8px] border border-[var(--red-line)] bg-[var(--red-bg)] px-2.5 text-xs text-[var(--red)]"
                 >
                   {t("killRelease")}
                 </button>
@@ -309,7 +349,7 @@ export function Settings() {
           title={
             <span className="flex flex-wrap items-baseline gap-x-2">
               {t("chCur")}
-              <span className="font-display text-[15px] font-semibold tabular-nums text-txt">{cur || "-"}</span>
+              <span className="font-display text-sm font-semibold tabular-nums text-txt">{cur || "-"}</span>
             </span>
           }
           body={
@@ -348,7 +388,7 @@ export function Settings() {
                 type="button"
                 onClick={() => void checkUpdates()}
                 disabled={checking}
-                className="press flex h-10 items-center gap-2 whitespace-nowrap rounded-[9px] border border-line bg-white/[0.03] px-4 text-[13px] text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
+                className="press flex h-10 items-center gap-2 whitespace-nowrap rounded-[9px] border border-line bg-white/[0.03] px-4 text-sm text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
               >
                 {checking ? <Loader2 className="size-3 animate-spin" aria-hidden /> : <RefreshCw className="size-3" aria-hidden />}
                 {checking ? t("upChecking") : t("upCheck")}
@@ -358,7 +398,7 @@ export function Settings() {
                   type="button"
                   onClick={() => void applyUpdate()}
                   disabled={installing}
-                  className="press flex h-10 items-center whitespace-nowrap rounded-[9px] bg-[var(--brand)] px-4 text-[13px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
+                  className="press flex h-10 items-center whitespace-nowrap rounded-[9px] bg-[var(--brand)] px-4 text-sm font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
                 >
                   {installing ? (updatePct !== null ? `${updatePct}%` : t("upInstalling")) : t("upGet")}
                 </button>

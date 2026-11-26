@@ -65,10 +65,13 @@ let demoSpaces: Space[] = EMPTY_SPACES ? [] : [
   },
 ]
 let demoSpaceActive = EMPTY_SPACES ? "" : "K7M2Q9X4"
+const LAN_SOLO =
+  typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).get("lan") === "solo"
 let demoLanOn =
   typeof window !== "undefined" &&
   new URLSearchParams(window.location.search).get("lan") !== "0"
-const demoLanPeers: OpenRadPeer[] = [
+const demoLanPeers: OpenRadPeer[] = LAN_SOLO ? [] : [
   {
     rid: "8900903485428369",
     name: "ALYONA",

@@ -25,16 +25,22 @@ The transport order is direct UDP, direct TCP, then the relay. When the two
 NATs allow a direct path, game traffic does not pass through the VPS. The card
 labels each peer `Direct` or `Relayed` and shows the measured RTT.
 
-## Cleaner Spaces card
+## New interface
 
-The LAN status is now one card inside the space, not a button above the whole
-screen. It shows the device name, the `26.x` address, the connected peers,
-their transport and their RTT. The old direct LAN and probe sections are gone
-from the screen; the backend remains in the tree for the retired in-house
-switch.
+The window uses Manrope for text and Geist Mono for addresses and latency.
+Surfaces are flat near-black panes over one accent halo, with hairlines instead
+of a field of gradients. Four themes are available from Settings > Appearance
+and from the swatches at the foot of the rail: Obsidian, Ember, Mint and
+Violet. The choice is remembered locally.
+
+Spaces is rebuilt around the LAN. The selected space is a chip at the top, the
+LAN status and live peers get the wide card, the invite and member list sit in
+the space card, and a play-together rail explains the three steps. The orbit
+map and the button above the screen are gone.
 
 Only connected peers are listed. An old identity left behind by a reinstall,
 and an offline member of the space roster, no longer appears as another IP.
+The LAN card shows this PC once, then each live peer with transport and RTT.
 
 ## Known limits
 

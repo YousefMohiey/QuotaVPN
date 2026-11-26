@@ -19,6 +19,41 @@
   unicode-range: U+1F1E6-1F1FF;
 }
 
+/* Manrope is the product voice: one family for headings, body and controls.
+   Geist Mono carries addresses, latency and other tabular data. Both are
+   self-hosted so the app never reaches the network for a glyph. */
+@font-face {
+  font-family: "Manrope";
+  src: url("/fonts/manrope-latin.woff2") format("woff2");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Manrope";
+  src: url("/fonts/manrope-latin-ext.woff2") format("woff2");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/fonts/geist-mono-latin.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/fonts/geist-mono-latin-ext.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 @font-face {
   font-family: "Cairo";
   src: url("/fonts/cairo-ar.woff2") format("woff2");
@@ -62,76 +97,145 @@
 :root {
   color-scheme: dark;
 
-  /* Instrument surfaces. Near-black window, one step up per layer, and the
-     structure carried by hairlines instead of card fills. */
-  --bg: #08090a;
-  --side: #0b0c0e;
-  --panel: #0f1113;
-  --panel-hover: #14171a;
-  --field: #14171a;
+  /* Obsidian is the default. Surfaces are flat and neutral; the structure
+     is carried by hairlines and one accent, never by a wash of gradients. */
+  --bg: #090a0c;
+  --side: #0c0e11;
+  --panel: #111318;
+  --panel-hover: #161a21;
+  --field: #161a21;
+  --surface-2: #151820;
+  --surface-3: #1b1f28;
 
-  /* Lines: one hairline weight, two strengths. */
-  --line: rgb(255 255 255 / 0.07);
-  --line-strong: rgb(255 255 255 / 0.13);
+  --line: rgb(255 255 255 / 0.075);
+  --line-strong: rgb(255 255 255 / 0.14);
 
-  /* Text: three steps, all readable on --panel. */
-  --txt: #f3f5f7;
-  --txt2: #a3aab3;
-  --txt3: #858c97;
+  --txt: #f4f6fa;
+  --txt2: #a6aebb;
+  --txt3: #7e8794;
 
-  /* One accent + muted semantics. Saturated hues read as generated. */
-  --brand: #2c5fd8;
-  --brand-vivid: #3d7bff;
-  --brand-strong: #7fa6ff;
-  --brand-bg: rgb(44 95 216 / 0.13);
-  --brand-mid: rgb(44 95 216 / 0.5);
-  --brand-line: rgb(44 95 216 / 0.38);
-  --green: #5fb08c;
-  --green-bg: rgb(95 176 140 / 0.12);
-  --green-line: rgb(95 176 140 / 0.34);
-  --amber: #c99b5c;
-  --amber-bg: rgb(201 155 92 / 0.12);
-  --amber-line: rgb(201 155 92 / 0.34);
-  --red: #d0797f;
-  --red-bg: rgb(208 121 127 / 0.12);
-  --red-line: rgb(208 121 127 / 0.34);
+  --brand: #4e6fe8;
+  --brand-vivid: #6c8bff;
+  --brand-strong: #9db2ff;
+  --brand-bg: rgb(78 111 232 / 0.12);
+  --brand-mid: rgb(78 111 232 / 0.45);
+  --brand-line: rgb(78 111 232 / 0.36);
+  --brand-glow: rgb(78 111 232 / 0.24);
+  --on-brand: #ffffff;
 
-  /* Shape, elevation, motion. */
-  --r-ctl: 9px;
-  --r-card: 14px;
+  --green: #4cc38a;
+  --green-bg: rgb(76 195 138 / 0.12);
+  --green-line: rgb(76 195 138 / 0.32);
+  --amber: #e0a458;
+  --amber-bg: rgb(224 164 88 / 0.12);
+  --amber-line: rgb(224 164 88 / 0.32);
+  --red: #e06c75;
+  --red-bg: rgb(224 108 117 / 0.12);
+  --red-line: rgb(224 108 117 / 0.32);
+
+  /* Shape, elevation, motion. The curve decelerates into place; color and
+     opacity are the only fast properties. */
+  --r-ctl: 10px;
+  --r-card: 16px;
   --r-pill: 999px;
-  --sh-1: 0 1px 2px rgb(0 0 0 / 0.3);
-  --sh-2: 0 18px 44px rgb(0 0 0 / 0.5), 0 2px 8px rgb(0 0 0 / 0.35);
-  --ease: cubic-bezier(0.33, 0, 0.67, 1);
-  --ease-out: cubic-bezier(0.1, 0.9, 0.2, 1);
+  --sh-1: 0 1px 2px rgb(0 0 0 / 0.32);
+  --sh-2: 0 20px 48px rgb(0 0 0 / 0.46), 0 2px 8px rgb(0 0 0 / 0.3);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* shadcn token bridge */
   --background: var(--bg);
   --foreground: var(--txt);
   --card: var(--panel);
   --card-foreground: var(--txt);
-  --popover: #141519;
+  --popover: var(--panel);
   --popover-foreground: var(--txt);
   --primary: var(--brand);
-  --primary-foreground: #08111f;
+  --primary-foreground: var(--on-brand);
   --secondary: var(--field);
   --secondary-foreground: var(--txt);
   --muted: var(--field);
   --muted-foreground: var(--txt3);
-  --accent: #1b1d23;
+  --accent: var(--surface-3);
   --accent-foreground: var(--txt);
   --destructive: var(--red);
   --destructive-foreground: #1b0e10;
   --border: var(--line);
   --input: var(--line-strong);
-  --ring: rgb(31 89 182 / 0.5);
-  --radius: 0.625rem;
+  --ring: var(--brand-mid);
+  --radius: 0.75rem;
+}
+
+[data-theme="ember"] {
+  --bg: #0c0a09;
+  --side: #100d0b;
+  --panel: #17120f;
+  --panel-hover: #1d1713;
+  --field: #1d1713;
+  --surface-2: #1c1613;
+  --surface-3: #241c18;
+  --line: rgb(255 240 230 / 0.08);
+  --line-strong: rgb(255 240 230 / 0.15);
+  --txt: #faf4ef;
+  --txt2: #b8a99f;
+  --txt3: #8e7e73;
+  --brand: #b85325;
+  --brand-vivid: #d9662f;
+  --brand-strong: #ffb08a;
+  --brand-bg: rgb(184 83 37 / 0.14);
+  --brand-mid: rgb(184 83 37 / 0.46);
+  --brand-line: rgb(184 83 37 / 0.38);
+  --brand-glow: rgb(184 83 37 / 0.22);
+}
+
+[data-theme="mint"] {
+  --bg: #070c0b;
+  --side: #0a100e;
+  --panel: #0f1715;
+  --panel-hover: #131d1a;
+  --field: #131d1a;
+  --surface-2: #121c19;
+  --surface-3: #182520;
+  --line: rgb(230 255 245 / 0.075);
+  --line-strong: rgb(230 255 245 / 0.14);
+  --txt: #f0f7f4;
+  --txt2: #9fb3ab;
+  --txt3: #778982;
+  --brand: #0b7c74;
+  --brand-vivid: #12a89a;
+  --brand-strong: #7be8dc;
+  --brand-bg: rgb(11 124 116 / 0.14);
+  --brand-mid: rgb(11 124 116 / 0.46);
+  --brand-line: rgb(11 124 116 / 0.38);
+  --brand-glow: rgb(11 124 116 / 0.2);
+}
+
+[data-theme="violet"] {
+  --bg: #08070c;
+  --side: #0b0912;
+  --panel: #120f1b;
+  --panel-hover: #171322;
+  --field: #171322;
+  --surface-2: #161220;
+  --surface-3: #1d1729;
+  --line: rgb(245 235 255 / 0.075);
+  --line-strong: rgb(245 235 255 / 0.14);
+  --txt: #f6f2ff;
+  --txt2: #b0a6c4;
+  --txt3: #857a9a;
+  --brand: #6e51d9;
+  --brand-vivid: #8b70f5;
+  --brand-strong: #c3b2ff;
+  --brand-bg: rgb(110 81 217 / 0.16);
+  --brand-mid: rgb(110 81 217 / 0.48);
+  --brand-line: rgb(110 81 217 / 0.4);
+  --brand-glow: rgb(110 81 217 / 0.24);
 }
 
 @theme inline {
-  --font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, "Cairo", "Twemoji Country Flags", sans-serif;
-  --font-display: "Archivo", "Segoe UI Variable Display", "Segoe UI", system-ui, "Cairo", sans-serif;
-  --font-mono: "Cascadia Mono", ui-monospace, "Consolas", "SFMono-Regular", monospace;
+  --font-sans: "Manrope", "Segoe UI Variable Text", "Segoe UI", system-ui, "Cairo", "Twemoji Country Flags", sans-serif;
+  --font-display: "Manrope", "Segoe UI Variable Display", "Segoe UI", system-ui, "Cairo", sans-serif;
+  --font-mono: "Geist Mono", "Cascadia Mono", ui-monospace, "Consolas", "SFMono-Regular", monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -195,14 +299,22 @@
     @apply text-foreground antialiased;
     background: var(--bg);
     margin: 0;
-    font-size: 13.5px;
-    line-height: 1.45;
+    font-size: 14px;
+    line-height: 1.5;
     font-variant-numeric: tabular-nums;
     overflow: hidden;
     /* The app is a product surface, not a document: nothing selects. Fields
        stay editable; the one value people copy is press-to-copy instead. */
     -webkit-user-select: none;
     user-select: none;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
   }
   input,
   textarea,
@@ -262,61 +374,39 @@
    legibility rules live in the `liquid-glass-ui` skill.
    --------------------------------------------------------------------------- */
 :root {
-  --glass-fill: rgb(16 20 28 / 0.55);
-  --glass-line: rgb(255 255 255 / 0.12);
-  --glass-top: rgb(255 255 255 / 0.1);
-  --glass-blur: blur(20px) saturate(150%);
+  --glass-fill: color-mix(in srgb, var(--panel) 78%, transparent);
+  --glass-line: var(--line-strong);
+  --glass-top: rgb(255 255 255 / 0.08);
+  --glass-blur: blur(20px) saturate(140%);
 }
 
+/* One ambient light tied to the accent, not a field of white orbs. The
+   surfaces above it stay flat; the halo only gives the window depth. */
 .scene {
   position: fixed;
   inset: 0;
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
+  background: var(--bg);
 }
-.orb {
+.scene::before {
+  content: "";
   position: absolute;
+  width: 900px;
+  height: 900px;
+  left: 8%;
+  top: -430px;
   border-radius: 50%;
-}
-.orb-a {
-  width: 560px;
-  height: 560px;
-  left: 46%;
-  margin-left: -160px;
-  top: -140px;
-  background: rgb(255 255 255 / 0.045);
-  filter: blur(75px);
-}
-.orb-b {
-  width: 460px;
-  height: 460px;
-  right: -130px;
-  top: 18%;
-  background: rgb(255 255 255 / 0.035);
-  filter: blur(85px);
-}
-.orb-c {
-  width: 520px;
-  height: 520px;
-  left: -150px;
-  bottom: -140px;
-  background: rgb(255 255 255 / 0.03);
-  filter: blur(90px);
-}
-.orb-d {
-  width: 340px;
-  height: 340px;
-  right: 4%;
-  bottom: -80px;
-  background: rgb(255 255 255 / 0.025);
-  filter: blur(75px);
+  background: radial-gradient(circle, var(--brand-glow) 0%, transparent 68%);
+  filter: blur(40px);
+  opacity: 0.6;
 }
 .scene::after {
   content: "";
   position: absolute;
   inset: 0;
-  opacity: 0.04;
+  opacity: 0.035;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
 }
 
