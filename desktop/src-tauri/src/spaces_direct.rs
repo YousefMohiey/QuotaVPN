@@ -390,6 +390,9 @@ pub async fn start(
         }
     }
     let _starting = Starting;
+    if !quotacards::vpn::is_elevated() {
+        return Err("Spaces needs administrator rights; run QuotaVPN as administrator".into());
+    }
     ensure_firewall();
     // One direct LAN per app. Stop the old one before replacing it.
     let previous = direct

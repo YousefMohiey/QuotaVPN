@@ -62,11 +62,12 @@ impl WintunIo {
             .collect();
         let name = format!("QuotaSpace{}", if suffix.is_empty() { "0000" } else { &suffix });
         let path = quotacards::vpn::engine_dir().join("wintun.dll");
+        if !path.exists() {
+            quotacards::vpn::ensure_wintun()?;
+        }
         let lib = unsafe { Library::new(&path) }
             .or_else(|_| unsafe { Library::new("wintun.dll") })
-            .map_err(|e| {
-                format!("the Wintun driver is not installed ({e}); connect the VPN once first")
-            })?;
+            .map_err(|e| format!("the Wintun driver could not be loaded ({e})"))?;
         let create: CreateAdapter = unsafe {
             *lib.get(b"WintunCreateAdapter\0")
                 .map_err(|_| "wintun.dll is missing WintunCreateAdapter".to_string())?

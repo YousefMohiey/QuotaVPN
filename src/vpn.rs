@@ -275,6 +275,53 @@ pub fn is_elevated() -> bool {
         .unwrap_or(false)
 }
 
+/// Download only the pinned Wintun DLL. Spaces needs the adapter on a fresh
+/// install that never connected the main VPN, so the full sing-box engine is
+/// not required just to open the virtual LAN.
+#[cfg(windows)]
+pub fn ensure_wintun() -> Result<(), String> {
+    let path = wintun_path();
+    if path.exists() {
+        return Ok(());
+    }
+    let dir = engine_dir();
+    std::fs::create_dir_all(&dir).map_err(|e| format!("mkdir: {e}"))?;
+    let wzip = dir.join("wintun.zip");
+    let dl = run_hidden(
+        "curl",
+        &[
+            "-L",
+            "--max-time",
+            "120",
+            "-A",
+            "QuotaVPN",
+            "-o",
+            &wzip.to_string_lossy(),
+            WINTUN_URL,
+        ],
+    )
+    .map(|o| o.status.success())
+    .unwrap_or(false);
+    if !dl {
+        return Err("the Wintun driver download failed (check internet)".into());
+    }
+    verify_artifact(&wzip, WINTUN_SHA256, "wintun driver")?;
+    run_hidden(
+        "tar",
+        &["-xf", &wzip.to_string_lossy(), "-C", &dir.to_string_lossy()],
+    )
+    .map_err(|e| format!("extract driver: {e}"))?;
+    let _ = std::fs::remove_file(&wzip);
+    let extracted = dir.join("wintun").join("bin").join("amd64").join("wintun.dll");
+    std::fs::copy(&extracted, &path).map_err(|e| format!("install driver: {e}"))?;
+    let _ = std::fs::remove_dir_all(dir.join("wintun"));
+    if path.exists() {
+        Ok(())
+    } else {
+        Err("the Wintun driver is missing after extract".into())
+    }
+}
+
 /// Download + extract the sing-box engine (pinned) and wintun driver.
 /// Version-stamped so a stale engine is replaced automatically.
 #[cfg(windows)]
