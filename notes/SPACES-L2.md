@@ -253,6 +253,13 @@ The ignored test `tap::tests::the_adapter_comes_up_and_carries_a_frame` was run
 on this PC against a real adapter and passed, so the Rust device path is proven,
 not just the PowerShell probe.
 
+`tap::tests::two_adapters_ping_through_the_switch` is the stronger one: two TAP
+adapters on this machine in one /24, bridged by the real `spaces_switch` code,
+and a ping from one to the other. Windows has to ARP across the switch and the
+ICMP reply has to come back. It passed, which covers TAP I/O, MAC learning,
+flooding for the ARP request, unicast for the reply, and the duplicate and
+control-frame filters in one run.
+
 Second slice, same day:
 
 - Multi-peer. `start_layer2` opens one path per online member in parallel, with

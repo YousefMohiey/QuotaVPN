@@ -129,7 +129,13 @@ impl TapIo {
     /// Adopt the recorded adapter, configure it, and bring the media up.
     pub fn new(mac: [u8; 6], address: &str, mtu: u32) -> Result<Self, String> {
         let guid = resolve_guid()?;
-        let (name, ifindex) = configure(&guid, mac, address, mtu)?;
+        Self::adopt(&guid, mac, address, mtu)
+    }
+
+    /// Same, for an adapter named by GUID. The engine uses `new`; the two
+    /// adapter test uses this directly.
+    pub fn adopt(guid: &str, mac: [u8; 6], address: &str, mtu: u32) -> Result<Self, String> {
+        let (name, ifindex) = configure(guid, mac, address, mtu)?;
         let path = format!("\\\\.\\Global\\{{{guid}}}.tap");
         let handle = open(&path)?;
         if let Err(error) = set_media(handle, true) {
@@ -513,5 +519,76 @@ mod tests {
             }
         }
         assert!(frames > 0, "no frame arrived from the adapter");
+    }
+
+    struct PeerAdapter {
+        io: TapIo,
+    }
+
+    impl quotacards::spaces_switch::PeerLink for PeerAdapter {
+        fn label(&self) -> &str {
+            self.io.name()
+        }
+
+        fn send(&mut self, frame: &[u8]) -> Result<(), String> {
+            self.io.write(frame)
+        }
+
+        fn try_recv(&mut self) -> Result<Option<Vec<u8>>, String> {
+            self.io.try_read()
+        }
+    }
+
+    fn guid_of(name: &str) -> String {
+        run_powershell(&format!("(Get-NetAdapter -Name '{name}').InterfaceGuid"))
+            .expect("adapter lookup")
+            .trim()
+            .trim_matches('{')
+            .trim_matches('}')
+            .to_string()
+    }
+
+    /// The end-to-end proof that does not need a second PC: two TAP adapters on
+    /// this machine, in one /24, bridged by the real switch. Windows has to ARP
+    /// across it and the ping has to come back.
+    ///
+    /// Needs `QuotaSpaceLAN` and `QuotaSpaceB` installed and an elevated shell.
+    #[test]
+    #[ignore]
+    fn two_adapters_ping_through_the_switch() {
+        use quotacards::spaces_switch::{self, PeerLink};
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::sync::Arc;
+        use std::time::Duration;
+
+        let a = guid_of("QuotaSpaceLAN");
+        let b = guid_of("QuotaSpaceB");
+        if a.is_empty() || b.is_empty() {
+            panic!("install QuotaSpaceLAN and QuotaSpaceB before this test");
+        }
+        let mac_a = [0x02, 0x51, 0x56, 0x00, 0x01, 0x01];
+        let mac_b = [0x02, 0x51, 0x56, 0x00, 0x01, 0x02];
+        let mut io_a = TapIo::adopt(&a, mac_a, "10.77.98.2/24", 1380).expect("adapter A");
+        let io_b = TapIo::adopt(&b, mac_b, "10.77.98.3/24", 1380).expect("adapter B");
+        let mut peers: Vec<Box<dyn PeerLink>> = vec![Box::new(PeerAdapter { io: io_b })];
+
+        let stop = Arc::new(AtomicBool::new(false));
+        let stop_for_ping = stop.clone();
+        let pinger = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(900));
+            let out = std::process::Command::new("ping")
+                .args(["-n", "3", "-w", "1200", "10.77.98.3"])
+                .output()
+                .expect("ping");
+            stop_for_ping.store(true, Ordering::Relaxed);
+            out
+        });
+
+        let result = spaces_switch::run(&mut io_a, &mut peers, mac_a, &stop);
+        result.expect("the switch loop");
+
+        let out = pinger.join().expect("pinger");
+        let text = String::from_utf8_lossy(&out.stdout).to_string();
+        assert!(out.status.success(), "ping across the switch failed: {text}");
     }
 }
