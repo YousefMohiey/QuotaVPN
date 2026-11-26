@@ -10,10 +10,12 @@
 //! engine stops. It never touches a TAP adapter that another product installed:
 //! the GUID is recorded at install time.
 //!
-//! The handle is synchronous. One thread blocks in `ReadFile` and feeds a
-//! channel, writes are plain `WriteFile` calls, and `CancelSynchronousIo` lets
-//! the reader return when the engine stops. The overlapped form read frames
-//! correctly but frames written that way never reached the Windows stack.
+//! The I/O follows the overlapped pattern in OpenRad's `windows_io.rs` (MIT):
+//! the handle is opened with FILE_FLAG_OVERLAPPED and exclusive access, every
+//! operation owns a stable buffer and OVERLAPPED, ReadFile and WriteFile get a
+//! NULL byte-count pointer, and the event is reset per operation. Handing the
+//! kernel a stack byte-count pointer or the caller's buffer is what made
+//! written frames disappear before.
 
 use quotacards::spaces_forward::PacketIo;
 use std::ffi::c_void;
@@ -23,21 +25,34 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, TryRecvError};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::thread::JoinHandle;
 
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const GENERIC_READ: u32 = 0x8000_0000;
 const GENERIC_WRITE: u32 = 0x4000_0000;
-const FILE_SHARE_READ: u32 = 1;
-const FILE_SHARE_WRITE: u32 = 2;
 const OPEN_EXISTING: u32 = 3;
 const FILE_ATTRIBUTE_SYSTEM: u32 = 4;
-const TAP_IOCTL_SET_MEDIA_STATUS: u32 = 0x0022_0018;
-const THREAD_ALL_ACCESS: u32 = 0x001F_03FF;
+const FILE_FLAG_OVERLAPPED: u32 = 0x4000_0000;
+const ERROR_IO_PENDING: u32 = 997;
+const WAIT_OBJECT_0: u32 = 0;
+const WAIT_TIMEOUT: u32 = 258;
+
+const TAP_IOCTL_GET_MTU: u32 = (0x22 << 16) | (3 << 2);
+const TAP_IOCTL_SET_MEDIA_STATUS: u32 = (0x22 << 16) | (6 << 2);
 
 /// One frame, including the Ethernet header.
 pub const FRAME: usize = 2048;
+
+#[repr(C)]
+#[derive(Default)]
+struct Overlapped {
+    internal: usize,
+    internal_high: usize,
+    offset: u32,
+    offset_high: u32,
+    event: isize,
+}
 
 #[allow(non_snake_case)]
 extern "system" {
@@ -53,32 +68,45 @@ extern "system" {
     fn DeviceIoControl(
         handle: isize,
         code: u32,
-        input: *const u8,
+        input: *const c_void,
         input_size: u32,
-        output: *mut u8,
+        output: *mut c_void,
         output_size: u32,
         returned: *mut u32,
-        overlapped: *mut c_void,
+        overlapped: *mut Overlapped,
     ) -> i32;
     fn ReadFile(
         handle: isize,
         buffer: *mut u8,
         length: u32,
         read: *mut u32,
-        overlapped: *mut c_void,
+        overlapped: *mut Overlapped,
     ) -> i32;
     fn WriteFile(
         handle: isize,
         buffer: *const u8,
         length: u32,
         written: *mut u32,
-        overlapped: *mut c_void,
+        overlapped: *mut Overlapped,
     ) -> i32;
+    fn GetOverlappedResult(
+        handle: isize,
+        overlapped: *const Overlapped,
+        transferred: *mut u32,
+        wait: i32,
+    ) -> i32;
+    fn CreateEventW(
+        security: *mut c_void,
+        manual: i32,
+        initial: i32,
+        name: *const u16,
+    ) -> isize;
+    fn ResetEvent(handle: isize) -> i32;
+    fn SetEvent(handle: isize) -> i32;
+    fn WaitForSingleObject(handle: isize, milliseconds: u32) -> u32;
+    fn CancelIoEx(handle: isize, overlapped: *const Overlapped) -> i32;
     fn CloseHandle(handle: isize) -> i32;
     fn GetLastError() -> u32;
-    fn GetCurrentThreadId() -> u32;
-    fn OpenThread(access: u32, inherit: i32, thread_id: u32) -> isize;
-    fn CancelSynchronousIo(thread: isize) -> i32;
 }
 
 fn wide(text: &str) -> Vec<u16> {
@@ -93,13 +121,194 @@ pub fn marker_path() -> PathBuf {
     quotacards::config::AppConfig::config_dir().join("spaces_tap.txt")
 }
 
+/// One overlapped operation with storage that cannot move while the kernel
+/// holds it. Ported from OpenRad (MIT).
+struct Operation {
+    handle: isize,
+    event: isize,
+    overlapped: Box<Overlapped>,
+    buffer: Box<[u8]>,
+    pending: bool,
+    immediate: u32,
+}
+
+unsafe impl Send for Operation {}
+
+impl Operation {
+    fn new(handle: isize, capacity: usize) -> Result<Self, String> {
+        let event = unsafe { CreateEventW(std::ptr::null_mut(), 1, 0, std::ptr::null()) };
+        if event == 0 || event == -1 {
+            return Err("the Spaces adapter event could not be created".into());
+        }
+        Ok(Self {
+            handle,
+            event,
+            overlapped: Box::new(Overlapped {
+                event,
+                ..Default::default()
+            }),
+            buffer: vec![0u8; capacity].into_boxed_slice(),
+            pending: false,
+            immediate: 0,
+        })
+    }
+
+    fn prepare(&mut self) -> Result<(), String> {
+        if self.pending {
+            return Err("the Spaces adapter reused a pending operation".into());
+        }
+        *self.overlapped = Overlapped {
+            event: self.event,
+            ..Default::default()
+        };
+        self.immediate = 0;
+        if unsafe { ResetEvent(self.event) } == 0 {
+            return Err(format!(
+                "the Spaces adapter event could not be reset ({})",
+                unsafe { GetLastError() }
+            ));
+        }
+        Ok(())
+    }
+
+    fn started(&mut self, success: i32) -> Result<(), String> {
+        if success != 0 {
+            if unsafe {
+                GetOverlappedResult(self.handle, &*self.overlapped, &mut self.immediate, 0)
+            } == 0
+            {
+                return Err(format!(
+                    "the Spaces adapter operation failed ({})",
+                    unsafe { GetLastError() }
+                ));
+            }
+            // Signal for an immediate completion too, so `ready` is uniform.
+            if unsafe { SetEvent(self.event) } == 0 {
+                return Err("the Spaces adapter event could not be set".into());
+            }
+        } else {
+            let error = unsafe { GetLastError() };
+            if error != ERROR_IO_PENDING {
+                return Err(format!("the Spaces adapter operation failed ({error})"));
+            }
+            self.pending = true;
+        }
+        Ok(())
+    }
+
+    fn read(&mut self) -> Result<(), String> {
+        self.prepare()?;
+        let success = unsafe {
+            ReadFile(
+                self.handle,
+                self.buffer.as_mut_ptr(),
+                self.buffer.len() as u32,
+                std::ptr::null_mut(),
+                &mut *self.overlapped,
+            )
+        };
+        self.started(success)
+    }
+
+    fn write(&mut self, data: &[u8]) -> Result<(), String> {
+        if data.len() > self.buffer.len() {
+            return Err("a frame is larger than the adapter accepts".into());
+        }
+        self.prepare()?;
+        self.buffer[..data.len()].copy_from_slice(data);
+        let success = unsafe {
+            WriteFile(
+                self.handle,
+                self.buffer.as_ptr(),
+                data.len() as u32,
+                std::ptr::null_mut(),
+                &mut *self.overlapped,
+            )
+        };
+        self.started(success)?;
+        self.finish(2000).map(|_| ())
+    }
+
+    fn ioctl(&mut self, code: u32, input: &[u8]) -> Result<usize, String> {
+        self.prepare()?;
+        if input.len() > self.buffer.len() {
+            return Err("the Spaces adapter control buffer is too small".into());
+        }
+        self.buffer[..input.len()].copy_from_slice(input);
+        let success = unsafe {
+            DeviceIoControl(
+                self.handle,
+                code,
+                self.buffer.as_ptr().cast(),
+                input.len() as u32,
+                self.buffer.as_mut_ptr().cast(),
+                self.buffer.len() as u32,
+                std::ptr::null_mut(),
+                &mut *self.overlapped,
+            )
+        };
+        self.started(success)?;
+        self.finish(1000)
+    }
+
+    fn finish(&mut self, timeout_ms: u32) -> Result<usize, String> {
+        if !self.pending {
+            return Ok(self.immediate as usize);
+        }
+        match unsafe { WaitForSingleObject(self.event, timeout_ms) } {
+            WAIT_OBJECT_0 => {}
+            WAIT_TIMEOUT => {
+                self.cancel();
+                return Err("the Spaces adapter operation timed out".into());
+            }
+            _ => {
+                self.cancel();
+                return Err("the Spaces adapter wait failed".into());
+            }
+        }
+        let mut len = 0u32;
+        let success = unsafe {
+            GetOverlappedResult(self.handle, &*self.overlapped, &mut len, 1)
+        };
+        self.pending = false;
+        if success == 0 {
+            return Err(format!(
+                "the Spaces adapter operation stopped ({})",
+                unsafe { GetLastError() }
+            ));
+        }
+        Ok(len as usize)
+    }
+
+    fn cancel(&mut self) {
+        if self.pending {
+            unsafe {
+                CancelIoEx(self.handle, &*self.overlapped);
+                let mut len = 0u32;
+                GetOverlappedResult(self.handle, &*self.overlapped, &mut len, 1);
+            }
+            self.pending = false;
+        }
+    }
+}
+
+impl Drop for Operation {
+    fn drop(&mut self) {
+        self.cancel();
+        unsafe {
+            CloseHandle(self.event);
+        }
+    }
+}
+
 pub struct TapIo {
     handle: isize,
     name: String,
     mac: [u8; 6],
+    write: Operation,
     frames: Receiver<Vec<u8>>,
+    stop: Arc<AtomicBool>,
     reader: Option<JoinHandle<()>>,
-    reader_thread: Arc<Mutex<isize>>,
 }
 
 unsafe impl Send for TapIo {}
@@ -114,13 +323,16 @@ impl TapIo {
         let (name, ifindex, mac) = configure(guid, address, mtu)?;
         let path = format!("\\\\.\\Global\\{{{guid}}}.tap");
         let handle = open(&path)?;
-        if let Err(error) = set_media(handle, true) {
-            unsafe { CloseHandle(handle) };
-            return Err(error);
-        }
-        // Apply the address again now that the media is up. Setting it while
-        // the adapter is down leaves the stack without the on-link route for a
-        // moment, and an ARP request that arrives in that window is ignored.
+
+        let mut control = Operation::new(handle, 64)?;
+        let read = Operation::new(handle, FRAME)?;
+        let write = Operation::new(handle, FRAME)?;
+
+        control.ioctl(TAP_IOCTL_GET_MTU, &[])?;
+        control.ioctl(TAP_IOCTL_SET_MEDIA_STATUS, &1u32.to_ne_bytes())?;
+
+        // The media is up now. Re-apply the address so the on-link route is
+        // installed before the first frame, and wait for it to be visible.
         let ip = address.split('/').next().unwrap_or(address).trim();
         let _ = run_powershell(&format!(
             "netsh interface ipv4 set address name=\"{name}\" source=static address={ip} mask=255.255.255.0 gateway=none | Out-Null"
@@ -135,37 +347,33 @@ impl TapIo {
             }
             std::thread::sleep(std::time::Duration::from_millis(150));
         }
-        std::thread::sleep(std::time::Duration::from_millis(2500));
+        std::thread::sleep(std::time::Duration::from_millis(3000));
         set_private(ifindex);
 
         let (sender, frames) = mpsc::channel();
         let stop = Arc::new(AtomicBool::new(false));
         let reader_stop = stop.clone();
-        let reader_thread = Arc::new(Mutex::new(0isize));
-        let thread_slot = reader_thread.clone();
+        let mut read_op = read;
         let reader = std::thread::spawn(move || {
-            let thread_id = unsafe { GetCurrentThreadId() };
-            let thread_handle = unsafe { OpenThread(THREAD_ALL_ACCESS, 0, thread_id) };
-            *thread_slot.lock().unwrap_or_else(|e| e.into_inner()) = thread_handle;
-            let mut buffer = vec![0u8; FRAME];
-            while !reader_stop.load(Ordering::Relaxed) {
-                let mut read = 0u32;
-                let ok = unsafe {
-                    ReadFile(
-                        handle,
-                        buffer.as_mut_ptr(),
-                        FRAME as u32,
-                        &mut read,
-                        std::ptr::null_mut(),
-                    )
-                };
-                if ok == 0 {
+            loop {
+                if reader_stop.load(Ordering::Relaxed) {
                     break;
                 }
-                if read as usize >= 14
-                    && sender.send(buffer[..read as usize].to_vec()).is_err()
-                {
+                if read_op.read().is_err() {
                     break;
+                }
+                match read_op.finish(500) {
+                    Ok(length) if length >= 14 => {
+                        if sender.send(read_op.buffer[..length].to_vec()).is_err() {
+                            break;
+                        }
+                    }
+                    Ok(_) => {}
+                    Err(_) => {
+                        if reader_stop.load(Ordering::Relaxed) {
+                            break;
+                        }
+                    }
                 }
             }
         });
@@ -174,9 +382,10 @@ impl TapIo {
             handle,
             name,
             mac,
+            write,
             frames,
+            stop,
             reader: Some(reader),
-            reader_thread,
         };
         quotacards::vpn::app_log(&format!(
             "spaces l2: adapter {} up, mac {:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}, mtu {}",
@@ -207,57 +416,23 @@ impl PacketIo for TapIo {
         if frame.is_empty() {
             return Ok(());
         }
-        if frame.len() > FRAME {
-            return Err("a frame is larger than the adapter accepts".into());
-        }
-        let mut written = 0u32;
-        let ok = unsafe {
-            WriteFile(
-                self.handle,
-                frame.as_ptr(),
-                frame.len() as u32,
-                &mut written,
-                std::ptr::null_mut(),
-            )
-        };
-        if ok == 0 {
-            return Err(format!(
-                "the Spaces adapter write failed ({})",
-                unsafe { GetLastError() }
-            ));
-        }
-        if written as usize != frame.len() {
-            return Err(format!(
-                "the Spaces adapter wrote {written} of {} bytes",
-                frame.len()
-            ));
-        }
-        Ok(())
+        self.write.write(frame)
     }
 }
 
 impl Drop for TapIo {
     fn drop(&mut self) {
-        let thread_handle = *self
-            .reader_thread
-            .lock()
-            .unwrap_or_else(|e| e.into_inner());
-        if thread_handle != 0 {
-            unsafe {
-                CancelSynchronousIo(thread_handle);
-            }
-        }
-        let _ = set_media(self.handle, false);
+        self.stop.store(true, Ordering::Relaxed);
         unsafe {
-            CloseHandle(self.handle);
+            // Cancel every pending request on the handle; the reader's wait
+            // returns and the join can finish.
+            CancelIoEx(self.handle, std::ptr::null());
         }
         if let Some(reader) = self.reader.take() {
             let _ = reader.join();
         }
-        if thread_handle != 0 {
-            unsafe {
-                CloseHandle(thread_handle);
-            }
+        unsafe {
+            CloseHandle(self.handle);
         }
     }
 }
@@ -268,10 +443,10 @@ fn open(path: &str) -> Result<isize, String> {
         CreateFileW(
             name.as_ptr(),
             GENERIC_READ | GENERIC_WRITE,
-            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            0,
             std::ptr::null_mut(),
             OPEN_EXISTING,
-            FILE_ATTRIBUTE_SYSTEM,
+            FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED,
             std::ptr::null_mut(),
         )
     };
@@ -282,30 +457,6 @@ fn open(path: &str) -> Result<isize, String> {
         ));
     }
     Ok(handle)
-}
-
-fn set_media(handle: isize, up: bool) -> Result<(), String> {
-    let mut status: u32 = if up { 1 } else { 0 };
-    let mut returned = 0u32;
-    let ok = unsafe {
-        DeviceIoControl(
-            handle,
-            TAP_IOCTL_SET_MEDIA_STATUS,
-            &mut status as *mut u32 as *const u8,
-            4,
-            std::ptr::null_mut(),
-            0,
-            &mut returned,
-            std::ptr::null_mut(),
-        )
-    };
-    if ok == 0 {
-        return Err(format!(
-            "the Spaces adapter did not change media state ({})",
-            unsafe { GetLastError() }
-        ));
-    }
-    Ok(())
 }
 
 fn resolve_guid() -> Result<String, String> {
@@ -346,8 +497,7 @@ fn first_tap_adapter() -> Result<String, String> {
     Ok(guid)
 }
 
-/// The MAC is deliberately not overridden: frames addressed to a NetworkAddress
-/// override were not accepted on receive in testing. The driver MAC is used.
+/// The MAC is deliberately not overridden; the driver MAC is used.
 fn configure(guid: &str, address: &str, mtu: u32) -> Result<(String, i32, [u8; 6]), String> {
     let ip = address.split('/').next().unwrap_or(address).trim();
     let script = format!(
@@ -449,8 +599,6 @@ mod tests {
         assert!(frames > 0, "no frame arrived from the adapter");
     }
 
-    /// The write half: a broadcast ARP request written into the adapter has to
-    /// reach Windows, which answers by learning the sender.
     #[test]
     #[ignore]
     fn a_written_broadcast_arp_reaches_windows() {
@@ -465,68 +613,16 @@ mod tests {
         frame.extend_from_slice(&[10, 77, 99, 9]);
         frame.extend_from_slice(&[0, 0, 0, 0, 0, 0]);
         frame.extend_from_slice(&[10, 77, 99, 2]);
-        // Wait until the address is really active on the interface. netsh can
-        // accept it while the media is still down, and an ARP request for an
-        // address the stack has not installed is ignored.
-        for _ in 0..25 {
-            let address = run_powershell(
-                "(Get-NetIPAddress -InterfaceAlias 'QuotaSpaceLAN' -AddressFamily IPv4 -ErrorAction SilentlyContinue).IPAddress",
-            )
-            .unwrap_or_default();
-            if address.contains("10.77.99.2") {
-                break;
-            }
-            std::thread::sleep(std::time::Duration::from_millis(200));
-        }
         std::thread::sleep(std::time::Duration::from_secs(3));
-        eprintln!(
-            "FRAME {}",
-            frame.iter().map(|b| format!("{:02x}", b)).collect::<String>()
-        );
         io.write(&frame).expect("write");
         std::thread::sleep(std::time::Duration::from_millis(900));
-        let out = run_powershell(            "(Get-NetNeighbor -InterfaceAlias 'QuotaSpaceLAN' -AddressFamily IPv4 -IPAddress '10.77.99.9' -ErrorAction SilentlyContinue).LinkLayerAddress",
+        let out = run_powershell(
+            "(Get-NetNeighbor -InterfaceAlias 'QuotaSpaceLAN' -AddressFamily IPv4 -IPAddress '10.77.99.9' -ErrorAction SilentlyContinue).LinkLayerAddress",
         )
         .unwrap_or_default();
         assert!(
             out.to_uppercase().contains("02-51-56-00-00-09"),
             "windows did not learn the sender: {out}"
         );
-    }
-}
-
-#[cfg(test)]
-mod ffi_tests {
-    use super::*;
-
-    #[test]
-    #[ignore]
-    fn raw_ffi_write_reaches_windows() {
-        let guid = resolve_guid().expect("guid");
-        let path = format!("\\\\.\\Global\\{{{guid}}}.tap");
-        let handle = open(&path).expect("open");
-        set_media(handle, true).expect("media");
-        std::thread::sleep(std::time::Duration::from_millis(700));
-        let sender = [0x02u8, 0x51, 0x56, 0x00, 0x00, 0x09];
-        let mut frame = Vec::new();
-        frame.extend_from_slice(&[0xFF; 6]);
-        frame.extend_from_slice(&sender);
-        frame.extend_from_slice(&[0x08, 0x06]);
-        frame.extend_from_slice(&[0x00, 0x01, 0x08, 0x00, 0x06, 0x04, 0x00, 0x01]);
-        frame.extend_from_slice(&sender);
-        frame.extend_from_slice(&[10, 77, 99, 9]);
-        frame.extend_from_slice(&[0, 0, 0, 0, 0, 0]);
-        frame.extend_from_slice(&[10, 77, 99, 2]);
-        let mut written = 0u32;
-        let ok = unsafe { WriteFile(handle, frame.as_ptr(), frame.len() as u32, &mut written, std::ptr::null_mut()) };
-        eprintln!("RAW ok={ok} written={written} err={}", unsafe { GetLastError() });
-        std::thread::sleep(std::time::Duration::from_millis(900));
-        set_media(handle, false).ok();
-        unsafe { CloseHandle(handle) };
-        let out = run_powershell(
-            "(Get-NetNeighbor -InterfaceAlias 'QuotaSpaceLAN' -AddressFamily IPv4 -IPAddress '10.77.99.9' -ErrorAction SilentlyContinue).LinkLayerAddress",
-        )
-        .unwrap_or_default();
-        assert!(out.to_uppercase().contains("02-51-56-00-00-09"), "no learn: {out}");
     }
 }
