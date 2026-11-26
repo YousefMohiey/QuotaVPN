@@ -140,6 +140,13 @@
 > the old listener, punches from `51394`, then creates the listener last; the local sequence was
 > tested and the listener accepted a client while the punch stayed open. Notes are in
 > `notes/RELEASE-0.7.15.md`.
+>
+> **Experimental 0.7.16, 26 November 2026:** the roles were backwards. The live Radmin socket showed
+> this PC initiated out; 0.7.16 makes the owner connect out and the joiner listen (STUN, punch,
+> listener last). Verified end to end against a VPS peer: join at `10.77.2.3`, listener on the
+> public 8444 port, this PC connected out, Noise handshake completed, `QuotaSpace8007` came up,
+> `ping 10.77.2.3` returned 4/4 at 97 to 137 ms, and the peer logged four echo frames. The friend
+> test remains. Notes are in `notes/RELEASE-0.7.16.md`.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.
