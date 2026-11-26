@@ -1,11 +1,11 @@
 {
     "version":  "0.7.6-exp.5",
-    "build":  "5ca2ae4",
-    "notes":  "Layer-2 Spaces test build. Both PCs must run this exact build (log line: app: build: 5ca2ae4). Known issue: the layer-2 ping still fails across a real tunnel; a local write test passes, so this build is for reproducing that on two real Windows PCs. Layer 3 is unchanged and still the default. The installer is unsigned.",
+    "build":  "fccd730",
+    "notes":  "The LAN button now starts the bundled OpenRad engine: one click joins the network, no separate install or commands. Layer 3 is unchanged. Windows only. The installer is unsigned.",
     "pub_date":  "2026-11-26T14:47:18Z",
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSUlmYnRoTkREc0Y1M2VkNVN4S0tobk16TEd4MXBJajhKbGFsMGZCV2FwMHR0d09reHJZaGpoR3ZoNWdwSlJ5ZmtKaVFXYTNnWXJtN041ZHJrQW05d1FrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NzE0MzI1CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjVfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjAuNy42LWV4cC41CitoZzJoKy84T1F3V3ZSQkkxNndIcCtVbzd3MzZrdkFNdlFGNGJyY2Iydk5vU2YyM1FmZkFxMUNvZDZrcTQxR1crVUtHTnppL1RUQ2pMUTN2TDRVNEFRPT0K",
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSU81TE9YSU5CUFZEQVFqNnIveU5zMnU2ZXVSWDcvY0N6bEtuQmk2c1VDcS9MVnl6UE96TWxzendJTlJTR0tLVFAwRnpZRDNFOEtsMWsySXYxTERPSkFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NzI0OTQzCWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjVfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjAuNy42LWV4cC41CnFIclFZK2QrUmVDQ1RKT2VVTTdhbUoxZDRBTHZCc0srd3U4N09GeUNpamlVaURQcHNEbkZ5aGdSc3BLb0tDZ3BGOGpJZkZzWGp2UEoybmZWd1ZQTENRPT0K",
                                              "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.6-exp.5/QuotaVPN_0.7.6-exp.5_x64-setup.exe"
                                          }
                   }
