@@ -919,6 +919,17 @@ async fn start_layer2(
         owner,
     };
 
+    // Bring the adapter up before the punch. Creating it afterwards left a
+    // several second gap between the Noise handshake and the first frame, and
+    // the punched TCP connection did not survive that gap.
+    let address_for_status = address.to_string();
+    let address_owned = address.to_string();
+    let io = tauri::async_runtime::spawn_blocking(move || TapIo::new(&address_owned, 1380))
+        .await
+        .map_err(|e| e.to_string())??;
+    let adapter = io.name().to_string();
+    let mac = io.mac();
+
     // Peers are opened one at a time on purpose. The coordinator keeps one
     // endpoint per member, not one per probe, so a second probe overwrites the
     // first. Punching in parallel would point every peer at the last socket
@@ -958,14 +969,6 @@ async fn start_layer2(
         .map(|(label, _)| label.clone())
         .collect::<Vec<_>>()
         .join(", ");
-
-    let address_for_status = address.to_string();
-    let address = address.to_string();
-    let io = tauri::async_runtime::spawn_blocking(move || TapIo::new(&address, 1380))
-        .await
-        .map_err(|e| e.to_string())??;
-    let adapter = io.name().to_string();
-    let mac = io.mac();
 
     let stop = Arc::new(AtomicBool::new(false));
     let error = Arc::new(Mutex::new(None));
