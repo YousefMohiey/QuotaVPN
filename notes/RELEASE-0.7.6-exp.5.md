@@ -42,5 +42,13 @@ The public coordinator is redeployed with `mode`, per-member MACs and
 - Windows to Windows. The phone is still 0.7.5 and has no Spaces screen.
 - Multi-peer is full mesh, one Noise session per member. Spaces larger than a
   handful of members will want the relay.
-- The game matrix has not run yet. The build is the first one able to run it.
+- **Layer 2 does not complete a ping across a real NAT tunnel yet.** In the VPS
+  test the punch, the Noise handshake, the TAP adapter and ARP all work: the
+  peer answers ARP and the ICMP echo requests reach it, it replies, and the
+  switch writes the replies to the adapter. Windows still reports the pings as
+  lost. The same switch passes a two-adapter ping on one machine, so the switch
+  and the write path are sound and the remaining fault is at the Windows
+  receive side or in reply timing. Treat layer 2 as experimental until a second
+  real PC proves otherwise. Layer 3 is unaffected.
+- The game matrix has not run yet.
 - Smart App Control still blocks an unsigned installer. That is unchanged.
