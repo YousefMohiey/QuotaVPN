@@ -1,12 +1,12 @@
 {
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSUxnS3hJZEYyRGFTRUwyU0F1T3M1WGc0YUkyd3NDdlhFY2FLT3pyMWtCZ3l2eUQyTXVMWDJYa0kySjNidENDWDVPcEdrd1VzYlZqSDV4a2xMYnByU0FvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NzI5MDA0CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjZfeDY0LXNldHVwLmV4ZQp0QmVWN0ZXRW1Fd2F3bWR3YUZtKzZUZSt6UWU4N3libXpPc2dQcE5vUTA0RlFVOW1pTEdDQVEyMHZoa2VzeHR1emtKbmpVbW03MUpiN1ArdVBFY21Ddz09Cg==",
-                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.6-exp.6/QuotaVPN_0.7.6-exp.6_x64-setup.exe"
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSUpJNzM4RGdIK1NNOUEraTJxQXdlRUd2MXdYclFmUlBaUCtrdTVzZEZXUnFDR01NdlVoYjRZeUluTzZDZXBZWWNvWWpKVkxKeW9Hck5RcGdtY25ReVFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NzM0NzU0CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjdfeDY0LXNldHVwLmV4ZQpyUXl6cXgvdFNKN21ncGFwZWJxa2V4cGtJYkh4dlNrWkRUUlptTUFJNnJPVjJIRjJpYjJjL0hUWlZQZnZkSm5oN001UllldHdIazQ1dVcxbTJycWhCUT09Cg==",
+                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.6-exp.7/QuotaVPN_0.7.6-exp.7_x64-setup.exe"
                                          }
                   },
-    "pub_date":  "2026-11-26T21:39:12Z",
-    "build":  "4c17eca",
-    "version":  "0.7.6-exp.6",
-    "notes":  "Spaces is rebuilt around the LAN with live peers, transport and latency, four themes, and a cleaner setup. The bundled engine falls back to public STUN for a direct UDP path when the server has no UES hosts. Windows only. The installer is unsigned."
+    "pub_date":  "2026-11-26T23:13:39Z",
+    "build":  "766cc74",
+    "version":  "0.7.6-exp.7",
+    "notes":  "Full ai-design-skills pass: Phosphor icons, approved dark surfaces, no background gradients, Manrope and Geist Mono, one type, radius and spacing scale, four neutral-surface themes, a skip link and skeleton loading. The direct LAN path is unchanged. Windows only. The installer is unsigned."
 }

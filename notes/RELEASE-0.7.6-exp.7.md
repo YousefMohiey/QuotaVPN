@@ -54,5 +54,5 @@ measured RTT.
 
 ## Build
 
-- Build stamp: to be filled after the build
-- Installer SHA-256: to be filled after the build
+- Build stamp: `766cc74`
+- Installer SHA-256: `96D813AE2EEABBDC50E6EA00D8C570349DBF826287EE03772A7CBC7310F40EF1`
