@@ -134,6 +134,12 @@
 > socket bound to `51394` (STUN, listener, punch). The STUN socket is now closed before the punch,
 > and the joining side drops its listener before connecting, leaving the owner with listener plus
 > punch and the joiner with one session socket. Notes are in `notes/RELEASE-0.7.14.md`.
+>
+> **Experimental 0.7.15, 26 November 2026:** the owner still created the listener before the punch,
+> so the punch took the inbound connection and the session closed with 10057. The owner now drops
+> the old listener, punches from `51394`, then creates the listener last; the local sequence was
+> tested and the listener accepted a client while the punch stayed open. Notes are in
+> `notes/RELEASE-0.7.15.md`.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.

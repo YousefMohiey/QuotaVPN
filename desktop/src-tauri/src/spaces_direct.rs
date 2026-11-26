@@ -540,16 +540,21 @@ pub async fn start(
             .port();
         let connect_timeout = Duration::from_secs(12);
         let stream = if owner {
-            // Punch from the listener port first. The SYN opens this router's
-            // mapping for the peer's address; the peer's own punch and session
-            // then pass. Hold the punch socket while the session is set up.
-            let punch = peer_tcp;
-            std::thread::spawn(move || {
-                if let Ok(stream) = connect_from(local_port, punch, Duration::from_secs(4)) {
-                    std::thread::sleep(Duration::from_secs(12));
-                    drop(stream);
-                }
-            });
+            // Punch first, then listen. The listener must be the last socket
+            // bound to the port or the punch takes the inbound connection.
+            drop(listener);
+            let _punch = connect_from(local_port, peer_tcp, Duration::from_secs(4));
+            let sock = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP))
+                .map_err(|e| format!("tcp listener: {e}"))?;
+            sock.set_reuse_address(true)
+                .map_err(|e| format!("tcp listener: {e}"))?;
+            sock.bind(&SocketAddr::from((std::net::Ipv4Addr::UNSPECIFIED, local_port)).into())
+                .map_err(|e| format!("tcp listener on {local_port}: {e}"))?;
+            sock.listen(8).map_err(|e| format!("tcp listener: {e}"))?;
+            let listener: TcpListener = sock.into();
+            listener
+                .set_nonblocking(true)
+                .map_err(|e| format!("tcp listener: {e}"))?;
             let deadline = Instant::now() + connect_timeout;
             loop {
                 match listener.accept() {
