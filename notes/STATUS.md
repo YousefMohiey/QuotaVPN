@@ -109,6 +109,14 @@
 > `https://quotavpn.duckdns.org/spaces`, behind the existing Xray TLS fallback and nginx path, with
 > no Oracle change, no new open port and no VPN service restart. Radmin's live data path was
 > inspected at the same time and was direct TCP, not relay. Notes are in `notes/RELEASE-0.7.10.md`.
+>
+> **Experimental 0.7.11, 26 November 2026:** the direct carrier is TCP. The UDP handshake timed out
+> between the two test PCs while Radmin's live session was direct TCP (`Connected ... via
+> TCP/incoming`). Each member now opens a stable TCP listener, keeps a helper connection to the
+> coordinator from the same local port so the NAT mapping stays open, and reports `ip:port` to the
+> coordinator. The owner listens, the other member connects, and the Noise session runs over
+> framed TCP. The coordinator stores and returns the TCP endpoint. Notes are in
+> `notes/RELEASE-0.7.11.md`.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.

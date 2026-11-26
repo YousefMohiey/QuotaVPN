@@ -19,7 +19,8 @@ use ring::aead::{Aad, LessSafeKey, Nonce, UnboundKey, CHACHA20_POLY1305};
 use ring::hmac;
 use snow::params::NoiseParams;
 use snow::Builder;
-use std::net::{SocketAddr, UdpSocket};
+use std::io::{Read, Write};
+use std::net::{SocketAddr, TcpStream, UdpSocket};
 use std::time::{Duration, Instant};
 
 const PARAMS: &str = "Noise_IK_25519_ChaChaPoly_BLAKE2s";
@@ -75,12 +76,23 @@ impl PathIdentity {
 /// the Noise transport state directly would drop the session on the first lost
 /// packet.
 pub struct DirectPath {
-    socket: UdpSocket,
+    link: Link,
     peer: SocketAddr,
     send_key: LessSafeKey,
     recv_key: LessSafeKey,
     send_counter: u64,
     replay: ReplayWindow,
+}
+
+enum Link {
+    Udp {
+        socket: UdpSocket,
+        peer: SocketAddr,
+    },
+    Tcp {
+        stream: TcpStream,
+        rx: Vec<u8>,
+    },
 }
 
 impl DirectPath {
@@ -135,55 +147,81 @@ impl DirectPath {
 
     pub fn send(&mut self, payload: &[u8]) -> Result<(), String> {
         let packet = self.encrypt(payload)?;
-        self.socket
-            .send_to(&packet, self.peer)
-            .map_err(|e| format!("direct send: {e}"))?;
+        match &mut self.link {
+            Link::Udp { socket, peer } => {
+                socket
+                    .send_to(&packet, *peer)
+                    .map_err(|e| format!("direct send: {e}"))?;
+            }
+            Link::Tcp { stream, .. } => write_frame(stream, &packet)?,
+        }
         Ok(())
     }
 
-    /// Nonblocking send for the packet loop. A full socket buffer is reported
-    /// as `false`, which lets the caller drop the datagram like any UDP stack.
+    /// Nonblocking send for the packet loop. A full UDP buffer is reported as
+    /// `false`, which lets the caller drop the datagram like any UDP stack.
     pub fn try_send(&mut self, payload: &[u8]) -> Result<bool, String> {
         let packet = self.encrypt(payload)?;
-        match self.socket.send_to(&packet, self.peer) {
-            Ok(_) => Ok(true),
-            Err(e)
-                if e.kind() == std::io::ErrorKind::WouldBlock
-                    || e.kind() == std::io::ErrorKind::TimedOut =>
-            {
-                Ok(false)
+        match &mut self.link {
+            Link::Udp { socket, peer } => match socket.send_to(&packet, *peer) {
+                Ok(_) => Ok(true),
+                Err(e)
+                    if e.kind() == std::io::ErrorKind::WouldBlock
+                        || e.kind() == std::io::ErrorKind::TimedOut =>
+                {
+                    Ok(false)
+                }
+                Err(e) => Err(format!("direct send: {e}")),
+            },
+            Link::Tcp { stream, .. } => {
+                write_frame(stream, &packet)?;
+                Ok(true)
             }
-            Err(e) => Err(format!("direct send: {e}")),
         }
     }
 
     pub fn set_nonblocking(&self) -> Result<(), String> {
-        self.socket
-            .set_nonblocking(true)
-            .map_err(|e| format!("direct nonblocking: {e}"))
+        match &self.link {
+            Link::Udp { socket, .. } => socket
+                .set_nonblocking(true)
+                .map_err(|e| format!("direct nonblocking: {e}")),
+            Link::Tcp { stream, .. } => {
+                stream
+                    .set_read_timeout(Some(Duration::from_millis(2)))
+                    .map_err(|e| format!("direct timeout: {e}"))?;
+                stream
+                    .set_write_timeout(Some(Duration::from_secs(2)))
+                    .map_err(|e| format!("direct timeout: {e}"))
+            }
+        }
     }
 
     /// Nonblocking receive for the packet loop. `None` means no payload is
     /// waiting, not that the session is dead.
     pub fn try_recv(&mut self) -> Result<Option<Vec<u8>>, String> {
-        let mut incoming = [0u8; 2048];
         loop {
-            match self.socket.recv_from(&mut incoming) {
-                Ok((n, src)) => {
-                    if src != self.peer {
-                        continue;
-                    }
-                    if let Some(plain) = self.decrypt(&incoming[..n])? {
-                        return Ok(Some(plain));
+            let packet = match &mut self.link {
+                Link::Udp { socket, peer } => {
+                    let mut incoming = [0u8; 2048];
+                    match socket.recv_from(&mut incoming) {
+                        Ok((n, src)) if src == *peer => Some(incoming[..n].to_vec()),
+                        Ok(_) => continue,
+                        Err(e)
+                            if e.kind() == std::io::ErrorKind::WouldBlock
+                                || e.kind() == std::io::ErrorKind::TimedOut =>
+                        {
+                            return Ok(None)
+                        }
+                        Err(e) => return Err(format!("direct receive: {e}")),
                     }
                 }
-                Err(e)
-                    if e.kind() == std::io::ErrorKind::WouldBlock
-                        || e.kind() == std::io::ErrorKind::TimedOut =>
-                {
-                    return Ok(None)
-                }
-                Err(e) => return Err(format!("direct receive: {e}")),
+                Link::Tcp { stream, rx } => read_tcp_packet(stream, rx)?,
+            };
+            let Some(packet) = packet else {
+                return Ok(None);
+            };
+            if let Some(plain) = self.decrypt(&packet)? {
+                return Ok(Some(plain));
             }
         }
     }
@@ -192,18 +230,87 @@ impl DirectPath {
     /// and failed tags are ignored until the socket times out, so a stray or
     /// tampered packet cannot confuse a session.
     pub fn recv(&mut self) -> Result<Vec<u8>, String> {
-        let mut incoming = [0u8; 2048];
         loop {
-            let (n, src) = self
-                .socket
-                .recv_from(&mut incoming)
-                .map_err(|e| format!("direct receive: {e}"))?;
-            if src != self.peer {
-                continue;
-            }
-            if let Some(plain) = self.decrypt(&incoming[..n])? {
+            let packet = match &mut self.link {
+                Link::Udp { socket, peer } => {
+                    let mut incoming = [0u8; 2048];
+                    match socket.recv_from(&mut incoming) {
+                        Ok((n, src)) if src == *peer => incoming[..n].to_vec(),
+                        Ok(_) => continue,
+                        Err(e) => return Err(format!("direct receive: {e}")),
+                    }
+                }
+                Link::Tcp { stream, rx } => match read_tcp_packet(stream, rx)? {
+                    Some(packet) => packet,
+                    None => return Err("the direct receive timed out".into()),
+                },
+            };
+            if let Some(plain) = self.decrypt(&packet)? {
                 return Ok(plain);
             }
+        }
+    }
+}
+
+fn write_frame(stream: &mut TcpStream, packet: &[u8]) -> Result<(), String> {
+    if packet.len() > u16::MAX as usize {
+        return Err("the direct frame is too large".into());
+    }
+    let len = (packet.len() as u16).to_be_bytes();
+    stream
+        .write_all(&len)
+        .map_err(|e| format!("direct send: {e}"))?;
+    stream
+        .write_all(packet)
+        .map_err(|e| format!("direct send: {e}"))
+}
+
+fn read_frame(stream: &mut TcpStream) -> Result<Vec<u8>, String> {
+    let mut len = [0u8; 2];
+    stream.read_exact(&mut len).map_err(|e| {
+        if e.kind() == std::io::ErrorKind::TimedOut
+            || e.kind() == std::io::ErrorKind::WouldBlock
+        {
+            "the direct handshake timed out".to_string()
+        } else {
+            format!("direct receive: {e}")
+        }
+    })?;
+    let size = u16::from_be_bytes(len) as usize;
+    if size == 0 || size > 4096 {
+        return Err("the direct frame is malformed".into());
+    }
+    let mut packet = vec![0u8; size];
+    stream
+        .read_exact(&mut packet)
+        .map_err(|e| format!("direct receive: {e}"))?;
+    Ok(packet)
+}
+
+fn read_tcp_packet(stream: &mut TcpStream, rx: &mut Vec<u8>) -> Result<Option<Vec<u8>>, String> {
+    loop {
+        if rx.len() >= 2 {
+            let size = u16::from_be_bytes([rx[0], rx[1]]) as usize;
+            if size == 0 || size > 4096 {
+                return Err("the direct frame is malformed".into());
+            }
+            if rx.len() >= 2 + size {
+                let packet = rx[2..2 + size].to_vec();
+                rx.drain(..2 + size);
+                return Ok(Some(packet));
+            }
+        }
+        let mut chunk = [0u8; 4096];
+        match stream.read(&mut chunk) {
+            Ok(0) => return Err("the direct peer closed the connection".into()),
+            Ok(n) => rx.extend_from_slice(&chunk[..n]),
+            Err(e)
+                if e.kind() == std::io::ErrorKind::WouldBlock
+                    || e.kind() == std::io::ErrorKind::TimedOut =>
+            {
+                return Ok(None)
+            }
+            Err(e) => return Err(format!("direct receive: {e}")),
         }
     }
 }
@@ -337,7 +444,7 @@ pub fn connect(
     let hash = handshake.get_handshake_hash().to_vec();
     let (send_key, recv_key) = derive_keys(&hash, true)?;
     Ok(DirectPath {
-        socket,
+        link: Link::Udp { socket, peer },
         peer,
         send_key,
         recv_key,
@@ -408,8 +515,126 @@ pub fn accept(
     let hash = handshake.get_handshake_hash().to_vec();
     let (send_key, recv_key) = derive_keys(&hash, false)?;
     Ok(DirectPath {
-        socket,
+        link: Link::Udp {
+            socket,
+            peer: expected_peer,
+        },
         peer: expected_peer,
+        send_key,
+        recv_key,
+        send_counter: 0,
+        replay: ReplayWindow::default(),
+    })
+}
+
+/// TCP initiator. The peer is known through the coordinator; the Noise
+/// handshake is identical to the UDP one, with a two-byte length around each
+/// handshake message and each data frame.
+pub fn connect_tcp(
+    mut stream: TcpStream,
+    local: &PathIdentity,
+    remote_public: &[u8],
+    timeout: Duration,
+) -> Result<DirectPath, String> {
+    if remote_public.len() != 32 {
+        return Err("the peer static key is not 32 bytes".into());
+    }
+    let peer = stream
+        .peer_addr()
+        .map_err(|e| format!("direct peer: {e}"))?;
+    stream
+        .set_read_timeout(Some(timeout))
+        .map_err(|e| format!("direct timeout: {e}"))?;
+    stream
+        .set_write_timeout(Some(timeout))
+        .map_err(|e| format!("direct timeout: {e}"))?;
+    let mut handshake = Builder::new(params()?)
+        .local_private_key(&local.private)
+        .remote_public_key(remote_public)
+        .prologue(PROLOGUE)
+        .build_initiator()
+        .map_err(|e| format!("direct handshake: {e}"))?;
+    let mut out = vec![0u8; 512];
+    out[0] = FRAME_HANDSHAKE;
+    let n = handshake
+        .write_message(&[], &mut out[1..])
+        .map_err(|e| format!("direct hello: {e}"))?;
+    write_frame(&mut stream, &out[..n + 1])?;
+    let incoming = read_frame(&mut stream)?;
+    if incoming.len() < 2 || incoming[0] != FRAME_HANDSHAKE {
+        return Err("the direct reply is not a handshake".into());
+    }
+    let mut payload = [0u8; 64];
+    handshake
+        .read_message(&incoming[1..], &mut payload)
+        .map_err(|e| format!("direct handshake reply: {e}"))?;
+    let hash = handshake.get_handshake_hash().to_vec();
+    let (send_key, recv_key) = derive_keys(&hash, true)?;
+    Ok(DirectPath {
+        link: Link::Tcp {
+            stream,
+            rx: Vec::new(),
+        },
+        peer,
+        send_key,
+        recv_key,
+        send_counter: 0,
+        replay: ReplayWindow::default(),
+    })
+}
+
+/// TCP responder. The connecting peer must present the expected static key.
+pub fn accept_tcp(
+    mut stream: TcpStream,
+    local: &PathIdentity,
+    expected_public: &[u8],
+    timeout: Duration,
+) -> Result<DirectPath, String> {
+    if expected_public.len() != 32 {
+        return Err("the peer static key is not 32 bytes".into());
+    }
+    let peer = stream
+        .peer_addr()
+        .map_err(|e| format!("direct peer: {e}"))?;
+    stream
+        .set_read_timeout(Some(timeout))
+        .map_err(|e| format!("direct timeout: {e}"))?;
+    stream
+        .set_write_timeout(Some(timeout))
+        .map_err(|e| format!("direct timeout: {e}"))?;
+    let mut handshake = Builder::new(params()?)
+        .local_private_key(&local.private)
+        .prologue(PROLOGUE)
+        .build_responder()
+        .map_err(|e| format!("direct responder: {e}"))?;
+    let incoming = read_frame(&mut stream)?;
+    if incoming.len() < 2 || incoming[0] != FRAME_HANDSHAKE {
+        return Err("the direct hello is not a handshake".into());
+    }
+    let mut payload = [0u8; 64];
+    handshake
+        .read_message(&incoming[1..], &mut payload)
+        .map_err(|e| format!("direct hello: {e}"))?;
+    let remote = handshake
+        .get_remote_static()
+        .ok_or("the direct hello carried no static key")?;
+    if remote != expected_public {
+        return Err("the direct hello named the wrong member".into());
+    }
+    let mut out = vec![0u8; 512];
+    out[0] = FRAME_HANDSHAKE;
+    let n = handshake
+        .write_message(&[], &mut out[1..])
+        .map_err(|e| format!("direct ack: {e}"))?;
+    write_frame(&mut stream, &out[..n + 1])?;
+    let hash = handshake.get_handshake_hash().to_vec();
+    let (send_key, recv_key) = derive_keys(&hash, false)?;
+    Ok(DirectPath {
+        link: Link::Tcp {
+            stream,
+            rx: Vec::new(),
+        },
+        peer,
         send_key,
         recv_key,
         send_counter: 0,
@@ -497,11 +722,42 @@ mod tests {
         let mut bogus = vec![FRAME_DATA];
         bogus.extend_from_slice(&[0u8; 8]);
         bogus.extend_from_slice(&[0u8; TAG]);
-        path.socket
-            .send_to(&bogus, b_addr)
-            .expect("tampered send");
+        match &path.link {
+            Link::Udp { socket, .. } => {
+                socket.send_to(&bogus, b_addr).expect("tampered send");
+            }
+            Link::Tcp { .. } => panic!("this test uses UDP"),
+        }
         path.send(b"ok").expect("valid send");
         responder.join().expect("responder");
+    }
+
+    #[test]
+    fn tcp_peers_exchange_an_encrypted_datagram() {
+        let (a_id, a_pub) = identity();
+        let (b_id, b_pub) = identity();
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("listener");
+        let addr = listener.local_addr().expect("addr");
+        let responder = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().expect("accept");
+            accept_tcp(stream, &b_id, &a_pub, Duration::from_secs(5)).expect("accept tcp")
+        });
+        let stream = TcpStream::connect(addr).expect("connect");
+        let mut a =
+            connect_tcp(stream, &a_id, &b_pub, Duration::from_secs(5)).expect("connect tcp");
+        let mut b = responder.join().expect("responder");
+        a.set_nonblocking().expect("a nonblocking");
+        b.set_nonblocking().expect("b nonblocking");
+        a.send(b"hello").expect("send");
+        let mut got = None;
+        for _ in 0..100 {
+            if let Some(value) = b.try_recv().expect("recv") {
+                got = Some(value);
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        assert_eq!(got.expect("payload"), b"hello");
     }
 
     #[test]

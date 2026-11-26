@@ -138,6 +138,7 @@ class Store:
         # punches UDP to the peer directly.
         self.probes = {}
         self.endpoints = {}
+        self.tcp_endpoints = {}
         self.probe_lock = threading.Lock()
         self.udp_port = 0
 
@@ -625,12 +626,13 @@ class Store:
                 now(),
             )
 
-    def probe_endpoint(self, member, space, probe_id, endpoint):
+    def probe_endpoint(self, member, space, probe_id, endpoint, tcp_endpoint=""):
         """Store the public UDP mapping the client learned from STUN.
 
         The VPS does not need an open UDP port for this. The client asks a STUN
         server from the same socket it will use for the Noise handshake, then
-        reports the mapping over the existing HTTPS channel.
+        reports the mapping over the existing HTTPS channel. The optional TCP
+        endpoint is the stable listener port behind the client's NAT.
         """
         try:
             ip_text, port_text = str(endpoint).rsplit(":", 1)
@@ -640,6 +642,17 @@ class Store:
                 raise ValueError("port")
         except Exception:
             return 400, {"error": "the endpoint is not an IPv4 host and port"}
+        tcp_text = ""
+        if tcp_endpoint:
+            try:
+                tcp_ip, tcp_port_text = str(tcp_endpoint).rsplit(":", 1)
+                ipaddress.IPv4Address(tcp_ip)
+                tcp_port = int(tcp_port_text)
+                if not 1 <= tcp_port <= 65535:
+                    raise ValueError("port")
+                tcp_text = f"{tcp_ip}:{tcp_port}"
+            except Exception:
+                return 400, {"error": "the tcp endpoint is not an IPv4 host and port"}
         with self.probe_lock:
             row = self.probes.get(probe_id)
             if row is None or row[0] != space["id"] or row[1] != member["id"]:
@@ -648,6 +661,11 @@ class Store:
                 f"{ip_text}:{port}",
                 now(),
             )
+            if tcp_text:
+                self.tcp_endpoints[(space["id"], member["id"])] = (
+                    tcp_text,
+                    now(),
+                )
         return 200, {"ok": True}
 
     def probe_status(self, member, space, probe_id):
@@ -667,6 +685,9 @@ class Store:
             self.endpoints = {
                 key: value for key, value in self.endpoints.items() if value[1] > cut
             }
+            self.tcp_endpoints = {
+                key: value for key, value in self.tcp_endpoints.items() if value[1] > cut
+            }
             self.probes = {
                 key: value
                 for key, value in self.probes.items()
@@ -676,12 +697,14 @@ class Store:
             peers = []
             for row in members:
                 endpoint = self.endpoints.get((space["id"], row["id"]))
+                tcp_endpoint = self.tcp_endpoints.get((space["id"], row["id"]))
                 peers.append(
                     {
                         "member_id": row["id"],
                         "name": row["name"],
                         "public_key": row["public_key"],
                         "endpoint": endpoint[0] if endpoint else None,
+                        "tcp_endpoint": tcp_endpoint[0] if tcp_endpoint else None,
                     }
                 )
             return 200, {
@@ -876,7 +899,7 @@ class Handler(BaseHTTPRequestHandler):
             if member is None:
                 return self._send(404, {"error": "not found"})
             code, payload = self.store.probe_endpoint(
-                member, space, parts[4], body.get("endpoint", "")
+                member, space, parts[4], body.get("endpoint", ""), body.get("tcp_endpoint", "")
             )
             return self._send(code, payload)
         if len(parts) == 4 and parts[:2] == ["v1", "spaces"]:

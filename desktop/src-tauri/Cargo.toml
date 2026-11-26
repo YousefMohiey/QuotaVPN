@@ -1,6 +1,6 @@
 [package]
 name = "quotacards-desktop"
-version = "0.7.10"
+version = "0.7.11"
 default-run = "QuotaVPN"
 edition = "2021"
 
@@ -40,6 +40,9 @@ quotacards = { path = "../..", default-features = false }
 sha2 = "0.10"
 
 [target.'cfg(windows)'.dependencies]
+# Stable-port TCP listener and the control-connection port reuse that Radmin
+# uses to keep a NAT mapping open for incoming peers.
+socket2 = "0.5"
 # TUN adapter byte counters for the live traffic chart.
 windows = { version = "0.62", features = ["Win32_NetworkManagement_IpHelper", "Win32_NetworkManagement_Ndis", "Win32_Foundation", "Win32_System_Diagnostics_ToolHelp", "Win32_System_Registry", "Win32_System_Threading", "Win32_System_Com", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Gdi", "Win32_Storage_FileSystem", "Win32_Security_Cryptography"] }
 # WebView2 memory trimming while the window sits hidden in the tray
