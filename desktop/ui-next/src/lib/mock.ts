@@ -52,6 +52,8 @@ let demoSpaces: Space[] = EMPTY_SPACES ? [] : [
 let demoSpaceActive = EMPTY_SPACES ? "" : "K7M2Q9X4"
 let demoDirect: DirectStatus = {
   running: false,
+  starting: false,
+  space: "",
   peer: "",
   address: "",
   adapter: "",
@@ -213,6 +215,8 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
       await new Promise((r) => setTimeout(r, 1600))
       demoDirect = {
         running: true,
+        starting: false,
+        space: demoSpaceActive,
         peer: "Sara-Laptop",
         address: "10.77.3.7",
         adapter: "QuotaSpaceK7M2",
@@ -223,6 +227,8 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
     case "space_direct_stop":
       demoDirect = {
         running: false,
+        starting: false,
+        space: demoDirect.space,
         peer: demoDirect.peer,
         address: demoDirect.address,
         adapter: demoDirect.adapter,

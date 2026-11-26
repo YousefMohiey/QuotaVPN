@@ -71,6 +71,8 @@ export type SpaceProbe = {
 /** The persistent direct LAN adapter, separate from the relay tunnel. */
 export type DirectStatus = {
   running: boolean
+  starting: boolean
+  space: string
   peer: string
   address: string
   adapter: string

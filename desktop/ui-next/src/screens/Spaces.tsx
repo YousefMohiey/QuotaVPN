@@ -723,10 +723,11 @@ export function Spaces() {
   }, [loadDirect])
 
   useEffect(() => {
-    if (!direct?.running) return
+    // The supervisor can start or stop the engine without the screen asking,
+    // so the status is polled even when nothing is running yet.
     const id = window.setInterval(() => void loadDirect(), 2000)
     return () => window.clearInterval(id)
-  }, [direct?.running, loadDirect])
+  }, [loadDirect])
 
   const startDirect = async () => {
     if (!space || !probePeer) return
@@ -1014,9 +1015,11 @@ export function Spaces() {
                             ? t("spacesLive")
                             : direct?.running
                               ? t("spacesDirectConnected")
-                              : active
-                                ? t("spacesReady")
-                                : t("spacesOff")}
+                              : direct?.starting
+                                ? t("spacesConnecting")
+                                : active
+                                  ? t("spacesReady")
+                                  : t("spacesOff")}
                         </div>
                         {live ? (
                           <span className="flex items-center gap-1.5 text-[12px] text-txt2">
@@ -1032,15 +1035,19 @@ export function Spaces() {
                           <button
                             type="button"
                             onClick={() => void startDirect()}
-                            disabled={!probePeer || directBusy}
+                            disabled={!probePeer || directBusy || direct?.starting}
                             className="press flex h-9 items-center gap-2 rounded-[8px] bg-[var(--brand)] px-4 text-[12.5px] font-medium text-white hover:brightness-110 disabled:opacity-50"
                           >
-                            {directBusy ? (
+                            {directBusy || direct?.starting ? (
                               <Loader2 className="size-3.5 animate-spin" aria-hidden />
                             ) : (
                               <Cable className="size-3.5" aria-hidden />
                             )}
-                            {probePeer ? t("spacesConnectDirect") : t("spacesWaitMember")}
+                            {direct?.starting
+                              ? t("spacesConnecting")
+                              : probePeer
+                                ? t("spacesConnectNow")
+                                : t("spacesWaitMember")}
                           </button>
                         ) : (
                           <button
@@ -1065,9 +1072,11 @@ export function Spaces() {
                             : direct?.running
                               ? t("spacesDirectHint")
                               : active
-                                ? probePeer
-                                  ? t("spacesConnectDirectHint")
-                                  : t("spacesWaitHint")
+                                ? direct?.starting
+                                  ? t("spacesConnectingHint")
+                                  : probePeer
+                                    ? t("spacesAutoHint")
+                                    : t("spacesWaitHint")
                                 : t("spacesSelectBody"))}
                       </p>
                     </div>
@@ -1092,15 +1101,19 @@ export function Spaces() {
                           <button
                             type="button"
                             onClick={() => void startDirect()}
-                            disabled={!probePeer || directBusy}
+                            disabled={!probePeer || directBusy || direct?.starting}
                             className="press flex h-9 items-center gap-2 rounded-[8px] bg-[var(--brand)] px-3.5 text-[12.5px] font-medium text-white transition-[filter] hover:brightness-110 disabled:opacity-50"
                           >
-                            {directBusy ? (
+                            {directBusy || direct?.starting ? (
                               <Loader2 className="size-3.5 animate-spin" aria-hidden />
                             ) : (
                               <Cable className="size-3.5" aria-hidden />
                             )}
-                            {directBusy ? t("spacesDirectStarting") : t("spacesDirectStart")}
+                            {direct?.starting
+                              ? t("spacesConnecting")
+                              : directBusy
+                                ? t("spacesDirectStarting")
+                                : t("spacesDirectStart")}
                           </button>
                         )}
                       </div>

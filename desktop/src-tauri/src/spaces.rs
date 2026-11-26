@@ -382,12 +382,19 @@ pub async fn space_refresh(
     state: tauri::State<'_, crate::State>,
     id: String,
 ) -> Result<SpacesState, String> {
+    refresh(&state, &id).await
+}
+
+/// Refresh a space from the coordinator and cache the roster. Shared by the
+/// command and the background supervisor, which needs the online flags
+/// without a screen being open.
+pub(crate) async fn refresh(state: &crate::State, id: &str) -> Result<SpacesState, String> {
     let (token, path) = {
         let cfg = state.0.lock().unwrap_or_else(|e| e.into_inner());
         let record = cfg
             .spaces
             .iter()
-            .find(|s| s.id == id)
+            .find(|s| s.id.as_str() == id)
             .ok_or("that space is not on this PC")?;
         (record.token.clone(), format!("/v1/spaces/{}", record.id))
     };
@@ -398,7 +405,7 @@ pub async fn space_refresh(
     let parsed: ApiList = serde_json::from_value(answer)
         .map_err(|e| format!("the space server sent an answer this build does not understand: {e}"))?;
     let mut cfg = state.0.lock().unwrap_or_else(|e| e.into_inner());
-    if let Some(record) = cfg.spaces.iter_mut().find(|s| s.id == id) {
+    if let Some(record) = cfg.spaces.iter_mut().find(|s| s.id.as_str() == id) {
         record.name = parsed.space.name;
         record.subnet = if parsed.space.subnet.is_empty() {
             record.subnet.clone()

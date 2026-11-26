@@ -96,6 +96,12 @@
 > instead of **Connect the VPN**. The direct path carries the space over its own Wintun adapter.
 > The relay remains available only when the user connects the main VPN manually. Notes are in
 > `notes/RELEASE-0.7.8.md`.
+>
+> **Experimental 0.7.9, 26 November 2026:** the direct engine now belongs to the app, not the
+> Spaces screen. A supervisor starts it for the active space, keeps it alive when the window is
+> hidden or the screen is left, and reconnects when another member is online. A manual Stop pauses
+> it. The app adds its own inbound UDP/TCP firewall rules for all profiles. The coordinator is
+> still the signaling path. Notes are in `notes/RELEASE-0.7.9.md`.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.

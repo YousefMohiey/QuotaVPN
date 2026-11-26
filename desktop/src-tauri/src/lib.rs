@@ -3726,6 +3726,87 @@ fn lan_routed_device() -> Option<RoutedDevice> {
     quotacards::lan_route::read_intent().map(RoutedDevice::from)
 }
 
+/// Keep the selected space connected without the Spaces screen.
+///
+/// Radmin's service owns the network and the window is only a view. This is the
+/// same ownership model with the app process as the owner: on launch, and every
+/// few seconds after, it refreshes the roster, picks the first online member,
+/// and starts the direct engine. The screen reads the status; it does not own
+/// the session. A manual Stop sets the pause flag and the supervisor leaves it
+/// alone until the user connects again or switches spaces.
+#[cfg(windows)]
+fn spawn_spaces_supervisor(app: tauri::AppHandle) {
+    tauri::async_runtime::spawn(async move {
+        // Let the window, the config load and the first paint finish.
+        tokio::time::sleep(std::time::Duration::from_secs(8)).await;
+        let mut last_space = String::new();
+        let mut last_error = String::new();
+        loop {
+            let state = app.state::<State>();
+            let direct = app.state::<spaces_direct::DirectState>();
+            let active = {
+                let cfg = state.0.lock().unwrap_or_else(|e| e.into_inner());
+                cfg.active_space.clone()
+            };
+            if active != last_space {
+                if !last_space.is_empty() {
+                    let _ = spaces_direct::stop_engine(&direct);
+                }
+                spaces_direct::set_paused(false);
+                last_space = active.clone();
+                last_error.clear();
+            }
+            if active.is_empty()
+                || spaces_direct::paused()
+                || spaces_direct::is_starting()
+                || spaces_direct::running_for(&direct, &active)
+            {
+                tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+                continue;
+            }
+            if let Some(other) = spaces_direct::running_space(&direct) {
+                if other != active {
+                    let _ = spaces_direct::stop_engine(&direct);
+                }
+            }
+            if let Err(e) = spaces::refresh(&*state, &active).await {
+                if e != last_error {
+                    quotacards::vpn::app_log(&format!("spaces supervisor: {e}"));
+                    last_error = e;
+                }
+                tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+                continue;
+            }
+            let peer = {
+                let cfg = state.0.lock().unwrap_or_else(|e| e.into_inner());
+                cfg.spaces
+                    .iter()
+                    .find(|s| s.id == active)
+                    .and_then(|s| s.members.iter().find(|m| !m.self_pc && m.online))
+                    .map(|m| m.id.clone())
+            };
+            if let Some(peer_id) = peer {
+                match spaces_direct::start(&*state, &direct, &active, &peer_id).await {
+                    Ok(status) => {
+                        last_error.clear();
+                        quotacards::vpn::app_log(&format!(
+                            "spaces supervisor: direct {} with {} ({})",
+                            status.address, status.peer, status.adapter
+                        ));
+                    }
+                    Err(e) => {
+                        if e != last_error {
+                            quotacards::vpn::app_log(&format!("spaces supervisor: {e}"));
+                            last_error = e;
+                        }
+                    }
+                }
+            }
+            tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+        }
+    });
+}
+
 #[cfg(windows)]
 fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync + 'static {
     tauri::generate_handler![
@@ -4542,6 +4623,10 @@ pub fn run() {
             let cfg = std::panic::catch_unwind(std::panic::AssertUnwindSafe(initial_config))
                 .unwrap_or_default();
             *app.state::<State>().0.lock().unwrap() = cfg;
+            // The space stays connected after the window hides or the Spaces
+            // screen is left, the way Radmin's service keeps its network up.
+            #[cfg(windows)]
+            spawn_spaces_supervisor(app.handle().clone());
             // Tray: the app lives here. Closing the window only hides it;
             // Quit from this menu is the real exit (engine stopped first).
             let show = MenuItem::with_id(app, "show", "Show QuotaVPN", true, None::<&str>)?;
