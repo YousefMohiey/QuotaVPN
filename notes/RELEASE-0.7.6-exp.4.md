@@ -90,5 +90,6 @@ the one that matters most.
 - Switching back to Stable does not downgrade. On `0.7.6-exp.4` the stable feed
   is 0.7.5, which is lower. To return now, run the 0.7.5 installer. The next
   stable release, 0.7.6, sorts above exp.4 and will be offered normally.
-- Installer SHA-256 is printed here after the build.
+- Installer SHA-256:
+  `ABB61F87E5D3F9FE5DEEACC0633D2B3499B6887A72F5B971F38B6BF98B1A636C`
 - The installer is unsigned and will trigger SmartScreen.
