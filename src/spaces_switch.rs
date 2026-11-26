@@ -147,6 +147,9 @@ impl Switch {
         if link_only(frame) {
             return Route::Drop;
         }
+        if local_multicast(frame) {
+            return Route::Drop;
+        }
         let src = mac(&frame[6..12]);
         if src[0] & 1 == 1 {
             // A multicast or broadcast source is not a valid sender.
@@ -191,6 +194,9 @@ impl Switch {
     /// Charge a frame to a peer's budget. Used for both directions.
     pub fn shape(&mut self, peer: usize, frame: &[u8]) -> bool {
         if frame.len() < HEADER || frame.len() > MAX_FRAME || link_only(frame) {
+            return false;
+        }
+        if local_multicast(frame) {
             return false;
         }
         match self.buckets.get_mut(peer) {
@@ -240,6 +246,18 @@ fn link_only(frame: &[u8]) -> bool {
     let control = frame[0] == 0x01 && frame[1] == 0x80 && frame[2] == 0xC2;
     let lldp = frame[12] == 0x88 && frame[13] == 0xCC;
     control || lldp
+}
+
+/// mDNS, LLMNR, SSDP and the rest of the 224.0.0.0/24 block are link-local
+/// service chatter. They never carry a game lobby, and flooding them to every
+/// peer at a few MB/s is what pushed ping replies to 1.6 seconds. Minecraft's
+/// 224.0.2.60 and the subnet broadcast are kept.
+fn local_multicast(frame: &[u8]) -> bool {
+    if frame.len() < 34 || frame[12] != 0x08 || frame[13] != 0x00 {
+        return false;
+    }
+    let dst = [frame[30], frame[31], frame[32], frame[33]];
+    (dst[0] == 224 && dst[1] == 0 && dst[2] == 0) || dst == [239, 255, 255, 250]
 }
 
 /// FNV-1a over the frame. Only needs to be good enough to spot the same frame
@@ -425,6 +443,32 @@ mod tests {
     fn a_frame_from_the_adapter_carries_our_mac_and_routes() {
         let mut switch = Switch::new(A, 1);
         assert_eq!(switch.route(&frame([0xFF; 6], A, 1)), Route::Flood(vec![0]));
+    }
+
+    fn ip_multicast(dst_ip: [u8; 4], tag: u8) -> Vec<u8> {
+        let mut out = vec![0u8; 38];
+        out[0..6].copy_from_slice(&[0x01, 0x00, 0x5E, 0x00, 0x00, 0xFB]);
+        out[6..12].copy_from_slice(&B);
+        out[12] = 0x08;
+        out[13] = 0x00;
+        out[14] = 0x45;
+        out[30..34].copy_from_slice(&dst_ip);
+        out[34] = tag;
+        out
+    }
+
+    #[test]
+    fn link_local_service_multicast_stays_home() {
+        let mut switch = Switch::new(A, 1);
+        assert_eq!(switch.route(&ip_multicast([224, 0, 0, 251], 1)), Route::Drop);
+        assert_eq!(
+            switch.route(&ip_multicast([239, 255, 255, 250], 2)),
+            Route::Drop
+        );
+        assert_eq!(
+            switch.route(&ip_multicast([224, 0, 2, 60], 3)),
+            Route::Flood(vec![0])
+        );
     }
 
     #[test]
