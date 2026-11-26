@@ -862,6 +862,10 @@ async fn open_path(
         } else {
             spaces_path::accept_tcp(stream, &local, &public, Duration::from_secs(8))?
         };
+        // The switch polls this path; without the read timeout it blocks in
+        // read until a peer frame arrives, and every adapter frame queues
+        // behind it.
+        path.set_nonblocking()?;
         Ok::<_, String>((path, peer_name))
     })
     .await
