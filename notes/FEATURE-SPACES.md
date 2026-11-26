@@ -771,3 +771,32 @@ Even after direct P2P, 9 ms is not guaranteed. It depends on both ISPs, NAT
 type, distance and DPI. Radmin itself falls back to a relay for many users. The
 goal should be "direct when the network allows it, relay when it does not", not
 "always 9 ms".
+
+### 12.6 Verified against the installed client
+
+On 26 November 2026 the official client was installed and inspected live. The
+full evidence is in `notes/RADMIN-WORKINGS.md`. The parts that change the
+design:
+
+- `RvControlSvc.exe` is a LocalSystem auto-start service and owns the entire
+  network: the NDIS miniport, the server registration, every peer connection,
+  the firewall rules and the GUI channel. `RvRvpnGui.exe` is a Qt view with no
+  network connections; it talks to the service over
+  `\\.\pipe\RadminVpnGuiChannel`.
+- The service registers within about five seconds of starting, assigns
+  `26.x.y.z/8` and `fdfd::<ipv4 in hex>`, and stays connected with the window
+  closed. The UI is optional.
+- The peer paths are `TCP/out`, `TCP/in`, `UDP/nat` and `Relay`. The ROL client
+  contains ENet reliable UDP, TCP connectors, NAT "pen wave" hole punching, a
+  crypto channel and DNS over HTTPS for server discovery.
+- The service keeps a graph of networks, nodes and reachability, monitors the
+  adapter and the Windows Filtering Platform, reinstalls the adapter if it
+  disappears, and adds its own firewall rules.
+
+The Spaces gap is ownership, not protocol. The direct engine currently starts
+from the Spaces screen and stops when the screen unmounts. Radmin's engine
+starts with the machine and runs until it stops. The first change after 0.7.8 is
+therefore a Spaces supervisor: start the direct engine from the app, poll the
+coordinator for an online peer, keep the session alive while the space is
+active, and let the UI be a view of that state. TCP fallback, a coordinator
+relay and multi-peer forwarding follow in that order.
