@@ -106,6 +106,9 @@ fn ensure_adapter() -> Result<(), String> {
 
 pub fn connect_blocking() -> Result<Value, String> {
     ensure_adapter()?;
+    // Changing the server is refused while the engine runs, and a previous
+    // connect or a manual run can leave it up. Stop first, then configure.
+    let _ = run_raw(&["stop"]);
     let modulus = modulus();
     if !modulus.exists() {
         return Err("the LAN server key is missing; reinstall QuotaVPN".into());
