@@ -961,28 +961,35 @@ async fn start_layer2(
         owner,
     };
 
-    // All members are punched at once. A peer that is not actually running the
-    // engine costs its own timeout and no more.
-    let mut handles = Vec::new();
-    for (id, name) in targets {
-        let auth = auth.clone();
-        handles.push((
-            name,
-            tauri::async_runtime::spawn(async move {
-                open_path(&auth, &id, Duration::from_secs(8)).await
-            }),
-        ));
-    }
+    // Peers are opened one at a time on purpose. The coordinator keeps one
+    // endpoint per member, not one per probe, so a second probe overwrites the
+    // first. Punching in parallel would point every peer at the last socket
+    // and break all but one. Sequential rendezvous keeps each mapping alive
+    // just long enough to punch, and two attempts cover a peer that was busy
+    // with another member on its own side.
     let mut paths: Vec<(String, spaces_path::DirectPath)> = Vec::new();
-    for (fallback, handle) in handles {
-        match handle.await {
-            Ok(Ok((path, name))) => {
-                let label = if name.is_empty() { fallback } else { name };
-                quotacards::vpn::app_log(&format!("spaces l2: path to {label} is up"));
-                paths.push((label, path));
+    for (id, fallback) in targets {
+        let mut last = String::new();
+        let mut connected = false;
+        for attempt in 0..2 {
+            match open_path(&auth, &id, Duration::from_secs(10)).await {
+                Ok((path, name)) => {
+                    let label = if name.is_empty() { fallback } else { name };
+                    quotacards::vpn::app_log(&format!("spaces l2: path to {label} is up"));
+                    paths.push((label, path));
+                    connected = true;
+                    break;
+                }
+                Err(error) => {
+                    last = error;
+                    if attempt == 0 {
+                        tokio::time::sleep(Duration::from_millis(800)).await;
+                    }
+                }
             }
-            Ok(Err(error)) => quotacards::vpn::app_log(&format!("spaces l2: {error}")),
-            Err(error) => quotacards::vpn::app_log(&format!("spaces l2: task failed: {error}")),
+        }
+        if !connected {
+            quotacards::vpn::app_log(&format!("spaces l2: {last}"));
         }
     }
     if paths.is_empty() {

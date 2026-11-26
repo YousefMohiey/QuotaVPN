@@ -74,10 +74,11 @@ TAP-Windows6 is therefore the driver. The cost is the licence.
 
 **Licence position to confirm:** TAP-Windows6 is GPLv2. Shipping the signed
 driver package inside our installer means shipping GPLv2 binaries, so the release
-must carry the licence text and either the driver source or a written offer. Our
-app talks to it through a device handle and links nothing against it, so the MIT
-code stays MIT. This is the standard reading, and OpenVPN ships it the same way,
-but it is a product decision, not a code decision. If it is refused, there is no
+must carry the licence text and the driver source. Both are in
+`desktop/src-tauri/tap`: `GPL-2.0.txt` and `tap-windows6-9.27.0.tar.gz`. Our app
+talks to it through a device handle and links nothing against it, so the MIT code
+stays MIT. This is the standard reading, and OpenVPN ships it the same way, but
+it is a product decision, not a code decision. If it is refused, there is no
 permissive L2 driver to fall back on, and the migration stops at M0.
 
 Install shape (all confirmed in M0):

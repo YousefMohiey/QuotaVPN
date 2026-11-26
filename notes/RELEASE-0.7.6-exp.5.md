@@ -29,8 +29,8 @@ adapter and records its GUID in `%APPDATA%\quotavpn\spaces_tap.txt`; uninstall
 removes only that device, matched by GUID, never by hardware id.
 
 The driver package is GPLv2. The installer ships the licence text and the
-driver source offer; the MIT app talks to it through a device handle and links
-nothing against it.
+driver source tarball (`tap-windows6-9.27.0.tar.gz`); the MIT app talks to it
+through a device handle and links nothing against it.
 
 ## Coordinator
 
