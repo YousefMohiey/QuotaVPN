@@ -1,11 +1,11 @@
 {
     "version":  "0.7.6-exp.5",
-    "build":  "fccd730",
-    "notes":  "The LAN button now starts the bundled OpenRad engine: one click joins the network, no separate install or commands. Layer 3 is unchanged. Windows only. The installer is unsigned.",
+    "build":  "977351e",
+    "notes":  "The LAN button now stops any running engine, clears a stale adapter address, reconfigures and connects in one press. One click joins the network; no separate install or commands. Layer 3 is unchanged. Windows only. The installer is unsigned.",
     "pub_date":  "2026-11-26T14:47:18Z",
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSU81TE9YSU5CUFZEQVFqNnIveU5zMnU2ZXVSWDcvY0N6bEtuQmk2c1VDcS9MVnl6UE96TWxzendJTlJTR0tLVFAwRnpZRDNFOEtsMWsySXYxTERPSkFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NzI0OTQzCWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjVfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjAuNy42LWV4cC41CnFIclFZK2QrUmVDQ1RKT2VVTTdhbUoxZDRBTHZCc0srd3U4N09GeUNpamlVaURQcHNEbkZ5aGdSc3BLb0tDZ3BGOGpJZkZzWGp2UEoybmZWd1ZQTENRPT0K",
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSUtsQXBVbytyeU40RmZRLytIYjU4cWpOQU0xb1VscEcyQ3pZNUY3TDFxM2thSERKc3B0TitwZEJ0cHV3ZkluclZ1VURvanhkUTU4SExBTERoS3NieHdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NzI1Mzc0CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjVfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjAuNy42LWV4cC41ClUyTXVBQ2FuUDQwUnlxVFZtV2dSTHNQSlJsaUVWRjFHSGUyanE2T3R0NW1YTFM0RGV4ZXBYbTYzdnVsa0FRNUdZdnRDeG5tbXRtaENUNjNqZkVZakJ3PT0K",
                                              "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.6-exp.5/QuotaVPN_0.7.6-exp.5_x64-setup.exe"
                                          }
                   }
