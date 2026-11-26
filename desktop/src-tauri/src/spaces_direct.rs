@@ -589,7 +589,7 @@ pub async fn start(
             drop(listener);
             let deadline = Instant::now() + connect_timeout;
             loop {
-                match connect_from(local_port, peer_tcp, Duration::from_secs(2)) {
+                match connect_from(0, peer_tcp, Duration::from_secs(2)) {
                     Ok(stream) => break stream,
                     Err(_) if Instant::now() < deadline => {
                         std::thread::sleep(Duration::from_millis(400));
@@ -604,7 +604,7 @@ pub async fn start(
             // closes the connection the owner is already handshaking on, and
             // holding it while binding the listener takes the port (10048).
             drop(listener);
-            match connect_from(local_port, peer_tcp, Duration::from_secs(4)) {
+            match connect_from(0, peer_tcp, Duration::from_secs(4)) {
                 Ok(stream) => {
                     quotacards::vpn::app_log(
                         "spaces direct: joiner used the punched TCP path",
@@ -807,7 +807,7 @@ async fn open_path(
             drop(listener);
             let deadline = Instant::now() + connect_timeout;
             loop {
-                match connect_from(local_port, peer_tcp, Duration::from_secs(2)) {
+                match connect_from(0, peer_tcp, Duration::from_secs(2)) {
                     Ok(stream) => break stream,
                     Err(_) if Instant::now() < deadline => {
                         std::thread::sleep(Duration::from_millis(400));
@@ -817,7 +817,7 @@ async fn open_path(
             }
         } else {
             drop(listener);
-            match connect_from(local_port, peer_tcp, Duration::from_secs(4)) {
+            match connect_from(0, peer_tcp, Duration::from_secs(4)) {
                 Ok(stream) => {
                     quotacards::vpn::app_log("spaces l2: joiner used the punched TCP path");
                     stream
