@@ -516,6 +516,9 @@ export function Spaces() {
   const [direct, setDirect] = useState<DirectStatus | null>(null)
   const [directBusy, setDirectBusy] = useState(false)
   const [directError, setDirectError] = useState("")
+  const [lanBusy, setLanBusy] = useState(false)
+  const [lanNote, setLanNote] = useState("")
+  const { t } = useI18n()
 
   const adopt = useCallback((next: SpacesState) => {
     setState(next)
@@ -637,6 +640,24 @@ export function Spaces() {
     }
   }
 
+  const connectLan = async () => {
+    setLanBusy(true)
+    setLanNote("")
+    try {
+      const status = (await api.openradConnect()) as {
+        node_name?: string
+        snapshot?: { vip?: string }
+      }
+      setLanNote(
+        [status?.node_name, status?.snapshot?.vip].filter(Boolean).join(" "),
+      )
+    } catch (e) {
+      setError(messageOf(e))
+    } finally {
+      setLanBusy(false)
+    }
+  }
+
   const rotate = async () => {
     if (!space) return
     setBusy("rotate")
@@ -744,6 +765,17 @@ export function Spaces() {
 
   return (
     <>
+      <div className="flex items-center gap-3 px-5 pt-3">
+        <button
+          type="button"
+          onClick={() => void connectLan()}
+          disabled={lanBusy}
+          className="press h-9 rounded-[8px] bg-[var(--brand)] px-4 text-[12.5px] font-medium text-white disabled:opacity-50"
+        >
+          {lanBusy ? t("lanConnecting") : t("lanConnect")}
+        </button>
+        {lanNote ? <span className="text-[11px] text-txt3">{lanNote}</span> : null}
+      </div>
       <SpacesConsole
         spaces={state?.spaces ?? []}
         selected={selected}

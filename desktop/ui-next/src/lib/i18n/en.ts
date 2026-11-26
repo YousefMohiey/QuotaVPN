@@ -630,4 +630,7 @@ export const en = {
   "spacesLayer3": "IP",
   "spacesUseLayer2": "Use Ethernet",
   "spacesUseLayer3": "Use IP",
+  "lanConnect": "Connect LAN",
+  "lanConnecting": "Connecting LAN",
+  "lanStop": "Stop LAN",
 } as const

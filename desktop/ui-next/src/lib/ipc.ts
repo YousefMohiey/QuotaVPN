@@ -397,6 +397,10 @@ export const api = {
   spaceRotate: (id: string) => call<SpacesState>("space_rotate", { id }),
   spaceSetMode: (id: string, mode: "l2" | "l3") =>
     call<SpacesState>("space_set_mode", { id, mode }),
+  openradConnect: () => call<unknown>("openrad_connect"),
+  openradDisconnect: () => call<void>("openrad_disconnect"),
+  openradStatus: () => call<unknown>("openrad_status"),
+  openradPeers: () => call<unknown>("openrad_peers"),
   spaceKick: (id: string, memberId: string) =>
     call<SpacesState>("space_kick", { id, memberId }),
   copyToClipboard: (text: string) => call<boolean>("copy_text", { text }),

@@ -630,4 +630,7 @@ export const ar = {
   "spacesLayer3": "IP",
   "spacesUseLayer2": "استخدام إيثرنت",
   "spacesUseLayer3": "استخدام IP",
+  "lanConnect": "تشغيل الشبكة",
+  "lanConnecting": "جارٍ تشغيل الشبكة",
+  "lanStop": "إيقاف الشبكة",
 } as const
