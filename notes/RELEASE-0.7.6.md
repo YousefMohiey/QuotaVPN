@@ -1,7 +1,8 @@
 # QuotaVPN 0.7.6 experimental
 
-Desktop-only test build. The phone remains on 0.7.5, and `latest.json` is not
-changed. This is a GitHub pre-release, not the normal update feed.
+Desktop-only test build. The phone remains on 0.7.5. The stable feed `latest.json`
+at the repository root is not changed and still points at 0.7.5. This is a
+GitHub pre-release with its own feed asset, not the normal update feed.
 
 ## Spaces
 
@@ -15,6 +16,16 @@ changed. This is a GitHub pre-release, not the normal update feed.
   of the main QuotaVPN tunnel.
 - Start the direct LAN on both PCs at the same time. The lower member id is the
   initiator.
+
+## Updating from 0.7.5
+
+The release carries a signed `latest.json` feed asset. On 0.7.5, choose
+**Settings -> Updates -> Experimental**, then **Check for updates**. The
+experimental channel lists pre-releases and will offer `0.7.6`. The stable
+channel remains 0.7.5 and is not offered this build.
+
+The installer can also be downloaded and run directly; the in-app update is the
+same signed installer.
 
 ## Before testing
 
@@ -49,8 +60,8 @@ token travel over it.
 
 - Windows only. The phone has no Spaces screen yet.
 - One peer per direct LAN session.
-- The Wintun adapter path has not been exercised on a live machine in this
-  build. If adapter creation fails, the error is shown in the Spaces screen.
+- The Wintun adapter path has not been exercised on a live machine yet. If
+  adapter creation fails, the error is shown in the Spaces screen.
 - Broadcast and multicast are not carried yet, so Minecraft must be joined by
   the space address, not through the LAN list.
 - The direct path depends on NAT and ISP policy. Relay is the fallback.
@@ -58,7 +69,7 @@ token travel over it.
 
 ## Verify
 
-- Install over 0.7.5; the app version shows `0.7.6-exp.1`.
+- Install over 0.7.5; the app version shows `0.7.6`.
 - Create a space on PC A, join from PC B.
 - Run **Test direct path** on both PCs at the same time.
 - Run **Start direct LAN** on both PCs at the same time.

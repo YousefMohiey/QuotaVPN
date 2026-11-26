@@ -78,6 +78,12 @@
 > and its triage identified the installer as a packed Inno Setup 6.5.2 x86 build. It was not
 > installed because the live tunnel would conflict with Radmin's 26.0.0.0/8 adapter and broadcast
 > routes. Details are in `notes/RADMIN-INSPECTION.md`. No VPS or Oracle change was made.
+>
+> **Experimental 0.7.6 pre-release, 26 November 2026:** the desktop Spaces build is published as
+> a GitHub pre-release with its own signed `latest.json` asset. The stable feed at the repository
+> root and `releases/latest` still point at 0.7.5, and the phone stays on 0.7.5. The build uses a
+> plain `0.7.6` version because the app's version parser turns `0.7.6-exp.1` into `0.7.0.1` and
+> would never offer it. Release notes and test steps are in `notes/RELEASE-0.7.6.md`.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.
