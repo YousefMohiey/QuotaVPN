@@ -20,21 +20,26 @@ changed. This is a GitHub pre-release, not the normal update feed.
 
 The coordinator is not deployed on the public server. The build defaults to
 `https://quotavpn.duckdns.org:8445`, which is not live. Set `QC_SPACES_API` to a
-reachable coordinator before launching the app, for example:
+reachable coordinator before launching the app. A user environment variable
+survives the elevated launch better than a variable set only in one terminal:
 
 ```
-$env:QC_SPACES_API = "http://127.0.0.1:8445"
-& "C:\Program Files\QuotaVPN\QuotaVPN.exe"
+setx QC_SPACES_API "http://<coordinator-ip>:8445"
 ```
 
-Both PCs must use the same coordinator. A local coordinator can be run with:
+Close and reopen the app after `setx`. Both PCs must use the same coordinator.
+
+For two PCs on the same LAN, run the dev coordinator on one of them:
 
 ```
-python embed/qc-spaces.py --dev --port 8445 --db %TEMP%\spaces.db
+python embed/qc-spaces.py --dev --host 0.0.0.0 --port 8445 --db %TEMP%\spaces.db
 ```
 
-For two PCs on different networks, the coordinator must be reachable by both.
-The direct data path is peer-to-peer; only signaling uses the coordinator.
+Allow TCP 8445 through Windows Firewall on that PC and use its LAN address in
+`QC_SPACES_API`. No VPS is needed for this test. For two PCs on different
+networks, the coordinator must be reachable by both; a public host or tunnel is
+required. The direct data path is peer-to-peer; only signaling uses the
+coordinator.
 
 ## Limits
 

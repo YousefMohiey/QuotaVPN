@@ -1119,7 +1119,7 @@ def selftest():
 
 def main():
     ap = argparse.ArgumentParser(description="QuotaVPN Spaces coordinator")
-    ap.add_argument("--host", default="0.0.0.0")
+    ap.add_argument("--host", default="")
     ap.add_argument("--port", type=int, default=8445)
     ap.add_argument("--udp-port", type=int, default=8446)
     ap.add_argument("--udp-host", default="")
@@ -1138,9 +1138,14 @@ def main():
         return
 
     if args.dev:
-        args.host = "127.0.0.1"
+        # Loopback by default, but an explicit --host is honoured so two PCs
+        # on one LAN can use the dev coordinator without any public deployment.
+        if not args.host:
+            args.host = "127.0.0.1"
         if args.db == "/var/lib/qc-spaces/spaces.db":
             args.db = "spaces-dev.db"
+    elif not args.host:
+        args.host = "0.0.0.0"
     os.makedirs(os.path.dirname(os.path.abspath(args.db)), exist_ok=True)
     key = DEV_HUB_KEY if args.dev else hub_key(args.hub_key_file, args.hub_key)
     store = Store(args.db, dev=args.dev, hub_key=key, iface=args.wg_interface)
