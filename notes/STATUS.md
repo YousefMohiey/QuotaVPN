@@ -102,6 +102,13 @@
 > hidden or the screen is left, and reconnects when another member is online. A manual Stop pauses
 > it. The app adds its own inbound UDP/TCP firewall rules for all profiles. The coordinator is
 > still the signaling path. Notes are in `notes/RELEASE-0.7.9.md`.
+>
+> **Experimental 0.7.10, 26 November 2026:** zero-setup invites. The invite carries the coordinator
+> address (`qvs2:` wrapper), so the joining PC pastes one code and never runs setx. The Spaces
+> header has a coordinator field. The coordinator is deployed publicly on the VPS at
+> `https://quotavpn.duckdns.org/spaces`, behind the existing Xray TLS fallback and nginx path, with
+> no Oracle change, no new open port and no VPN service restart. Radmin's live data path was
+> inspected at the same time and was direct TCP, not relay. Notes are in `notes/RELEASE-0.7.10.md`.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.

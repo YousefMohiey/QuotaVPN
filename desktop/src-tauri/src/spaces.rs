@@ -5,6 +5,7 @@
 //! the webview. Moving them to a DPAPI-sealed store is a phase-2 item; the
 //! card's own WireGuard key already has the same lifetime and location.
 
+use base64::Engine as _;
 use quotacards::{
     config::AppConfig,
     spaces::{self, SpaceMember, SpaceRecord},
@@ -12,16 +13,107 @@ use quotacards::{
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::net::{SocketAddr, UdpSocket};
+use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 const DEFAULT_API: &str = "https://quotavpn.duckdns.org:8445";
 
+fn api_slot() -> &'static Mutex<String> {
+    static API: OnceLock<Mutex<String>> = OnceLock::new();
+    API.get_or_init(|| Mutex::new(String::new()))
+}
+
+/// Resolve the coordinator once at startup: the stored address first, then the
+/// environment for older installs, then the built-in default.
+pub(crate) fn init_api(cfg: &AppConfig) {
+    let mut value = cfg.spaces_api.trim().trim_end_matches('/').to_string();
+    if value.is_empty() {
+        value = std::env::var("QC_SPACES_API")
+            .ok()
+            .map(|s| s.trim().trim_end_matches('/').to_string())
+            .unwrap_or_default();
+    }
+    *api_slot().lock().unwrap_or_else(|e| e.into_inner()) = value;
+}
+
 pub(crate) fn api_base() -> String {
+    let value = api_slot().lock().unwrap_or_else(|e| e.into_inner()).clone();
+    if !value.is_empty() {
+        return value;
+    }
     std::env::var("QC_SPACES_API")
         .ok()
         .map(|s| s.trim().trim_end_matches('/').to_string())
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| DEFAULT_API.to_string())
+}
+
+fn normalize_api(url: &str) -> Result<String, String> {
+    let clean = url.trim().trim_end_matches('/').to_string();
+    if clean.is_empty() {
+        return Err("enter the coordinator address".into());
+    }
+    if !(clean.starts_with("http://") || clean.starts_with("https://")) {
+        return Err("the coordinator address must start with http:// or https://".into());
+    }
+    if clean.chars().any(|c| c.is_whitespace()) {
+        return Err("the coordinator address cannot contain spaces".into());
+    }
+    Ok(clean)
+}
+
+/// Store a coordinator address and make it live for every Spaces call. The
+/// join path uses this when an invite carries the host's address, so the
+/// joining PC never needs an environment variable.
+pub(crate) fn remember_api(state: &crate::State, url: &str) -> Result<String, String> {
+    let clean = normalize_api(url)?;
+    {
+        let mut cfg = state.0.lock().unwrap_or_else(|e| e.into_inner());
+        cfg.spaces_api = clean.clone();
+        cfg.save();
+    }
+    *api_slot().lock().unwrap_or_else(|e| e.into_inner()) = clean.clone();
+    Ok(clean)
+}
+
+/// The invite shown to the owner. The coordinator address rides inside it, so
+/// the other PC can join with the code alone.
+fn wrap_invite(raw: &str) -> String {
+    if raw.is_empty() || raw.starts_with("qvs2:") {
+        return raw.to_string();
+    }
+    let api = api_base();
+    let encoded = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(api.as_bytes());
+    format!("qvs2:{encoded}:{raw}")
+}
+
+/// Split a wrapped invite into the coordinator address and the server code.
+/// A plain `qvs1` code is still accepted.
+fn split_invite(code: &str) -> (String, String) {
+    let trimmed = code.trim();
+    if let Some(rest) = trimmed.strip_prefix("qvs2:") {
+        if let Some((encoded, inner)) = rest.split_once(':') {
+            if let Ok(bytes) = base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(encoded) {
+                if let Ok(api) = String::from_utf8(bytes) {
+                    return (api.trim().to_string(), inner.to_string());
+                }
+            }
+        }
+    }
+    (String::new(), trimmed.to_string())
+}
+
+#[tauri::command]
+pub fn spaces_api() -> String {
+    api_base()
+}
+
+#[tauri::command]
+pub fn set_spaces_api(
+    state: tauri::State<'_, crate::State>,
+    url: String,
+) -> Result<String, String> {
+    remember_api(&state, &url)
 }
 
 fn http() -> Result<reqwest::Client, String> {
@@ -192,7 +284,7 @@ fn view(record: &SpaceRecord) -> SpaceView {
         subnet: record.subnet.clone(),
         owner: record.owner,
         invite: if record.owner {
-            record.invite.clone()
+            wrap_invite(&record.invite)
         } else {
             String::new()
         },
@@ -330,7 +422,11 @@ pub async fn space_join(
     password: String,
     device_name: String,
 ) -> Result<SpacesState, String> {
-    let invite = spaces::parse_invite(&code)?;
+    let (api, inner) = split_invite(&code);
+    if !api.is_empty() {
+        remember_api(&state, &api)?;
+    }
+    let invite = spaces::parse_invite(&inner)?;
     // Joining a space this PC already belongs to must reuse its key. A fresh
     // key would enrol a second member and leave the old hub peer behind.
     let (private_key, public_key, owner_before) = {

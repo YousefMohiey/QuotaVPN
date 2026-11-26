@@ -3829,6 +3829,8 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         tunnel_probe,
         tunnel_apps,
         spaces::spaces_state,
+        spaces::spaces_api,
+        spaces::set_spaces_api,
         spaces::space_device_name,
         spaces::space_create,
         spaces::space_join,
@@ -3922,6 +3924,8 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         tunnel_copy_log,
         tunnel_probe,
         spaces::spaces_state,
+        spaces::spaces_api,
+        spaces::set_spaces_api,
         spaces::space_device_name,
         spaces::space_create,
         spaces::space_join,
@@ -4620,8 +4624,21 @@ pub fn run() {
             }
             // Same OS config dir as the previous desktop app: cards carry
             // over, nothing to re-enter. (No chdir - that is phone-only.)
-            let cfg = std::panic::catch_unwind(std::panic::AssertUnwindSafe(initial_config))
+            let mut cfg = std::panic::catch_unwind(std::panic::AssertUnwindSafe(initial_config))
                 .unwrap_or_default();
+            // Older test builds used QC_SPACES_API. Adopt it once so the app
+            // keeps working after the variable is gone, and the address can be
+            // changed from the UI instead.
+            if cfg.spaces_api.is_empty() {
+                if let Ok(env) = std::env::var("QC_SPACES_API") {
+                    let clean = env.trim().trim_end_matches('/').to_string();
+                    if !clean.is_empty() {
+                        cfg.spaces_api = clean;
+                        cfg.save();
+                    }
+                }
+            }
+            spaces::init_api(&cfg);
             *app.state::<State>().0.lock().unwrap() = cfg;
             // The space stays connected after the window hides or the Spaces
             // screen is left, the way Radmin's service keeps its network up.

@@ -167,6 +167,10 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
       } as T
     case "spaces_state":
       return demoSpacesState() as T
+    case "spaces_api":
+      return "http://192.168.1.52:8445" as T
+    case "set_spaces_api":
+      return String(args?.url ?? "") as T
     case "space_device_name":
       return "Preview-PC" as T
     case "space_create": {

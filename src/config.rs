@@ -64,6 +64,10 @@ pub struct AppConfig {
     /// "applied" instead of claiming a live space the engine never loaded.
     #[serde(default)]
     pub tunnel_space: String,
+    /// Coordinator address used for Spaces. The invite can carry it too, so a
+    /// joining PC never needs an environment variable or a terminal.
+    #[serde(default)]
+    pub spaces_api: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

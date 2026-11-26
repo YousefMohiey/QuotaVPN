@@ -16,6 +16,7 @@ import {
   Radar,
   RefreshCw,
   RotateCw,
+  Server,
   Trash2,
   UserMinus,
   Users,
@@ -253,6 +254,87 @@ function CreateDialog({
   )
 }
 
+function CoordinatorDialog({
+  open,
+  onOpenChange,
+  onSaved,
+}: {
+  open: boolean
+  onOpenChange: (o: boolean) => void
+  onSaved: (url: string) => void
+}) {
+  const { t } = useI18n()
+  const [url, setUrl] = useState("")
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState("")
+
+  useEffect(() => {
+    if (!open) return
+    setErr("")
+    void api
+      .spacesApi()
+      .then((value) => setUrl(value))
+      .catch(() => {})
+    return pushCloser(() => onOpenChange(false))
+  }, [open, onOpenChange])
+
+  const save = async () => {
+    setBusy(true)
+    setErr("")
+    try {
+      const clean = await api.setSpacesApi(url.trim())
+      onSaved(clean)
+      onOpenChange(false)
+    } catch (e) {
+      setErr(messageOf(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[480px] overflow-hidden p-0">
+        <DialogHead icon={Server} title={t("spacesCoordinator")} body={t("spacesCoordinatorBody")} />
+        <div className="grid gap-4 px-5 py-4">
+          <Field label={t("spacesCoordinatorAddress")} hint={t("spacesCoordinatorHint")}>
+            <Input
+              value={url}
+              onChange={(e) => {
+                setErr("")
+                setUrl(e.target.value)
+              }}
+              autoFocus
+              dir="ltr"
+              spellCheck={false}
+              className="h-9 font-mono text-[12px]"
+            />
+          </Field>
+          {err ? <p className="text-[12.5px] leading-snug text-[var(--red)]">{err}</p> : null}
+        </div>
+        <div className="flex justify-end gap-2 border-t border-line px-5 py-3">
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="press h-9 rounded-[8px] border border-line px-4 text-[13px] text-txt2 hover:text-txt"
+          >
+            {t("cancel")}
+          </button>
+          <button
+            type="button"
+            onClick={() => void save()}
+            disabled={busy}
+            className="press flex h-9 items-center gap-2 rounded-[8px] bg-[var(--brand)] px-4 text-[13px] font-medium text-white hover:brightness-110 disabled:opacity-60"
+          >
+            {busy ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : null}
+            {t("spacesCoordinatorSave")}
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function JoinDialog({
   open,
   onOpenChange,
@@ -287,7 +369,7 @@ function JoinDialog({
   }, [open, onOpenChange])
 
   const submit = async () => {
-    if (!/^qvs1:[0-9a-z]{8}:[0-9a-f]{32}$/i.test(code.trim())) {
+    if (!/^(qvs2:[A-Za-z0-9_-]+:)?qvs1:[0-9a-z]{8}:[0-9a-f]{32}$/i.test(code.trim())) {
       setErr(t("spacesNeedCode"))
       return
     }
@@ -545,6 +627,8 @@ export function Spaces() {
   const [note, setNote] = useState("")
   const [createOpen, setCreateOpen] = useState(false)
   const [joinOpen, setJoinOpen] = useState(false)
+  const [coordOpen, setCoordOpen] = useState(false)
+  const [apiBase, setApiBase] = useState("")
   const [confirm, setConfirm] = useState<Confirm | null>(null)
   const [probe, setProbe] = useState<SpaceProbe | null>(null)
   const [probeBusy, setProbeBusy] = useState(false)
@@ -585,6 +669,13 @@ export function Spaces() {
       alive = false
     }
   }, [adopt])
+
+  useEffect(() => {
+    void api
+      .spacesApi()
+      .then(setApiBase)
+      .catch(() => {})
+  }, [])
 
   const space = useMemo(
     () => state?.spaces.find((s) => s.id === selected) ?? null,
@@ -768,6 +859,17 @@ export function Spaces() {
             {t("tabSpaces")}
           </h1>
           <p className="mt-2 text-[13px] leading-relaxed text-txt2">{t("spacesTag")}</p>
+          <button
+            type="button"
+            onClick={() => setCoordOpen(true)}
+            className="mt-2 flex max-w-full items-center gap-1.5 text-[11.5px] text-txt3 transition-colors hover:text-txt2"
+          >
+            <Server className="size-3.5 shrink-0" aria-hidden />
+            <span className="shrink-0">{t("spacesCoordinator")}</span>
+            <span className="truncate font-mono text-[11px] text-txt3/80" dir="ltr">
+              {apiBase || t("spacesCoordinatorNone")}
+            </span>
+          </button>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button
@@ -1314,6 +1416,7 @@ export function Spaces() {
 
       <CreateDialog open={createOpen} onOpenChange={setCreateOpen} onDone={adoptNew} />
       <JoinDialog open={joinOpen} onOpenChange={setJoinOpen} onDone={adoptNew} />
+      <CoordinatorDialog open={coordOpen} onOpenChange={setCoordOpen} onSaved={setApiBase} />
       <ConfirmDialog
         confirm={confirm}
         onClose={() => setConfirm(null)}
