@@ -42,7 +42,8 @@
     ],
     "createUpdaterArtifacts": true,
     "resources": [
-      "tap/**/*"
+      "tap/**/*",
+      "openrad/**/*"
     ],
     "windows": {
       "nsis": {

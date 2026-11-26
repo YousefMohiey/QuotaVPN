@@ -30,6 +30,7 @@ pub mod router_huawei;
 mod router_remember;
 mod spaces;
 #[cfg(windows)]
+mod openrad;
 mod spaces_direct;
 mod tap;
 pub mod speed;
@@ -3896,6 +3897,10 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         spaces::space_rotate,
         spaces::space_kick,
         spaces::space_set_mode,
+        openrad::openrad_connect,
+        openrad::openrad_disconnect,
+        openrad::openrad_status,
+        openrad::openrad_peers,
         spaces_direct::space_direct_start,
         spaces_direct::space_direct_stop,
         spaces_direct::space_direct_status,
@@ -3992,6 +3997,10 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         spaces::space_rotate,
         spaces::space_kick,
         spaces::space_set_mode,
+        openrad::openrad_connect,
+        openrad::openrad_disconnect,
+        openrad::openrad_status,
+        openrad::openrad_peers,
         resolve_host,
         check_update,
         apply_update,
@@ -4126,6 +4135,19 @@ pub fn run() {
         }
         return;
     }
+    // Headless automation path: bring the bundled OpenRad LAN up and exit.
+    // The Spaces screen calls the same function through the Tauri command.
+    if std::env::args().any(|a| a == "--lan-connect") {
+        match openrad::connect_blocking() {
+            Ok(status) => println!("LAN {}", status),
+            Err(error) => {
+                eprintln!("LAN error: {error}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+
     // Open the capture and hold it, without sending anything: the probe for
     // whether opening a handle disturbs this adapter.
     #[cfg(windows)]
