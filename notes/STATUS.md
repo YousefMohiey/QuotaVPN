@@ -129,6 +129,11 @@
 > Windows gave the port to the helper (`Bound` and `Established`, no `Listen`). The order is now
 > STUN first, then the listener, then the punch; the helper holds the STUN stream without
 > rebinding. Notes are in `notes/RELEASE-0.7.13.md`.
+>
+> **Experimental 0.7.14, 26 November 2026:** 0.7.13 then hit WSAEADDRINUSE (10048) on the third
+> socket bound to `51394` (STUN, listener, punch). The STUN socket is now closed before the punch,
+> and the joining side drops its listener before connecting, leaving the owner with listener plus
+> punch and the joiner with one session socket. Notes are in `notes/RELEASE-0.7.14.md`.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.

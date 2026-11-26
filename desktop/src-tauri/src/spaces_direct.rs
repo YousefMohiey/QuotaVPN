@@ -80,8 +80,6 @@ fn ensure_firewall() {
 pub struct DirectEngine {
     stop: Arc<AtomicBool>,
     handle: Option<JoinHandle<Result<(), String>>>,
-    helper_stop: Arc<AtomicBool>,
-    helper: Option<JoinHandle<()>>,
     space: String,
     peer: String,
     address: String,
@@ -168,16 +166,12 @@ pub fn stop_engine(direct: &DirectState) -> DirectStatus {
         return stopped();
     };
     engine.stop.store(true, Ordering::Relaxed);
-    engine.helper_stop.store(true, Ordering::Relaxed);
     let error = engine
         .error
         .lock()
         .unwrap_or_else(|e| e.into_inner())
         .clone()
         .unwrap_or_default();
-    if let Some(helper) = engine.helper.take() {
-        let _ = helper.join();
-    }
     if let Some(handle) = engine.handle.take() {
         let _ = handle.join();
     }
@@ -405,10 +399,6 @@ pub async fn start(
         .take();
     if let Some(mut engine) = previous {
         engine.stop.store(true, Ordering::Relaxed);
-        engine.helper_stop.store(true, Ordering::Relaxed);
-        if let Some(helper) = engine.helper.take() {
-            let _ = helper.join();
-        }
         if let Some(handle) = engine.handle.take() {
             let _ = tauri::async_runtime::spawn_blocking(move || handle.join()).await;
         }
@@ -536,6 +526,11 @@ pub async fn start(
         stop: helper_stop,
         helper,
     } = gateway;
+    // Free the STUN socket before the punch. Three sockets on one local port
+    // is what produced WSAEADDRINUSE (10048); the listener and one session
+    // socket are what Radmin keeps. The punch recreates the mapping.
+    helper_stop.store(true, Ordering::Relaxed);
+    let _ = helper.join();
     let (path, io) = tauri::async_runtime::spawn_blocking(move || {
         let local = PathIdentity::from_private(&private_key)?;
         let public = spaces_path::decode_public(&peer_public)?;
@@ -569,8 +564,10 @@ pub async fn start(
                 }
             }
         } else {
-            // The joining side is the connector. It also sends from the
-            // listener port, so both mappings line up and one SYN gets through.
+            // The joining side does not accept; the owner does. Dropping the
+            // listener frees the port for the session socket and removes any
+            // punch connection sitting in its backlog.
+            drop(listener);
             let deadline = Instant::now() + connect_timeout;
             loop {
                 match connect_from(local_port, peer_tcp, Duration::from_secs(2)) {
@@ -615,8 +612,6 @@ pub async fn start(
     let engine = DirectEngine {
         stop,
         handle: Some(handle),
-        helper_stop,
-        helper: Some(helper),
         space: engine_space,
         peer: if peer_name.is_empty() {
             peer_id.to_string()
@@ -643,10 +638,6 @@ pub fn stop_now(direct: &DirectState) {
         .take();
     if let Some(mut engine) = engine {
         engine.stop.store(true, Ordering::Relaxed);
-        engine.helper_stop.store(true, Ordering::Relaxed);
-        if let Some(helper) = engine.helper.take() {
-            let _ = helper.join();
-        }
         if let Some(handle) = engine.handle.take() {
             let _ = handle.join();
         }
