@@ -33,7 +33,6 @@ const FILE_SHARE_READ: u32 = 1;
 const FILE_SHARE_WRITE: u32 = 2;
 const OPEN_EXISTING: u32 = 3;
 const FILE_ATTRIBUTE_SYSTEM: u32 = 4;
-const TAP_IOCTL_GET_MTU: u32 = 0x0022_000C;
 const TAP_IOCTL_SET_MEDIA_STATUS: u32 = 0x0022_0018;
 const THREAD_ALL_ACCESS: u32 = 0x001F_03FF;
 
@@ -119,7 +118,24 @@ impl TapIo {
             unsafe { CloseHandle(handle) };
             return Err(error);
         }
-        std::thread::sleep(std::time::Duration::from_millis(800));
+        // Apply the address again now that the media is up. Setting it while
+        // the adapter is down leaves the stack without the on-link route for a
+        // moment, and an ARP request that arrives in that window is ignored.
+        let ip = address.split('/').next().unwrap_or(address).trim();
+        let _ = run_powershell(&format!(
+            "netsh interface ipv4 set address name=\"{name}\" source=static address={ip} mask=255.255.255.0 gateway=none | Out-Null"
+        ));
+        for _ in 0..20 {
+            let present = run_powershell(&format!(
+                "(Get-NetIPAddress -InterfaceIndex {ifindex} -AddressFamily IPv4 -ErrorAction SilentlyContinue).IPAddress"
+            ))
+            .unwrap_or_default();
+            if present.contains(ip) {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(150));
+        }
+        std::thread::sleep(std::time::Duration::from_millis(2500));
         set_private(ifindex);
 
         let (sender, frames) = mpsc::channel();
@@ -210,6 +226,12 @@ impl PacketIo for TapIo {
                 unsafe { GetLastError() }
             ));
         }
+        if written as usize != frame.len() {
+            return Err(format!(
+                "the Spaces adapter wrote {written} of {} bytes",
+                frame.len()
+            ));
+        }
         Ok(())
     }
 }
@@ -257,29 +279,6 @@ fn open(path: &str) -> Result<isize, String> {
         return Err(format!(
             "the Spaces adapter device could not be opened ({})",
             unsafe { GetLastError() }
-        ));
-    }
-    let mut output = [0u8; 16];
-    let mut returned = 0u32;
-    let ok = unsafe {
-        DeviceIoControl(
-            handle,
-            TAP_IOCTL_GET_MTU,
-            std::ptr::null(),
-            0,
-            output.as_mut_ptr(),
-            output.len() as u32,
-            &mut returned,
-            std::ptr::null_mut(),
-        )
-    };
-    if ok == 0 {
-        let error = unsafe { GetLastError() };
-        unsafe {
-            CloseHandle(handle);
-        }
-        return Err(format!(
-            "the Spaces adapter is not a TAP-Windows6 device ({error})"
         ));
     }
     Ok(handle)
@@ -448,5 +447,86 @@ mod tests {
             }
         }
         assert!(frames > 0, "no frame arrived from the adapter");
+    }
+
+    /// The write half: a broadcast ARP request written into the adapter has to
+    /// reach Windows, which answers by learning the sender.
+    #[test]
+    #[ignore]
+    fn a_written_broadcast_arp_reaches_windows() {
+        let mut io = TapIo::new("10.77.99.2/24", 1380).expect("the Spaces adapter");
+        let sender = [0x02u8, 0x51, 0x56, 0x00, 0x00, 0x09];
+        let mut frame = Vec::new();
+        frame.extend_from_slice(&[0xFF; 6]);
+        frame.extend_from_slice(&sender);
+        frame.extend_from_slice(&[0x08, 0x06]);
+        frame.extend_from_slice(&[0x00, 0x01, 0x08, 0x00, 0x06, 0x04, 0x00, 0x01]);
+        frame.extend_from_slice(&sender);
+        frame.extend_from_slice(&[10, 77, 99, 9]);
+        frame.extend_from_slice(&[0, 0, 0, 0, 0, 0]);
+        frame.extend_from_slice(&[10, 77, 99, 2]);
+        // Wait until the address is really active on the interface. netsh can
+        // accept it while the media is still down, and an ARP request for an
+        // address the stack has not installed is ignored.
+        for _ in 0..25 {
+            let address = run_powershell(
+                "(Get-NetIPAddress -InterfaceAlias 'QuotaSpaceLAN' -AddressFamily IPv4 -ErrorAction SilentlyContinue).IPAddress",
+            )
+            .unwrap_or_default();
+            if address.contains("10.77.99.2") {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(200));
+        }
+        std::thread::sleep(std::time::Duration::from_secs(3));
+        eprintln!(
+            "FRAME {}",
+            frame.iter().map(|b| format!("{:02x}", b)).collect::<String>()
+        );
+        io.write(&frame).expect("write");
+        std::thread::sleep(std::time::Duration::from_millis(900));
+        let out = run_powershell(            "(Get-NetNeighbor -InterfaceAlias 'QuotaSpaceLAN' -AddressFamily IPv4 -IPAddress '10.77.99.9' -ErrorAction SilentlyContinue).LinkLayerAddress",
+        )
+        .unwrap_or_default();
+        assert!(
+            out.to_uppercase().contains("02-51-56-00-00-09"),
+            "windows did not learn the sender: {out}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod ffi_tests {
+    use super::*;
+
+    #[test]
+    #[ignore]
+    fn raw_ffi_write_reaches_windows() {
+        let guid = resolve_guid().expect("guid");
+        let path = format!("\\\\.\\Global\\{{{guid}}}.tap");
+        let handle = open(&path).expect("open");
+        set_media(handle, true).expect("media");
+        std::thread::sleep(std::time::Duration::from_millis(700));
+        let sender = [0x02u8, 0x51, 0x56, 0x00, 0x00, 0x09];
+        let mut frame = Vec::new();
+        frame.extend_from_slice(&[0xFF; 6]);
+        frame.extend_from_slice(&sender);
+        frame.extend_from_slice(&[0x08, 0x06]);
+        frame.extend_from_slice(&[0x00, 0x01, 0x08, 0x00, 0x06, 0x04, 0x00, 0x01]);
+        frame.extend_from_slice(&sender);
+        frame.extend_from_slice(&[10, 77, 99, 9]);
+        frame.extend_from_slice(&[0, 0, 0, 0, 0, 0]);
+        frame.extend_from_slice(&[10, 77, 99, 2]);
+        let mut written = 0u32;
+        let ok = unsafe { WriteFile(handle, frame.as_ptr(), frame.len() as u32, &mut written, std::ptr::null_mut()) };
+        eprintln!("RAW ok={ok} written={written} err={}", unsafe { GetLastError() });
+        std::thread::sleep(std::time::Duration::from_millis(900));
+        set_media(handle, false).ok();
+        unsafe { CloseHandle(handle) };
+        let out = run_powershell(
+            "(Get-NetNeighbor -InterfaceAlias 'QuotaSpaceLAN' -AddressFamily IPv4 -IPAddress '10.77.99.9' -ErrorAction SilentlyContinue).LinkLayerAddress",
+        )
+        .unwrap_or_default();
+        assert!(out.to_uppercase().contains("02-51-56-00-00-09"), "no learn: {out}");
     }
 }
