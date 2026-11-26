@@ -4,7 +4,7 @@
  * Values mirror the shapes in lib.rs; the tunnel "runs" so connected-state
  * screens are reachable with ?vpn=1.
  */
-import type { Card, CardStatus, CmdResult, LanStatus, TrafficState, TunnelState, UpdateInfo } from "./ipc"
+import type { Card, CardStatus, CmdResult, DirectStatus, LanStatus, Space, SpaceProbe, SpacesState, TrafficState, TunnelState, UpdateInfo } from "./ipc"
 
 const cards: Card[] = [
   { name: "Gamerz (playvalorant.com)", uuid: "11111111-1111-4111-8111-111111111111", card_type: "Gamerz", sni: "playvalorant.com", wg_private: "", wg_addr: "", registered: true },
@@ -15,6 +15,58 @@ let running = typeof window !== "undefined" && new URLSearchParams(window.locati
 let rx = 0
 let tx = 0
 const started = Date.now()
+
+// The Spaces demo: one owned space, a live member and a sleeping one, so the
+// roster, the invite block and the online count can all be judged without a
+// coordinator. Nothing here ships.
+const demoMember = (id: string, name: string, address: string, online: boolean, self: boolean, owner: boolean) => ({
+  id,
+  name,
+  address,
+  online,
+  self_pc: self,
+  owner,
+  last_seen: Math.floor(Date.now() / 1000) - (online ? 20 : 3600),
+})
+// ?spaces=empty shows the first-run state without clearing the demo data.
+const EMPTY_SPACES =
+  typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).get("spaces") === "empty"
+
+let demoSpaces: Space[] = EMPTY_SPACES ? [] : [
+  {
+    id: "K7M2Q9X4",
+    name: "Gaming",
+    address: "10.77.3.7",
+    subnet: "10.77.3.0/24",
+    owner: true,
+    invite: "qvs1:K7M2Q9X4:6f1a2b3c4d5e6f708192a3b4c5d6e7f8",
+    online: 2,
+    members: [
+      demoMember("m-1", "Yousef-PC", "10.77.3.7", true, true, true),
+      demoMember("m-2", "Sara-Laptop", "10.77.3.8", true, false, false),
+      demoMember("m-3", "Studio-PC", "10.77.3.9", false, false, false),
+    ],
+  },
+]
+let demoSpaceActive = EMPTY_SPACES ? "" : "K7M2Q9X4"
+let demoDirect: DirectStatus = {
+  running: false,
+  peer: "",
+  address: "",
+  adapter: "",
+  error: "",
+}
+// What the live tunnel actually loaded. Changing the selected space does not
+// change this until the next connect, which is the state the screen must show.
+let demoTunnelSpace = running ? demoSpaceActive : ""
+
+const demoSpacesState = (): SpacesState => ({
+  spaces: demoSpaces,
+  active: demoSpaceActive,
+  tunnel_space: running ? demoTunnelSpace : "",
+  tunnel_on: running,
+})
 
 const APPS = [
   "Discord", "Steam", "VALORANT", "Riot Client", "Google Chrome", "Firefox", "Opera GX",
@@ -111,6 +163,119 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
         version: "0.4.15",
         update_channel: "normal",
       } as T
+    case "spaces_state":
+      return demoSpacesState() as T
+    case "space_create": {
+      const name = String(args?.name ?? "New space").trim() || "New space"
+      const device = String(args?.deviceName ?? "This PC").trim() || "This PC"
+      const id = "NEWSPACE"
+      const space: Space = {
+        id,
+        name,
+        address: "10.77.9.2",
+        subnet: "10.77.9.0/24",
+        owner: true,
+        invite: `qvs1:${id}:9a8b7c6d5e4f30211234567890abcdef`,
+        online: 1,
+        members: [demoMember("m-new", device, "10.77.9.2", true, true, true)],
+      }
+      demoSpaces = [...demoSpaces.filter((s) => s.id !== id), space]
+      demoSpaceActive = id
+      return demoSpacesState() as T
+    }
+    case "space_join": {
+      const device = String(args?.deviceName ?? "This PC").trim() || "This PC"
+      const id = "JOINSPC1"
+      const space: Space = {
+        id,
+        name: "Joined space",
+        address: "10.77.4.3",
+        subnet: "10.77.4.0/24",
+        owner: false,
+        invite: "",
+        online: 2,
+        members: [
+          demoMember("m-own", "Owner-PC", "10.77.4.2", true, false, true),
+          demoMember("m-me", device, "10.77.4.3", true, true, false),
+        ],
+      }
+      demoSpaces = [...demoSpaces.filter((s) => s.id !== id), space]
+      demoSpaceActive = id
+      return demoSpacesState() as T
+    }
+    case "space_refresh":
+      return demoSpacesState() as T
+    case "space_direct_status":
+      return demoDirect as T
+    case "space_direct_start": {
+      await new Promise((r) => setTimeout(r, 1600))
+      demoDirect = {
+        running: true,
+        peer: "Sara-Laptop",
+        address: "10.77.3.7",
+        adapter: "QuotaSpaceK7M2",
+        error: "",
+      }
+      return demoDirect as T
+    }
+    case "space_direct_stop":
+      demoDirect = {
+        running: false,
+        peer: demoDirect.peer,
+        address: demoDirect.address,
+        adapter: demoDirect.adapter,
+        error: "",
+      }
+      return demoDirect as T
+    case "space_probe": {
+      await new Promise((r) => setTimeout(r, 1200))
+      const relay =
+        typeof window !== "undefined" &&
+        new URLSearchParams(window.location.search).get("relay") === "1"
+      const result: SpaceProbe = relay
+        ? {
+            direct: false,
+            rtt_ms: null,
+            self_endpoint: "203.0.113.42:51234",
+            peer_endpoint: "198.51.100.7:51820",
+            note: "no direct packet arrived; the relay would be used",
+          }
+        : {
+            direct: true,
+            rtt_ms: 9.4,
+            self_endpoint: "203.0.113.42:51234",
+            peer_endpoint: "198.51.100.7:51820",
+            note: "",
+          }
+      return result as T
+    }
+    case "space_activate": {
+      const id = String(args?.id ?? "")
+      demoSpaceActive = id
+      return demoSpacesState() as T
+    }
+    case "space_leave":
+    case "space_delete": {
+      const id = String(args?.id ?? "")
+      demoSpaces = demoSpaces.filter((s) => s.id !== id)
+      if (demoSpaceActive === id) demoSpaceActive = ""
+      return demoSpacesState() as T
+    }
+    case "space_rotate": {
+      const id = String(args?.id ?? "")
+      demoSpaces = demoSpaces.map((s) =>
+        s.id === id ? { ...s, invite: `qvs1:${id}:00112233445566778899aabbccddeeff` } : s,
+      )
+      return demoSpacesState() as T
+    }
+    case "space_kick": {
+      const id = String(args?.id ?? "")
+      const memberId = String(args?.memberId ?? "")
+      demoSpaces = demoSpaces.map((s) =>
+        s.id === id ? { ...s, members: s.members.filter((m) => m.id !== memberId) } : s,
+      )
+      return demoSpacesState() as T
+    }
     case "lan_known":
     case "lan_devices":
       return DEMO_DEVICES as T
@@ -249,15 +414,19 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
     }
     case "tunnel_start":
       running = true
+      demoTunnelSpace = demoSpaceActive
       return ok("Engine started.") as T
     case "tunnel_stop":
       running = false
+      demoTunnelSpace = ""
       return ok("Engine stopped.") as T
     case "tunnel_status":
       return { running, error: "" } as TunnelState as T
     case "tunnel_health":
       return 180 as T
     case "process_running":
+      return false as T
+    case "game_running":
       return false as T
     case "autostart_get":
       return false as T

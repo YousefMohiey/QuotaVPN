@@ -542,6 +542,40 @@ pub fn write_tun_config(
         wg,
         &routed_device_ips(),
         lan_bind,
+        None,
+    )
+    .map(|(path, _)| path)
+}
+
+/// Build the config with one active Space. The space endpoint rides the main
+/// outbound (`detour: proxy`), so the config is otherwise the normal session:
+/// the card still picks the transport, the route still sends everything else
+/// where it did.
+pub fn write_tun_config_with_space(
+    uuid: &str,
+    host: &str,
+    sni: &str,
+    apps_mode: &str,
+    apps: &[String],
+    voice: bool,
+    transport: &str,
+    hy2_pass: &str,
+    wg: Option<(&str, &str, &str, &str)>,
+    space: Option<&crate::spaces::SpaceTunnel>,
+) -> Result<PathBuf, String> {
+    write_tun_config_for(
+        uuid,
+        host,
+        sni,
+        apps_mode,
+        apps,
+        voice,
+        transport,
+        hy2_pass,
+        wg,
+        &routed_device_ips(),
+        lan_bind,
+        space,
     )
     .map(|(path, _)| path)
 }
@@ -614,6 +648,7 @@ fn write_tun_config_for<F>(
     wg: Option<(&str, &str, &str, &str)>,
     routed: &[String],
     bind: F,
+    space: Option<&crate::spaces::SpaceTunnel>,
 ) -> Result<(PathBuf, serde_json::Value), String>
 where
     F: FnOnce() -> Option<(String, String)>,
@@ -887,7 +922,7 @@ where
             }
         })
     };
-    let (outbounds, endpoints) = match transport {
+    let (outbounds, mut endpoints) = match transport {
         "hy2" => (
             serde_json::json!([hy2_out("proxy"), direct_out.clone()]),
             serde_json::json!([]),
@@ -997,6 +1032,20 @@ where
             "default_domain_resolver": "direct-dns"
         }
     });
+    // A Space rides the same session: one top-level endpoint and one IP rule.
+    // The rule goes first because it is an IP match, so it needs neither
+    // sniffing nor DNS, and it must sit above the IPv6 reject and the default
+    // final. The endpoint is only added when the record passed validation, so
+    // a damaged space can never stop a normal connect.
+    if let Some(space) = space {
+        space.valid()?;
+        if let Some(list) = endpoints.as_array_mut() {
+            list.push(space.endpoint_json());
+        }
+        if let Some(rules) = cfg["route"]["rules"].as_array_mut() {
+            rules.insert(0, space.route_rule());
+        }
+    }
     // A localhost-only control channel the app itself uses: the engine's
     // Clash API answers "is the upstream actually carrying traffic" with a
     // real dial through the proxy outbound. Process-and-routes liveness stays
@@ -1023,7 +1072,14 @@ where
     // block-mode sessions must NOT get this: they are defined by capturing
     // everything and classifying per connection.
     if apps_only && voice && apps.is_empty() {
-        cfg["inbounds"][0]["route_address"] = serde_json::json!(VOICE_CIDRS.to_vec());
+        let mut routes: Vec<String> = VOICE_CIDRS.iter().map(|s| s.to_string()).collect();
+        // A voice-only session narrows the TUN to the voice ranges. A space
+        // would then have no route into the TUN and its rule could never fire,
+        // so its /24 is carried alongside the voice networks.
+        if let Some(space) = space {
+            routes.push(space.subnet.clone());
+        }
+        cfg["inbounds"][0]["route_address"] = serde_json::json!(routes);
     }
     // The WireGuard endpoint lives in its own top-level list; omit the key
     // entirely for the other transports so the shape stays minimal.
@@ -2919,8 +2975,46 @@ mod tests {
             None,
             &list,
             move || bind,
+            None,
         )?;
         Ok(cfg)
+    }
+
+    #[test]
+    fn a_space_adds_one_endpoint_and_one_rule_at_the_top() {
+        let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let (private_key, _) = crate::spaces::wireguard_keypair();
+        let space = crate::spaces::SpaceTunnel {
+            private_key,
+            address: "10.77.9.7/32".into(),
+            hub_public_key: crate::spaces::wireguard_keypair().1,
+            hub_endpoint: "10.77.0.1".into(),
+            hub_port: 51821,
+            subnet: "10.77.9.0/24".into(),
+        };
+        let (_path, cfg) = write_tun_config_for(
+            "11111111-1111-1111-1111-111111111111",
+            TEST_HOST,
+            "example.com",
+            "all",
+            &[],
+            false,
+            "vless",
+            "",
+            None,
+            &[],
+            || None,
+            Some(&space),
+        )
+        .expect("config");
+        let endpoints = cfg["endpoints"].as_array().expect("endpoints");
+        assert_eq!(endpoints.len(), 1);
+        assert_eq!(endpoints[0]["tag"], "space");
+        assert_eq!(endpoints[0]["address"][0], "10.77.9.7/32");
+        assert_eq!(endpoints[0]["detour"], "proxy");
+        let rules = cfg["route"]["rules"].as_array().expect("rules");
+        assert_eq!(rules[0]["outbound"], "space");
+        assert_eq!(rules[0]["ip_cidr"][0], "10.77.9.0/24");
     }
 
     #[test]
@@ -3521,6 +3615,50 @@ mod tests {
             .unwrap()
             .iter()
             .all(|o| o["tag"] != "proxy"));
+
+        // The space endpoint has to coexist with the awg endpoint and point
+        // its detour at it. This is the combination a WireGuard card uses, and
+        // the engine is the only authority on whether the shape is valid.
+        let space = crate::spaces::SpaceTunnel {
+            private_key: crate::spaces::wireguard_keypair().0,
+            address: "10.77.7.9/32".into(),
+            hub_public_key: crate::spaces::wireguard_keypair().1,
+            hub_endpoint: "10.77.0.1".into(),
+            hub_port: 51821,
+            subnet: "10.77.7.0/24".into(),
+        };
+        let p = write_tun_config_with_space(
+            "00000000-test",
+            TEST_HOST,
+            "example.com",
+            "all",
+            &[],
+            false,
+            "wg",
+            "",
+            Some((
+                "Ji355SrChcN8xhmBAWfjUlx8V1/lNmL/ItImPY7B/tA=",
+                "10.8.0.8/32",
+                "NybbwmymQWVk3lKfz46jqj/Cqzxbv7ToDk3jP0A5yv4=",
+                "{\"jc\":4,\"jmin\":40,\"jmax\":70,\"s1\":15,\"s2\":68,\"h1\":\"2310286408\",\"h2\":\"311773765\",\"h3\":\"3400017965\",\"h4\":\"400567291\"}",
+            )),
+            Some(&space),
+        )
+        .expect("config");
+        match check_config() {
+            Ok(()) => {}
+            Err(e) if e.contains("unknown endpoint type: awg") => eprintln!(
+                "skipped the awg+space leg: this engine is stock sing-box, not the amnezia fork"
+            ),
+            Err(e) => panic!("awg + space config must pass the engine's own decoder: {e:?}"),
+        }
+        let v: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&p).expect("read")).expect("json");
+        let endpoints = v["endpoints"].as_array().expect("endpoints");
+        assert_eq!(endpoints.len(), 2);
+        assert_eq!(endpoints[1]["tag"], "space");
+        assert_eq!(endpoints[1]["detour"], "proxy");
+        assert_eq!(v["route"]["rules"][0]["outbound"], "space");
     }
 }
 

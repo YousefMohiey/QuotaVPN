@@ -28,6 +28,55 @@ export type UiState = {
   update_channel: string
 }
 
+/** One member of a space, as the coordinator last reported it. */
+export type SpaceMember = {
+  id: string
+  name: string
+  address: string
+  online: boolean
+  self_pc: boolean
+  owner: boolean
+  last_seen: number
+}
+
+/** A space this install belongs to. The private key and token stay in Rust. */
+export type Space = {
+  id: string
+  name: string
+  address: string
+  subnet: string
+  owner: boolean
+  invite: string
+  members: SpaceMember[]
+  online: number
+}
+
+export type SpacesState = {
+  spaces: Space[]
+  active: string
+  /** The space the live tunnel actually carries, empty when none. */
+  tunnel_space: string
+  tunnel_on: boolean
+}
+
+/** Diagnostic result: can this PC reach the peer without the relay? */
+export type SpaceProbe = {
+  direct: boolean
+  rtt_ms: number | null
+  self_endpoint: string
+  peer_endpoint: string
+  note: string
+}
+
+/** The persistent direct LAN adapter, separate from the relay tunnel. */
+export type DirectStatus = {
+  running: boolean
+  peer: string
+  address: string
+  adapter: string
+  error: string
+}
+
 /** Read-only state of one card. `ok` is false when the server refused or the
     PC could not reach it; `message` carries the server's own sentence. */
 export type CardStatus = {
@@ -325,6 +374,23 @@ export const api = {
   forgetCard: (uuid: string) => call<CmdResult>("forget_card", { uuid }),
   setCardSni: (uuid: string, sni: string) => call<CmdResult>("set_card_sni", { uuid, sni }),
   copyCard: (uuid: string) => call<CmdResult>("copy_card", { uuid }),
+  spacesState: () => call<SpacesState>("spaces_state"),
+  spaceCreate: (name: string, password: string, deviceName: string) =>
+    call<SpacesState>("space_create", { name, password, deviceName }),
+  spaceJoin: (code: string, password: string, deviceName: string) =>
+    call<SpacesState>("space_join", { code, password, deviceName }),
+  spaceRefresh: (id: string) => call<SpacesState>("space_refresh", { id }),
+  spaceProbe: (id: string, peerId: string) => call<SpaceProbe>("space_probe", { id, peerId }),
+  spaceDirectStart: (id: string, peerId: string) =>
+    call<DirectStatus>("space_direct_start", { id, peerId }),
+  spaceDirectStop: () => call<DirectStatus>("space_direct_stop"),
+  spaceDirectStatus: () => call<DirectStatus>("space_direct_status"),
+  spaceActivate: (id: string) => call<SpacesState>("space_activate", { id }),
+  spaceLeave: (id: string) => call<SpacesState>("space_leave", { id }),
+  spaceDelete: (id: string) => call<SpacesState>("space_delete", { id }),
+  spaceRotate: (id: string) => call<SpacesState>("space_rotate", { id }),
+  spaceKick: (id: string, memberId: string) =>
+    call<SpacesState>("space_kick", { id, memberId }),
   copyToClipboard: (text: string) => call<boolean>("copy_text", { text }),
   platform: () => call<string>("platform"),
   killSwitchState: () => call<{ armed: boolean; blocked: boolean }>("kill_switch_state"),

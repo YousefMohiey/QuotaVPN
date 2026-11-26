@@ -50,6 +50,20 @@ pub struct AppConfig {
     /// never be capped or blocked, whatever the rest of the screen says.
     #[serde(default)]
     pub lan_protected: Vec<String>,
+    /// Spaces this install belongs to. The records carry the WireGuard private
+    /// key and the coordinator token; the UI snapshot never reads them.
+    #[serde(default)]
+    pub spaces: Vec<crate::spaces::SpaceRecord>,
+    /// Which space the engine should attach on the next connect. Empty means
+    /// none. A space is attached at session start, not live, so changing this
+    /// takes effect on the next tunnel.
+    #[serde(default)]
+    pub active_space: String,
+    /// The space the running session actually carries. Written when a connect
+    /// succeeds and cleared on stop, so the screen can tell "selected" from
+    /// "applied" instead of claiming a live space the engine never loaded.
+    #[serde(default)]
+    pub tunnel_space: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

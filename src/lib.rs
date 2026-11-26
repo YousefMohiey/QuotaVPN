@@ -12,6 +12,13 @@ pub mod lan_ask;
 #[cfg(target_os = "windows")]
 pub mod dhcp;
 pub mod qvreg;
+// Spaces: private virtual LANs. The model and endpoint shape are pure and shared
+// by both apps; the HTTP client lives in the desktop crate for now.
+pub mod spaces;
+// Direct Spaces path: Noise IK over UDP, above the coordinator's rendezvous.
+pub mod spaces_path;
+pub mod spaces_stun;
+pub mod spaces_forward;
 // The LAN control surface drives the PC relay and its ledger. It imports
 // `wpcap` and the Windows capture helpers, so it is Windows-only; Android and
 // Linux never call it. Leaving it ungated is what broke the phone build.

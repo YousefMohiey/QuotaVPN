@@ -1,0 +1,58 @@
+# QuotaVPN 0.7.6 experimental
+
+Desktop-only test build. The phone remains on 0.7.5, and `latest.json` is not
+changed. This is a GitHub pre-release, not the normal update feed.
+
+## Spaces
+
+- A new Spaces place in the rail: create or join a private space, copy the
+  invite code, see the roster and addresses.
+- **Direct path** test: reports Direct or Relay with an RTT. It uses a Noise IK
+  session over UDP and an encrypted echo.
+- **Direct LAN**: starts a second Wintun adapter at `10.77.<space>.x/24` and
+  carries IPv4 packets over the direct Noise session. Stop removes the adapter.
+- The existing hub/relay path remains available. The direct LAN is independent
+  of the main QuotaVPN tunnel.
+- Start the direct LAN on both PCs at the same time. The lower member id is the
+  initiator.
+
+## Before testing
+
+The coordinator is not deployed on the public server. The build defaults to
+`https://quotavpn.duckdns.org:8445`, which is not live. Set `QC_SPACES_API` to a
+reachable coordinator before launching the app, for example:
+
+```
+$env:QC_SPACES_API = "http://127.0.0.1:8445"
+& "C:\Program Files\QuotaVPN\QuotaVPN.exe"
+```
+
+Both PCs must use the same coordinator. A local coordinator can be run with:
+
+```
+python embed/qc-spaces.py --dev --port 8445 --db %TEMP%\spaces.db
+```
+
+For two PCs on different networks, the coordinator must be reachable by both.
+The direct data path is peer-to-peer; only signaling uses the coordinator.
+
+## Limits
+
+- Windows only. The phone has no Spaces screen yet.
+- One peer per direct LAN session.
+- The Wintun adapter path has not been exercised on a live machine in this
+  build. If adapter creation fails, the error is shown in the Spaces screen.
+- Broadcast and multicast are not carried yet, so Minecraft must be joined by
+  the space address, not through the LAN list.
+- The direct path depends on NAT and ISP policy. Relay is the fallback.
+- The installer and the app are unsigned and will trigger SmartScreen.
+
+## Verify
+
+- Install over 0.7.5; the app version shows `0.7.6-exp.1`.
+- Create a space on PC A, join from PC B.
+- Run **Test direct path** on both PCs at the same time.
+- Run **Start direct LAN** on both PCs at the same time.
+- Check `Get-NetAdapter` for the `QuotaSpace...` adapter and the `10.77.x.x`
+  address.
+- Ping the peer's space address.

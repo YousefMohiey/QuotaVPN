@@ -28,7 +28,12 @@ mod credentials;
 pub mod ookla;
 pub mod router_huawei;
 mod router_remember;
+mod spaces;
+#[cfg(windows)]
+mod spaces_direct;
 pub mod speed;
+#[cfg(windows)]
+mod wintun;
 mod we_quota;
 
 #[cfg(windows)]
@@ -68,6 +73,23 @@ struct UiState {
     cards: Vec<Card>,
     version: String,
     update_channel: String,
+}
+
+/// Record which space the live session really carries. Only called after a
+/// connect has proved the engine is routing, so a failed start cannot claim a
+/// space the user cannot use.
+fn note_tunnel_space(app: &tauri::AppHandle, applied: bool) {
+    let state = app.state::<State>();
+    let mut cfg = state.0.lock().unwrap_or_else(|e| e.into_inner());
+    let next = if applied {
+        cfg.active_space.clone()
+    } else {
+        String::new()
+    };
+    if cfg.tunnel_space != next {
+        cfg.tunnel_space = next;
+        cfg.save();
+    }
 }
 
 fn snapshot(cfg: &AppConfig) -> UiState {
@@ -826,7 +848,7 @@ async fn tunnel_start(
     // engine from spawn to routes instead of racing a teardown.
     let _gate = lifecycle.0.lock().await;
     let connect_started = std::time::Instant::now();
-    let (host, card) = {
+    let (host, card, space) = {
         let state = app.state::<State>();
         let cfg = state.0.lock().unwrap();
         let Some(card) = cfg.cards.iter().find(|c| c.uuid == uuid).cloned() else {
@@ -835,7 +857,14 @@ async fn tunnel_start(
                 msg: "Card not found".into(),
             });
         };
-        (cfg.server_ip.clone(), card)
+        // One active Space rides this session. A damaged record is ignored
+        // rather than allowed to break the card's connect.
+        let space = cfg
+            .spaces
+            .iter()
+            .find(|s| s.id == cfg.active_space)
+            .and_then(|s| s.tunnel());
+        (cfg.server_ip.clone(), card, space)
     };
     if host.is_empty() {
         return Ok(CmdResult {
@@ -950,8 +979,17 @@ async fn tunnel_start(
     // most of the wait on a second connect.
     let write_started = std::time::Instant::now();
     let before = vpn::tun_config_digest();
-    vpn::write_tun_config(
-        &card.uuid, &host, &card.sni, &mode, &list, voice_on, t, &hy2_pass, wg_ref,
+    vpn::write_tun_config_with_space(
+        &card.uuid,
+        &host,
+        &card.sni,
+        &mode,
+        &list,
+        voice_on,
+        t,
+        &hy2_pass,
+        wg_ref,
+        space.as_ref(),
     )
     .map_err(|e| e)?;
     vpn::app_log(&format!(
@@ -967,6 +1005,7 @@ async fn tunnel_start(
         .filter(|p| *p != 0 && pid_alive(*p));
     if unchanged && live.is_some() && vpn::tun_routes_present() {
         vpn::app_log("connect: config unchanged and the tunnel is already carrying it");
+        note_tunnel_space(&app, true);
         return Ok(CmdResult {
             ok: true,
             msg: format!("VPN on - {} carries the traffic", card.name),
@@ -1080,6 +1119,7 @@ async fn tunnel_start(
             "connect: ready in {}ms",
             connect_started.elapsed().as_millis()
         ));
+        note_tunnel_space(&app, true);
         Ok(CmdResult {
             ok: true,
             msg: format!("VPN on - {} carries the traffic", card.name),
@@ -1130,6 +1170,7 @@ async fn tunnel_start(
             spawn_dest_poll(app.clone(), live);
             if vpn::tun_routes_present() {
                 flush_dns_cache();
+                note_tunnel_space(&app, true);
                 return Ok(CmdResult {
                     ok: true,
                     msg: format!("VPN on - {} carries the traffic", card.name),
@@ -1264,6 +1305,7 @@ async fn setup_helper() -> Result<CmdResult, String> {
 
 #[tauri::command]
 async fn tunnel_stop(
+    app: tauri::AppHandle,
     engine: tauri::State<'_, Engine>,
     lifecycle: tauri::State<'_, Lifecycle>,
 ) -> Result<CmdResult, String> {
@@ -1272,6 +1314,8 @@ async fn tunnel_stop(
     let _gate = lifecycle.0.lock().await;
     vpn::app_log("stop from app");
     stop_engine(&engine);
+    // The next session starts without a space unless the user selects one.
+    note_tunnel_space(&app, false);
     // Drop the tunnel's DNS answers so normal resolution resumes cleanly.
     flush_dns_cache();
     Ok(CmdResult {
@@ -3703,6 +3747,19 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         tunnel_copy_log,
         tunnel_probe,
         tunnel_apps,
+        spaces::spaces_state,
+        spaces::space_create,
+        spaces::space_join,
+        spaces::space_refresh,
+        spaces::space_probe,
+        spaces::space_activate,
+        spaces::space_leave,
+        spaces::space_delete,
+        spaces::space_rotate,
+        spaces::space_kick,
+        spaces_direct::space_direct_start,
+        spaces_direct::space_direct_stop,
+        spaces_direct::space_direct_status,
         resolve_host,
         check_update,
         apply_update,
@@ -3782,6 +3839,16 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         tunnel_log,
         tunnel_copy_log,
         tunnel_probe,
+        spaces::spaces_state,
+        spaces::space_create,
+        spaces::space_join,
+        spaces::space_refresh,
+        spaces::space_probe,
+        spaces::space_activate,
+        spaces::space_leave,
+        spaces::space_delete,
+        spaces::space_rotate,
+        spaces::space_kick,
         resolve_host,
         check_update,
         apply_update,
@@ -4466,6 +4533,7 @@ pub fn run() {
                 app.manage(LanState(std::sync::Mutex::new(None)));
                 app.manage(MonitorState(std::sync::Mutex::new(None)));
                 app.manage(RouterState(tokio::sync::Mutex::new(None)));
+                app.manage(spaces_direct::DirectState(std::sync::Mutex::new(None)));
             }
             // Same OS config dir as the previous desktop app: cards carry
             // over, nothing to re-enter. (No chdir - that is phone-only.)
@@ -4594,6 +4662,10 @@ pub fn run() {
                             session.stop();
                         }
                     }
+                }
+                #[cfg(windows)]
+                if let Some(state) = app.try_state::<spaces_direct::DirectState>() {
+                    spaces_direct::stop_now(&state);
                 }
             }
         });

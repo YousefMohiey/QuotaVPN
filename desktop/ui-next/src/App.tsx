@@ -9,6 +9,7 @@ import { closeTopOverlay } from "@/lib/navStack"
 import { Home } from "@/screens/Home"
 import { Speed } from "@/screens/Speed"
 import { Network } from "@/screens/Network"
+import { Spaces } from "@/screens/Spaces"
 import { Voice } from "@/screens/Voice"
 import { SpeedHistory } from "@/screens/SpeedHistory"
 import { SpeedResult } from "@/screens/SpeedResult"
@@ -16,17 +17,18 @@ import { Settings } from "@/screens/Settings"
 import { Apps } from "@/screens/Apps"
 
 const EASE_OUT = [0.4, 0, 0.2, 1] as const
-const TABS: Tab[] = ["home", "voice", "network", "speed", "history", "result", "apps", "settings"]
+const TABS: Tab[] = ["home", "voice", "network", "spaces", "speed", "history", "result", "apps", "settings"]
 /** Where each place sits in the rail; the page slide follows the same order. */
 const TAB_ORDER: Record<Tab, number> = {
   home: 0,
   voice: 1,
   apps: 1.5,
   network: 2,
-  speed: 3,
-  history: 4,
-  result: 4.5,
-  settings: 5,
+  spaces: 3,
+  speed: 4,
+  history: 5,
+  result: 5.5,
+  settings: 6,
 }
 
 export default function App() {
@@ -169,6 +171,7 @@ export default function App() {
       "2": "voice",
       "3": "speed",
       "6": "network",
+      "7": "spaces",
       "4": "history",
       "5": "settings",
     }
@@ -281,6 +284,7 @@ export default function App() {
                 {tab === "home" && <Home onOpenApps={() => go("apps")} />}
                 {tab === "speed" && <Speed />}
                 {tab === "network" && <Network />}
+                {tab === "spaces" && <Spaces />}
                 {tab === "voice" && <Voice />}
                 {tab === "history" && <SpeedHistory onOpenResult={openResult} onOpenSpeed={() => go("speed")} />}
                 {tab === "result" && <SpeedResult runAt={resultAt} onBack={back} />}

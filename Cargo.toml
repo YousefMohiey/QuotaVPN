@@ -25,6 +25,13 @@ dirs = "7"
 windows-sys = { version = "0.59", features = ["Win32_System_LibraryLoader", "Win32_Foundation", "Win32_NetworkManagement_IpHelper", "Win32_NetworkManagement_Ndis", "Win32_Networking_WinSock", "Win32_System_Threading"] }
 ring = { version = "0.17", default-features = false, features = ["alloc", "std"] }
 rand_core = { version = "0.6", features = ["getrandom", "std"] }
+# Spaces: WireGuard keypairs and the base64 shape the engine expects. Both are
+# pure Rust and build on every target, including Android.
+x25519-dalek = { version = "2", features = ["static_secrets"] }
+base64 = "0.22"
+# Noise IK for the direct Spaces channel. A reviewed protocol composition is
+# safer than hand-rolling the handshake from the primitives above.
+snow = "0.9"
 # WinDivert.dll and wpcap.dll are both loaded by name at runtime, never linked.
 # A build-time SDK or a bundled import library would stop the project from
 # compiling without the driver present, which is the thing this avoids.

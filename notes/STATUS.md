@@ -43,6 +43,41 @@
 > real measuring state, and list/picker rows have press feedback and a selected-check pop. The
 > automatic server probe on launch is silent; a connection the user starts says Connecting instead
 > of Working. 0.7.4 remains published; 0.7.3 remains removed.
+>
+> **Spaces (unreleased, 25 November 2026):** the first slice of a private virtual LAN. The desktop
+> has a Spaces screen, the core has the invite/key/endpoint model, and `embed/qc-spaces.py` is the
+> coordinator. The data plane is one WireGuard endpoint inside the existing sing-box session, with
+> `detour: proxy`, so the handshake rides the main tunnel and needs no new public UDP port or
+> AmneziaWG layer. The hub is `embed/qc-spaces-setup.sh` plus a kernel `qcspaces` interface on the
+> VPS. The server has not been deployed yet and the phone is untouched at 0.7.5. The full design,
+> including why layer 2 and direct peer-to-peer are later phases, is in `notes/FEATURE-SPACES.md`.
+>
+> **Spaces research update:** Radmin is direct-first, not relay-first. Direct peers use UDP
+> hole punching; the TCP relay is only the fallback. The current Spaces slice always relays
+> through the VPS, so it cannot match a 9 ms direct link, and it is layer 3, so Minecraft LAN
+> discovery does not work. The corrected direction, the public reverse-engineering evidence and
+> the GitHub implementations are in section 12 of `notes/FEATURE-SPACES.md`. OpenRad 2.4.5 was
+> inspected at source and release level; the verdict is in `notes/OPENRAD-INTEGRATION.md`. The
+> decision is to build inside QuotaVPN, not to ship OpenRad as a sidecar or a second app.
+>
+> **Direct-path probe, 26 November 2026:** the first in-house step is implemented. The coordinator
+> records each member's public UDP endpoint on port 8446, the desktop has a `space_probe` command,
+> and the Spaces screen has a Direct path test showing Direct or Relay with an RTT. The probe now
+> establishes a real Noise IK session (`Noise_IK_25519_ChaChaPoly_BLAKE2s`) over the same socket,
+> sends one encrypted echo, and measures the RTT. The coordinator selftest covers the rendezvous;
+> the core has encrypted-channel and tamper tests; the desktop has a loopback secure-probe test.
+> The direct LAN engine is now in the tree: `spaces_direct` creates a second Wintun adapter at
+> the member's `10.77.<n>.x/24`, `spaces_forward` carries IPv4 datagrams over the Noise session,
+> and the Spaces screen has Start/Stop controls. The forwarding loop has a real bidirectional
+> loopback test over the encrypted path; the Wintun adapter has not been created on this machine
+> yet because a live sing-box tunnel is running and a second adapter route should not be added
+> under it without an explicit test. The next test is two PCs with the tunnel off.
+>
+> The official Radmin VPN 2.1.4952.2 installer was downloaded and its Authenticode signature
+> verified (Famatech Corp., DigiCert, valid). Craft Anything 0.6.1 was downloaded, hash verified,
+> and its triage identified the installer as a packed Inno Setup 6.5.2 x86 build. It was not
+> installed because the live tunnel would conflict with Radmin's 26.0.0.0/8 adapter and broadcast
+> routes. Details are in `notes/RADMIN-INSPECTION.md`. No VPS or Oracle change was made.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.

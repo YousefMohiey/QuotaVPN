@@ -196,7 +196,7 @@ the vanilla UI in `android/tauri-app/ui`. The desktop keeps all three transports
 cached Hysteria2/WireGuard values; a newly imported card is VLESS only until the API can provision
 the other two. `notes/STATUS.md` has the Sept 2026 detail and `notes/linux.md` covers the Linux port.
 
-`cargo test` is green (103 passed) on this tree. The Windows app builds for the MSVC host target;
+`cargo test` is green (121 passed) on this tree. The Windows app builds for the MSVC host target;
 the GNU target currently fails in `embed-resource`, not in the Rust code. The card API hostname is
 `quotavpn.duckdns.org` and resolves to `80.225.89.162`. TCP 443 and TCP 8444 both answer, the
 `qvreg` API certificate for the new name is deployed, and the real card reports active.
