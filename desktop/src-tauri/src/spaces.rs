@@ -233,6 +233,7 @@ pub struct SpaceView {
     subnet: String,
     owner: bool,
     invite: String,
+    mode: String,
     members: Vec<SpaceMemberView>,
     online: usize,
 }
@@ -285,6 +286,11 @@ fn view(record: &SpaceRecord) -> SpaceView {
             wrap_invite(&record.invite)
         } else {
             String::new()
+        },
+        mode: if record.mode.is_empty() {
+            "l3".to_string()
+        } else {
+            record.mode.clone()
         },
         online: members.iter().filter(|m| m.online).count(),
         members,

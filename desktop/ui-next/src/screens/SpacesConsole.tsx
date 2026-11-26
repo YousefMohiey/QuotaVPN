@@ -51,6 +51,7 @@ export type SpacesConsoleProps = {
   onStop: () => void
   onProbe: () => void
   onRotate: () => void
+  onToggleMode: () => void
   onRemove: () => void
   onKick: (memberId: string, name: string) => void
   onCreate: () => void
@@ -282,6 +283,28 @@ export default function SpacesConsole(props: SpacesConsoleProps) {
                   </span>
                   <span>{online} {t("spacesOnline")}</span>
                   <span className="font-mono">{props.space.subnet}</span>
+                  <span className="flex items-center gap-1.5">
+                    <span
+                      className={cn(
+                        "rounded-[4px] border px-1.5 py-0.5 text-[10px] tracking-[0.04em]",
+                        props.space.mode === "l2"
+                          ? "border-[var(--brand-line)] bg-[var(--brand)]/[0.08] text-brand-strong"
+                          : "border-[var(--line)] text-txt3",
+                      )}
+                    >
+                      {props.space.mode === "l2" ? t("spacesLayer2") : t("spacesLayer3")}
+                    </span>
+                    {props.space.owner ? (
+                      <button
+                        type="button"
+                        onClick={props.onToggleMode}
+                        disabled={props.busy === "mode"}
+                        className="press rounded-[4px] px-1 py-0.5 text-[10.5px] text-txt3 underline decoration-dotted underline-offset-2 hover:text-txt disabled:opacity-50"
+                      >
+                        {props.space.mode === "l2" ? t("spacesUseLayer3") : t("spacesUseLayer2")}
+                      </button>
+                    ) : null}
+                  </span>
                 </div>
               </div>
               <button

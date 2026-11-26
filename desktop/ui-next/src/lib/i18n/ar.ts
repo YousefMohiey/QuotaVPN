@@ -626,4 +626,8 @@ export const ar = {
   "spacesNeedCode": "أدخل رمز دعوة صالحًا.",
   "spacesDevicePlaceholder": "جهازي",
   "spacesOnline": "متصل",
+  "spacesLayer2": "إيثرنت",
+  "spacesLayer3": "IP",
+  "spacesUseLayer2": "استخدام إيثرنت",
+  "spacesUseLayer3": "استخدام IP",
 } as const

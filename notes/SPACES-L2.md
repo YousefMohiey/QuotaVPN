@@ -253,16 +253,24 @@ The ignored test `tap::tests::the_adapter_comes_up_and_carries_a_frame` was run
 on this PC against a real adapter and passed, so the Rust device path is proven,
 not just the PowerShell probe.
 
-Still open before this is a usable release:
+Second slice, same day:
 
-1. Multi-peer sessions. The switch already takes a peer list; `start` still
-   connects one peer. The next step is to reuse the rendezvous and punch for
-   every online member and hand the vector to the switch.
-2. Installer: ship the driver, create the adapter with `devcon`, name it
-   `QuotaSpaceLAN`, record the GUID, and remove it on uninstall.
-3. UI: show the mode, the adapter and the MAC on the Spaces page, and let the
-   owner switch a space to `l2`.
-4. The application matrix from M4.
+- Multi-peer. `start_layer2` opens one path per online member in parallel, with
+  one Noise session each, and hands the whole vector to the switch. The single
+  peer path stays for layer-3 spaces.
+- Installer. The driver package, `devcon.exe`, the GPL text and two PowerShell
+  helpers live in `desktop/src-tauri/tap` and are bundled as resources. The NSIS
+  hook installs the adapter, names it, records the GUID, and removes only that
+  device on uninstall. `tools/build-installer.sh` refuses to build without the
+  payload.
+- UI. The space header shows `Ethernet` or `IP`; the owner gets one button to
+  switch. Changing the mode stops the engine so the next start picks the other
+  adapter.
+- Coordinator. Redeployed to `quotavpn.duckdns.org` with `mode`, member MACs and
+  `POST /v1/spaces/{id}/mode`. The live `test` space reports `mode=l3` and both
+  members' MACs.
+
+Still open: the game matrix, and the phone.
 
 ## Milestones
 

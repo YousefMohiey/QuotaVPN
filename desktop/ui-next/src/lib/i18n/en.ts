@@ -626,4 +626,8 @@ export const en = {
   "spacesNeedCode": "Enter a valid invite code.",
   "spacesDevicePlaceholder": "My PC",
   "spacesOnline": "online",
+  "spacesLayer2": "Ethernet",
+  "spacesLayer3": "IP",
+  "spacesUseLayer2": "Use Ethernet",
+  "spacesUseLayer3": "Use IP",
 } as const

@@ -47,6 +47,7 @@ export type Space = {
   subnet: string
   owner: boolean
   invite: string
+  mode: string
   members: SpaceMember[]
   online: number
 }
@@ -394,6 +395,8 @@ export const api = {
   spaceLeave: (id: string) => call<SpacesState>("space_leave", { id }),
   spaceDelete: (id: string) => call<SpacesState>("space_delete", { id }),
   spaceRotate: (id: string) => call<SpacesState>("space_rotate", { id }),
+  spaceSetMode: (id: string, mode: "l2" | "l3") =>
+    call<SpacesState>("space_set_mode", { id, mode }),
   spaceKick: (id: string, memberId: string) =>
     call<SpacesState>("space_kick", { id, memberId }),
   copyToClipboard: (text: string) => call<boolean>("copy_text", { text }),

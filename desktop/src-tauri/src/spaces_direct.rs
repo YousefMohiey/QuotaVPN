@@ -482,6 +482,22 @@ pub async fn start(
     if address.is_empty() {
         return Err("this space has no local address".into());
     }
+    if l2 {
+        return start_layer2(
+            state,
+            direct,
+            &space_id,
+            &peer_id,
+            &token,
+            &path,
+            &private_key,
+            &self_id,
+            &address,
+            mac,
+            owner,
+        )
+        .await;
+    }
 
     let created = crate::spaces::call(
         reqwest::Method::POST,
@@ -711,6 +727,307 @@ pub async fn start(
         peer: engine_peer,
         address: address_for_status,
         adapter: adapter.clone(),
+        error,
+    };
+    let status = status_of(&engine);
+    *direct.0.lock().unwrap_or_else(|e| e.into_inner()) = Some(engine);
+    Ok(status)
+}
+
+#[derive(Clone)]
+struct SpaceAuth {
+    token: String,
+    probe: String,
+    private_key: String,
+    self_id: String,
+    owner: bool,
+}
+
+/// Rendezvous, NAT punch and Noise handshake for one member. This is the single
+/// peer path lifted out of `start`, so a layer-2 space can open one per member.
+async fn open_path(
+    auth: &SpaceAuth,
+    peer_id: &str,
+    wait: Duration,
+) -> Result<(spaces_path::DirectPath, String), String> {
+    let created = crate::spaces::call(
+        reqwest::Method::POST,
+        &auth.probe,
+        Some(&auth.token),
+        Some(serde_json::json!({})),
+    )
+    .await?;
+    let probe_id = created
+        .get("probe_id")
+        .and_then(Value::as_str)
+        .ok_or("the space server did not issue a probe")?
+        .to_string();
+    let socket = UdpSocket::bind("0.0.0.0:0").map_err(|e| format!("probe socket: {e}"))?;
+    let (_socket, stun) = tauri::async_runtime::spawn_blocking(move || {
+        let result = quotacards::spaces_stun::discover(&socket, STUN, Duration::from_millis(1500));
+        (socket, result)
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+    let endpoint =
+        stun.map_err(|e| format!("could not discover the public UDP endpoint: {e}"))?;
+    let gateway = tcp_gateway()?;
+    let tcp_endpoint = gateway.public.to_string();
+    let endpoint_path = format!("{}/{probe_id}/endpoint", auth.probe);
+    crate::spaces::call(
+        reqwest::Method::POST,
+        &endpoint_path,
+        Some(&auth.token),
+        Some(serde_json::json!({
+            "endpoint": endpoint.to_string(),
+            "tcp_endpoint": tcp_endpoint,
+        })),
+    )
+    .await?;
+
+    let status_path = format!("{}/{probe_id}", auth.probe);
+    let deadline = Instant::now() + wait;
+    let mut peer_public = String::new();
+    let mut peer_tcp_text = String::new();
+    let mut peer_name = String::new();
+    while Instant::now() < deadline {
+        let status =
+            crate::spaces::call(reqwest::Method::GET, &status_path, Some(&auth.token), None).await?;
+        if let Some(peers) = status.get("peers").and_then(Value::as_array) {
+            if let Some(peer) = peers
+                .iter()
+                .find(|p| p.get("member_id").and_then(Value::as_str) == Some(peer_id))
+            {
+                if let Some(value) = peer.get("public_key").and_then(Value::as_str) {
+                    peer_public = value.to_string();
+                }
+                if let Some(value) = peer.get("tcp_endpoint").and_then(Value::as_str) {
+                    peer_tcp_text = value.to_string();
+                }
+                if let Some(value) = peer.get("name").and_then(Value::as_str) {
+                    peer_name = value.to_string();
+                }
+            }
+        }
+        if !peer_public.is_empty() && !peer_tcp_text.is_empty() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(300)).await;
+    }
+    if peer_public.is_empty() {
+        return Err(format!("{peer_id} did not answer the rendezvous"));
+    }
+    if peer_tcp_text.is_empty() {
+        return Err(format!("{peer_id} did not publish a TCP endpoint"));
+    }
+    let peer_tcp: SocketAddr = peer_tcp_text
+        .parse()
+        .map_err(|_| "the peer TCP endpoint is not an address".to_string())?;
+    let initiator = auth.self_id.as_str() < peer_id;
+
+    let TcpGateway {
+        listener,
+        public: _,
+        stop: helper_stop,
+        helper,
+    } = gateway;
+    helper_stop.store(true, Ordering::Relaxed);
+    let _ = helper.join();
+
+    let private_key = auth.private_key.clone();
+    let owner = auth.owner;
+    let (path, name) = tauri::async_runtime::spawn_blocking(move || {
+        let local = PathIdentity::from_private(&private_key)?;
+        let public = spaces_path::decode_public(&peer_public)?;
+        let local_port = listener
+            .local_addr()
+            .map_err(|e| format!("tcp listener: {e}"))?
+            .port();
+        let connect_timeout = Duration::from_secs(12);
+        let stream = if owner {
+            drop(listener);
+            let deadline = Instant::now() + connect_timeout;
+            loop {
+                match connect_from(local_port, peer_tcp, Duration::from_secs(2)) {
+                    Ok(stream) => break stream,
+                    Err(_) if Instant::now() < deadline => {
+                        std::thread::sleep(Duration::from_millis(400));
+                    }
+                    Err(e) => return Err(e),
+                }
+            }
+        } else {
+            drop(listener);
+            match connect_from(local_port, peer_tcp, Duration::from_secs(4)) {
+                Ok(stream) => {
+                    quotacards::vpn::app_log("spaces l2: joiner used the punched TCP path");
+                    stream
+                }
+                Err(_) => {
+                    let sock = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP))
+                        .map_err(|e| format!("tcp listener: {e}"))?;
+                    sock.set_reuse_address(true)
+                        .map_err(|e| format!("tcp listener: {e}"))?;
+                    sock.bind(
+                        &SocketAddr::from((std::net::Ipv4Addr::UNSPECIFIED, local_port)).into(),
+                    )
+                    .map_err(|e| format!("tcp listener on {local_port}: {e}"))?;
+                    sock.listen(8).map_err(|e| format!("tcp listener: {e}"))?;
+                    let listener: TcpListener = sock.into();
+                    listener
+                        .set_nonblocking(true)
+                        .map_err(|e| format!("tcp listener: {e}"))?;
+                    quotacards::vpn::app_log("spaces l2: joiner is listening for the TCP path");
+                    let deadline = Instant::now() + connect_timeout;
+                    loop {
+                        match listener.accept() {
+                            Ok((stream, _)) => break stream,
+                            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                                if Instant::now() >= deadline {
+                                    return Err("the peer did not connect over TCP".into());
+                                }
+                                std::thread::sleep(Duration::from_millis(50));
+                            }
+                            Err(e) => return Err(format!("tcp accept: {e}")),
+                        }
+                    }
+                }
+            }
+        };
+        stream
+            .set_nonblocking(false)
+            .map_err(|e| format!("tcp stream: {e}"))?;
+        let _ = stream.set_nodelay(true);
+        let path = if initiator {
+            spaces_path::connect_tcp(stream, &local, &public, Duration::from_secs(8))?
+        } else {
+            spaces_path::accept_tcp(stream, &local, &public, Duration::from_secs(8))?
+        };
+        Ok::<_, String>((path, peer_name))
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+
+    Ok((
+        path,
+        if name.is_empty() {
+            peer_id.to_string()
+        } else {
+            name
+        },
+    ))
+}
+
+/// Layer-2 start: open one path per online member, bring up TAP, and run the
+/// switch over all of them.
+#[allow(clippy::too_many_arguments)]
+async fn start_layer2(
+    state: &crate::State,
+    direct: &DirectState,
+    space_id: &str,
+    requested_peer: &str,
+    token: &str,
+    probe: &str,
+    private_key: &str,
+    self_id: &str,
+    address: &str,
+    mac: [u8; 6],
+    owner: bool,
+) -> Result<DirectStatus, String> {
+    let targets = {
+        let cfg = state.0.lock().unwrap_or_else(|e| e.into_inner());
+        let record = cfg
+            .spaces
+            .iter()
+            .find(|s| s.id == space_id)
+            .ok_or("that space is not on this PC")?;
+        let mut list: Vec<(String, String)> = record
+            .members
+            .iter()
+            .filter(|m| m.online && !m.self_pc)
+            .map(|m| (m.id.clone(), m.name.clone()))
+            .collect();
+        if list.is_empty() {
+            list.push((requested_peer.to_string(), String::new()));
+        }
+        list
+    };
+
+    let auth = SpaceAuth {
+        token: token.to_string(),
+        probe: probe.to_string(),
+        private_key: private_key.to_string(),
+        self_id: self_id.to_string(),
+        owner,
+    };
+
+    // All members are punched at once. A peer that is not actually running the
+    // engine costs its own timeout and no more.
+    let mut handles = Vec::new();
+    for (id, name) in targets {
+        let auth = auth.clone();
+        handles.push((
+            name,
+            tauri::async_runtime::spawn(async move {
+                open_path(&auth, &id, Duration::from_secs(8)).await
+            }),
+        ));
+    }
+    let mut paths: Vec<(String, spaces_path::DirectPath)> = Vec::new();
+    for (fallback, handle) in handles {
+        match handle.await {
+            Ok(Ok((path, name))) => {
+                let label = if name.is_empty() { fallback } else { name };
+                quotacards::vpn::app_log(&format!("spaces l2: path to {label} is up"));
+                paths.push((label, path));
+            }
+            Ok(Err(error)) => quotacards::vpn::app_log(&format!("spaces l2: {error}")),
+            Err(error) => quotacards::vpn::app_log(&format!("spaces l2: task failed: {error}")),
+        }
+    }
+    if paths.is_empty() {
+        return Err("no member answered the direct rendezvous; start the LAN on both PCs".into());
+    }
+    let peer_label = paths
+        .iter()
+        .map(|(label, _)| label.clone())
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    let address_for_status = address.to_string();
+    let address = address.to_string();
+    let io = tauri::async_runtime::spawn_blocking(move || TapIo::new(mac, &address, 1380))
+        .await
+        .map_err(|e| e.to_string())??;
+    let adapter = io.name().to_string();
+
+    let stop = Arc::new(AtomicBool::new(false));
+    let error = Arc::new(Mutex::new(None));
+    let stop_for_thread = stop.clone();
+    let error_for_thread = error.clone();
+    let handle = std::thread::spawn(move || {
+        let mut io = io;
+        let mut peers: Vec<Box<dyn PeerLink>> = paths
+            .into_iter()
+            .map(|(label, path)| Box::new(DirectPeer { label, path }) as Box<dyn PeerLink>)
+            .collect();
+        let result = spaces_switch::run(&mut io, &mut peers, mac, &stop_for_thread);
+        if let Err(e) = &result {
+            *error_for_thread
+                .lock()
+                .unwrap_or_else(|e| e.into_inner()) = Some(e.clone());
+            quotacards::vpn::app_log(&format!("spaces l2: {e}"));
+        }
+        result
+    });
+
+    let engine = DirectEngine {
+        stop,
+        handle: Some(handle),
+        space: space_id.to_string(),
+        peer: peer_label,
+        address: address_for_status,
+        adapter,
         error,
     };
     let status = status_of(&engine);

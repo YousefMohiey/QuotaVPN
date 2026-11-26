@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Browser fallback so the UI runs (and can be screenshotted) without the
  * Rust engine: `npm run dev` in a plain browser, or the preview harness.
  * Values mirror the shapes in lib.rs; the tunnel "runs" so connected-state
@@ -40,6 +40,7 @@ let demoSpaces: Space[] = EMPTY_SPACES ? [] : [
     address: "10.77.3.7",
     subnet: "10.77.3.0/24",
     owner: true,
+    mode: "l3",
     invite: "qvs1:K7M2Q9X4:6f1a2b3c4d5e6f708192a3b4c5d6e7f8",
     online: 2,
     members: [
@@ -183,6 +184,7 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
         address: "10.77.9.2",
         subnet: "10.77.9.0/24",
         owner: true,
+        mode: "l3",
         invite: `qvs1:${id}:9a8b7c6d5e4f30211234567890abcdef`,
         online: 1,
         members: [demoMember("m-new", device, "10.77.9.2", true, true, true)],
@@ -200,6 +202,7 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
         address: "10.77.4.3",
         subnet: "10.77.4.0/24",
         owner: false,
+        mode: "l3",
         invite: "",
         online: 2,
         members: [

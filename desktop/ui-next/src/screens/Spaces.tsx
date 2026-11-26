@@ -619,6 +619,24 @@ export function Spaces() {
     }
   }
 
+  const toggleMode = async () => {
+    if (!space || !space.owner) return
+    setBusy("mode")
+    setError("")
+    try {
+      const next = space.mode === "l2" ? "l3" : "l2"
+      adopt(await api.spaceSetMode(space.id, next))
+      // The adapter type cannot change under a running engine, so stop it and
+      // let the supervisor start the next one with the new mode.
+      await api.spaceDirectStop().catch(() => null)
+      setDirect(await api.spaceDirectStatus().catch(() => null))
+    } catch (e) {
+      setError(messageOf(e))
+    } finally {
+      setBusy(null)
+    }
+  }
+
   const rotate = async () => {
     if (!space) return
     setBusy("rotate")
@@ -752,6 +770,7 @@ export function Spaces() {
         onStop={() => void stopDirect()}
         onProbe={() => void runProbe()}
         onRotate={() => void rotate()}
+        onToggleMode={() => void toggleMode()}
         onRemove={() => setConfirm({ kind: space?.owner ? "delete" : "leave" })}
         onKick={(memberId, name) => setConfirm({ kind: "kick", memberId, name })}
         onCreate={() => setCreateOpen(true)}

@@ -9,11 +9,31 @@
 # the lookup cannot miss. The updater key signs the artifact; the password
 # comes from its file, never from this script.
 set -e
-export PATH="/c/Tools/mingw_extract/mingw64/bin:$PATH"
-export RC="C:/Tools/mingw_extract/mingw64/bin/windres.exe"
+# The host default is MSVC. Only a GNU build needs MinGW's binutils and windres
+# on PATH; forcing them on an MSVC build makes embed-resource hand an MSVC
+# resource to windres, which fails with "package.metadata does not exist".
+case " $* " in
+  *" windows-gnu "*)
+    export PATH="/c/Tools/mingw_extract/mingw64/bin:$PATH"
+    export RC="C:/Tools/mingw_extract/mingw64/bin/windres.exe"
+    ;;
+esac
 export TAURI_SIGNING_PRIVATE_KEY="C:/Tools/qc-updater.key"
 export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="$(cat C:/Tools/qc-updater-pass.txt)"
 cd "$(dirname "$0")/.." || exit 1
+
+# The layer-2 adapter is part of the product now. A build without the driver
+# payload would install and then fail every layer-2 space, so refuse it here.
+TAP_SYS="desktop/src-tauri/tap/amd64/tap0901.sys"
+TAP_INF="desktop/src-tauri/tap/amd64/OemVista.inf"
+TAP_CAT="desktop/src-tauri/tap/amd64/tap0901.cat"
+TAP_DEV="desktop/src-tauri/tap/amd64/devcon.exe"
+for f in "$TAP_SYS" "$TAP_INF" "$TAP_CAT" "$TAP_DEV" "desktop/src-tauri/tap/setup.ps1" "desktop/src-tauri/tap/remove.ps1"; do
+  if [ ! -f "$f" ]; then
+    echo "missing layer-2 payload: $f" >&2
+    exit 1
+  fi
+done
 cd desktop
 
 # Code signing: set QC_SIGN_THUMBPRINT to the thumbprint of the code signing

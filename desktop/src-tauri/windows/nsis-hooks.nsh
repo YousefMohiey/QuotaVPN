@@ -77,6 +77,14 @@
 
   !insertmacro QCVPN_PURGE_LEGACY_SHORTCUTS
 
+  ; The layer-2 adapter. The driver package is attestation-signed by Microsoft,
+  ; so this raises no trust prompt. A failure is not fatal: a space stays on
+  ; layer 3 and the Spaces screen explains that the adapter is missing.
+  IfFileExists "$INSTDIR\tap\setup.ps1" 0 qcvpn_no_tap
+    DetailPrint "Installing the Spaces layer-2 adapter"
+    nsExec::ExecToLog 'powershell -NoProfile -ExecutionPolicy Bypass -File "$INSTDIR\tap\setup.ps1"'
+  qcvpn_no_tap:
+
   ; Exactly one shortcut, named after the app, always refreshed here. The
   ; template skips its own creation on updates, so this is what keeps the
   ; shortcut correct on every install and every in-app update.
@@ -112,6 +120,11 @@
 !macroend
 
 !macro NSIS_HOOK_PREUNINSTALL
+  ; Remove our own layer-2 adapter before the files go, matched by the GUID the
+  ; installer recorded. A user's OpenVPN adapter is never touched.
+  IfFileExists "$INSTDIR\tap\remove.ps1" 0 qcvpn_no_tap_remove
+    nsExec::ExecToLog 'powershell -NoProfile -ExecutionPolicy Bypass -File "$INSTDIR\tap\remove.ps1"'
+  qcvpn_no_tap_remove:
   ; The template removes "$DESKTOP\${PRODUCTNAME}.lnk" itself; clean the
   ; legacy names here too. Restore the shell var context at the end so the
   ; rest of the uninstaller is unaffected.
