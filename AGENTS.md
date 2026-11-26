@@ -50,6 +50,11 @@ Windows, run from git-bash. The toolchain this project was developed against:
   For a private build without the updater key, add
   `--config <file>` where the file contains `{"bundle":{"createUpdaterArtifacts":false}}`.
   Produces `bundle/nsis/QuotaVPN_<version>_x64-setup.exe` plus its `.sig` when signing is on.
+- Updater feed: write `latest.json` as UTF-8 without BOM. PowerShell's `Set-Content -Encoding utf8`
+  adds a BOM on 5.1, `serde_json` then fails, and the experimental check reports `offered=none`
+  even though the file looks correct. Use
+  `[IO.File]::WriteAllText($path, $json, (New-Object Text.UTF8Encoding($false)))` and confirm the
+  first bytes are `7B`, not `EF BB BF`.
 - Phone: `bash tools/build-apk.sh` (needs `ANDROID_HOME`, and `cygpath` before any native SDK `.exe`).
 - Icons: `python tools/make-icons.py`. It trims the master to its content box and verifies every frame;
   run it after touching `res/app-icon-src.png` only.

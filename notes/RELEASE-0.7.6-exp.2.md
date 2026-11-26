@@ -56,4 +56,8 @@ fallback.
 
 - `0.7.6-exp.1` is deleted. This is the only experimental release.
 - A 0.7.5 install on the experimental channel sees `0.7.6-exp.2` as newer.
+- Switching the channel back to Stable does not downgrade. On `0.7.6-exp.2` the
+  stable feed is 0.7.5, which is lower, so the check reports up to date. To return
+  now, run the 0.7.5 installer. The next stable release, 0.7.6, sorts above
+  `0.7.6-exp.2` and will be offered on the Stable channel normally.
 - The installer is unsigned and will trigger SmartScreen.
