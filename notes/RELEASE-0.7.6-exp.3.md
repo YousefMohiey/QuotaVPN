@@ -70,5 +70,6 @@ Both PCs install this build. The space and invite do not change.
 - Switching back to Stable does not downgrade. On `0.7.6-exp.3` the stable feed
   is 0.7.5, which is lower. To return now, run the 0.7.5 installer. The next
   stable release, 0.7.6, sorts above exp.3 and will be offered normally.
-- Installer SHA-256 is printed in the release notes after the build.
+- Installer SHA-256:
+  `48E434D41661AA01F1092942EFC3F3921EF630F130747B2450BB8B9E7A78553A`
 - The installer is unsigned and will trigger SmartScreen.
