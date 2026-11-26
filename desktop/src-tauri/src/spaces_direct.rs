@@ -540,8 +540,24 @@ pub async fn start(
             .port();
         let connect_timeout = Duration::from_secs(12);
         let stream = if owner {
-            // Punch first, then listen. The listener must be the last socket
-            // bound to the port or the punch takes the inbound connection.
+            // The live Radmin session was outbound from this PC. Its port was
+            // closed from outside, so this router blocks inbound; the peer's
+            // router accepted the outbound. The owner connects out.
+            drop(listener);
+            let deadline = Instant::now() + connect_timeout;
+            loop {
+                match connect_from(local_port, peer_tcp, Duration::from_secs(2)) {
+                    Ok(stream) => break stream,
+                    Err(_) if Instant::now() < deadline => {
+                        std::thread::sleep(Duration::from_millis(400));
+                    }
+                    Err(e) => return Err(e),
+                }
+            }
+        } else {
+            // The joiner listens. Punch first to open this router for the
+            // owner's address, then create the listener last so it owns the
+            // inbound connection.
             drop(listener);
             let _punch = connect_from(local_port, peer_tcp, Duration::from_secs(4));
             let sock = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP))
@@ -566,21 +582,6 @@ pub async fn start(
                         std::thread::sleep(Duration::from_millis(50));
                     }
                     Err(e) => return Err(format!("tcp accept: {e}")),
-                }
-            }
-        } else {
-            // The joining side does not accept; the owner does. Dropping the
-            // listener frees the port for the session socket and removes any
-            // punch connection sitting in its backlog.
-            drop(listener);
-            let deadline = Instant::now() + connect_timeout;
-            loop {
-                match connect_from(local_port, peer_tcp, Duration::from_secs(2)) {
-                    Ok(stream) => break stream,
-                    Err(_) if Instant::now() < deadline => {
-                        std::thread::sleep(Duration::from_millis(400));
-                    }
-                    Err(e) => return Err(e),
                 }
             }
         };
