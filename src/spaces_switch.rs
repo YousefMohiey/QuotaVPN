@@ -262,6 +262,7 @@ pub fn run(
 ) -> Result<(), String> {
     let mut switch = Switch::new(local, peers.len());
     let mut keepalive = Instant::now();
+    let debug = std::env::var("QC_SWITCH_DEBUG").map(|v| v == "1").unwrap_or(false);
     while !stop.load(Ordering::Relaxed) {
         let mut busy = false;
 
@@ -272,7 +273,15 @@ pub fn run(
                     if frame.is_empty() {
                         continue;
                     }
-                    match switch.route(&frame) {
+                    let route = switch.route(&frame);
+                    if debug {
+                        crate::vpn::app_log(&format!(
+                            "spaces switch: adapter len {} -> {:?}",
+                            frame.len(),
+                            route
+                        ));
+                    }
+                    match route {
                         Route::Drop => {}
                         Route::Unicast(peer) => {
                             if switch.shape(peer, &frame) {
@@ -300,7 +309,16 @@ pub fn run(
                         if frame.is_empty() {
                             continue;
                         }
-                        if switch.accept_peer_frame(index, &frame) {
+                        let accepted = switch.accept_peer_frame(index, &frame);
+                        if debug {
+                            crate::vpn::app_log(&format!(
+                                "spaces switch: peer {} len {} accepted {}",
+                                index,
+                                frame.len(),
+                                accepted
+                            ));
+                        }
+                        if accepted {
                             io.write(&frame)?;
                         }
                     }

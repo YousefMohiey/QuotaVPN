@@ -89,29 +89,6 @@ pub struct DirectEngine {
     error: Arc<Mutex<Option<String>>>,
 }
 
-/// The adapter behind the engine. Layer-3 spaces keep Wintun; layer-2 spaces
-/// use TAP and the switch.
-enum Adapter {
-    Wintun(WintunIo),
-    Tap(TapIo),
-}
-
-impl quotacards::spaces_forward::PacketIo for Adapter {
-    fn try_read(&mut self) -> Result<Option<Vec<u8>>, String> {
-        match self {
-            Adapter::Wintun(io) => io.try_read(),
-            Adapter::Tap(io) => io.try_read(),
-        }
-    }
-
-    fn write(&mut self, packet: &[u8]) -> Result<(), String> {
-        match self {
-            Adapter::Wintun(io) => io.write(packet),
-            Adapter::Tap(io) => io.write(packet),
-        }
-    }
-}
-
 /// One Noise path, with the label the switch logs.
 struct DirectPeer {
     label: String,
@@ -452,7 +429,7 @@ pub async fn start(
         }
     }
 
-    let (token, path, private_key, self_id, address, space_id, owner, mode, mac) = {
+    let (token, path, private_key, self_id, address, space_id, owner, mode) = {
         let cfg = state.0.lock().unwrap_or_else(|e| e.into_inner());
         let record = cfg
             .spaces
@@ -474,7 +451,6 @@ pub async fn start(
             record.id.clone(),
             record.owner,
             record.mode.clone(),
-            record.mac(),
         )
     };
     let l2 = mode.eq_ignore_ascii_case("l2")
@@ -493,7 +469,6 @@ pub async fn start(
             &private_key,
             &self_id,
             &address,
-            mac,
             owner,
         )
         .await;
@@ -678,16 +653,9 @@ pub async fn start(
         } else {
             spaces_path::accept_tcp(stream, &local, &public, Duration::from_secs(8))?
         };
-        let (adapter, name) = if l2 {
-            let tap = TapIo::new(mac, &address, 1380)?;
-            let name = tap.name().to_string();
-            (Adapter::Tap(tap), name)
-        } else {
-            let wintun = WintunIo::new(&space_id, &address)?;
-            let name = wintun.name().to_string();
-            (Adapter::Wintun(wintun), name)
-        };
-        Ok::<_, String>((path, adapter, name))
+        let wintun = WintunIo::new(&space_id, &address)?;
+        let name = wintun.name().to_string();
+        Ok::<_, String>((path, wintun, name))
     })
     .await
     .map_err(|e| e.to_string())??;
@@ -697,21 +665,12 @@ pub async fn start(
     } else {
         peer_name.clone()
     };
-    let thread_peer = engine_peer.clone();
     let stop = Arc::new(AtomicBool::new(false));
     let error = Arc::new(Mutex::new(None));
     let stop_for_thread = stop.clone();
     let error_for_thread = error.clone();
     let handle = std::thread::spawn(move || {
-        let result = if l2 {
-            let mut peers: Vec<Box<dyn PeerLink>> = vec![Box::new(DirectPeer {
-                label: thread_peer,
-                path,
-            })];
-            spaces_switch::run(&mut io, &mut peers, mac, &stop_for_thread)
-        } else {
-            spaces_forward::run(path, &mut io, &stop_for_thread)
-        };
+        let result = spaces_forward::run(path, &mut io, &stop_for_thread);
         if let Err(e) = &result {
             *error_for_thread
                 .lock()
@@ -931,7 +890,6 @@ async fn start_layer2(
     private_key: &str,
     self_id: &str,
     address: &str,
-    mac: [u8; 6],
     owner: bool,
 ) -> Result<DirectStatus, String> {
     let targets = {
@@ -1003,10 +961,11 @@ async fn start_layer2(
 
     let address_for_status = address.to_string();
     let address = address.to_string();
-    let io = tauri::async_runtime::spawn_blocking(move || TapIo::new(mac, &address, 1380))
+    let io = tauri::async_runtime::spawn_blocking(move || TapIo::new(&address, 1380))
         .await
         .map_err(|e| e.to_string())??;
     let adapter = io.name().to_string();
+    let mac = io.mac();
 
     let stop = Arc::new(AtomicBool::new(false));
     let error = Arc::new(Mutex::new(None));

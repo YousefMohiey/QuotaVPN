@@ -113,6 +113,7 @@ pub fn marker_path() -> PathBuf {
 pub struct TapIo {
     handle: isize,
     name: String,
+    mac: [u8; 6],
     pending: Option<PendingRead>,
 }
 
@@ -127,15 +128,15 @@ unsafe impl Send for TapIo {}
 
 impl TapIo {
     /// Adopt the recorded adapter, configure it, and bring the media up.
-    pub fn new(mac: [u8; 6], address: &str, mtu: u32) -> Result<Self, String> {
+    pub fn new(address: &str, mtu: u32) -> Result<Self, String> {
         let guid = resolve_guid()?;
-        Self::adopt(&guid, mac, address, mtu)
+        Self::adopt(&guid, address, mtu)
     }
 
     /// Same, for an adapter named by GUID. The engine uses `new`; the two
     /// adapter test uses this directly.
-    pub fn adopt(guid: &str, mac: [u8; 6], address: &str, mtu: u32) -> Result<Self, String> {
-        let (name, ifindex) = configure(guid, mac, address, mtu)?;
+    pub fn adopt(guid: &str, address: &str, mtu: u32) -> Result<Self, String> {
+        let (name, ifindex, mac) = configure(guid, address, mtu)?;
         let path = format!("\\\\.\\Global\\{{{guid}}}.tap");
         let handle = open(&path)?;
         if let Err(error) = set_media(handle, true) {
@@ -145,6 +146,7 @@ impl TapIo {
         let io = Self {
             handle,
             name,
+            mac,
             pending: None,
         };
         // The adapter only gets a network profile once the media is up.
@@ -159,6 +161,12 @@ impl TapIo {
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    /// The MAC the driver actually uses for receive and transmit. This is the
+    /// value the switch must treat as local.
+    pub fn mac(&self) -> [u8; 6] {
+        self.mac
     }
 
     fn start_read(&mut self) -> Result<(), String> {
@@ -424,13 +432,17 @@ fn first_tap_adapter() -> Result<String, String> {
     Ok(guid)
 }
 
-/// Give the adapter its MAC, MTU and address. Returns the adapter name and
-/// interface index.
-fn configure(guid: &str, mac: [u8; 6], address: &str, mtu: u32) -> Result<(String, i32), String> {
-    let mac_hex = format!(
-        "{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}",
-        mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]
-    );
+/// Give the adapter its MTU and address. Returns the adapter name, interface
+/// index and the MAC the driver actually uses.
+///
+/// The MAC is deliberately not overridden. TAP-Windows6 accepts a
+/// `NetworkAddress` override and reports it on the adapter, and Windows then
+/// transmits with it, but unicast frames addressed to the override are dropped
+/// before the ARP stack sees them: the receive filter keeps the address the
+/// device was created with. Broadcast still passes, which is why an override
+/// looks healthy until the first reply has to come back. The driver picks a
+/// unique 00:FF address at install; that is the address the switch uses.
+fn configure(guid: &str, address: &str, mtu: u32) -> Result<(String, i32, [u8; 6]), String> {
     let ip = address.split('/').next().unwrap_or(address).trim();
     let script = format!(
         "$ErrorActionPreference='Stop'; \
@@ -442,11 +454,10 @@ fn configure(guid: &str, mac: [u8; 6], address: &str, mtu: u32) -> Result<(Strin
            $taken = Get-NetAdapter -Name 'QuotaSpaceLAN' -ErrorAction SilentlyContinue; \
            if ($taken) {{ throw 'another adapter already uses QuotaSpaceLAN' }}; \
            Rename-NetAdapter -Name $name -NewName 'QuotaSpaceLAN'; $name = 'QuotaSpaceLAN' }}; \
-         Set-NetAdapterAdvancedProperty -Name $name -RegistryKeyword NetworkAddress -RegistryValue '{mac_hex}' -ErrorAction SilentlyContinue | Out-Null; \
          Set-NetAdapterAdvancedProperty -Name $name -RegistryKeyword MTU -RegistryValue {mtu} -ErrorAction SilentlyContinue | Out-Null; \
          netsh interface ipv4 set address name=\"$name\" source=static address={ip} mask=255.255.255.0 gateway=none | Out-Null; \
          $a = Get-NetAdapter -Name $name; \
-         \"$($a.Name)|$($a.ifIndex)\""
+         \"$($a.Name)|$($a.ifIndex)|$($a.MacAddress)\""
     );
     let out = run_powershell(&script)?;
     let mut parts = out.trim().split('|');
@@ -455,10 +466,24 @@ fn configure(guid: &str, mac: [u8; 6], address: &str, mtu: u32) -> Result<(Strin
         .next()
         .and_then(|value| value.trim().parse::<i32>().ok())
         .ok_or("the Spaces adapter did not report an interface index")?;
+    let mac_text = parts.next().unwrap_or_default().trim();
     if name.is_empty() {
         return Err("the Spaces adapter did not report a name".into());
     }
-    Ok((name, ifindex))
+    let mac = parse_mac(mac_text).ok_or("the Spaces adapter did not report a MAC")?;
+    Ok((name, ifindex, mac))
+}
+
+fn parse_mac(text: &str) -> Option<[u8; 6]> {
+    let clean: String = text.chars().filter(|c| c.is_ascii_hexdigit()).collect();
+    if clean.len() != 12 {
+        return None;
+    }
+    let mut mac = [0u8; 6];
+    for (index, slot) in mac.iter_mut().enumerate() {
+        *slot = u8::from_str_radix(&clean[index * 2..index * 2 + 2], 16).ok()?;
+    }
+    Some(mac)
 }
 
 fn set_private(ifindex: i32) {
@@ -467,7 +492,8 @@ fn set_private(ifindex: i32) {
     ));
 }
 
-fn run_powershell(script: &str) -> Result<String, String> {    let output = Command::new("powershell")
+fn run_powershell(script: &str) -> Result<String, String> {
+    let output = Command::new("powershell")
         .args([
             "-NoProfile",
             "-NonInteractive",
@@ -502,8 +528,7 @@ mod tests {
     #[test]
     #[ignore]
     fn the_adapter_comes_up_and_carries_a_frame() {
-        let mut io = TapIo::new([0x02, 0x51, 0x56, 0x00, 0x00, 0x01], "10.77.99.2/24", 1380)
-            .expect("the Spaces adapter");
+        let mut io = TapIo::new("10.77.99.2/24", 1380).expect("the Spaces adapter");
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(4);
         let mut frames = 0;
         while std::time::Instant::now() < deadline {
@@ -566,10 +591,10 @@ mod tests {
         if a.is_empty() || b.is_empty() {
             panic!("install QuotaSpaceLAN and QuotaSpaceB before this test");
         }
-        let mac_a = [0x02, 0x51, 0x56, 0x00, 0x01, 0x01];
-        let mac_b = [0x02, 0x51, 0x56, 0x00, 0x01, 0x02];
-        let mut io_a = TapIo::adopt(&a, mac_a, "10.77.98.2/24", 1380).expect("adapter A");
-        let io_b = TapIo::adopt(&b, mac_b, "10.77.98.3/24", 1380).expect("adapter B");
+        let mut io_a = TapIo::adopt(&a, "10.77.98.2/24", 1380).expect("adapter A");
+        let io_b = TapIo::adopt(&b, "10.77.98.3/24", 1380).expect("adapter B");
+        let mac_a = io_a.mac();
+        let _mac_b = io_b.mac();
         let mut peers: Vec<Box<dyn PeerLink>> = vec![Box::new(PeerAdapter { io: io_b })];
 
         let stop = Arc::new(AtomicBool::new(false));
