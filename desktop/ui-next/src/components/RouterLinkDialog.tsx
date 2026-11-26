@@ -46,17 +46,17 @@ export function RouterLinkDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[400px]">
-        <DialogTitle className="text-[16px] font-semibold">{t("routerTitle")}</DialogTitle>
-        <p className="mt-1 text-[12.5px] leading-relaxed text-txt2" dir="auto">
+        <DialogTitle className="text-base font-semibold">{t("routerTitle")}</DialogTitle>
+        <p className="mt-1 text-xs leading-relaxed text-txt2" dir="auto">
           {t("routerBody")}
         </p>
         <div className="mt-4 flex flex-col gap-3">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[12px] text-txt3">{t("routerUser")}</span>
+          <label className="flex flex-col gap-2">
+            <span className="text-xs text-txt3">{t("routerUser")}</span>
             <Input value={user} onChange={(e) => setUser(e.target.value)} className="h-9" dir="ltr" autoComplete="off" />
           </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[12px] text-txt3">{t("routerPass")}</span>
+          <label className="flex flex-col gap-2">
+            <span className="text-xs text-txt3">{t("routerPass")}</span>
             <Input
               type="password"
               value={pass}
@@ -67,12 +67,12 @@ export function RouterLinkDialog({
             />
           </label>
         </div>
-        {err ? <p className="mt-3 text-[12px] text-[var(--red)]">{err}</p> : null}
-        <div className="mt-5 flex justify-end gap-2">
+        {err ? <p className="mt-3 text-xs text-[var(--red)]">{err}</p> : null}
+        <div className="mt-6 flex justify-end gap-2">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="press h-9 rounded-[9px] border border-line px-3.5 text-[13px] text-txt2 hover:bg-white/[0.03]"
+            className="press h-9 rounded-lg border border-line px-4 text-sm text-txt2 hover:bg-white/[0.03]"
           >
             {t("cancel")}
           </button>
@@ -80,7 +80,7 @@ export function RouterLinkDialog({
             type="button"
             onClick={() => void link()}
             disabled={busy || !user || !pass}
-            className="press h-9 rounded-[9px] bg-[var(--brand)] px-4 text-[13px] font-medium text-[var(--brand-ink)] disabled:opacity-50"
+            className="press h-9 rounded-lg bg-[var(--brand)] px-4 text-sm font-medium text-[var(--on-brand)] disabled:opacity-50"
           >
             {busy ? t("routerConnecting") : t("routerLink")}
           </button>

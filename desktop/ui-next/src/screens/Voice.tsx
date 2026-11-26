@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Mic } from "lucide-react"
+import { Mic } from "@/components/icons"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { ValorantMark } from "@/components/ValorantMark"
 import { useI18n } from "@/lib/i18n"
@@ -134,9 +134,9 @@ export function Voice() {
               <div className="min-w-0">
                 <div className="flex items-center gap-3">
                   <ValorantMark className={cn("size-[22px] shrink-0", healthy ? "text-[var(--green)]" : "text-txt")} />
-                  <span className="text-[15px] font-semibold uppercase leading-none tracking-[0.62em] text-txt">VALORANT</span>
+                  <span className="text-sm font-semibold uppercase leading-none tracking-[0.62em] text-txt">VALORANT</span>
                 </div>
-                <p className="mt-2.5 max-w-[360px] text-[11px] uppercase leading-relaxed tracking-[0.2em] text-txt2">
+                <p className="mt-3 max-w-[360px] text-xs uppercase leading-relaxed tracking-[0.2em] text-txt2">
                   {t("voiceTagline")}
                 </p>
               </div>
@@ -152,9 +152,9 @@ export function Voice() {
                       initial={calm ? false : { opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={calm ? { opacity: 0 } : { opacity: 0, y: -4 }}
-                      transition={{ duration: calm ? 0 : 0.16, ease: "easeOut" }}
+                      transition={{ duration: calm ? 0 : 0.16, ease: [0.22, 1, 0.36, 1] }}
                       className={cn(
-                        "font-display text-[38px] font-semibold uppercase leading-none tracking-[0.01em] transition-colors duration-200",
+                        "font-display text-4xl font-semibold uppercase leading-none tracking-[0.01em] transition-colors duration-200",
                         healthy ? "text-[var(--green)]" : "text-txt",
                       )}
                     >
@@ -162,12 +162,12 @@ export function Voice() {
                     </motion.span>
                   </AnimatePresence>
                 </div>
-                <span className="max-w-[430px] text-[13px] leading-snug text-txt2">{stateWord}</span>
+                <span className="max-w-[430px] text-sm leading-snug text-txt2">{stateWord}</span>
                 {msg && msg !== stateWord ? (
-                  <span className="max-w-[440px] text-[12px] leading-snug text-txt3" role="status">{msg}</span>
+                  <span className="max-w-[440px] text-xs leading-snug text-txt3" role="status">{msg}</span>
                 ) : null}
                 <span aria-hidden className={cn("mt-3 h-px w-16", healthy ? "bg-[var(--green-line)]" : "bg-[var(--brand-line)]")} />
-                <p className="max-w-[430px] text-[12px] leading-relaxed text-txt3">{t("launchPanelBody")}</p>
+                <p className="max-w-[430px] text-xs leading-relaxed text-txt3">{t("launchPanelBody")}</p>
               </div>
 
               {/* the control: the game's shape, not a disc. It answers the
@@ -222,7 +222,7 @@ export function Voice() {
                       strokeWidth="2.4"
                       strokeLinecap="round"
                       strokeDasharray="150 192"
-                      className="[animation:qc-trace_1.9s_linear_infinite]"
+                      className="voice-trace"
                     />
                     <polygon
                       points="16,0 84,0 100,16 100,84 84,100 16,100 0,84 0,16"
@@ -231,21 +231,21 @@ export function Voice() {
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeDasharray="40 302"
-                      className="[animation:qc-trace_1.9s_linear_infinite]"
+                      className="voice-trace"
                     />
                   </svg>
                 )}
                 <span aria-hidden className={cn("absolute inset-0 transition-colors duration-300", on ? "bg-[var(--green-line)]" : "bg-[var(--brand-line)]")} />
-                <span aria-hidden className="absolute inset-[2px] bg-[var(--panel)] transition-colors duration-200 group-hover:bg-[#14171a]" style={{ clipPath: PLATE }} />
+                <span aria-hidden className="absolute inset-[2px] bg-[var(--panel)] transition-colors duration-200 group-hover:bg-[var(--panel-hover)]" style={{ clipPath: PLATE }} />
                 <motion.span
                   aria-hidden
                   className="absolute inset-[2px]"
                   initial={false}
-                  animate={{ boxShadow: on ? "inset 0 0 64px rgb(40 160 110 / 0.18)" : "inset 0 0 0 rgb(0 0 0 / 0)" }}
+                  animate={{ boxShadow: on ? "inset 0 0 64px var(--green-bg)" : "inset 0 0 0 rgb(0 0 0 / 0)" }}
                   transition={{ duration: 0.45 }}
                   style={{ clipPath: PLATE }}
                 />
-                <span className="relative flex flex-col items-center gap-2.5">
+                <span className="relative flex flex-col items-center gap-3">
                   {working ? (
                     <Mic className={cn("size-10", on ? "text-[var(--green)]/60" : "text-txt2/60")} aria-hidden />
                   ) : (
@@ -255,7 +255,7 @@ export function Voice() {
                       is not a guess */}
                   <span
                     className={cn(
-                      "text-[11.5px] font-semibold uppercase tracking-[0.2em]",
+                      "text-xs font-semibold uppercase tracking-[0.2em]",
                       on ? "text-[var(--green)]/90" : "text-txt3",
                     )}
                   >
@@ -268,8 +268,8 @@ export function Voice() {
 
             {/* the switch sits on the floor, where a HUD keeps its settings */}
             <div className="flex items-end justify-between gap-6">
-              <div className="flex items-center gap-5 bg-white/[0.045] px-6 py-3" style={{ clipPath: CHIP }}>
-                <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-txt2">{t("voiceLaunchTitle")}</span>
+              <div className="flex items-center gap-6 bg-[var(--surface-2)] px-6 py-3" style={{ clipPath: CHIP }}>
+                <span className="text-xs font-medium uppercase tracking-[0.2em] text-txt2">{t("voiceLaunchTitle")}</span>
                 <button
                   type="button"
                   role="switch"
@@ -280,12 +280,12 @@ export function Voice() {
                   className="press relative h-8 w-[62px] shrink-0 transition-colors duration-200"
                   style={{ clipPath: SWITCH }}
                 >
-                  <span aria-hidden className={cn("absolute inset-0 transition-colors duration-200", launch ? "bg-[var(--brand)]/85" : "bg-white/[0.12]")} />
+                  <span aria-hidden className={cn("absolute inset-0 transition-colors duration-200", launch ? "bg-[var(--brand)]/85" : "bg-[var(--surface-3)]")} />
                   <span
                     aria-hidden
                     className={cn(
-                      "absolute bottom-1 top-1 w-6 bg-[var(--txt)] transition-[left] duration-200 ease-out",
-                      launch ? "left-[calc(100%-28px)]" : "left-1",
+                      "absolute bottom-1 left-1 top-1 w-6 bg-[var(--txt)] transition-transform duration-200",
+                      launch ? "translate-x-[30px]" : "translate-x-0",
                     )}
                     style={{ clipPath: KNOB }}
                   />

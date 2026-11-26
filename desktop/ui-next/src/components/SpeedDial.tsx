@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import type { LucideIcon } from "lucide-react"
+import type { IconComponent } from "@/components/icons"
 import { useI18n } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
@@ -66,7 +66,7 @@ export function SpeedDial({
   display: string
   value: number
   unit: string
-  icon: LucideIcon
+  icon: IconComponent
   phase: DialPhase
   runId: number
   onStart: () => void
@@ -104,37 +104,24 @@ export function SpeedDial({
       className="relative h-[300px] w-[300px] [@media(max-height:660px)]:h-[172px] [@media(max-height:660px)]:w-[172px]"
     >
       <svg viewBox={`0 0 ${VIEW} ${VIEW}`} className="h-full w-full" aria-hidden focusable="false">
-        <defs>
-          <linearGradient id="qcDialFill" x1="0" y1="0.8" x2="1" y2="0.2">
-            <stop offset="0" stopColor="#6fa3f2" />
-            <stop offset="1" stopColor="#1d5bd6" />
-          </linearGradient>
-          {/* their dark-theme needle: light blade at the tip, fading home */}
-          <linearGradient id="qcDialNeedle" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#f2f4f9" stopOpacity="0.95" />
-            <stop offset="0.65" stopColor="#c3cad6" stopOpacity="0.65" />
-            <stop offset="1" stopColor="#7d879c" stopOpacity="0.35" />
-          </linearGradient>
-        </defs>
-
         {/* the working face: track, lit stretch, scale and needle. Only
             present while a run or a result exists. */}
-        <g style={{ opacity: atRest ? 0 : 1, transition: "opacity 400ms ease" }}>
+        <g style={{ opacity: atRest ? 0 : 1, transition: "opacity 400ms var(--ease-out)" }}>
           {/* the track */}
-          <path d={arcPath} fill="none" stroke="#2c3050" strokeWidth={STROKE} strokeLinecap="butt" />
+          <path d={arcPath} fill="none" stroke="var(--line-strong)" strokeWidth={STROKE} strokeLinecap="butt" />
 
           {/* the covered stretch, lit */}
           <path
             d={arcPath}
             fill="none"
-            stroke="url(#qcDialFill)"
+            stroke="var(--brand-vivid)"
             strokeWidth={STROKE}
             strokeLinecap="butt"
             style={{
               strokeDasharray: arcLen,
               strokeDashoffset: arcLen * (1 - frac),
               transition: "stroke-dashoffset 170ms cubic-bezier(0.22, 1, 0.36, 1)",
-              filter: "drop-shadow(0 0 5px rgb(29 91 214 / 0.5))",
+              filter: "drop-shadow(0 0 5px var(--brand-mid))",
             }}
           />
 
@@ -171,7 +158,7 @@ export function SpeedDial({
           >
             <path
               d={needlePath}
-              fill="url(#qcDialNeedle)"
+              fill="var(--txt)"
               style={{ filter: "drop-shadow(0 1px 5px rgb(0 0 0 / 0.5))" }}
             />
           </g>
@@ -190,12 +177,12 @@ export function SpeedDial({
           title={phase === "done" ? t("startAgain") : undefined}
           className={cn(
             "absolute left-1/2 top-1/2 grid size-[216px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border transition-[opacity,border-color,transform] duration-300 [@media(max-height:660px)]:size-[150px]",
-            "border-[rgb(255_255_255/0.14)] bg-black/35 shadow-[inset_0_1px_0_rgb(255_255_255/0.10)] backdrop-blur-[14px] backdrop-saturate-150",
-            "hover:border-[rgb(255_255_255/0.26)] active:scale-[0.985] [-webkit-tap-highlight-color:transparent]",
+            "border-[var(--line-strong)] bg-black/35 shadow-[inset_0_1px_0_rgb(255_255_255/0.10)] backdrop-blur-[14px] backdrop-saturate-150",
+            "hover:border-[var(--brand-line)] active:scale-[0.985] [-webkit-tap-highlight-color:transparent]",
             atRest ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
           )}
         >
-          <span className="text-[26px] font-bold tracking-[0.06em] text-txt">GO</span>
+          <span className="text-2xl font-bold tracking-[0.06em] text-txt">GO</span>
         </button>
 
         <div className="absolute left-1/2 top-[calc(50%+78px)] -translate-x-1/2 -translate-y-1/2 [@media(max-height:660px)]:top-[calc(50%+51px)]">
@@ -206,14 +193,14 @@ export function SpeedDial({
             )}
           >
             <span
-              className="text-[32px] font-medium leading-none tabular-nums text-txt [@media(max-height:660px)]:text-[22px]"
+              className="text-3xl font-medium leading-none tabular-nums text-txt [@media(max-height:660px)]:text-xl"
               style={{ letterSpacing: "-0.01em" }}
             >
               {display}
             </span>
-            <span className="mt-2 flex items-center gap-1.5">
+            <span className="mt-2 flex items-center gap-2">
               <Icon className="size-3.5 text-brand-strong" strokeWidth={1.9} aria-hidden />
-              <span className="text-[11.5px] text-txt2 [@media(max-height:660px)]:text-[11px]">
+              <span className="text-xs text-txt2 [@media(max-height:660px)]:text-xs">
                 {unit}
               </span>
             </span>

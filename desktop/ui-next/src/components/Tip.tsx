@@ -72,7 +72,7 @@ export function Tip({
               ref={bubble}
               role="tooltip"
               className={cn(
-                "pointer-events-none fixed z-[80] max-w-[min(260px,calc(100vw-20px))] rounded-[7px] border border-line bg-[rgb(26_27_33/0.98)] px-2.5 py-1 text-center text-[11.5px] font-medium leading-[1.3] text-txt2 shadow-[0_10px_26px_rgb(0_0_0/0.55)]",
+                "pointer-events-none fixed z-[80] max-w-[min(260px,calc(100vw-20px))] rounded-lg border border-line bg-[var(--panel)] px-3 py-1 text-center text-xs font-medium leading-[1.3] text-txt2 shadow-[0_10px_26px_rgb(0_0_0/0.55)]",
                 place.above ? "-translate-y-full" : "",
                 align === "center" ? "-translate-x-1/2" : align === "end" ? "-translate-x-full" : "",
               )}

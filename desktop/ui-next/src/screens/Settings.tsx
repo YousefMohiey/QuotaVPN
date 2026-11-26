@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
-import { Download, Languages, Loader2, MonitorPlay, Palette, RefreshCw, ShieldOff } from "lucide-react"
+import { Download, Languages, Loader2, MonitorPlay, Palette, RefreshCw, ShieldOff } from "@/components/icons"
 import { Toggle } from "@/components/Toggle"
 import { Segmented } from "@/components/Segmented"
 import { Tip } from "@/components/Tip"
@@ -33,7 +33,7 @@ function Section({ label, gap, children }: { label: string; gap?: boolean; child
 /** The WE mark in a ring, the way the quota card on Home wears it. */
 function WeIcon() {
   return (
-    <span className="grid size-10 place-items-center rounded-full border border-white/[0.11] bg-[rgb(255_255_255/0.03)] text-txt">
+    <span className="grid size-10 place-items-center rounded-full border border-white/[0.11] bg-[var(--surface-2)] text-txt">
       <WeMark className="w-[23px]" />
     </span>
   )
@@ -83,7 +83,7 @@ function WeQuotaRows() {
         title={t("weQuota")}
         body={
           q.linked && remaining ? (
-            <span className="flex items-baseline gap-1.5">
+            <span className="flex items-baseline gap-2">
               <span className="font-display text-base font-semibold tabular-nums text-txt">{fmtQuota(remaining.remain)}</span>
               {t("weLeftShort")}
             </span>
@@ -99,7 +99,7 @@ function WeQuotaRows() {
                   type="button"
                   onClick={() => void quotaRefresh(true)}
                   disabled={busy}
-                  className="press flex h-10 items-center gap-2 whitespace-nowrap rounded-[9px] border border-line bg-white/[0.03] px-4 text-sm text-txt transition-colors hover:border-[var(--brand-line)]"
+                  className="press flex h-10 items-center gap-2 whitespace-nowrap rounded-lg border border-line bg-white/[0.03] px-4 text-sm text-txt transition-colors hover:border-[var(--brand-line)]"
                 >
                   {busy ? <Loader2 className="size-3 animate-spin" aria-hidden /> : <RefreshCw className="size-3" aria-hidden />}
                   {t("weRefresh")}
@@ -108,7 +108,7 @@ function WeQuotaRows() {
               <button
                 type="button"
                 onClick={() => void quotaLogout()}
-                className="press flex h-10 items-center whitespace-nowrap rounded-[9px] border border-line bg-transparent px-4 text-sm text-txt2 transition-colors hover:border-[var(--red-line)] hover:text-txt"
+                className="press flex h-10 items-center whitespace-nowrap rounded-lg border border-line bg-transparent px-4 text-sm text-txt2 transition-colors hover:border-[var(--red-line)] hover:text-txt"
               >
                 {t("weUnlink")}
               </button>
@@ -117,7 +117,7 @@ function WeQuotaRows() {
             <button
               type="button"
               onClick={() => setQuotaOpen(true)}
-              className="press flex h-10 items-center rounded-[9px] bg-[var(--brand)] px-5 text-sm font-medium text-white transition-[filter] hover:brightness-110"
+              className="press flex h-10 items-center rounded-lg bg-[var(--brand)] px-6 text-sm font-medium text-white transition-[filter] hover:brightness-110"
             >
               {t("weLink")}
             </button>
@@ -245,7 +245,7 @@ export function Settings() {
                     onClick={() => setTheme(option.id)}
                     aria-pressed={active}
                     aria-label={t(option.labelKey)}
-                    className="group flex min-w-12 flex-col items-center gap-1.5"
+                    className="group flex min-w-12 flex-col items-center gap-2"
                   >
                     <span
                       className={cn(
@@ -271,7 +271,7 @@ export function Settings() {
         <Row
           icon={Languages}
           title={t("language")}
-          body={lang === "ar" ? "Ø¹Ø±Ø¨ÙŠ" : "English"}
+          body={lang === "ar" ? t("langArabic") : t("langEnglish")}
           control={
             <Segmented
               boxed
@@ -281,7 +281,7 @@ export function Settings() {
               onChange={(l) => setLang(l)}
               options={[
                 { value: "en", label: "EN" },
-                { value: "ar", label: "Ø¹Ø±Ø¨ÙŠ" },
+                { value: "ar", label: t("langArabic") },
               ]}
             />
           }
@@ -319,7 +319,7 @@ export function Settings() {
                       .then(() => window.setTimeout(refreshKill, 2500))
                       .catch(() => setKillMsg(t("killFail")))
                   }
-                  className="press h-8 rounded-[8px] border border-[var(--red-line)] bg-[var(--red-bg)] px-2.5 text-xs text-[var(--red)]"
+                  className="press h-8 rounded-lg border border-[var(--red-line)] bg-[var(--red-bg)] px-3 text-xs text-[var(--red)]"
                 >
                   {t("killRelease")}
                 </button>
@@ -353,7 +353,7 @@ export function Settings() {
             </span>
           }
           body={
-            <span aria-live="polite" className="flex min-w-0 items-center gap-1.5">
+            <span aria-live="polite" className="flex min-w-0 items-center gap-2">
               <span
                 aria-hidden
                 className={cn(
@@ -374,7 +374,7 @@ export function Settings() {
                   initial={calm ? false : { opacity: 0, y: 2 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={calm ? { opacity: 0 } : { opacity: 0, y: -2 }}
-                  transition={{ duration: calm ? 0 : 0.14, ease: "easeOut" }}
+                  transition={{ duration: calm ? 0 : 0.14, ease: [0.22, 1, 0.36, 1] }}
                   className="truncate"
                 >
                   {updateText}
@@ -388,7 +388,7 @@ export function Settings() {
                 type="button"
                 onClick={() => void checkUpdates()}
                 disabled={checking}
-                className="press flex h-10 items-center gap-2 whitespace-nowrap rounded-[9px] border border-line bg-white/[0.03] px-4 text-sm text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
+                className="press flex h-10 items-center gap-2 whitespace-nowrap rounded-lg border border-line bg-white/[0.03] px-4 text-sm text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
               >
                 {checking ? <Loader2 className="size-3 animate-spin" aria-hidden /> : <RefreshCw className="size-3" aria-hidden />}
                 {checking ? t("upChecking") : t("upCheck")}
@@ -398,7 +398,7 @@ export function Settings() {
                   type="button"
                   onClick={() => void applyUpdate()}
                   disabled={installing}
-                  className="press flex h-10 items-center whitespace-nowrap rounded-[9px] bg-[var(--brand)] px-4 text-sm font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
+                  className="press flex h-10 items-center whitespace-nowrap rounded-lg bg-[var(--brand)] px-4 text-sm font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
                 >
                   {installing ? (updatePct !== null ? `${updatePct}%` : t("upInstalling")) : t("upGet")}
                 </button>

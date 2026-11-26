@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
-import { ArrowDownToLine, Gauge, History as HistoryIcon, Home as HomeIcon, Settings as SettingsIcon, Users, Wifi } from "lucide-react"
+import { ArrowDownToLine, Gauge, History as HistoryIcon, Home as HomeIcon, Settings as SettingsIcon, Users, Wifi } from "@/components/icons"
 import type { ComponentType } from "react"
 import { ValorantMark } from "@/components/ValorantMark"
 import { cn } from "@/lib/utils"
@@ -50,7 +50,7 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
   return (
     <aside className="flex w-[250px] shrink-0 flex-col border-e border-line bg-[var(--side)]">
       {/* identity: mark, wordmark, build number on one line */}
-      <div className="px-4 pb-4 pt-5">
+      <div className="px-4 pb-4 pt-6">
         <div className="flex items-center gap-3">
           <img src="./icon.png" alt="" aria-hidden className="size-11 shrink-0" />
           <div className="min-w-0 flex-1">
@@ -71,7 +71,7 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.3, ease: EASE_OUT }}
               onClick={() => onTab("settings")}
-              className="mt-2.5 flex w-full items-center gap-2 rounded-[8px] border border-line px-2 py-1.5 text-start transition-colors hover:border-[var(--brand-line)]"
+              className="mt-3 flex w-full items-center gap-2 rounded-lg border border-line px-2 py-2 text-start transition-colors hover:border-[var(--brand-line)]"
             >
               <ArrowDownToLine className="size-3.5 shrink-0 text-brand-strong" aria-hidden />
               <span className="min-w-0 flex-1">
@@ -94,7 +94,7 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
             onClick={() => onTab(id)}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "relative flex h-12 items-center gap-3 rounded-[10px] px-3 text-sm transition-colors duration-200",
+              "relative flex h-12 items-center gap-3 rounded-xl px-3 text-sm transition-colors duration-200",
               active ? "font-medium text-txt" : "text-txt2 hover:bg-[var(--surface-2)] hover:text-txt",
             )}
           >
@@ -102,7 +102,7 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
               <motion.span
                 layoutId="nav-active"
                 aria-hidden
-                className="absolute inset-0 rounded-[10px] bg-[var(--surface-3)]"
+                className="absolute inset-0 rounded-xl bg-[var(--surface-3)]"
                 transition={calm ? { duration: 0 } : { type: "spring", stiffness: 480, damping: 42 }}
               />
             ) : null}
@@ -118,7 +118,7 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
 
       {/* the live state sits in the hero; the rail keeps the places and the
           one control that changes the whole room */}
-      <div className="mt-auto px-4 pb-5 pt-6">
+      <div className="mt-auto px-4 pb-6 pt-6">
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs font-medium text-txt3">{t("theme")}</span>
           <div className="flex items-center gap-2" role="group" aria-label={t("theme")}>

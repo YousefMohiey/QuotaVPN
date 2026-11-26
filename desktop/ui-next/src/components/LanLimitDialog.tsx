@@ -66,13 +66,13 @@ export function LanLimitDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[380px]">
-        <DialogTitle className="text-[16px] font-semibold">{t("netLimitTitle")}</DialogTitle>
-        <p className="mt-1 text-[12.5px] leading-relaxed text-txt2" dir="auto">
+        <DialogTitle className="text-base font-semibold">{t("netLimitTitle")}</DialogTitle>
+        <p className="mt-1 text-xs leading-relaxed text-txt2" dir="auto">
           {t("netLimitBody")}
         </p>
         <div className="mt-4 flex flex-col gap-3">
           <label className="flex items-center justify-between gap-3">
-            <span className="text-[13px] text-txt2">{t("netLimitDown")}</span>
+            <span className="text-sm text-txt2">{t("netLimitDown")}</span>
             <Input
               value={down}
               onChange={(e) => setDown(e.target.value.replace(/[^0-9]/g, ""))}
@@ -83,7 +83,7 @@ export function LanLimitDialog({
             />
           </label>
           <label className="flex items-center justify-between gap-3">
-            <span className="text-[13px] text-txt2">{t("netLimitUp")}</span>
+            <span className="text-sm text-txt2">{t("netLimitUp")}</span>
             <Input
               value={up}
               onChange={(e) => setUp(e.target.value.replace(/[^0-9]/g, ""))}
@@ -94,13 +94,13 @@ export function LanLimitDialog({
             />
           </label>
         </div>
-        {err ? <p className="mt-3 text-[12px] text-[var(--red)]">{err}</p> : null}
-        <div className="mt-5 flex items-center justify-between gap-2">
+        {err ? <p className="mt-3 text-xs text-[var(--red)]">{err}</p> : null}
+        <div className="mt-6 flex items-center justify-between gap-2">
           {current && (current.down_kbps > 0 || current.up_kbps > 0) ? (
             <button
               type="button"
               onClick={() => void remove()}
-              className="press h-9 rounded-[9px] border border-line px-3 text-[13px] text-txt2 hover:border-[var(--red)]/45 hover:text-[var(--red)]"
+              className="press h-9 rounded-lg border border-line px-3 text-sm text-txt2 hover:border-[var(--red)]/45 hover:text-[var(--red)]"
             >
               {t("netLimitRemove")}
             </button>
@@ -111,14 +111,14 @@ export function LanLimitDialog({
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="press h-9 rounded-[9px] border border-line px-3.5 text-[13px] text-txt2 hover:bg-white/[0.03]"
+            className="press h-9 rounded-lg border border-line px-4 text-sm text-txt2 hover:bg-white/[0.03]"
           >
             {t("cancel")}
           </button>
           <button
             type="button"
             onClick={() => void apply()}
-            className="press h-9 rounded-[9px] bg-[var(--brand)] px-4 text-[13px] font-medium text-[var(--brand-ink)]"
+            className="press h-9 rounded-lg bg-[var(--brand)] px-4 text-sm font-medium text-[var(--on-brand)]"
           >
             {t("netLimitApply")}
           </button>

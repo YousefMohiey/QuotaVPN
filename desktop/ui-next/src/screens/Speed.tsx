@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
-import { Activity, ArrowDown, ArrowUp, Check, ChevronDown, Cloud, Copy, Gauge, Gamepad2, Loader2, RefreshCw, Server, Tv, Video, Wifi } from "lucide-react"
+import { Activity, ArrowDown, ArrowUp, Check, ChevronDown, Cloud, Copy, Gauge, Gamepad2, Loader2, RefreshCw, Server, Tv, Video, Wifi } from "@/components/icons"
 import { PickerDialog } from "@/components/PickerDialog"
 import { SpeedDial } from "@/components/SpeedDial"
 import { useApp } from "@/state/app"
@@ -674,7 +674,7 @@ export function Speed() {
       {/* one surface, the Home language: the dial holds the stage, the four
           readings stand in the rail beside it, and the facts sit in the band */}
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
-        <section className="flex min-h-0 flex-col items-center justify-center gap-4 px-6 py-5">
+        <section className="flex min-h-0 flex-col items-center justify-center gap-4 px-6 py-6">
           <SpeedDial
             display={fmt(value, unit)}
             value={dialValue}
@@ -695,14 +695,14 @@ export function Speed() {
                   initial={calm ? false : { opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={calm ? { opacity: 0 } : { opacity: 0, y: -4 }}
-                  transition={{ duration: calm ? 0 : 0.16, ease: "easeOut" }}
-                  className="flex w-full max-w-[372px] items-center gap-2.5 rounded-[10px] border border-line bg-white/[0.03] py-1.5 pe-1.5 ps-3"
+                  transition={{ duration: calm ? 0 : 0.16, ease: [0.22, 1, 0.36, 1] }}
+                  className="flex w-full max-w-[372px] items-center gap-3 rounded-xl border border-line bg-white/[0.03] py-2 pe-1.5 ps-3"
                 >
                   <span className="relative grid size-2 shrink-0 place-items-center">
                     <span className="absolute size-2 rounded-full bg-brand-strong opacity-50 motion-safe:animate-ping" aria-hidden />
                     <span className="size-1.5 rounded-full bg-brand-strong" aria-hidden />
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-[12px] text-txt2">
+                  <span className="min-w-0 flex-1 truncate text-xs text-txt2">
                     <span className="font-medium text-brand-strong">{t("measuring")}</span>
                     <span className="text-txt3"> · </span>
                     {hint || t("speedTag")}
@@ -710,9 +710,9 @@ export function Speed() {
                   <button
                     type="button"
                     onClick={stop}
-                    className="press flex h-8 shrink-0 items-center gap-2 rounded-[7px] border border-[var(--red-line)] bg-[rgb(207_112_120_/_0.12)] px-2.5 text-[12px] font-medium text-[var(--red)] transition-colors hover:bg-[rgb(207_112_120_/_0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/50"
+                    className="press flex h-8 shrink-0 items-center gap-2 rounded-lg border border-[var(--red-line)] bg-[var(--red-bg)] px-3 text-xs font-medium text-[var(--red)] transition-colors hover:bg-[var(--red-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/50"
                   >
-                    <span className="size-2 rounded-[2px] bg-[var(--red)]" aria-hidden />
+                    <span className="size-2 rounded-sm bg-[var(--red)]" aria-hidden />
                     {t("stop")}
                   </button>
                 </motion.div>
@@ -722,13 +722,13 @@ export function Speed() {
                   initial={calm ? false : { opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={calm ? { opacity: 0 } : { opacity: 0, y: -4 }}
-                  transition={{ duration: calm ? 0 : 0.16, ease: "easeOut" }}
+                  transition={{ duration: calm ? 0 : 0.16, ease: [0.22, 1, 0.36, 1] }}
                   className="flex min-w-0 flex-col items-center gap-1 text-center"
                 >
-                  <span className={cn("truncate font-display text-[23px] font-semibold leading-tight tracking-[-0.02em]", "text-txt")}>
+                  <span className={cn("truncate font-display text-2xl font-semibold leading-tight tracking-[-0.02em]", "text-txt")}>
                     {phase === "done" ? t("doneLabel") : t("idle")}
                   </span>
-                  <span className="max-w-[380px] text-[12px] leading-snug text-txt2">
+                  <span className="max-w-[380px] text-xs leading-snug text-txt2">
                     {phase === "done" ? t("startAgain") : hint || t("speedTag")}
                   </span>
                 </motion.div>
@@ -736,16 +736,16 @@ export function Speed() {
             </AnimatePresence>
           </div>
 
-          <div className="grid w-full max-w-[440px] shrink-0 grid-cols-2 overflow-hidden rounded-[10px] bg-white/[0.03]">
-            <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-2.5">
-              <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("selServer")}</span>
-              <span className="w-full truncate text-center text-[13px] text-txt" dir="auto">
+          <div className="grid w-full max-w-[440px] shrink-0 grid-cols-2 overflow-hidden rounded-xl bg-white/[0.03]">
+            <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-3">
+              <span className="truncate text-xs font-medium uppercase tracking-[0.08em] text-txt2">{t("selServer")}</span>
+              <span className="w-full truncate text-center text-sm text-txt" dir="auto">
                 {picking ? t("findingServer") : srv.label}
               </span>
             </span>
-            <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-2.5">
-              <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("peak")}</span>
-              <span className="truncate text-[13px] tabular-nums text-txt">
+            <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-3">
+              <span className="truncate text-xs font-medium uppercase tracking-[0.08em] text-txt2">{t("peak")}</span>
+              <span className="truncate text-sm tabular-nums text-txt">
                 {peakSnap ? `${fmt(peakSnap.v, peakSnap.u)} ${peakSnap.u}` : shown.length > 0 ? `${fmt(peak, unit)} ${unit}` : "-"}
               </span>
             </span>
@@ -753,9 +753,9 @@ export function Speed() {
         </section>
 
         <aside className="flex min-h-0 flex-col border-s border-line bg-[var(--side)] px-4 py-4">
-          <div className="flex shrink-0 items-center gap-2.5 pb-3">
+          <div className="flex shrink-0 items-center gap-3 pb-3">
             <Gauge className="size-4 shrink-0 text-txt2" strokeWidth={1.7} aria-hidden />
-            <span className="min-w-0 flex-1 truncate text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
+            <span className="min-w-0 flex-1 truncate text-xs font-medium uppercase tracking-[0.1em] text-txt2">
               {t("speedTest")}
             </span>
           </div>
@@ -805,8 +805,8 @@ export function Speed() {
 
       {/* where the run is pointed, who hosts it, what you are on */}
       <section className="grid shrink-0 grid-cols-3 overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
-        <div className="group/server flex min-w-0 flex-col justify-center gap-2 px-5 py-4 transition-colors duration-200 hover:bg-white/[0.02]">
-          <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
+        <div className="group/server flex min-w-0 flex-col justify-center gap-2 px-6 py-4 transition-colors duration-200 hover:bg-[var(--surface-2)]">
+          <span className="flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.1em] text-txt2">
             <Server
               className="size-4 shrink-0 text-txt3 transition-colors duration-200 group-hover/server:text-brand-strong"
               strokeWidth={1.8}
@@ -822,7 +822,7 @@ export function Speed() {
               aria-label={t("pickServer")}
               className="press group flex min-w-0 flex-1 items-center gap-2 text-start text-txt transition-colors disabled:cursor-not-allowed"
             >
-              <span className="min-w-0 flex-1 truncate text-[13px]" dir="auto">
+              <span className="min-w-0 flex-1 truncate text-sm" dir="auto">
                 {picking ? t("findingServer") : srv.label}
               </span>
               <ChevronDown
@@ -846,11 +846,11 @@ export function Speed() {
               )}
             </button>
           </div>
-          <span className="truncate text-[12px] text-txt3" dir="auto">{srv.detail || srv.host}</span>
+          <span className="truncate text-xs text-txt3" dir="auto">{srv.detail || srv.host}</span>
         </div>
 
-        <div className="group/host flex min-w-0 flex-col justify-center gap-2 border-s border-line px-5 py-4 transition-colors duration-200 hover:bg-white/[0.02]">
-          <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
+        <div className="group/host flex min-w-0 flex-col justify-center gap-2 border-s border-line px-6 py-4 transition-colors duration-200 hover:bg-[var(--surface-2)]">
+          <span className="flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.1em] text-txt2">
             <Cloud
               className="size-4 shrink-0 text-txt3 transition-colors duration-200 group-hover/host:text-brand-strong"
               strokeWidth={1.8}
@@ -858,13 +858,13 @@ export function Speed() {
             />
             <span className="truncate transition-colors duration-200 group-hover/host:text-txt">{t("hostedBy")}</span>
           </span>
-          <span className="truncate text-[13px] font-medium text-txt" dir="auto">{sponsor}</span>
+          <span className="truncate text-sm font-medium text-txt" dir="auto">{sponsor}</span>
           <button
             type="button"
             onClick={() => void copyValue("host", hostText)}
             aria-label={`${t("copy")} ${hostText}`}
             title={t("copy")}
-            className="press group/hostcopy flex min-w-0 items-center gap-1.5 text-start text-[12px] text-txt3 transition-colors hover:text-txt"
+            className="press group/hostcopy flex min-w-0 items-center gap-2 text-start text-xs text-txt3 transition-colors hover:text-txt"
           >
             <span className="truncate" dir="auto">{hostText}</span>
             {copied === "host" ? (
@@ -875,8 +875,8 @@ export function Speed() {
           </button>
         </div>
 
-        <div className="group/conn flex min-w-0 flex-col justify-center gap-2 border-s border-line px-5 py-4 transition-colors duration-200 hover:bg-white/[0.02]">
-          <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
+        <div className="group/conn flex min-w-0 flex-col justify-center gap-2 border-s border-line px-6 py-4 transition-colors duration-200 hover:bg-[var(--surface-2)]">
+          <span className="flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.1em] text-txt2">
             <Wifi
               className="size-4 shrink-0 text-txt3 transition-colors duration-200 group-hover/conn:text-brand-strong"
               strokeWidth={1.8}
@@ -884,11 +884,11 @@ export function Speed() {
             />
             <span className="truncate transition-colors duration-200 group-hover/conn:text-txt">{t("yourConn")}</span>
           </span>
-          <span className="truncate text-[13px] font-medium text-txt" dir="auto">
+          <span className="truncate text-sm font-medium text-txt" dir="auto">
             {netInfo ? netInfo.isp || "-" : "-"}
           </span>
           {netInfo?.ip ? (
-            <span className="flex min-w-0 items-center gap-1.5 text-[12px] text-txt3">
+            <span className="flex min-w-0 items-center gap-2 text-xs text-txt3">
               <button
                 type="button"
                 onClick={() => void copyValue("ip", netInfo.ip)}
@@ -911,7 +911,7 @@ export function Speed() {
               ) : null}
             </span>
           ) : (
-            <span className="text-[12px] text-txt3">-</span>
+            <span className="text-xs text-txt3">-</span>
           )}
         </div>
       </section>
@@ -992,7 +992,7 @@ function ReadingCard({
       disabled={disabled}
       title={label}
       className={cn(
-        "press group flex min-h-0 min-w-0 flex-1 flex-col justify-center gap-2.5 rounded-[10px] px-3.5 py-3.5 text-start transition-[background-color,box-shadow]",
+        "press group flex min-h-0 min-w-0 flex-1 flex-col justify-center gap-3 rounded-xl px-4 py-4 text-start transition-[background-color,box-shadow]",
         live ? "bg-[var(--brand-bg)]" : "bg-white/[0.035]",
         !disabled && !live && "hover:bg-white/[0.055] hover:ring-1 hover:ring-inset hover:ring-[var(--brand-line)]/30",
         disabled && "cursor-default",
@@ -1007,20 +1007,20 @@ function ReadingCard({
           strokeWidth={1.7}
           aria-hidden
         />
-        <span className="min-w-0 flex-1 truncate text-[11px] font-medium uppercase tracking-[0.09em] text-txt2">{label}</span>
+        <span className="min-w-0 flex-1 truncate text-xs font-medium uppercase tracking-[0.09em] text-txt2">{label}</span>
         {live ? <span className="net-live-dot size-1.5 shrink-0 rounded-full bg-brand-strong" aria-hidden /> : null}
       </span>
-      <span className="flex min-w-0 items-baseline gap-1.5">
+      <span className="flex min-w-0 items-baseline gap-2">
         <span
           className={cn(
             "font-display font-semibold leading-none tabular-nums",
-            wide ? "text-[34px]" : "text-[26px]",
+            wide ? "text-3xl" : "text-2xl",
             value === null ? "text-txt3" : live ? "text-brand-strong" : "text-txt",
           )}
         >
           {value === null ? "-" : fmt(value, unit === "ms" ? "ms" : "Mbps")}
         </span>
-        <span className="text-[11.5px] text-txt3">{unit}</span>
+        <span className="text-xs text-txt3">{unit}</span>
       </span>
     </button>
   )

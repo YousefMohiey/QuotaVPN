@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Check, ChevronRight, Search } from "lucide-react"
+import { Check, ChevronRight, Search } from "@/components/icons"
 import { motion, useReducedMotion } from "motion/react"
 import { Segmented } from "@/components/Segmented"
 import { useApp, type AppsMode } from "@/state/app"
@@ -112,7 +112,7 @@ export function Apps({ onBack }: { onBack: () => void }) {
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1180px] flex-col gap-3">
       {/* the list owns the height and scrolls itself, the rules sit in the band */}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
-        <div className="flex shrink-0 items-center gap-2.5 border-b border-line px-5 py-3.5">
+        <div className="flex shrink-0 items-center gap-3 border-b border-line px-6 py-4">
           <button
             type="button"
             onClick={onBack}
@@ -122,10 +122,10 @@ export function Apps({ onBack }: { onBack: () => void }) {
           >
             <ChevronRight className="size-4 rotate-180" aria-hidden />
           </button>
-          <span className="min-w-0 flex-1 truncate text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
+          <span className="min-w-0 flex-1 truncate text-xs font-medium uppercase tracking-[0.1em] text-txt2">
             {t("routing")}
           </span>
-          <span className="shrink-0 text-[11.5px] tabular-nums text-txt3" dir="auto">
+          <span className="shrink-0 text-xs tabular-nums text-txt3" dir="auto">
             {appsMode === "all" ? t("appsEveryApp") : `${apps.length} / ${list.length} ${t("selOf")}`}
           </span>
         </div>
@@ -149,12 +149,12 @@ export function Apps({ onBack }: { onBack: () => void }) {
               <span className="grid size-12 place-items-center rounded-full border border-line bg-white/[0.03] text-txt3">
                 <Search className="size-5" strokeWidth={1.7} aria-hidden />
               </span>
-              <p className="text-[13px] text-txt2">{loading ? t("appsLoading") : t("appsEmpty")}</p>
+              <p className="text-sm text-txt2">{loading ? t("appsLoading") : t("appsEmpty")}</p>
               {!loading && q ? (
                 <button
                   type="button"
                   onClick={() => setQuery("")}
-                  className="press flex h-9 items-center gap-1.5 rounded-[9px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-3.5 text-[12.5px] font-medium text-brand-strong transition-colors hover:bg-[var(--brand)]/20"
+                  className="press flex h-9 items-center gap-2 rounded-lg border border-[var(--brand-line)] bg-[var(--brand-bg)] px-4 text-xs font-medium text-brand-strong transition-colors hover:bg-[var(--brand)]/20"
                 >
                   {t("appsClearSearch")}
                 </button>
@@ -198,32 +198,32 @@ export function Apps({ onBack }: { onBack: () => void }) {
                       }
                     }}
                     className={cn(
-                      "flex w-full scroll-mt-2 items-center gap-3 border-b border-line px-5 py-2.5 text-start transition-colors last:border-b-0 hover:bg-white/[0.03] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-line)]",
+                      "flex w-full scroll-mt-2 items-center gap-3 border-b border-line px-6 py-3 text-start transition-colors last:border-b-0 hover:bg-white/[0.03] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-line)]",
                       tinted ? "bg-[var(--brand)]/[0.055]" : focused && "bg-white/[0.04]",
                     )}
                   >
                     <span
                       aria-hidden
-                      className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-[7px] bg-white/[0.03]"
+                      className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-lg bg-white/[0.03]"
                     >
                       {icon ? (
                         <img src={icon} alt="" draggable={false} className="size-4 select-none" />
                       ) : (
-                        <span className="text-[12px] font-semibold uppercase text-txt3">{row.label.slice(0, 1)}</span>
+                        <span className="text-xs font-semibold uppercase text-txt3">{row.label.slice(0, 1)}</span>
                       )}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className={cn("block truncate text-[13px]", on ? "text-txt" : "text-txt2")} dir="auto">
+                      <span className={cn("block truncate text-sm", on ? "text-txt" : "text-txt2")} dir="auto">
                         {row.label}
                       </span>
-                      <span className="block truncate text-[11.5px] text-txt3" dir="auto">
+                      <span className="block truncate text-xs text-txt3" dir="auto">
                         {row.pkg}
                       </span>
                     </span>
                     <span
                       aria-hidden
                       className={cn(
-                        "grid size-4 shrink-0 place-items-center rounded-[5px] border transition-colors",
+                        "grid size-4 shrink-0 place-items-center rounded-md border transition-colors",
                         on ? "border-[var(--brand-line)] bg-[var(--brand-bg)]" : "border-line-strong",
                       )}
                     >
@@ -246,7 +246,7 @@ export function Apps({ onBack }: { onBack: () => void }) {
         {!atEnd && filtered.length > 0 ? (
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-7 bg-gradient-to-t from-[var(--panel)] to-transparent"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-7 bg-[var(--panel)]"
           />
         ) : null}
         </div>
@@ -254,9 +254,9 @@ export function Apps({ onBack }: { onBack: () => void }) {
 
       {/* the rules the list answers to: what counts, which ones, and the ways
           to set them without walking the list */}
-      <section className="grid shrink-0 grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_auto] items-start gap-6 rounded-[var(--r-card)] border border-line bg-[var(--panel)] px-5 py-4">
+      <section className="grid shrink-0 grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_auto] items-start gap-6 rounded-[var(--r-card)] border border-line bg-[var(--panel)] px-6 py-4">
         <div className="flex min-w-0 flex-col gap-2">
-          <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">{t("appsModeLbl")}</span>
+          <span className="text-xs font-medium uppercase tracking-[0.1em] text-txt2">{t("appsModeLbl")}</span>
           <Segmented
             id="apps-mode"
             value={appsMode}
@@ -268,11 +268,11 @@ export function Apps({ onBack }: { onBack: () => void }) {
               { value: "block", label: t("appsExcept") },
             ]}
           />
-          <p className="text-[12px] leading-relaxed text-txt3">{t("appsBody")}</p>
+          <p className="text-xs leading-relaxed text-txt3">{t("appsBody")}</p>
         </div>
 
         <div className="flex min-w-0 flex-col gap-2">
-          <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">{t("appsSearch")}</span>
+          <span className="text-xs font-medium uppercase tracking-[0.1em] text-txt2">{t("appsSearch")}</span>
           <div className="relative">
             <Search className="absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-txt3" aria-hidden />
             <input
@@ -287,22 +287,22 @@ export function Apps({ onBack }: { onBack: () => void }) {
               }}
               placeholder={t("appsSearch")}
               aria-label={t("appsSearch")}
-              className="h-9 w-full rounded-[7px] border border-line bg-white/[0.02] ps-8 pe-2 text-[12.5px] text-txt outline-none transition-colors placeholder:text-txt3 focus:border-[var(--brand-line)]"
+              className="h-9 w-full rounded-lg border border-line bg-[var(--surface-2)] ps-8 pe-2 text-xs text-txt outline-none transition-colors placeholder:text-txt3 focus:border-[var(--brand-line)]"
             />
           </div>
         </div>
 
         <div className="flex min-w-0 flex-col gap-2">
-          <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">{t("appsBulkLbl")}</span>
+          <span className="text-xs font-medium uppercase tracking-[0.1em] text-txt2">{t("appsBulkLbl")}</span>
           {bulkOff ? (
-            <span className="flex h-9 items-center text-[12px] leading-snug text-txt3">{t("appsBulkOff")}</span>
+            <span className="flex h-9 items-center text-xs leading-snug text-txt3">{t("appsBulkOff")}</span>
           ) : (
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 disabled={filtered.length === 0}
                 onClick={selectMatches}
-                className="press h-9 whitespace-nowrap rounded-[7px] border border-[var(--brand-line)] px-3 text-[12.5px] text-brand-strong transition-colors hover:bg-[var(--brand-bg)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                className="press h-9 whitespace-nowrap rounded-lg border border-[var(--brand-line)] px-3 text-xs text-brand-strong transition-colors hover:bg-[var(--brand-bg)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
               >
                 {q
                   ? t("appsSelectMatches").replace("{m}", String(filtered.length))
@@ -312,7 +312,7 @@ export function Apps({ onBack }: { onBack: () => void }) {
                 type="button"
                 disabled={apps.length === 0}
                 onClick={() => setApps([])}
-                className="press h-9 whitespace-nowrap rounded-[7px] border border-line px-3 text-[12.5px] text-[rgb(207_112_120/0.8)] transition-colors hover:border-[var(--red-line)] hover:bg-[var(--red-bg)] hover:text-[var(--red)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line disabled:hover:bg-transparent disabled:hover:text-[rgb(207_112_120/0.8)]"
+                className="press h-9 whitespace-nowrap rounded-lg border border-line px-3 text-xs text-[var(--red)] transition-colors hover:border-[var(--red-line)] hover:bg-[var(--red-bg)] hover:text-[var(--red)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line disabled:hover:bg-transparent disabled:hover:text-[var(--red)]"
               >
                 {t("appsClearSel")}
               </button>

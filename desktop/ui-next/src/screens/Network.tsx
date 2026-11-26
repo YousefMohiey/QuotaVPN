@@ -19,7 +19,7 @@ import {
   Tv,
   Unlock,
   X,
-} from "lucide-react"
+} from "@/components/icons"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { useI18n } from "@/lib/i18n"
 import { api, type LanDevice, type LanPrepare, type LanStatus, type LanWire, type NetworkSnapshot } from "@/lib/ipc"
@@ -91,7 +91,7 @@ function CopyButton({ value, label, onError }: { value: string; label: string; o
         setDone(true)
         window.setTimeout(() => setDone(false), 1200)
       }}
-      className="press grid size-6 place-items-center rounded-[6px] text-txt3 opacity-55 transition-opacity hover:bg-white/[0.06] hover:text-txt group-hover:opacity-100 focus-visible:opacity-100"
+      className="press grid size-6 place-items-center rounded-md text-txt3 opacity-55 transition-opacity hover:bg-white/[0.06] hover:text-txt group-hover:opacity-100 focus-visible:opacity-100"
     >
       {done ? <Check className="net-check-in size-3.5 text-[var(--green)]" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}
     </button>
@@ -107,12 +107,12 @@ function Rate({ value, unit }: { value: string; unit: string }) {
         key={value}
         initial={reduce ? false : { opacity: 0.35, y: 3 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.18, ease: "easeOut" }}
-        className="inline-block font-mono text-[20px] text-txt"
+        transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+        className="inline-block font-mono text-xl text-txt"
       >
         {value}
       </motion.span>
-      <span className="text-[12px] text-txt3">{unit}</span>
+      <span className="text-xs text-txt3">{unit}</span>
     </span>
   )
 }
@@ -156,28 +156,28 @@ function RouterDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[420px] overflow-hidden p-0">
-        <div className="relative border-b border-line bg-[linear-gradient(135deg,rgba(101,145,255,0.12),transparent_62%)] px-5 py-5">
+        <div className="relative border-b border-line bg-[var(--surface-2)] px-6 py-6">
           <div className="flex items-center gap-3">
-            <span className="grid size-11 place-items-center rounded-[12px] border border-[var(--brand-line)] bg-[var(--brand)]/10">
+            <span className="grid size-11 place-items-center rounded-xl border border-[var(--brand-line)] bg-[var(--brand)]/10">
               <RouterIcon className="size-5 text-brand-strong" aria-hidden />
             </span>
             <div className="min-w-0">
-              <DialogTitle className="text-[17px] font-semibold tracking-[-0.01em]">{t("routerTitle")}</DialogTitle>
-              <p className="mt-0.5 text-[12px] uppercase tracking-[0.16em] text-txt3">{t("netNamesTitle")}</p>
+              <DialogTitle className="text-base font-semibold tracking-[-0.01em]">{t("routerTitle")}</DialogTitle>
+              <p className="mt-0.5 text-xs uppercase tracking-[0.16em] text-txt3">{t("netNamesTitle")}</p>
             </div>
           </div>
         </div>
-        <div className="px-5 py-4">
-          <p className="text-[12.5px] leading-relaxed text-txt2" dir="auto">
+        <div className="px-6 py-4">
+          <p className="text-xs leading-relaxed text-txt2" dir="auto">
             {t("routerBody")}
           </p>
           <div className="mt-4 grid gap-3">
-            <label className="grid gap-1.5">
-              <span className="text-[11px] uppercase tracking-[0.12em] text-txt3">{t("routerUser")}</span>
+            <label className="grid gap-2">
+              <span className="text-xs uppercase tracking-[0.12em] text-txt3">{t("routerUser")}</span>
               <Input value={user} onChange={(e) => setUser(e.target.value)} className="h-9" dir="ltr" autoComplete="off" />
             </label>
-            <label className="grid gap-1.5">
-              <span className="text-[11px] uppercase tracking-[0.12em] text-txt3">{t("routerPass")}</span>
+            <label className="grid gap-2">
+              <span className="text-xs uppercase tracking-[0.12em] text-txt3">{t("routerPass")}</span>
               <Input
                 type="password"
                 value={pass}
@@ -191,17 +191,17 @@ function RouterDialog({
               />
             </label>
           </div>
-          <p className="mt-3 flex items-start gap-2 text-[12px] leading-relaxed text-txt3">
+          <p className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-txt3">
             <LockKeyhole className="mt-0.5 size-3.5 shrink-0" aria-hidden />
             {t("netRouterHint")}
           </p>
-          {err ? <p className="mt-3 text-[12px] leading-snug text-[var(--red)]">{err}</p> : null}
+          {err ? <p className="mt-3 text-xs leading-snug text-[var(--red)]">{err}</p> : null}
         </div>
-        <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-3">
+        <div className="flex items-center justify-end gap-2 border-t border-line px-6 py-3">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="press h-9 rounded-[9px] border border-line px-3.5 text-[12.5px] text-txt2 hover:bg-white/[0.03]"
+            className="press h-9 rounded-lg border border-line px-4 text-xs text-txt2 hover:bg-white/[0.03]"
           >
             {t("cancel")}
           </button>
@@ -209,7 +209,7 @@ function RouterDialog({
             type="button"
             onClick={() => void submit()}
             disabled={busy || !user || !pass}
-            className="press flex h-9 items-center gap-2 rounded-[9px] bg-[var(--brand)] px-4 text-[12.5px] font-medium text-[var(--brand-ink)] disabled:opacity-50"
+            className="press flex h-9 items-center gap-2 rounded-lg bg-[var(--brand)] px-4 text-xs font-medium text-[var(--on-brand)] disabled:opacity-50"
           >
             {busy ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : null}
             {busy ? t("netLoggingIn") : t("routerLink")}
@@ -560,22 +560,22 @@ export function Network() {
   return (
     <div className="net-page flex h-full min-h-0 w-full flex-col gap-3">
       <header className="flex shrink-0 items-center justify-between gap-4">
-        <div className="flex min-w-0 items-baseline gap-2.5">
-          <h1 className="font-display text-[30px] font-semibold leading-none tracking-[-0.02em] text-txt">
+        <div className="flex min-w-0 items-baseline gap-3">
+          <h1 className="font-display text-3xl font-semibold leading-none tracking-[-0.02em] text-txt">
             {t("netTitle")}
           </h1>
-          <span className="text-[13px] text-txt3">
+          <span className="text-sm text-txt3">
             {t(onlineOnly ? "netCountOnline" : "netCount").replace("{n}", String(visible.length))}
           </span>
           {snap?.router_linked ? (
             <>
-              <span className="text-[12px] text-txt3/40" aria-hidden>
+              <span className="text-xs text-txt3/40" aria-hidden>
                 ·
               </span>
               <button
                 type="button"
                 onClick={() => setShowIdle((v) => !v)}
-                className="press text-[12.5px] text-txt3 underline-offset-4 hover:text-txt hover:underline"
+                className="press text-xs text-txt3 underline-offset-4 hover:text-txt hover:underline"
               >
                 {showIdle ? t("netOnlineOnly") : t("netShowIdle")}
               </button>
@@ -585,7 +585,7 @@ export function Network() {
         <div className="flex shrink-0 items-center gap-2">
           {snap?.router_linked ? (
             <>
-              <span className="flex h-10 items-center gap-2 rounded-[10px] border border-[var(--green-line)] bg-[var(--green)]/[0.06] px-3 text-[13px] text-[var(--green)]">
+              <span className="flex h-10 items-center gap-2 rounded-xl border border-[var(--green-line)] bg-[var(--green)]/[0.06] px-3 text-sm text-[var(--green)]">
                 <RouterIcon className="size-4" aria-hidden />
                 {t("netRouterSaved")}
               </span>
@@ -596,7 +596,7 @@ export function Network() {
                 onClick={() => {
                   void api.routerUnlink().then(() => load(false))
                 }}
-                className="press grid size-10 place-items-center rounded-[10px] border border-line text-txt3 hover:border-[var(--red)]/40 hover:text-[var(--red)]"
+                className="press grid size-10 place-items-center rounded-xl border border-line text-txt3 hover:border-[var(--red)]/40 hover:text-[var(--red)]"
               >
                 <X className="size-4" aria-hidden />
               </button>
@@ -605,7 +605,7 @@ export function Network() {
             <button
               type="button"
               onClick={() => setRouterOpen(true)}
-              className="press flex h-10 items-center gap-2 rounded-[10px] border border-[var(--brand-line)]/50 bg-[var(--brand)]/[0.06] px-3 text-[13px] font-medium text-brand-strong hover:bg-[var(--brand)]/[0.12]"
+              className="press flex h-10 items-center gap-2 rounded-xl border border-[var(--brand-line)]/50 bg-[var(--brand)]/[0.06] px-3 text-sm font-medium text-brand-strong hover:bg-[var(--brand)]/[0.12]"
             >
               <LockKeyhole className="size-4" aria-hidden />
               {t("netNamesLink")}
@@ -615,7 +615,7 @@ export function Network() {
             type="button"
             onClick={refresh}
             disabled={scanning}
-            className="press flex h-10 items-center gap-2 rounded-[10px] border border-line px-4 text-[13px] text-txt2 hover:border-[var(--brand-line)] hover:text-txt disabled:opacity-50"
+            className="press flex h-10 items-center gap-2 rounded-xl border border-line px-4 text-sm text-txt2 hover:border-[var(--brand-line)] hover:text-txt disabled:opacity-50"
           >
             <RefreshCw className={cn("size-4", scanning && "animate-spin")} aria-hidden />
             {t("netRefresh")}
@@ -624,20 +624,20 @@ export function Network() {
       </header>
 
       {guardAlert ? (
-        <div className="flex shrink-0 items-center gap-2 rounded-[10px] border border-[var(--red)]/35 bg-[var(--red)]/10 px-3 py-2 text-[12.5px] text-[var(--red)]">
+        <div className="flex shrink-0 items-center gap-2 rounded-xl border border-[var(--red)]/35 bg-[var(--red)]/10 px-3 py-2 text-xs text-[var(--red)]">
           <ShieldCheck className="size-4 shrink-0" aria-hidden />
           {t("netGuardAlert").replace("{mac}", snap?.guard.attacker_mac ?? "")}
         </div>
       ) : null}
 
       {error && !selectedDevice ? (
-        <div className="shrink-0 rounded-[9px] border border-[var(--red)]/30 bg-[var(--red)]/[0.06] px-3 py-2 text-[12.5px] leading-snug text-[var(--red)]">
+        <div className="shrink-0 rounded-lg border border-[var(--red)]/30 bg-[var(--red)]/[0.06] px-3 py-2 text-xs leading-snug text-[var(--red)]">
           {error}
         </div>
       ) : null}
 
       {scanBusy ? (
-        <div className="flex shrink-0 items-center gap-2 rounded-[9px] border border-[var(--brand-line)]/50 bg-[var(--brand)]/[0.05] px-3 py-2 text-[12px] text-brand-strong">
+        <div className="flex shrink-0 items-center gap-2 rounded-lg border border-[var(--brand-line)]/50 bg-[var(--brand)]/[0.05] px-3 py-2 text-xs text-brand-strong">
           <Loader2 className="size-3.5 animate-spin" aria-hidden />
           {t("netScanningSleepers")}
         </div>
@@ -645,8 +645,8 @@ export function Network() {
 
       <div className="net-layout min-h-0 flex-1">
         <section className="flex min-h-0 flex-col">
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[16px] border border-line bg-[var(--panel)]">
-            <div className="net-grid shrink-0 items-center gap-2 border-b border-line px-4 py-2.5 text-[12px] uppercase tracking-[0.12em] text-txt3">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-[var(--panel)]">
+            <div className="net-grid shrink-0 items-center gap-2 border-b border-line px-4 py-3 text-xs uppercase tracking-[0.12em] text-txt3">
               <span>{t("netColDevice")}</span>
               <span>{t("netColIp")}</span>
               <span className="net-mac">{t("netColMac")}</span>
@@ -656,19 +656,35 @@ export function Network() {
 
             <div className="min-h-0 flex-1 overflow-y-auto">
               {visible.length === 0 ? (
-                <div className="flex h-full min-h-[240px] flex-col items-center justify-center gap-3 px-6 text-center">
-                  <Radar className={cn("size-10 text-txt3", scanning && "net-wait")} aria-hidden />
-                  <p className="text-[13.5px] text-txt2">{scanning ? t("netScanning") : t("netEmpty")}</p>
-                  {!scanning ? (
+                scanning ? (
+                  <div className="grid gap-2 p-4" aria-busy="true" aria-label={t("netScanning")}>
+                    {[0, 1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-3 rounded-xl border border-line bg-[var(--surface-2)] px-3 py-3"
+                      >
+                        <span className="size-9 shrink-0 animate-pulse rounded-xl bg-[var(--surface-3)]" />
+                        <span className="min-w-0 flex-1 space-y-2">
+                          <span className="block h-3 w-32 animate-pulse rounded bg-[var(--surface-3)]" />
+                          <span className="block h-2.5 w-20 animate-pulse rounded bg-[var(--surface-3)]" />
+                        </span>
+                        <span className="h-3 w-24 shrink-0 animate-pulse rounded bg-[var(--surface-3)]" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex h-full min-h-[240px] flex-col items-center justify-center gap-3 px-6 text-center">
+                    <Radar className="size-10 text-txt3" aria-hidden />
+                    <p className="text-sm text-txt2">{t("netEmpty")}</p>
                     <button
                       type="button"
                       onClick={refresh}
-                      className="press text-[13px] text-brand-strong underline-offset-4 hover:underline"
+                      className="press text-sm text-brand-strong underline-offset-4 hover:underline"
                     >
                       {t("netRefresh")}
                     </button>
-                  ) : null}
-                </div>
+                  </div>
+                )
               ) : (
                 visible.map((d) => {
                   const Icon = iconFor(d)
@@ -698,38 +714,38 @@ export function Network() {
                         <motion.span
                           layoutId="net-selection"
                           transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 430, damping: 38 }}
-                          className="pointer-events-none absolute inset-x-1.5 inset-y-1.5 rounded-[11px] bg-[var(--brand)]/[0.10] ring-1 ring-inset ring-[var(--brand-line)]/40"
+                          className="pointer-events-none absolute inset-x-1.5 inset-y-1.5 rounded-xl bg-[var(--brand)]/[0.10] ring-1 ring-inset ring-[var(--brand-line)]/40"
                           aria-hidden
                         />
                       ) : null}
                       <div className="relative z-10 flex min-w-0 items-center gap-3">
                         <span
                           className={cn(
-                            "grid size-9 shrink-0 place-items-center rounded-[10px] border",
+                            "grid size-9 shrink-0 place-items-center rounded-xl border",
                             isSel ? "border-[var(--brand-line)] bg-[var(--brand)]/10" : "border-line bg-white/[0.025]",
                           )}
                         >
                           <Icon className={cn("size-[18px]", isSel ? "text-brand-strong" : "text-txt2")} aria-hidden />
                         </span>
                         <span className="min-w-0">
-                          <span className={cn("block truncate text-[15px] font-medium", name ? "text-txt" : "text-txt3")}>
+                          <span className={cn("block truncate text-sm font-medium", name ? "text-txt" : "text-txt3")}>
                             {name || t("netUnknownName")}
                           </span>
-                          <span className="mt-0.5 block truncate text-[12.5px] text-txt3">{subtitleOf(d)}</span>
+                          <span className="mt-0.5 block truncate text-xs text-txt3">{subtitleOf(d)}</span>
                         </span>
                       </div>
                       <div className="relative z-10 flex min-w-0 items-center gap-1">
-                        <span className="truncate font-mono text-[13px] text-txt2">{d.ip}</span>
+                        <span className="truncate font-mono text-sm text-txt2">{d.ip}</span>
                         <CopyButton value={d.ip} label={t("netCopyIp")} onError={() => setError(t("netCopyFailed"))} />
                       </div>
                       <div className="net-mac relative z-10 flex min-w-0 items-center gap-1">
-                        <span className="truncate font-mono text-[12px] text-txt3">{d.mac || "-"}</span>
+                        <span className="truncate font-mono text-xs text-txt3">{d.mac || "-"}</span>
                         <CopyButton value={d.mac} label={t("netCopyMac")} onError={() => setError(t("netCopyFailed"))} />
                       </div>
                       <div className="relative z-10">
                         <span
                           className={cn(
-                            "inline-flex items-center gap-1.5 text-[12px]",
+                            "inline-flex items-center gap-2 text-xs",
                             status.tone === "bad" ? "text-[var(--red)]" : "text-txt2",
                           )}
                         >
@@ -748,7 +764,7 @@ export function Network() {
                       </div>
                       <span
                         className={cn(
-                          "relative z-10 grid size-6 place-items-center rounded-[6px] transition-[translate] duration-200 group-hover:translate-x-0.5",
+                          "relative z-10 grid size-6 place-items-center rounded-md transition-[translate] duration-200 group-hover:translate-x-0.5",
                           isSel ? "text-brand-strong" : "text-txt3",
                         )}
                         aria-hidden
@@ -765,17 +781,17 @@ export function Network() {
 
         <aside
           data-network-detail
-          className="net-detail flex min-h-0 max-h-full flex-col self-start overflow-hidden rounded-[16px] border border-line bg-[var(--panel)]"
+          className="net-detail flex min-h-0 max-h-full flex-col self-start overflow-hidden rounded-2xl border border-line bg-[var(--panel)]"
         >
           {!selectedDevice ? (
-            <div className="flex items-start gap-4 p-5">
-              <span className="relative grid size-14 shrink-0 place-items-center rounded-[16px] border border-[var(--brand-line)] bg-[var(--brand)]/10">
-                <span className="net-ping absolute inset-0 rounded-[16px] border border-[var(--brand-line)]/40" aria-hidden />
+            <div className="flex items-start gap-4 p-6">
+              <span className="relative grid size-14 shrink-0 place-items-center rounded-2xl border border-[var(--brand-line)] bg-[var(--brand)]/10">
+                <span className="net-ping absolute inset-0 rounded-2xl border border-[var(--brand-line)]/40" aria-hidden />
                 <Radar className="size-7 text-brand-strong" aria-hidden />
               </span>
               <div className="min-w-0">
-                <h2 className="font-display text-[22px] font-semibold leading-tight text-txt">{t("netPickDevice")}</h2>
-                <p className="mt-1.5 text-[13px] leading-relaxed text-txt2">{t("netPickBody")}</p>
+                <h2 className="font-display text-xl font-semibold leading-tight text-txt">{t("netPickDevice")}</h2>
+                <p className="mt-2 text-sm leading-relaxed text-txt2">{t("netPickBody")}</p>
               </div>
             </div>
           ) : (
@@ -783,15 +799,15 @@ export function Network() {
               <div className="shrink-0 border-b border-line px-4 py-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className="grid size-12 place-items-center rounded-[12px] border border-[var(--brand-line)] bg-[var(--brand)]/10">
+                    <span className="grid size-12 place-items-center rounded-xl border border-[var(--brand-line)] bg-[var(--brand)]/10">
                       {(() => {
                         const Icon = iconFor(selectedDevice)
                         return <Icon className="size-5 text-brand-strong" aria-hidden />
                       })()}
                     </span>
                     <div className="min-w-0">
-                      <div className="flex min-w-0 items-center gap-1.5">
-                        <span className="truncate text-[17px] font-semibold text-txt">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="truncate text-base font-semibold text-txt">
                           {selectedName || t("netUnknownName")}
                         </span>
                         {selectedName ? (
@@ -815,13 +831,13 @@ export function Network() {
                         />
                         <span
                           className={cn(
-                            "shrink-0 text-[12px]",
+                            "shrink-0 text-xs",
                             selectedStatus?.tone === "bad" ? "text-[var(--red)]" : "text-txt2",
                           )}
                         >
                           {selectedStatus?.text}
                         </span>
-                        <span className="truncate text-[12.5px] text-txt3">{selectedSubtitle}</span>
+                        <span className="truncate text-xs text-txt3">{selectedSubtitle}</span>
                       </div>
                     </div>
                   </div>
@@ -829,7 +845,7 @@ export function Network() {
                     type="button"
                     aria-label={t("cancel")}
                     onClick={() => setSelected(null)}
-                    className="press grid size-8 shrink-0 place-items-center rounded-[7px] text-txt3 hover:bg-white/[0.06] hover:text-txt"
+                    className="press grid size-8 shrink-0 place-items-center rounded-lg text-txt3 hover:bg-white/[0.06] hover:text-txt"
                   >
                     <X className="size-4" aria-hidden />
                   </button>
@@ -838,7 +854,7 @@ export function Network() {
                   <button
                     type="button"
                     onClick={() => setRouterOpen(true)}
-                    className="press mt-2 flex items-center gap-1 text-[12px] text-brand-strong hover:underline"
+                    className="press mt-2 flex items-center gap-1 text-xs text-brand-strong hover:underline"
                   >
                     <LockKeyhole className="size-3.5" aria-hidden />
                     {t("netSignInName")}
@@ -848,15 +864,15 @@ export function Network() {
 
               <div className="net-readings shrink-0 divide-x divide-line/60 border-b border-line/60">
                 <div className="group px-4 py-3">
-                  <div className="text-[12px] uppercase tracking-[0.1em] text-txt3">{t("netColIp")}</div>
-                  <div className="mt-1 flex items-center gap-1 font-mono text-[13px] text-txt">
+                  <div className="text-xs uppercase tracking-[0.1em] text-txt3">{t("netColIp")}</div>
+                  <div className="mt-1 flex items-center gap-1 font-mono text-sm text-txt">
                     {selectedDevice.ip}
                     <CopyButton value={selectedDevice.ip} label={t("netCopyIp")} onError={() => setError(t("netCopyFailed"))} />
                   </div>
                 </div>
                 <div className="group px-4 py-3">
-                  <div className="text-[12px] uppercase tracking-[0.1em] text-txt3">{t("netColMac")}</div>
-                  <div className="mt-1 flex items-center gap-1 font-mono text-[12.5px] text-txt">
+                  <div className="text-xs uppercase tracking-[0.1em] text-txt3">{t("netColMac")}</div>
+                  <div className="mt-1 flex items-center gap-1 font-mono text-xs text-txt">
                     {selectedDevice.mac || "-"}
                     <CopyButton value={selectedDevice.mac} label={t("netCopyMac")} onError={() => setError(t("netCopyFailed"))} />
                   </div>
@@ -865,14 +881,14 @@ export function Network() {
 
               <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-4">
                 {!ready ? (
-                  <div className="rounded-[12px] border border-[var(--brand-line)] bg-[var(--brand)]/[0.04] px-4 py-3.5">
-                    <div className="flex items-center gap-2 text-[13px] font-medium text-txt">
+                  <div className="rounded-xl border border-[var(--brand-line)] bg-[var(--brand)]/[0.04] px-4 py-4">
+                    <div className="flex items-center gap-2 text-sm font-medium text-txt">
                       <LockKeyhole className="size-4 text-brand-strong" aria-hidden />
                       {t("netSetupTitle")}
                     </div>
-                    <p className="mt-1.5 text-[12.5px] leading-relaxed text-txt2">{t("netSetupBody")}</p>
+                    <p className="mt-2 text-xs leading-relaxed text-txt2">{t("netSetupBody")}</p>
                     <div className="mt-3 flex items-center justify-between gap-2 border-b border-line/60 pb-2">
-                      <span className="flex items-center gap-2 text-[13px] text-txt2">
+                      <span className="flex items-center gap-2 text-sm text-txt2">
                         <span
                           className={cn(
                             "size-1.5 rounded-full",
@@ -883,13 +899,13 @@ export function Network() {
                         Npcap
                       </span>
                       {setup?.npcap || snap?.claim_ready ? (
-                        <span className="text-[12px] uppercase tracking-[0.1em] text-[var(--green)]">{t("netReady")}</span>
+                        <span className="text-xs uppercase tracking-[0.1em] text-[var(--green)]">{t("netReady")}</span>
                       ) : (
                         <button
                           type="button"
                           onClick={() => void installNpcap()}
                           disabled={npcapBusy}
-                          className="press flex h-9 items-center gap-1.5 rounded-[8px] bg-[var(--brand)]/15 px-3 text-[12.5px] font-medium text-brand-strong disabled:opacity-50"
+                          className="press flex h-9 items-center gap-2 rounded-lg bg-[var(--brand)]/15 px-3 text-xs font-medium text-brand-strong disabled:opacity-50"
                         >
                           {npcapBusy ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : null}
                           {npcapBusy ? t("netNpcapBusy") : t("netNpcapInstall")}
@@ -897,32 +913,32 @@ export function Network() {
                       )}
                     </div>
                     {!(setup?.npcap || snap?.claim_ready) ? (
-                      <p className="mt-2 text-[12px] leading-snug text-txt3">{t("netNpcapHint")}</p>
+                      <p className="mt-2 text-xs leading-snug text-txt3">{t("netNpcapHint")}</p>
                     ) : null}
-                    {driverMsg ? <p className="mt-2 text-[12px] leading-snug text-txt3">{driverMsg}</p> : null}
+                    {driverMsg ? <p className="mt-2 text-xs leading-snug text-txt3">{driverMsg}</p> : null}
                   </div>
                 ) : null}
 
                 {activeOther ? (
-                  <p className="rounded-[10px] border border-line/70 px-3.5 py-2.5 text-[12.5px] leading-snug text-[var(--amber)]">
+                  <p className="rounded-xl border border-line/70 px-4 py-3 text-xs leading-snug text-[var(--amber)]">
                     {t("netControlOther")}
                   </p>
                 ) : null}
 
                 {activeHere ? (
-                  <div className="rounded-[12px] border border-line/70 bg-white/[0.02] px-4 py-3.5">
+                  <div className="rounded-xl border border-line/70 bg-[var(--surface-2)] px-4 py-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <div className="text-[12px] uppercase tracking-[0.1em] text-txt3">{t("netDownload")}</div>
+                        <div className="text-xs uppercase tracking-[0.1em] text-txt3">{t("netDownload")}</div>
                         <Rate value={fmtRate(rates.down)[0]} unit={fmtRate(rates.down)[1]} />
-                        <div className="mt-1 font-mono text-[12px] text-txt3">
+                        <div className="mt-1 font-mono text-xs text-txt3">
                           {fmtBytes(active?.down_bytes ?? 0)}
                         </div>
                       </div>
                       <div>
-                        <div className="text-[12px] uppercase tracking-[0.1em] text-txt3">{t("netUpload")}</div>
+                        <div className="text-xs uppercase tracking-[0.1em] text-txt3">{t("netUpload")}</div>
                         <Rate value={fmtRate(rates.up)[0]} unit={fmtRate(rates.up)[1]} />
-                        <div className="mt-1 font-mono text-[12px] text-txt3">
+                        <div className="mt-1 font-mono text-xs text-txt3">
                           {fmtBytes(active?.up_bytes ?? 0)}
                         </div>
                       </div>
@@ -931,16 +947,16 @@ export function Network() {
                 ) : null}
 
                 {!selectedDevice.protected ? (
-                  <div className="grid gap-2.5 rounded-[12px] border border-line/70 bg-white/[0.02] p-3.5">
+                  <div className="grid gap-3 rounded-xl border border-line/70 bg-[var(--surface-2)] p-4">
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-txt3">
+                      <span className="text-xs font-semibold uppercase tracking-[0.12em] text-txt3">
                         {t("netLimitTitle")}
                       </span>
-                      <span className="text-[11.5px] text-txt3">{t("netCapsHint")}</span>
+                      <span className="text-xs text-txt3">{t("netCapsHint")}</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <label className="rounded-[10px] border border-line bg-[var(--panel)] px-3 py-2 transition-colors focus-within:border-[var(--brand-line)] focus-within:bg-[var(--brand)]/[0.04]">
-                        <span className="block text-[11.5px] text-txt3">{t("netDownload")}</span>
+                      <label className="rounded-xl border border-line bg-[var(--panel)] px-3 py-2 transition-colors focus-within:border-[var(--brand-line)] focus-within:bg-[var(--brand)]/[0.04]">
+                        <span className="block text-xs text-txt3">{t("netDownload")}</span>
                         <span className="mt-0.5 flex items-baseline gap-1">
                           <Input
                             value={down}
@@ -948,14 +964,14 @@ export function Network() {
                             inputMode="numeric"
                             placeholder="0"
                             aria-label={t("netLimitDown")}
-                            className="h-6 min-w-0 flex-1 border-0 bg-transparent p-0 text-right font-mono text-[15px] text-txt focus-visible:ring-0"
+                            className="h-6 min-w-0 flex-1 border-0 bg-transparent p-0 text-right font-mono text-sm text-txt focus-visible:ring-0"
                             dir="ltr"
                           />
-                          <span className="shrink-0 text-[11px] text-txt3">KB/s</span>
+                          <span className="shrink-0 text-xs text-txt3">KB/s</span>
                         </span>
                       </label>
-                      <label className="rounded-[10px] border border-line bg-[var(--panel)] px-3 py-2 transition-colors focus-within:border-[var(--brand-line)] focus-within:bg-[var(--brand)]/[0.04]">
-                        <span className="block text-[11.5px] text-txt3">{t("netUpload")}</span>
+                      <label className="rounded-xl border border-line bg-[var(--panel)] px-3 py-2 transition-colors focus-within:border-[var(--brand-line)] focus-within:bg-[var(--brand)]/[0.04]">
+                        <span className="block text-xs text-txt3">{t("netUpload")}</span>
                         <span className="mt-0.5 flex items-baseline gap-1">
                           <Input
                             value={up}
@@ -964,21 +980,21 @@ export function Network() {
                             placeholder="0"
                             aria-label={t("netLimitUp")}
                             disabled={uploadsBypass}
-                            className="h-6 min-w-0 flex-1 border-0 bg-transparent p-0 text-right font-mono text-[15px] text-txt focus-visible:ring-0 disabled:opacity-40"
+                            className="h-6 min-w-0 flex-1 border-0 bg-transparent p-0 text-right font-mono text-sm text-txt focus-visible:ring-0 disabled:opacity-40"
                             dir="ltr"
                           />
-                          <span className="shrink-0 text-[11px] text-txt3">KB/s</span>
+                          <span className="shrink-0 text-xs text-txt3">KB/s</span>
                         </span>
                       </label>
                     </div>
                     {uploadsBypass ? (
-                      <p className="text-[12px] leading-snug text-[var(--amber)]">{t("netUploadBypass")}</p>
+                      <p className="text-xs leading-snug text-[var(--amber)]">{t("netUploadBypass")}</p>
                     ) : null}
                     <button
                       type="button"
                       onClick={() => void applyCaps()}
                       disabled={!ready || busy !== null}
-                      className="press flex h-9 items-center justify-center gap-1.5 rounded-[9px] bg-[var(--brand)]/15 text-[13px] font-medium text-brand-strong hover:bg-[var(--brand)]/25 disabled:opacity-50"
+                      className="press flex h-9 items-center justify-center gap-2 rounded-lg bg-[var(--brand)]/15 text-sm font-medium text-brand-strong hover:bg-[var(--brand)]/25 disabled:opacity-50"
                     >
                       {busy === "caps" || busy === "control" ? (
                         <Loader2 className="size-3.5 animate-spin" aria-hidden />
@@ -991,7 +1007,7 @@ export function Network() {
 
               <div className="shrink-0 border-t border-line p-4">
                 {selectedDevice.protected ? (
-                  <div className="flex items-center justify-center gap-1.5 py-1 text-[12px] text-txt3">
+                  <div className="flex items-center justify-center gap-2 py-1 text-xs text-txt3">
                     <ShieldCheck className="size-4" aria-hidden />
                     {t("netProtected")}
                   </div>
@@ -1002,7 +1018,7 @@ export function Network() {
                       initial={reduce ? false : { opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
-                      transition={{ duration: reduce ? 0 : 0.16, ease: "easeOut" }}
+                      transition={{ duration: reduce ? 0 : 0.16, ease: [0.22, 1, 0.36, 1] }}
                       className="flex gap-2"
                     >
                       {activeHere ? (
@@ -1011,7 +1027,7 @@ export function Network() {
                             type="button"
                             onClick={() => void release()}
                             disabled={busy !== null}
-                            className="press flex h-10 flex-1 items-center justify-center gap-1.5 rounded-[9px] border border-[var(--brand-line)] bg-[var(--brand)]/15 text-[13px] font-medium text-brand-strong hover:bg-[var(--brand)]/25 disabled:opacity-50"
+                            className="press flex h-10 flex-1 items-center justify-center gap-2 rounded-lg border border-[var(--brand-line)] bg-[var(--brand)]/15 text-sm font-medium text-brand-strong hover:bg-[var(--brand)]/25 disabled:opacity-50"
                           >
                             {busy === "release" ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : null}
                             {t("netRelease")}
@@ -1021,7 +1037,7 @@ export function Network() {
                             onClick={() => void toggleBlock()}
                             disabled={busy !== null}
                             className={cn(
-                              "press flex h-10 flex-1 items-center justify-center gap-1.5 rounded-[9px] border text-[13px] font-medium disabled:opacity-50",
+                              "press flex h-10 flex-1 items-center justify-center gap-2 rounded-lg border text-sm font-medium disabled:opacity-50",
                               blocked
                                 ? "border-[var(--green-line)] bg-[var(--green)]/10 text-[var(--green)] hover:bg-[var(--green)]/15"
                                 : "border-[var(--red)]/35 bg-[var(--red)]/[0.06] text-[var(--red)] hover:bg-[var(--red)]/12",
@@ -1043,7 +1059,7 @@ export function Network() {
                             type="button"
                             onClick={() => void startControl(false)}
                             disabled={!ready || busy !== null}
-                            className="press flex h-10 flex-1 items-center justify-center gap-1.5 rounded-[9px] bg-[var(--brand)] text-[13px] font-medium text-[var(--brand-ink)] disabled:opacity-50"
+                            className="press flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--brand)] text-sm font-medium text-[var(--on-brand)] disabled:opacity-50"
                           >
                             {busy === "control" ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : null}
                             {t("netMonitor")}
@@ -1052,7 +1068,7 @@ export function Network() {
                             type="button"
                             onClick={() => void startControl(true)}
                             disabled={!ready || busy !== null}
-                            className="press flex h-10 flex-1 items-center justify-center gap-1.5 rounded-[9px] border border-[var(--red)]/35 bg-[var(--red)]/[0.06] text-[13px] font-medium text-[var(--red)] hover:bg-[var(--red)]/12 disabled:opacity-50"
+                            className="press flex h-10 flex-1 items-center justify-center gap-2 rounded-lg border border-[var(--red)]/35 bg-[var(--red)]/[0.06] text-sm font-medium text-[var(--red)] hover:bg-[var(--red)]/12 disabled:opacity-50"
                           >
                             {busy === "block" ? (
                               <Loader2 className="size-3.5 animate-spin" aria-hidden />
@@ -1066,7 +1082,7 @@ export function Network() {
                     </motion.div>
                   </AnimatePresence>
                 )}
-                {error ? <p className="mt-2 text-[12px] leading-snug text-[var(--red)]">{error}</p> : null}
+                {error ? <p className="mt-2 text-xs leading-snug text-[var(--red)]">{error}</p> : null}
               </div>
             </div>
           )}

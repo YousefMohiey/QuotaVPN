@@ -14,7 +14,7 @@ export function WaitingRing({ className, stroke = 1.6 }: { className?: string; s
   return (
     <span aria-hidden className={cn("pointer-events-none absolute inset-0", className)}>
       <svg viewBox="0 0 100 100" className="size-full">
-        <circle cx="50" cy="50" r="49.2" fill="none" stroke="rgb(255 255 255 / 0.06)" strokeWidth="1.4" />
+        <circle cx="50" cy="50" r="49.2" fill="none" stroke="var(--line-strong)" strokeWidth="1.4" />
         <circle
           cx="50"
           cy="50"

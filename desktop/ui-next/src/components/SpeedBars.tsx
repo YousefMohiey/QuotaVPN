@@ -28,13 +28,12 @@ export function SpeedBars({
   // deriving straight from the prop keeps every bar in step with the readout.
   const max = Math.max(1, ...view)
   const any = view.some((v) => v > 0)
-  const height = view.map((v) => (v === 0 ? "2px" : `${Math.max(8, (v / max) * 100)}%`))
   const t = view.map((v) => v / max)
 
   return (
     <div className="relative">
       <div
-        className="flex h-[96px] items-end gap-[3px]"
+        className="flex h-[96px] items-end gap-1"
         role="img"
         aria-label={active ? "live throughput" : "last run shape"}
       >
@@ -44,18 +43,18 @@ export function SpeedBars({
           view.map((v, i) => (
             <span
               key={i}
-              className="flex-1 rounded-t-[3px]"
+              className="h-full flex-1 origin-bottom rounded-t"
               style={{
-                height: height[i],
+                transform: `scaleY(${v === 0 ? 0.02 : Math.max(0.08, v / max)})`,
                 background: `color-mix(in oklab, ${accent} ${Math.round(18 + t[i] * 62)}%, rgb(255 255 255 / 0.10))`,
                 opacity: v === 0 ? 0.28 : i === view.length - 1 && active ? 1 : 0.92,
-                transition: "height 140ms linear, background 200ms linear",
+                transition: "transform 140ms var(--ease-out), background 200ms var(--ease-out)",
               }}
             />
           ))}
       </div>
       {/* baseline: without it the row of bars reads as decoration, not a scale */}
-      <div className="mt-1 h-px w-full bg-[rgb(255_255_255/0.10)]" />
+      <div className="mt-1 h-px w-full bg-[var(--line)]" />
     </div>
   )
 }

@@ -18,25 +18,25 @@ export function Row({
         align === "center" ? "items-center" : "items-start",
       )}
     >
-      <div className="w-[148px] shrink-0 pt-[7px] text-[12.5px] text-txt2">{label}</div>
+      <div className="w-[148px] shrink-0 pt-2 text-xs text-txt2">{label}</div>
       <div className="min-w-0 flex-1">{children}</div>
     </div>
   )
 }
 
 export function Panel({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("glass overflow-hidden rounded-[20px]", className)}>{children}</div>
+  return <div className={cn("glass overflow-hidden rounded-2xl", className)}>{children}</div>
 }
 
 export function GroupLabel({ children }: { children: ReactNode }) {
-  return <div className="px-1 pb-2 text-[11px] font-medium tracking-[0.07em] text-txt3 uppercase">{children}</div>
+  return <div className="px-1 pb-2 text-xs font-medium tracking-[0.07em] text-txt3 uppercase">{children}</div>
 }
 
 export function PageTitle({ children, sub }: { children: ReactNode; sub?: string }) {
   return (
     <div className="px-1">
-      <h1 className="text-[15px] font-semibold text-txt">{children}</h1>
-      {sub && <p className="mt-0.5 text-[12.5px] text-txt3">{sub}</p>}
+      <h1 className="text-sm font-semibold text-txt">{children}</h1>
+      {sub && <p className="mt-0.5 text-xs text-txt3">{sub}</p>}
     </div>
   )
 }

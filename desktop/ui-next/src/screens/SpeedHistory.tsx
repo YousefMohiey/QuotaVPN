@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { Activity, ArrowDown, ArrowUp, Check, ChevronRight, Gauge, History as HistoryIcon, Trash2 } from "lucide-react"
+import { Activity, ArrowDown, ArrowUp, Check, ChevronRight, Gauge, History as HistoryIcon, Trash2 } from "@/components/icons"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import {
   Dialog,
@@ -53,9 +53,9 @@ function RunCard({
       layout
       initial={false}
       exit={calm ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: -4 }}
-      transition={{ duration: calm ? 0 : 0.16, ease: "easeOut" }}
+      transition={{ duration: calm ? 0 : 0.16, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "group relative rounded-[14px] border border-line bg-[var(--panel)] transition-colors hover:border-line-strong",
+        "group relative rounded-2xl border border-line bg-[var(--panel)] transition-colors hover:border-line-strong",
         picked && "border-[var(--brand-line)] bg-[var(--brand-bg)]",
       )}
     >
@@ -66,23 +66,23 @@ function RunCard({
         className="block w-full px-4 pt-3 pb-0 text-start"
       >
         <div className="flex items-center gap-3 pe-16">
-          <span className="text-[11px] tabular-nums text-txt3">{time}</span>
-          <span className="min-w-0 truncate text-[11.5px] text-txt2" dir="auto">
+          <span className="text-xs tabular-nums text-txt3">{time}</span>
+          <span className="min-w-0 truncate text-xs text-txt2" dir="auto">
             {h.target || serverLabel}
           </span>
         </div>
-        <div className="-mx-4 mt-2.5 grid grid-cols-4 divide-x divide-line border-t border-line">
+        <div className="-mx-4 mt-3 grid grid-cols-4 divide-x divide-line border-t border-line">
           {cells.map((c, i) => (
-            <span key={c.label + i} className="min-w-0 px-3.5 py-2.5">
-              <span className="flex items-center gap-1.5 text-[11px] text-txt3">
+            <span key={c.label + i} className="min-w-0 px-4 py-3">
+              <span className="flex items-center gap-2 text-xs text-txt3">
                 {c.icon && <c.icon className="size-3 shrink-0" strokeWidth={1.7} aria-hidden />}
                 <span className="truncate">{c.label}</span>
               </span>
               <span className="mt-1 flex items-baseline gap-1">
-                <span className={cn("text-[16px] font-semibold leading-none tabular-nums", c.value === "-" ? "text-txt3" : "text-txt")}>
+                <span className={cn("text-base font-semibold leading-none tabular-nums", c.value === "-" ? "text-txt3" : "text-txt")}>
                   {c.value}
                 </span>
-                <span className="text-[11px] text-txt3">{c.unit}</span>
+                <span className="text-xs text-txt3">{c.unit}</span>
               </span>
             </span>
           ))}
@@ -92,7 +92,7 @@ function RunCard({
         {select ? (
           <span
             className={cn(
-              "grid size-4 place-items-center rounded-[5px] border transition-colors",
+              "grid size-4 place-items-center rounded-md border transition-colors",
               picked ? "border-[var(--brand-line)] bg-[var(--brand-bg)]" : "border-line-strong",
             )}
             aria-hidden
@@ -114,7 +114,7 @@ function RunCard({
               aria-label={deleteLabel}
               title={deleteLabel}
               onClick={onDelete}
-              className="grid size-7 place-items-center rounded-[8px] text-txt3 opacity-0 transition-opacity duration-150 hover:bg-[var(--red-bg)] hover:text-[var(--red)] focus-visible:opacity-100 group-hover:opacity-100"
+              className="grid size-7 place-items-center rounded-lg text-txt3 opacity-0 transition-opacity duration-150 hover:bg-[var(--red-bg)] hover:text-[var(--red)] focus-visible:opacity-100 group-hover:opacity-100"
             >
               <Trash2 className="size-3.5" aria-hidden />
             </button>
@@ -213,13 +213,13 @@ export function SpeedHistory({ onOpenResult, onOpenSpeed }: { onOpenResult: (at:
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
         {/* the log: one column, newest first, cut into days */}
         <section className="flex min-h-0 flex-1 flex-col">
-          <div className="flex shrink-0 items-center gap-2.5 border-b border-line px-5 py-3.5">
+          <div className="flex shrink-0 items-center gap-3 border-b border-line px-6 py-4">
             <HistoryIcon className="size-4 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
-            <span className="min-w-0 flex-1 truncate text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
+            <span className="min-w-0 flex-1 truncate text-xs font-medium uppercase tracking-[0.1em] text-txt2">
               {t("history")}
             </span>
             {history.length > 0 ? (
-              <span className="shrink-0 text-[11.5px] tabular-nums text-txt3">{history.length}</span>
+              <span className="shrink-0 text-xs tabular-nums text-txt3">{history.length}</span>
             ) : null}
             {history.length > 0 ? (
               <div className="flex shrink-0 items-center gap-2">
@@ -229,7 +229,7 @@ export function SpeedHistory({ onOpenResult, onOpenSpeed }: { onOpenResult: (at:
                     setSelMode((v) => !v)
                     setPicked([])
                   }}
-                  className="press flex h-7 items-center rounded-full px-2.5 text-[12px] text-txt2 transition-colors hover:bg-white/[0.05] hover:text-txt"
+                  className="press flex h-7 items-center rounded-full px-3 text-xs text-txt2 transition-colors hover:bg-white/[0.05] hover:text-txt"
                 >
                   {selMode ? t("done") : t("select")}
                 </button>
@@ -248,21 +248,21 @@ export function SpeedHistory({ onOpenResult, onOpenSpeed }: { onOpenResult: (at:
             ) : null}
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
             {history.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center gap-5 text-center">
+              <div className="flex h-full flex-col items-center justify-center gap-6 text-center">
                 <span className="relative grid size-16 place-items-center rounded-full border border-line bg-white/[0.03]">
                   <span className="net-ping absolute inset-0 rounded-full border border-[var(--brand-line)]/50" aria-hidden />
                   <HistoryIcon className="size-7 text-txt2" strokeWidth={1.6} aria-hidden />
                 </span>
                 <div>
-                  <h2 className="font-display text-[22px] font-semibold leading-tight text-txt">{t("histEmptyTitle")}</h2>
-                  <p className="mx-auto mt-1.5 max-w-[320px] text-[13px] leading-relaxed text-txt2">{t("histEmptyBody")}</p>
+                  <h2 className="font-display text-xl font-semibold leading-tight text-txt">{t("histEmptyTitle")}</h2>
+                  <p className="mx-auto mt-2 max-w-[320px] text-sm leading-relaxed text-txt2">{t("histEmptyBody")}</p>
                 </div>
                 <button
                   type="button"
                   onClick={onOpenSpeed}
-                  className="press flex h-10 items-center gap-2 rounded-[10px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-4 text-[13px] font-medium text-brand-strong transition-colors hover:bg-[var(--brand)]/20"
+                  className="press flex h-10 items-center gap-2 rounded-xl border border-[var(--brand-line)] bg-[var(--brand-bg)] px-4 text-sm font-medium text-brand-strong transition-colors hover:bg-[var(--brand)]/20"
                 >
                   <Gauge className="size-4" strokeWidth={1.8} aria-hidden />
                   {t("histEmptyAction")}
@@ -273,10 +273,10 @@ export function SpeedHistory({ onOpenResult, onOpenSpeed }: { onOpenResult: (at:
                 {days.map((d) => (
                   <div key={d.key}>
                     <div className="flex items-center gap-3">
-                      <span className="text-[11px] font-medium uppercase tracking-[0.09em] text-txt3">{dayLabel(d.at)}</span>
+                      <span className="text-xs font-medium uppercase tracking-[0.09em] text-txt3">{dayLabel(d.at)}</span>
                       <span className="h-px flex-1 bg-[var(--line)]" aria-hidden />
                     </div>
-                    <div className="mt-2.5 flex flex-col gap-2">
+                    <div className="mt-3 flex flex-col gap-2">
                       <AnimatePresence initial={false}>
                         {d.runs.map((h) => {
                           const on = picked.includes(h.at)
@@ -302,15 +302,15 @@ export function SpeedHistory({ onOpenResult, onOpenSpeed }: { onOpenResult: (at:
           </div>
 
           {selMode ? (
-            <div className="flex shrink-0 items-center justify-between gap-3 border-t border-line bg-[var(--side)] px-4 py-2.5">
-              <span className="text-[12.5px] text-txt3">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-t border-line bg-[var(--side)] px-4 py-3">
+              <span className="text-xs text-txt3">
                 {t("selected")}: <span className="tabular-nums text-txt2">{picked.length}</span>
               </span>
               <button
                 type="button"
                 disabled={picked.length === 0}
                 onClick={() => setPending({ kind: "many" })}
-                className="press flex h-8 items-center gap-1.5 rounded-full bg-[var(--brand)] px-3.5 text-[12.5px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                className="press flex h-8 items-center gap-2 rounded-full bg-[var(--brand)] px-4 text-xs font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Trash2 className="size-3.5" aria-hidden />
                 {t("delete")}
@@ -322,26 +322,26 @@ export function SpeedHistory({ onOpenResult, onOpenSpeed }: { onOpenResult: (at:
         </div>
 
       <section className="grid shrink-0 grid-cols-[0.9fr_repeat(3,1.1fr)] overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
-        <div className="flex min-w-0 flex-col justify-center gap-1.5 border-e border-line px-5 py-4">
-          <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">{t("allTime")}</span>
-          <span className="truncate text-[12px] text-txt3">
+        <div className="flex min-w-0 flex-col justify-center gap-2 border-e border-line px-6 py-4">
+          <span className="text-xs font-medium uppercase tracking-[0.1em] text-txt2">{t("allTime")}</span>
+          <span className="truncate text-xs text-txt3">
             {history.length} {t("runs")}
           </span>
         </div>
         {bestCells.map((c, i) => (
           <div
             key={c.label}
-            className={cn("flex min-w-0 flex-col justify-center gap-2 px-5 py-4", i < 2 && "border-e border-line")}
+            className={cn("flex min-w-0 flex-col justify-center gap-2 px-6 py-4", i < 2 && "border-e border-line")}
           >
-            <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
+            <span className="flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.1em] text-txt2">
               <c.icon className="size-3.5 shrink-0 text-txt3" strokeWidth={1.7} aria-hidden />
               <span className="truncate">{c.label}</span>
             </span>
-            <span className="flex min-w-0 items-baseline gap-1.5">
-              <span className={cn("font-display text-[24px] font-semibold leading-none tabular-nums", c.value === null ? "text-txt3" : "text-txt")}>
+            <span className="flex min-w-0 items-baseline gap-2">
+              <span className={cn("font-display text-2xl font-semibold leading-none tabular-nums", c.value === null ? "text-txt3" : "text-txt")}>
                 {c.round ? (c.value === null ? "-" : Math.round(c.value)) : num(c.value)}
               </span>
-              <span className="text-[11.5px] text-txt3">{c.unit}</span>
+              <span className="text-xs text-txt3">{c.unit}</span>
             </span>
           </div>
         ))}
@@ -349,26 +349,26 @@ export function SpeedHistory({ onOpenResult, onOpenSpeed }: { onOpenResult: (at:
 
       <Dialog open={pending !== null} onOpenChange={(o) => !o && setPending(null)}>
         <DialogContent className="max-w-[360px] gap-0 overflow-hidden rounded-[var(--r-card)] p-0">
-          <div className="px-5 pb-4 pt-4">
-            <DialogHeader className="gap-1.5">
-              <DialogTitle className="text-[14px] font-semibold">{title}</DialogTitle>
-              <DialogDescription className="text-[12.5px] leading-relaxed text-txt3">{body}</DialogDescription>
+          <div className="px-6 pb-4 pt-4">
+            <DialogHeader className="gap-2">
+              <DialogTitle className="text-sm font-semibold">{title}</DialogTitle>
+              <DialogDescription className="text-xs leading-relaxed text-txt3">{body}</DialogDescription>
             </DialogHeader>
-            <p className="mt-3 text-[12.5px] text-txt3">
+            <p className="mt-3 text-xs text-txt3">
               {t("history")}: <span className="tabular-nums text-txt2">{rowsToGo}</span>
             </p>
           </div>
-          <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-3">
+          <div className="flex items-center justify-end gap-2 border-t border-line px-6 py-3">
             <button
               type="button"
-              className="flex h-9 items-center rounded-[10px] border border-line px-4 text-[13px] text-txt transition-colors hover:border-line-strong"
+              className="flex h-9 items-center rounded-xl border border-line px-4 text-sm text-txt transition-colors hover:border-line-strong"
               onClick={() => setPending(null)}
             >
               {t("cancel")}
             </button>
             <button
               type="button"
-              className="flex h-9 items-center gap-1.5 rounded-[10px] border border-[var(--red-line)] bg-[rgb(207_112_120/0.2)] px-4 text-[13px] font-medium text-[#e6999f] transition-colors hover:bg-[rgb(207_112_120/0.26)]"
+              className="flex h-9 items-center gap-2 rounded-xl border border-[var(--red-line)] bg-[var(--red-bg)] px-4 text-sm font-medium text-[var(--red)] transition-colors hover:bg-[var(--red-bg)]"
               onClick={confirm}
             >
               <Trash2 className="size-3.5" aria-hidden />

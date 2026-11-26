@@ -53,21 +53,21 @@ export function WeQuotaDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[380px] gap-0 overflow-hidden rounded-[var(--r-card)] border-line bg-[var(--popover)] p-0">
-        <div className="border-b border-line px-4 pb-3.5 pt-4">
+        <div className="border-b border-line px-4 pb-4 pt-4">
           <div className="flex items-center gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[var(--surface-2)] text-txt">
               <WeMark className="w-[22px]" />
             </span>
             <div className="min-w-0">
-              <DialogTitle className="text-[14px] font-semibold text-txt">
+              <DialogTitle className="text-sm font-semibold text-txt">
                 {t("weQuota")}
               </DialogTitle>
-              <p className="mt-0.5 text-[12px] text-txt2">{t("weQuotaSub")}</p>
+              <p className="mt-0.5 text-xs text-txt2">{t("weQuotaSub")}</p>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col gap-2.5 p-4">
+        <div className="flex flex-col gap-3 p-4">
           <Input
             value={number}
             onChange={(e) => setNumber(e.target.value)}
@@ -75,7 +75,7 @@ export function WeQuotaDialog({
             autoComplete="off"
             placeholder={t("weNumber")}
             aria-label={t("weNumber")}
-            className="h-10 rounded-[10px] border-line bg-white/[0.02] text-[13px] focus-visible:border-[var(--brand-line)] focus-visible:ring-[3px] focus-visible:ring-[rgb(46_123_246/0.14)]"
+            className="h-10 rounded-xl border-line bg-[var(--surface-2)] text-sm focus-visible:border-[var(--brand-line)] focus-visible:ring-[3px] focus-visible:ring-[var(--brand-line)]"
           />
           <Input
             value={password}
@@ -84,15 +84,15 @@ export function WeQuotaDialog({
             autoComplete="off"
             placeholder={t("wePassword")}
             aria-label={t("wePassword")}
-            className="h-10 rounded-[10px] border-line bg-white/[0.02] text-[13px] focus-visible:border-[var(--brand-line)] focus-visible:ring-[3px] focus-visible:ring-[rgb(46_123_246/0.14)]"
+            className="h-10 rounded-xl border-line bg-[var(--surface-2)] text-sm focus-visible:border-[var(--brand-line)] focus-visible:ring-[3px] focus-visible:ring-[var(--brand-line)]"
           />
           {q.phase === "need-code" && (
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-3">
               {q.challengeImage ? (
                 <img
                   src={q.challengeImage}
                   alt={t("weCode")}
-                  className="h-10 shrink-0 rounded-[8px] border border-line"
+                  className="h-10 shrink-0 rounded-lg border border-line"
                 />
               ) : null}
               <Input
@@ -101,12 +101,12 @@ export function WeQuotaDialog({
                 autoComplete="off"
                 placeholder={t("weCode")}
                 aria-label={t("weCode")}
-                className="h-10 rounded-[10px] border-line bg-white/[0.02] text-[13px] focus-visible:border-[var(--brand-line)] focus-visible:ring-[3px] focus-visible:ring-[rgb(46_123_246/0.14)]"
+                className="h-10 rounded-xl border-line bg-[var(--surface-2)] text-sm focus-visible:border-[var(--brand-line)] focus-visible:ring-[3px] focus-visible:ring-[var(--brand-line)]"
               />
             </div>
           )}
           {q.phase === "error" && q.msgKey ? (
-            <p className="text-[12px] text-[var(--red)]">
+            <p className="text-xs text-[var(--red)]">
               {t(q.msgKey as never)}
               {q.msgRaw ? ` (${q.msgRaw})` : ""}
             </p>
@@ -117,7 +117,7 @@ export function WeQuotaDialog({
                 type="button"
                 onClick={() => void link(code.trim())}
                 disabled={busy || !code.trim()}
-                className="flex h-10 flex-1 items-center justify-center rounded-[10px] bg-[var(--brand)] px-3.5 text-[13px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
+                className="flex h-10 flex-1 items-center justify-center rounded-xl bg-[var(--brand)] px-4 text-sm font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
               >
                 {t("weConfirm")}
               </button>
@@ -126,13 +126,13 @@ export function WeQuotaDialog({
                 type="button"
                 onClick={() => void link("")}
                 disabled={busy || !number.trim()}
-                className="flex h-10 flex-1 items-center justify-center rounded-[10px] bg-[var(--brand)] px-3.5 text-[13px] font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
+                className="flex h-10 flex-1 items-center justify-center rounded-xl bg-[var(--brand)] px-4 text-sm font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
               >
                 {t("weLink")}
               </button>
             )}
           </div>
-          <p className="text-[11px] text-txt3">{t("weLinkHint")}</p>
+          <p className="text-xs text-txt3">{t("weLinkHint")}</p>
         </div>
       </DialogContent>
     </Dialog>

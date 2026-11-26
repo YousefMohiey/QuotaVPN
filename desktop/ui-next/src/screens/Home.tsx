@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { motion, useReducedMotion } from "motion/react"
-import { Building2, ChevronDown, ChevronRight, Copy, Gamepad2, Globe, LayoutGrid, Link2, MapPin, Tv } from "lucide-react"
+import { Building2, ChevronDown, ChevronRight, Copy, Gamepad2, Globe, LayoutGrid, Link2, MapPin, Tv } from "@/components/icons"
 import { useGeo, useServerAddr } from "@/components/Hero"
 import { Dial, type DialState } from "@/components/Dial"
 import { WeQuotaCard } from "@/components/WeQuotaCard"
@@ -29,7 +29,7 @@ function SwapText({ text, className, dir }: { text: string; className?: string; 
       key={text}
       initial={calm ? false : { opacity: 0, y: 2 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: calm ? 0 : 0.16, ease: "easeOut" }}
+      transition={{ duration: calm ? 0 : 0.16, ease: [0.22, 1, 0.36, 1] }}
       className={className}
       dir={dir}
     >
@@ -124,8 +124,8 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
   }
 
   const cells: Array<{ id: string; label: string; icon?: typeof Globe; body: React.ReactNode; cls: string; chevron?: "down" | "right"; onClick?: () => void }> = [
-    { id: "domain", label: t("domainSni"), icon: Globe, cls: "col-span-3 border-e border-b border-line", body: <span className="truncate text-[12.5px] text-txt" dir="auto">{domText}</span>, chevron: "down", onClick: () => setDomainOpen(true) },
-    { id: "routing", label: t("routing"), icon: LayoutGrid, cls: "col-span-3 border-b border-line", body: <span className="truncate text-[12.5px] text-txt" dir="auto">{routing}{routingCount}</span>, chevron: "right", onClick: onOpenApps },
+    { id: "domain", label: t("domainSni"), icon: Globe, cls: "col-span-3 border-e border-b border-line", body: <span className="truncate text-xs text-txt" dir="auto">{domText}</span>, chevron: "down", onClick: () => setDomainOpen(true) },
+    { id: "routing", label: t("routing"), icon: LayoutGrid, cls: "col-span-3 border-b border-line", body: <span className="truncate text-xs text-txt" dir="auto">{routing}{routingCount}</span>, chevron: "right", onClick: onOpenApps },
     { id: "transport", label: t("transport"), icon: Link2, cls: "col-span-6 border-b border-line", body: <Segmented id="transport" value={transport} onChange={setTransport} boxed options={[
       { value: "vless", label: t("trStandard"), hint: t("trNoteVless") },
       { value: "hy2", label: "Hysteria2", hint: t("trNoteHy2") },
@@ -137,7 +137,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
           type="button"
           onClick={() => void take()}
           aria-label={`${t("copy")} ${ipText}`}
-          className="press group inline-flex min-w-0 items-center gap-1.5 text-[12.5px] tabular-nums transition-colors"
+          className="press group inline-flex min-w-0 items-center gap-2 text-xs tabular-nums transition-colors"
         >
           <span className={cn("truncate", copied ? "text-[var(--green)]" : "text-txt")} dir="auto">
             <SwapText text={copied ? t("copied") : ipText} />
@@ -146,16 +146,16 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
         </button>
       </Tip>
     ) },
-    { id: "location", label: t("yourLocation"), icon: MapPin, cls: "col-span-2 border-e border-line", body: <span className="truncate text-[12.5px] text-txt" dir="auto"><SwapText text={geo?.place || "-"} /></span> },
-    { id: "isp", label: t("ispLbl"), icon: Building2, cls: "col-span-2", body: <span className="truncate text-[12.5px] text-txt" dir="auto"><SwapText text={geo?.isp || "-"} /></span> },
+    { id: "location", label: t("yourLocation"), icon: MapPin, cls: "col-span-2 border-e border-line", body: <span className="truncate text-xs text-txt" dir="auto"><SwapText text={geo?.place || "-"} /></span> },
+    { id: "isp", label: t("ispLbl"), icon: Building2, cls: "col-span-2", body: <span className="truncate text-xs text-txt" dir="auto"><SwapText text={geo?.isp || "-"} /></span> },
   ]
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1180px] flex-col gap-3">
       {/* one field: the control owns the left, the line owns the right, and a
           flat band underneath carries the settings the session runs on */}
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)] shadow-[inset_0_1px_0_rgb(255_255_255/0.045)]">
-        <section aria-busy={working || settling} className="flex min-h-0 flex-col items-center justify-center gap-4 px-6 py-5">
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)] shadow-[inset_0_1px_0_var(--line)]">
+        <section aria-busy={working || settling} className="flex min-h-0 flex-col items-center justify-center gap-4 px-6 py-6">
           <Dial size={206} state={state} onClick={toggle} />
           <div className="flex min-w-0 flex-col items-center gap-1 text-center">
             <span className="flex min-w-0 items-center justify-center gap-2">
@@ -165,22 +165,22 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 animate={calm ? { opacity: 1 } : { opacity: 1, y: 0 }}
                 transition={{ duration: calm ? 0.12 : 0.18, ease: [0.23, 1, 0.32, 1] }}
                 className={cn(
-                  "truncate font-display text-[23px] font-semibold leading-tight tracking-[-0.02em]",
+                  "truncate font-display text-2xl font-semibold leading-tight tracking-[-0.02em]",
                   connected ? "text-[var(--green)]" : "text-txt",
                 )}
               >
                 {settling ? t("disconnecting") : phase === "on" ? t("connected") : working ? t("connecting") : t("notConnected")}
               </motion.span>
             </span>
-            <span className="max-w-[260px] truncate font-mono text-[11.5px] text-txt2" dir="auto">
+            <span className="max-w-[260px] truncate font-mono text-xs text-txt2" dir="auto">
               {displayHost(card?.sni) || "-"}
             </span>
             {needsSetup ? (
               <span className="mt-1 flex max-w-[300px] flex-col items-center gap-2 text-center">
-                <span className="text-[11.5px] leading-snug text-txt2">{t("tunnelSetupBody")}</span>
+                <span className="text-xs leading-snug text-txt2">{t("tunnelSetupBody")}</span>
                 <Button
                   size="sm"
-                  className="h-8 rounded-[7px] bg-[var(--brand)] px-3 text-[12px] font-medium text-white"
+                  className="h-8 rounded-lg bg-[var(--brand)] px-3 text-xs font-medium text-white"
                   disabled={settingUp}
                   onClick={() => {
                     void (async () => {
@@ -196,15 +196,15 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   {settingUp ? t("tunnelSetupWorking") : t("tunnelSetupBtn")}
                 </Button>
                 {status ? (
-                  <span className="mt-0.5 max-w-[280px] text-[11px] leading-snug text-[var(--red)]">{status}</span>
+                  <span className="mt-0.5 max-w-[280px] text-xs leading-snug text-[var(--red)]">{status}</span>
                 ) : null}
               </span>
             ) : status ? (
-              <span className="mt-0.5 line-clamp-2 max-w-[280px] text-[11.5px] leading-snug text-txt2" role="status">{status}</span>
+              <span className="mt-0.5 line-clamp-2 max-w-[280px] text-xs leading-snug text-txt2" role="status">{status}</span>
             ) : null}
           </div>
 
-          <div className="grid w-full max-w-[440px] shrink-0 grid-cols-2 gap-2.5" role="group" aria-label={t("setupTitle")}>
+          <div className="grid w-full max-w-[440px] shrink-0 grid-cols-2 gap-3" role="group" aria-label={t("setupTitle")}>
             {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
               // The button is a preset, not the active card: show the domain
               // that preset selects. The live domain is in the cell below.
@@ -225,7 +225,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     void ensurePresetCard(kind).finally(() => setCreating(null))
                   }}
                   className={cn(
-                    "press group/preset relative flex min-h-0 min-w-0 items-center gap-2.5 overflow-hidden rounded-[10px] px-3 py-2.5 text-start transition-colors duration-150 disabled:cursor-wait disabled:opacity-70",
+                    "press group/preset relative flex min-h-0 min-w-0 items-center gap-3 overflow-hidden rounded-xl px-3 py-3 text-start transition-colors duration-150 disabled:cursor-wait disabled:opacity-70",
                     isActive ? "text-txt" : "text-txt2 hover:bg-white/[0.03] hover:text-txt",
                   )}
                 >
@@ -233,37 +233,37 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     <motion.span
                       layoutId="profile-ring"
                       aria-hidden
-                      className="absolute inset-0 rounded-[10px] bg-[var(--brand-bg)] shadow-[inset_0_0_0_1px_var(--brand-line)]"
+                      className="absolute inset-0 rounded-xl bg-[var(--brand-bg)] shadow-[inset_0_0_0_1px_var(--brand-line)]"
                       transition={calm ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 40 }}
                     />
                   ) : null}
                   <span
                     className={cn(
-                      "relative grid size-8 shrink-0 place-items-center rounded-[9px] bg-white/[0.04] transition-colors duration-150 group-hover/preset:bg-white/[0.07]",
+                      "relative grid size-8 shrink-0 place-items-center rounded-lg bg-white/[0.04] transition-colors duration-150 group-hover/preset:bg-white/[0.07]",
                       isActive ? "text-brand-strong" : "text-txt3 group-hover/preset:text-brand-strong",
                     )}
                   >
                     <Icon className="size-4" aria-hidden />
                   </span>
                   <span className="relative min-w-0 flex-1">
-                    <span className="block truncate text-[12.5px] font-medium">{t(kind === "Gamerz" ? "kindGamerz" : "kindStreamerz")}</span>
-                    <span className="mt-0.5 block truncate font-mono text-[11px] text-txt2" dir="auto">{sni}</span>
+                    <span className="block truncate text-xs font-medium">{t(kind === "Gamerz" ? "kindGamerz" : "kindStreamerz")}</span>
+                    <span className="mt-0.5 block truncate font-mono text-xs text-txt2" dir="auto">{sni}</span>
                   </span>
                 </button>
               )
             })}
           </div>
 
-          <div className="grid w-full max-w-[440px] shrink-0 grid-cols-3 overflow-hidden rounded-[10px] bg-white/[0.03]">
-            <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-2.5">
-              <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("yourIp")}</span>
+          <div className="grid w-full max-w-[440px] shrink-0 grid-cols-3 overflow-hidden rounded-xl bg-white/[0.03]">
+            <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-3">
+              <span className="truncate text-xs font-medium uppercase tracking-[0.08em] text-txt2">{t("yourIp")}</span>
 
              <Tip text={copied ? t("copied") : t("copy")}>
                <button
                  type="button"
                  onClick={() => void take()}
                  aria-label={`${t("copy")} ${ipText}`}
-                 className="press group flex min-w-0 items-center gap-1.5 text-[13px] tabular-nums transition-colors"
+                 className="press group flex min-w-0 items-center gap-2 text-sm tabular-nums transition-colors"
                >
                  <span className={cn("truncate", copied ? "text-[var(--green)]" : "text-txt")} dir="auto">
                    <SwapText text={copied ? t("copied") : ipText} />
@@ -272,16 +272,16 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                </button>
              </Tip>
             </span>
-            <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-2.5">
-              <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("yourLocation")}</span>
-              <span className="flex min-w-0 max-w-full items-center gap-1 text-[13px] text-txt">
+            <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-3">
+              <span className="truncate text-xs font-medium uppercase tracking-[0.08em] text-txt2">{t("yourLocation")}</span>
+              <span className="flex min-w-0 max-w-full items-center gap-1 text-sm text-txt">
                 <span className="shrink-0" aria-hidden>{geo?.place ? flagFor(geo.place) : ""}</span>
                 <span className="truncate" dir="auto"><SwapText text={geo?.place || "-"} /></span>
               </span>
             </span>
-            <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-2.5">
-              <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-txt2">{t("ispLbl")}</span>
-              <span className="truncate text-[13px] text-txt" dir="auto"><SwapText text={geo?.isp || "-"} /></span>
+            <span className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-3">
+              <span className="truncate text-xs font-medium uppercase tracking-[0.08em] text-txt2">{t("ispLbl")}</span>
+              <span className="truncate text-sm text-txt" dir="auto"><SwapText text={geo?.isp || "-"} /></span>
             </span>
           </div>
         </section>
@@ -289,17 +289,17 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
         <WeQuotaCard />
       </div>
 
-      <section className="grid shrink-0 grid-cols-[1fr_1fr_1.4fr] overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)] shadow-[inset_0_1px_0_rgb(255_255_255/0.045)]">
+      <section className="grid shrink-0 grid-cols-[1fr_1fr_1.4fr] overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)] shadow-[inset_0_1px_0_var(--line)]">
         {cells.slice(0, 3).map((c, i) => (
           <div
             key={c.id}
             className={cn(
-              "group/cell flex min-w-0 flex-col justify-center gap-2 px-5 py-4",
+              "group/cell flex min-w-0 flex-col justify-center gap-2 px-6 py-4",
               i < 2 && "border-e border-line",
-              c.onClick && "transition-colors duration-200 hover:bg-white/[0.02]",
+              c.onClick && "transition-colors duration-200 hover:bg-[var(--surface-2)]",
             )}
           >
-            <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">
+            <span className="flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.1em] text-txt2">
               {c.icon ? (
                 <c.icon
                   className={cn(
@@ -314,7 +314,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
               </span>
             </span>
             {c.id === "domain" && customOpen ? (
-              <div className="flex w-full min-w-0 items-center gap-1.5">
+              <div className="flex w-full min-w-0 items-center gap-2">
                 <Input
                   autoFocus
                   value={customVal}
@@ -325,9 +325,9 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   }}
                   placeholder="example.com"
                   aria-label={t("domainSni")}
-                  className="h-8 min-w-0 rounded-[7px] border-line bg-white/[0.02] px-2 text-[12.5px]"
+                  className="h-8 min-w-0 rounded-lg border-line bg-[var(--surface-2)] px-2 text-xs"
                 />
-                <Button size="sm" className="h-8 shrink-0 rounded-[7px] px-2.5 text-[12px]" disabled={domainBusy || !customVal.trim()} onClick={() => void submitCustom()}>
+                <Button size="sm" className="h-8 shrink-0 rounded-lg px-3 text-xs" disabled={domainBusy || !customVal.trim()} onClick={() => void submitCustom()}>
                   {t("apply")}
                 </Button>
               </div>
@@ -357,7 +357,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
               <span className="flex min-w-0">{c.body}</span>
             )}
             {c.id === "domain" && domainErr ? (
-              <span className="truncate text-[11px] text-[var(--red)]" role="alert">{domainErr}</span>
+              <span className="truncate text-xs text-[var(--red)]" role="alert">{domainErr}</span>
             ) : null}
 
           </div>

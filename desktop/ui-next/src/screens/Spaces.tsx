@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from "react"
-import { Loader2, LogIn, Server, Users } from "lucide-react"
+import { Loader2, LogIn, Server, Users } from "@/components/icons"
 import { useApp } from "@/state/app"
 import { useI18n } from "@/lib/i18n"
 import { api, type OpenRadPeer, type OpenRadStatus, type SpacesState } from "@/lib/ipc"
@@ -39,10 +39,10 @@ function Field({
   children: React.ReactNode
 }) {
   return (
-    <label className="grid gap-1.5">
-      <span className="text-[11px] uppercase tracking-[0.12em] text-txt3">{label}</span>
+    <label className="grid gap-2">
+      <span className="text-xs uppercase tracking-[0.12em] text-txt3">{label}</span>
       {children}
-      {hint ? <span className="text-[12px] leading-snug text-txt3">{hint}</span> : null}
+      {hint ? <span className="text-xs leading-snug text-txt3">{hint}</span> : null}
     </label>
   )
 }
@@ -57,14 +57,14 @@ function DialogHead({
   body: string
 }) {
   return (
-    <div className="relative border-b border-line bg-[linear-gradient(135deg,rgba(101,145,255,0.12),transparent_62%)] px-5 py-5">
+    <div className="relative border-b border-line bg-[var(--surface-2)] px-6 py-6">
       <div className="flex items-center gap-3">
-        <span className="grid size-11 place-items-center rounded-[12px] border border-[var(--brand-line)] bg-[var(--brand)]/10">
+        <span className="grid size-11 place-items-center rounded-xl border border-[var(--brand-line)] bg-[var(--brand)]/10">
           <Icon className="size-5 text-brand-strong" aria-hidden />
         </span>
         <div className="min-w-0">
-          <DialogTitle className="text-[17px] font-semibold tracking-[-0.01em]">{title}</DialogTitle>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-txt2">{body}</p>
+          <DialogTitle className="text-base font-semibold tracking-[-0.01em]">{title}</DialogTitle>
+          <p className="mt-1 text-xs leading-relaxed text-txt2">{body}</p>
         </div>
       </div>
     </div>
@@ -137,7 +137,7 @@ function CreateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[440px] overflow-hidden p-0">
         <DialogHead icon={Users} title={t("spacesNew")} body={t("spacesCreateBody")} />
-        <div className="grid gap-4 px-5 py-4">
+        <div className="grid gap-4 px-6 py-4">
           <Field label={t("spacesName")}>
             <Input
               value={name}
@@ -177,13 +177,13 @@ function CreateDialog({
               className="h-9"
             />
           </Field>
-          {err ? <p className="text-[12.5px] leading-snug text-[var(--red)]">{err}</p> : null}
+          {err ? <p className="text-xs leading-snug text-[var(--red)]">{err}</p> : null}
         </div>
-        <div className="flex justify-end gap-2 border-t border-line px-5 py-3">
+        <div className="flex justify-end gap-2 border-t border-line px-6 py-3">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="press h-9 rounded-[8px] border border-line px-4 text-[13px] text-txt2 hover:text-txt"
+            className="press h-9 rounded-lg border border-line px-4 text-sm text-txt2 hover:text-txt"
           >
             {t("cancel")}
           </button>
@@ -191,7 +191,7 @@ function CreateDialog({
             type="button"
             onClick={() => void submit()}
             disabled={busy}
-            className="press flex h-9 items-center gap-2 rounded-[8px] bg-[var(--brand)] px-4 text-[13px] font-medium text-white hover:brightness-110 disabled:opacity-60"
+            className="press flex h-9 items-center gap-2 rounded-lg bg-[var(--brand)] px-4 text-sm font-medium text-white hover:brightness-110 disabled:opacity-60"
           >
             {busy ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : null}
             {t("spacesCreateAction")}
@@ -244,7 +244,7 @@ function CoordinatorDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[480px] overflow-hidden p-0">
         <DialogHead icon={Server} title={t("spacesCoordinator")} body={t("spacesCoordinatorBody")} />
-        <div className="grid gap-4 px-5 py-4">
+        <div className="grid gap-4 px-6 py-4">
           <Field label={t("spacesCoordinatorAddress")} hint={t("spacesCoordinatorHint")}>
             <Input
               value={url}
@@ -255,16 +255,16 @@ function CoordinatorDialog({
               autoFocus
               dir="ltr"
               spellCheck={false}
-              className="h-9 font-mono text-[12px]"
+              className="h-9 font-mono text-xs"
             />
           </Field>
-          {err ? <p className="text-[12.5px] leading-snug text-[var(--red)]">{err}</p> : null}
+          {err ? <p className="text-xs leading-snug text-[var(--red)]">{err}</p> : null}
         </div>
-        <div className="flex justify-end gap-2 border-t border-line px-5 py-3">
+        <div className="flex justify-end gap-2 border-t border-line px-6 py-3">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="press h-9 rounded-[8px] border border-line px-4 text-[13px] text-txt2 hover:text-txt"
+            className="press h-9 rounded-lg border border-line px-4 text-sm text-txt2 hover:text-txt"
           >
             {t("cancel")}
           </button>
@@ -272,7 +272,7 @@ function CoordinatorDialog({
             type="button"
             onClick={() => void save()}
             disabled={busy}
-            className="press flex h-9 items-center gap-2 rounded-[8px] bg-[var(--brand)] px-4 text-[13px] font-medium text-white hover:brightness-110 disabled:opacity-60"
+            className="press flex h-9 items-center gap-2 rounded-lg bg-[var(--brand)] px-4 text-sm font-medium text-white hover:brightness-110 disabled:opacity-60"
           >
             {busy ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : null}
             {t("spacesCoordinatorSave")}
@@ -345,7 +345,7 @@ function JoinDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[460px] overflow-hidden p-0">
         <DialogHead icon={LogIn} title={t("spacesJoinTitle")} body={t("spacesJoinBody")} />
-        <div className="grid gap-4 px-5 py-4">
+        <div className="grid gap-4 px-6 py-4">
           <Field label={t("spacesCode")} hint={t("spacesCodeHint")}>
             <Input
               value={code}
@@ -356,7 +356,7 @@ function JoinDialog({
               autoFocus
               dir="ltr"
               spellCheck={false}
-              className="h-9 font-mono text-[12px]"
+              className="h-9 font-mono text-xs"
             />
           </Field>
           <Field label={t("spacesPassword")}>
@@ -385,13 +385,13 @@ function JoinDialog({
               className="h-9"
             />
           </Field>
-          {err ? <p className="text-[12.5px] leading-snug text-[var(--red)]">{err}</p> : null}
+          {err ? <p className="text-xs leading-snug text-[var(--red)]">{err}</p> : null}
         </div>
-        <div className="flex justify-end gap-2 border-t border-line px-5 py-3">
+        <div className="flex justify-end gap-2 border-t border-line px-6 py-3">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="press h-9 rounded-[8px] border border-line px-4 text-[13px] text-txt2 hover:text-txt"
+            className="press h-9 rounded-lg border border-line px-4 text-sm text-txt2 hover:text-txt"
           >
             {t("cancel")}
           </button>
@@ -399,7 +399,7 @@ function JoinDialog({
             type="button"
             onClick={() => void submit()}
             disabled={busy}
-            className="press flex h-9 items-center gap-2 rounded-[8px] bg-[var(--brand)] px-4 text-[13px] font-medium text-white hover:brightness-110 disabled:opacity-60"
+            className="press flex h-9 items-center gap-2 rounded-lg bg-[var(--brand)] px-4 text-sm font-medium text-white hover:brightness-110 disabled:opacity-60"
           >
             {busy ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : null}
             {t("spacesJoinAction")}
@@ -471,15 +471,15 @@ function ConfirmDialog({
 
   return (
     <Dialog open={!!confirm} onOpenChange={(o) => (!o ? onClose() : undefined)}>
-      <DialogContent className="max-w-[400px] p-5">
-        <DialogTitle className="text-[17px] font-semibold tracking-[-0.01em]">{title}</DialogTitle>
-        <p className="text-[13px] leading-relaxed text-txt2">{body}</p>
-        {err ? <p className="text-[12.5px] leading-snug text-[var(--red)]">{err}</p> : null}
+      <DialogContent className="max-w-[400px] p-6">
+        <DialogTitle className="text-base font-semibold tracking-[-0.01em]">{title}</DialogTitle>
+        <p className="text-sm leading-relaxed text-txt2">{body}</p>
+        {err ? <p className="text-xs leading-snug text-[var(--red)]">{err}</p> : null}
         <div className="flex justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="press h-9 rounded-[8px] border border-line px-4 text-[13px] text-txt2 hover:text-txt"
+            className="press h-9 rounded-lg border border-line px-4 text-sm text-txt2 hover:text-txt"
           >
             {t("cancel")}
           </button>
@@ -487,7 +487,7 @@ function ConfirmDialog({
             type="button"
             onClick={() => void go()}
             disabled={busy}
-            className="press flex h-9 items-center gap-2 rounded-[8px] bg-[var(--red)] px-4 text-[13px] font-medium text-white hover:brightness-110 disabled:opacity-60"
+            className="press flex h-9 items-center gap-2 rounded-lg bg-[var(--red)] px-4 text-sm font-medium text-white hover:brightness-110 disabled:opacity-60"
           >
             {busy ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : null}
             {t("spacesConfirm")}

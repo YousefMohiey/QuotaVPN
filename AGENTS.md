@@ -65,12 +65,14 @@ Windows, run from git-bash. The toolchain this project was developed against:
   before hand-rolling an animation, check Motion. Do not add another UI library.
 - **No dropdown menus.** Choices use the searchable list picker (`components/PickerDialog.tsx`)
   with a check on the current value.
-- **Theme**: flat near-black surfaces over one accent halo (`index.css` tokens, `.scene`);
-  `.glass*` is for dialogs and popovers, not every pane. Four themes (obsidian, ember, mint,
-  violet) come from `src/state/theme.tsx` and are chosen in Settings > Appearance or from the
-  swatches at the foot of the rail. One primary typeface, Manrope, plus Geist Mono for addresses
-  and latency; no Inter, no Roboto, no italics. Keep `backdrop-filter` free of the `-webkit-`
-  twin: Vite's minifier keeps only that one and Chromium then ignores it, killing the blur.
+- **Theme**: flat approved dark surfaces (`#000000`, `#181818`, `#1F1F1F`, `#272727`) with no
+  background gradients (`index.css` tokens, `.scene` grain only); `.glass*` is for dialogs and
+  popovers, not every pane. Four accent themes (obsidian, ember, mint, violet) come from
+  `src/state/theme.tsx` and are chosen in Settings > Appearance or from the swatches at the foot
+  of the rail. One primary typeface, Manrope, plus Geist Mono for addresses and latency; no Inter,
+  no Roboto, no italics. Phosphor is the only icon set, at the regular weight. Keep
+  `backdrop-filter` free of the `-webkit-` twin: Vite's minifier keeps only that one and Chromium
+  then ignores it, killing the blur.
 - **All user-visible strings go through `src/lib/i18n/{en,ar}.ts`** (formal Modern Standard Arabic,
   RTL). Never mirror the layout in Arabic, only the text direction.
 - **Never emit em-dashes** in code, UI strings, or docs. Plain hyphens only. The user treats
@@ -84,7 +86,7 @@ Windows, run from git-bash. The toolchain this project was developed against:
   built exe for the dependency before it publishes.
 - **Version lives in four files**: `desktop/src-tauri/{tauri.conf.json,Cargo.toml}` and
   `android/tauri-app/src-tauri/{tauri.conf.json,Cargo.toml}`. A normal release bumps all four
-  together. The desktop is 0.7.6-exp.6; the phone is 0.7.5. The phone still compiles the legacy SSH
+  together. The desktop is 0.7.6-exp.7; the phone is 0.7.5. The phone still compiles the legacy SSH
   control plane (`legacy-ssh`) until its own credential migration lands; do not bump the phone
   to a version that has no tested APK behind it. Experimental desktop-only builds may move ahead
   of the phone; stable releases still ship both at the same version.
@@ -168,7 +170,7 @@ answer true because there is nothing to install. The release job fails if the bi
 
 ## Current state
 
-**Exp.6 desktop (26 November 2026).** Spaces starts the bundled OpenRad engine for the game LAN
+**Exp.7 desktop (27 November 2026).** Spaces starts the bundled OpenRad engine for the game LAN
 (`desktop/src-tauri/src/openrad.rs`, `openrad/openrad.exe`, `modulus.bin`). One press creates the
 `OpenRad` TAP adapter, clears a stale `26.x` address, configures the self-hosted server, starts the
 service and joins `QuotaVPN`. The bundled engine was patched to fall back to public STUN for its
@@ -176,7 +178,7 @@ NAT mapping when the server has no UES hosts, so a direct UDP path is used when 
 it. A Windows PC and a VPS peer reached `DirectUdp` at about 45 ms; the card shows only connected
 peers with `Direct` or `Relayed` and RTT. The in-house layer-2 switch below stays in the tree but
 is not the shipping LAN path. The window also moved to Manrope and Geist Mono, flat surfaces and
-four themes (obsidian, ember, mint, violet).
+four themes (obsidian, ember, mint, violet), Phosphor icons at one weight, and the full approved dark surface set.
 
 **Spaces layer 2 (desktop, superseded).** A space can carry Ethernet instead of IP. The adapter is
 TAP-Windows6 9.27.0, bundled in `desktop/src-tauri/tap` and installed by the NSIS hook; 9.27.0 is
@@ -189,7 +191,7 @@ record carries `mode` (`l3` or `l2`) and the coordinator stores it, returns each
 accepts `POST /v1/spaces/{id}/mode`. Layer 3 is still the default, the phone is still 0.7.5, and
 `notes/SPACES-L2.md` holds the audit, the plan and the proofs.
 
-**The latest desktop release is v0.7.6-exp.6 (experimental, Windows); stable is v0.7.5, Windows
+**The latest desktop release is v0.7.6-exp.7 (experimental, Windows); stable is v0.7.5, Windows
 and Android.** This tree carries the 0.7.0
 credential migration (`notes/HANDOFF-2026-11-22.md`): the desktop imports a server-issued `qv1:`
 secret into a DPAPI-sealed per-card store (`qc1:` is still accepted), talks to the card API over

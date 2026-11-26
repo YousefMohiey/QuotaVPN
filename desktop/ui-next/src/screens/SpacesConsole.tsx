@@ -21,7 +21,7 @@ import {
   Users,
   WifiOff,
   X,
-} from "lucide-react"
+} from "@/components/icons"
 import { useI18n } from "@/lib/i18n"
 import { copyText } from "@/lib/clipboard"
 import type { OpenRadPeer, OpenRadStatus, SpaceMember, SpacesState } from "@/lib/ipc"
@@ -67,7 +67,7 @@ function StatusChip({ tone, children }: { tone: "live" | "ready" | "off"; childr
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
+        "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium",
         tone === "live"
           ? "border-[var(--green-line)] bg-[var(--green-bg)] text-[var(--green)]"
           : tone === "ready"
@@ -121,7 +121,7 @@ function Chip({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-lg border border-line bg-[var(--surface-2)] px-2.5 py-1.5 text-xs text-txt2",
+        "inline-flex items-center gap-2 rounded-lg border border-line bg-[var(--surface-2)] px-3 py-2 text-xs text-txt2",
         mono && "font-mono",
       )}
     >
@@ -145,10 +145,10 @@ function PeerRow({ peer, self }: { peer: OpenRadPeer; self?: boolean }) {
         {initial(peer.name)}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-1.5">
+        <div className="flex min-w-0 items-center gap-2">
           <span className="truncate text-sm text-txt">{peer.name}</span>
           {self ? (
-            <span className="shrink-0 rounded bg-[var(--brand-bg)] px-1.5 py-0.5 text-xs font-medium text-brand-strong">
+            <span className="shrink-0 rounded bg-[var(--brand-bg)] px-2 py-0.5 text-xs font-medium text-brand-strong">
               {t("spacesThisPc")}
             </span>
           ) : null}
@@ -159,7 +159,7 @@ function PeerRow({ peer, self }: { peer: OpenRadPeer; self?: boolean }) {
         <div className="flex shrink-0 flex-col items-end gap-1">
           <span
             className={cn(
-              "rounded-md px-1.5 py-0.5 text-xs font-medium uppercase tracking-[0.08em]",
+              "rounded-md px-2 py-0.5 text-xs font-medium uppercase tracking-[0.08em]",
               peer.transport === "Relay"
                 ? "bg-[var(--amber-bg)] text-[var(--amber)]"
                 : "bg-[var(--green-bg)] text-[var(--green)]",
@@ -286,7 +286,7 @@ function LanPanel({
             </div>
           ) : null}
 
-          <div className="mt-5 flex flex-wrap items-center gap-3">
+          <div className="mt-6 flex flex-wrap items-center gap-3">
             {on ? (
               <button
                 type="button"
@@ -310,7 +310,7 @@ function LanPanel({
             )}
           </div>
           {on ? (
-            <p className="mt-2 flex items-center gap-1.5 text-xs text-txt3">
+            <p className="mt-2 flex items-center gap-2 text-xs text-txt3">
               <ShieldCheck className="size-3.5" aria-hidden />
               {t("lanTrust")}
             </p>
@@ -330,7 +330,7 @@ function LanPanel({
                   <PeerRow key={peer.rid} peer={peer} />
                 ))}
                 {peers.length === 0 ? (
-                  <div className="m-1 grid place-items-center rounded-lg border border-dashed border-line px-4 py-5 text-center">
+                  <div className="m-1 grid place-items-center rounded-lg border border-dashed border-line px-4 py-6 text-center">
                     <Monitor className="size-5 text-txt3" aria-hidden />
                     <p className="mt-2 text-xs leading-relaxed text-txt3">{t("lanNoPeers")}</p>
                   </div>
@@ -360,7 +360,7 @@ function MemberRow({
 }) {
   const { t } = useI18n()
   return (
-    <div className="group flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 transition-colors duration-200 hover:bg-[var(--panel-hover)]">
+    <div className="group flex items-center gap-3 rounded-lg px-2 py-2 transition-colors duration-200 hover:bg-[var(--panel-hover)]">
       <span
         className={cn(
           "relative grid size-8 shrink-0 place-items-center rounded-full border font-mono text-xs",
@@ -378,10 +378,10 @@ function MemberRow({
         />
       </span>
       <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-1.5">
+        <div className="flex min-w-0 items-center gap-2">
           <span className="truncate text-sm text-txt">{member.name}</span>
           {member.self_pc ? (
-            <span className="shrink-0 rounded bg-[var(--surface-3)] px-1.5 py-0.5 text-xs text-txt3">
+            <span className="shrink-0 rounded bg-[var(--surface-3)] px-2 py-0.5 text-xs text-txt3">
               {t("spacesThisPc")}
             </span>
           ) : null}
@@ -467,7 +467,7 @@ export default function SpacesConsole(props: SpacesConsoleProps) {
               <button
                 type="button"
                 onClick={props.onJoin}
-                className="flex h-9 items-center gap-1.5 rounded-full border border-line px-3 text-sm text-txt2 transition-colors duration-200 hover:bg-[var(--surface-2)] hover:text-txt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-line)]"
+                className="flex h-9 items-center gap-2 rounded-full border border-line px-3 text-sm text-txt2 transition-colors duration-200 hover:bg-[var(--surface-2)] hover:text-txt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-line)]"
               >
                 <LogIn className="size-4" aria-hidden />
                 {t("spacesJoin")}
@@ -475,7 +475,7 @@ export default function SpacesConsole(props: SpacesConsoleProps) {
               <button
                 type="button"
                 onClick={props.onCreate}
-                className="flex h-9 items-center gap-1.5 rounded-full bg-[var(--brand)] px-3 text-sm font-semibold text-[var(--on-brand)] transition-colors duration-200 hover:bg-[var(--brand-vivid)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-line)]"
+                className="flex h-9 items-center gap-2 rounded-full bg-[var(--brand)] px-3 text-sm font-semibold text-[var(--on-brand)] transition-colors duration-200 hover:bg-[var(--brand-vivid)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-line)]"
               >
                 <Plus className="size-4" aria-hidden />
                 {t("spacesCreate")}
@@ -531,8 +531,8 @@ export default function SpacesConsole(props: SpacesConsoleProps) {
               </button>
             </div>
           </section>
-          <aside className="grid content-start gap-6">
-            <section className="rounded-2xl border border-line bg-[var(--panel)] p-5">
+          <aside className="grid content-start gap-4">
+            <section className="rounded-2xl border border-line bg-[var(--panel)] p-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-txt">{t("lanTitle")}</h2>
                 <span
@@ -582,7 +582,7 @@ export default function SpacesConsole(props: SpacesConsoleProps) {
                 </>
               )}
             </section>
-            <section className="rounded-2xl border border-line bg-[var(--panel)] p-5">
+            <section className="rounded-2xl border border-line bg-[var(--panel)] p-4">
               <h2 className="text-sm font-semibold text-txt">{t("spacesCoordinator")}</h2>
               <p className="mt-2 truncate font-mono text-xs text-txt3" dir="ltr">
                 {props.apiBase || t("spacesCoordinatorNone")}
@@ -613,7 +613,7 @@ export default function SpacesConsole(props: SpacesConsoleProps) {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="font-display text-2xl font-semibold tracking-[-0.02em] text-txt">
+                    <h2 className="hero-text font-display text-2xl font-semibold tracking-[-0.02em]">
                       {props.space.name}
                     </h2>
                     {props.space.owner ? (
@@ -649,7 +649,7 @@ export default function SpacesConsole(props: SpacesConsoleProps) {
                       type="button"
                       onClick={props.onActivate}
                       disabled={props.busy === "activate"}
-                      className="flex h-9 items-center gap-2 rounded-xl bg-[var(--brand)] px-3.5 text-sm font-semibold text-[var(--on-brand)] transition-colors duration-200 hover:bg-[var(--brand-vivid)] disabled:opacity-50"
+                      className="flex h-9 items-center gap-2 rounded-xl bg-[var(--brand)] px-4 text-sm font-semibold text-[var(--on-brand)] transition-colors duration-200 hover:bg-[var(--brand-vivid)] disabled:opacity-50"
                     >
                       {props.busy === "activate" ? (
                         <Loader2 className="size-4 animate-spin" aria-hidden />
@@ -671,7 +671,7 @@ export default function SpacesConsole(props: SpacesConsoleProps) {
                 </div>
               </div>
 
-              <div className="mt-6 grid gap-4 lg:grid-cols-2">
+              <div className="mt-6 grid items-start gap-4 lg:grid-cols-2">
                 <div className="rounded-xl border border-line bg-[var(--surface-2)] p-4">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-medium text-txt3">{t("spacesInvite")}</span>
@@ -679,7 +679,7 @@ export default function SpacesConsole(props: SpacesConsoleProps) {
                       type="button"
                       onClick={props.onRotate}
                       disabled={props.busy === "rotate"}
-                      className="flex items-center gap-1.5 text-xs font-medium text-brand-strong transition-colors hover:text-txt disabled:opacity-50"
+                      className="flex items-center gap-2 text-xs font-medium text-brand-strong transition-colors hover:text-txt disabled:opacity-50"
                     >
                       {props.busy === "rotate" ? (
                         <Loader2 className="size-3.5 animate-spin" aria-hidden />
@@ -727,8 +727,8 @@ export default function SpacesConsole(props: SpacesConsoleProps) {
             </section>
           </div>
 
-          <aside className="grid content-start gap-6">
-            <section className="rounded-2xl border border-line bg-[var(--panel)] p-5 shadow-[var(--sh-1)]">
+          <aside className="grid content-start gap-4">
+            <section className="rounded-2xl border border-line bg-[var(--panel)] p-4 shadow-[var(--sh-1)]">
               <div className="flex items-center gap-2">
                 <Gamepad2 className="size-4 text-brand-strong" aria-hidden />
                 <h2 className="text-sm font-semibold text-txt">{t("lanPlayTitle")}</h2>
@@ -755,7 +755,7 @@ export default function SpacesConsole(props: SpacesConsoleProps) {
               </p>
             </section>
 
-            <section className="rounded-2xl border border-line bg-[var(--panel)] p-5">
+            <section className="rounded-2xl border border-line bg-[var(--panel)] p-4">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Server className="size-4 text-txt3" aria-hidden />
@@ -780,7 +780,7 @@ export default function SpacesConsole(props: SpacesConsoleProps) {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-line bg-[var(--panel)] p-5">
+            <section className="rounded-2xl border border-line bg-[var(--panel)] p-4">
               <div className="flex items-center gap-2 text-xs leading-relaxed text-txt3">
                 <WifiOff className="size-4 shrink-0" aria-hidden />
                 {t("spacesLocalNote")}
@@ -788,7 +788,7 @@ export default function SpacesConsole(props: SpacesConsoleProps) {
               <button
                 type="button"
                 onClick={props.onRemove}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-line px-3 py-2.5 text-sm text-txt3 transition-colors duration-200 hover:border-[var(--red-line)] hover:bg-[var(--red-bg)] hover:text-[var(--red)]"
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-line px-3 py-3 text-sm text-txt3 transition-colors duration-200 hover:border-[var(--red-line)] hover:bg-[var(--red-bg)] hover:text-[var(--red)]"
               >
                 <Trash2 className="size-4" aria-hidden />
                 {props.space.owner ? t("spacesDelete") : t("spacesLeave")}

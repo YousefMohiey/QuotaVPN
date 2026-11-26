@@ -185,7 +185,7 @@ export function Hero() {
             />
             <span
               className={cn(
-                "truncate font-display text-[14.5px] font-medium tracking-[-0.01em]",
+                "truncate font-display text-sm font-medium tracking-[-0.01em]",
                 connected ? "text-[var(--green)]" : "text-txt2",
               )}
             >
@@ -193,17 +193,17 @@ export function Hero() {
             </span>
           </div>
           {status ? (
-            <div className="mt-3 max-w-[360px] text-[11px] leading-snug text-txt3">{status}</div>
+            <div className="mt-3 max-w-[360px] text-xs leading-snug text-txt3">{status}</div>
           ) : null}
         </div>
       </div>
 
       {/* the identity sits on the readings band, so the dial keeps the free air */}
       <div className="flex w-full shrink-0 flex-col items-center pb-4 text-center">
-        <p className="w-full truncate font-display text-[20px] font-semibold leading-[1.15] tracking-[-0.025em] text-txt" dir="auto">
+        <p className="w-full truncate font-display text-xl font-semibold leading-[1.15] tracking-[-0.025em] text-txt" dir="auto">
           {name || "-"}
         </p>
-        <p className="mt-1 truncate font-mono text-[11px] text-txt3" dir="auto">
+        <p className="mt-1 truncate font-mono text-xs text-txt3" dir="auto">
           {displayHost(card?.sni)}
         </p>
       </div>
@@ -222,8 +222,8 @@ export function Hero() {
 function Reading({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex min-w-0 flex-col items-center gap-1 px-3">
-      <span className="truncate text-[11px] font-medium uppercase tracking-[0.09em] text-txt3">{label}</span>
-      <span className="truncate text-[13px] font-medium tabular-nums text-txt">{value}</span>
+      <span className="truncate text-xs font-medium uppercase tracking-[0.09em] text-txt3">{label}</span>
+      <span className="truncate text-sm font-medium tabular-nums text-txt">{value}</span>
     </div>
   )
 }
@@ -237,7 +237,7 @@ export function FactsCard() {
   const ipText = connected ? serverAddr || geo?.ip || "-" : geo?.ip || "-"
 
   return (
-    <section className="rounded-[var(--r-card)] border border-line bg-[var(--panel)] px-5 py-4">
+    <section className="rounded-[var(--r-card)] border border-line bg-[var(--panel)] px-6 py-4">
       <div className="flex flex-col divide-y divide-line">
         <FactRow label={t("yourLocation")} value={geo?.place || "-"} />
         <FactRow label={t("yourIp")} value={ipText} copy />
@@ -275,8 +275,8 @@ function FactRow({
     window.setTimeout(() => setCopied(false), 1400)
   }
   return (
-    <div className="flex items-center justify-between gap-3 py-2.5">
-      <span className="shrink-0 text-[12px] text-txt2">{label}</span>
+    <div className="flex items-center justify-between gap-3 py-3">
+      <span className="shrink-0 text-xs text-txt2">{label}</span>
       <span className="flex min-w-0 items-center gap-2">
         {dot ? (
           <span
@@ -291,7 +291,7 @@ function FactRow({
               onClick={() => void take()}
               aria-label={`${t("copy")} ${value}`}
               className={cn(
-                "min-w-0 cursor-pointer truncate rounded-[4px] text-[13px] transition-colors focus-visible:outline-none",
+                "min-w-0 cursor-pointer truncate rounded text-sm transition-colors focus-visible:outline-none",
                 "hover:text-[var(--brand)] focus-visible:text-[var(--brand)]",
                 copied ? "text-[var(--green)]" : "text-txt",
               )}
@@ -301,7 +301,7 @@ function FactRow({
             </button>
           </Tip>
         ) : (
-          <span className="truncate text-[13px] text-txt" dir="auto">
+          <span className="truncate text-sm text-txt" dir="auto">
             {value}
           </span>
         )}

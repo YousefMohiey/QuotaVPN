@@ -44,7 +44,7 @@
 > automatic server probe on launch is silent; a connection the user starts says Connecting instead
 > of Working. 0.7.4 remains published; 0.7.3 remains removed.
 >
-> **0.7.6-exp.6 note (26 November 2026):** the Spaces LAN button now starts the bundled
+> **0.7.6-exp.7 note (27 November 2026):** the Spaces LAN button now starts the bundled
 > OpenRad engine, not the in-house layer-2 switch. One press creates the `OpenRad`
 > TAP-Windows6 adapter, configures the coordination server with the bundled modulus,
 > registers this PC and joins the `QuotaVPN` network. The engine now falls back to public
@@ -54,7 +54,7 @@
 > about 49 ms. The Spaces card shows only connected LAN peers, with `Direct` or `Relayed`
 > and RTT, and filters the stale offline identity left by an earlier install. The old
 > direct LAN and probe controls are gone from the screen. The window now uses Manrope
-> and Geist Mono over flat surfaces with one accent halo, and four themes (Obsidian,
+> and Geist Mono over the approved flat dark surfaces, and four themes (Obsidian,
 > Ember, Mint and Violet) are chosen from Settings > Appearance or the swatches at the
 > foot of the rail. Spaces is a LAN-first layout: a space chip row, a wide LAN card,
 > a space card for the invite and members, and a play-together rail. Stable stays at

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Gamepad2, Layers, Loader2, Play, RefreshCw } from "lucide-react"
+import { Gamepad2, Layers, Loader2, Play, RefreshCw } from "@/components/icons"
 import { cn } from "@/lib/utils"
 import { WeMark } from "./WeMark"
 import { useI18n } from "@/lib/i18n"
@@ -39,7 +39,7 @@ export function WeQuotaCard() {
   )
 
   return (
-    <section className="flex min-h-0 flex-col gap-2.5 border-s border-line bg-[var(--side)] px-4 py-3.5">
+    <section className="flex min-h-0 flex-col gap-3 border-s border-line bg-[var(--side)] px-4 py-4">
       {quota.linked && mainUnit ? (
         <>
           <div className="flex shrink-0 items-center justify-between gap-2">
@@ -47,10 +47,10 @@ export function WeQuotaCard() {
               <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/[0.05] text-txt">
                 <WeMark className="w-[23px]" />
               </span>
-              <span className="truncate text-[11px] font-medium uppercase tracking-[0.1em] text-txt2">{t("weQuota")}</span>
+              <span className="truncate text-xs font-medium uppercase tracking-[0.1em] text-txt2">{t("weQuota")}</span>
             </span>
-            <span className="flex shrink-0 items-center gap-1.5">
-              <span className="max-w-[120px] truncate rounded-full bg-white/[0.04] px-2 py-0.5 text-[11px] text-txt2" title={mainUnit.offer || "WE"} dir="auto">
+            <span className="flex shrink-0 items-center gap-2">
+              <span className="max-w-[120px] truncate rounded-full bg-white/[0.04] px-2 py-0.5 text-xs text-txt2" title={mainUnit.offer || "WE"} dir="auto">
                 {mainUnit.offer || "WE"}
               </span>
               <Tip text={t("weRefresh")} align="end">
@@ -71,16 +71,16 @@ export function WeQuotaCard() {
             </span>
           </div>
 
-          <div className="shrink-0 rounded-[12px] bg-white/[0.03] px-3.5 py-3">
+          <div className="shrink-0 rounded-xl bg-white/[0.03] px-4 py-3">
             <div className="flex min-w-0 items-baseline gap-2">
-              <span className="font-display text-[48px] font-semibold leading-none tracking-[-0.035em] tabular-nums text-txt">{numPart}</span>
-              <span className="text-[16px] font-medium text-txt2">{unitPart}</span>
+              <span className="font-display text-5xl font-semibold leading-none tracking-[-0.035em] tabular-nums text-txt">{numPart}</span>
+              <span className="text-base font-medium text-txt2">{unitPart}</span>
             </div>
-            <div className="mt-1 flex items-baseline justify-between gap-3 text-[12px] text-txt2">
+            <div className="mt-1 flex items-baseline justify-between gap-3 text-xs text-txt2">
               <span className="truncate">
                 {t("weLeft")} {fmtQuota(mainUnit.total)}
               </span>
-              <span className="shrink-0 text-[11.5px] tabular-nums text-txt3">
+              <span className="shrink-0 text-xs tabular-nums text-txt3">
                 {t("weUsed")} {fmtQuota(mainUnit.used)}
               </span>
             </div>
@@ -90,20 +90,20 @@ export function WeQuotaCard() {
               aria-valuemin={0}
               aria-valuemax={Math.round(mainUnit.total)}
               aria-label={t("weQuota")}
-              className="mt-3.5 h-3.5 w-full overflow-hidden rounded-full bg-white/[0.08]"
+              className="mt-4 h-3.5 w-full overflow-hidden rounded-full bg-white/[0.08]"
             >
               <div
-                className="h-full origin-left rounded-full bg-[var(--brand-vivid)] transition-transform duration-[240ms] ease-linear"
+                className="h-full origin-left rounded-full bg-[var(--brand-vivid)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
                 style={{ transform: `scaleX(${pct / 100})` }}
               />
             </div>
             {quota.updatedAt ? (
-              <div className="mt-2 flex items-baseline justify-end text-[11.5px] tabular-nums text-txt3">
+              <div className="mt-2 flex items-baseline justify-end text-xs tabular-nums text-txt3">
                 {t("weUpdated")} {new Date(quota.updatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
               </div>
             ) : null}
             {quota.phase === "error" && quota.msgKey ? (
-              <p className="mt-2 truncate text-[11px] text-[var(--red)]" dir="auto">
+              <p className="mt-2 truncate text-xs text-[var(--red)]" dir="auto">
                 {t(quota.msgKey as Parameters<typeof t>[0])}
                 {quota.msgRaw ? ` (${quota.msgRaw})` : ""}
               </p>
@@ -112,7 +112,7 @@ export function WeQuotaCard() {
 
           {buckets.length ? (
             <div className={cn("flex min-h-0 flex-1 flex-col gap-2", buckets.length < 3 && "justify-center")}>
-              <span className={cn("shrink-0 text-[11px] font-medium uppercase tracking-[0.09em] text-txt2", buckets.length < 3 && "sr-only")}>{t("wePackage")}</span>
+              <span className={cn("shrink-0 text-xs font-medium uppercase tracking-[0.09em] text-txt2", buckets.length < 3 && "sr-only")}>{t("wePackage")}</span>
               {buckets.map((b) => {
                 const k = bucketKey(b.item)
                 const label = k ? t(k) : b.label || "WE"
@@ -122,28 +122,28 @@ export function WeQuotaCard() {
                   <div
                     key={b.item || b.label}
                     className={cn(
-                      "flex min-w-0 flex-col justify-between gap-1.5 rounded-[10px] bg-white/[0.035] px-3.5 py-3",
+                      "flex min-w-0 flex-col justify-between gap-2 rounded-xl bg-white/[0.035] px-4 py-3",
                       buckets.length > 2 ? "min-h-0 flex-1" : buckets.length === 2 ? "min-h-[136px]" : "min-h-[176px]",
                     )}
                   >
                     <div className="flex min-w-0 items-center gap-2">
-                      <span className="grid size-6 shrink-0 place-items-center rounded-[7px] bg-white/[0.06] text-brand-strong">
+                      <span className="grid size-6 shrink-0 place-items-center rounded-lg bg-white/[0.06] text-brand-strong">
                         <Icon className="size-3.5" aria-hidden />
                       </span>
-                      <span className="truncate text-[11.5px] font-medium uppercase tracking-[0.08em] text-txt2">{label}</span>
-                      <span className="ms-auto shrink-0 text-[11.5px] tabular-nums text-txt3">of {fmtQuota(b.total)}</span>
+                      <span className="truncate text-xs font-medium uppercase tracking-[0.08em] text-txt2">{label}</span>
+                      <span className="ms-auto shrink-0 text-xs tabular-nums text-txt3">of {fmtQuota(b.total)}</span>
                     </div>
-                    <div className="flex min-w-0 items-baseline gap-1.5">
+                    <div className="flex min-w-0 items-baseline gap-2">
                       <span
                         className={cn(
                           "font-display font-semibold leading-none tracking-[-0.02em] tabular-nums text-txt",
-                          buckets.length === 1 ? "text-[32px]" : buckets.length === 2 ? "text-[27px]" : "text-[23px]",
+                          buckets.length === 1 ? "text-3xl" : buckets.length === 2 ? "text-2xl" : "text-xl",
                         )}
                       >
                         {fmtQuota(b.remain)}
                       </span>
-                      <span className="shrink-0 text-[11px] text-txt2">{t("weLeftShort")}</span>
-                      <span className="ms-auto shrink-0 text-[11.5px] tabular-nums text-txt3">{Math.round(100 - upct)}%</span>
+                      <span className="shrink-0 text-xs text-txt2">{t("weLeftShort")}</span>
+                      <span className="ms-auto shrink-0 text-xs tabular-nums text-txt3">{Math.round(100 - upct)}%</span>
                     </div>
                     <span
                       role="progressbar"
@@ -155,7 +155,7 @@ export function WeQuotaCard() {
                     >
                       <span
                         className={cn(
-                          "block h-full origin-left rounded-full transition-transform duration-[240ms] ease-linear",
+                          "block h-full origin-left rounded-full transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
                           upct >= 99 ? "bg-[var(--red)]" : "bg-[var(--brand-vivid)]",
                         )}
                         style={{ transform: `scaleX(${(100 - upct) / 100})` }}
@@ -166,26 +166,26 @@ export function WeQuotaCard() {
               })}
             </div>
           ) : (
-            <div className="flex min-h-0 flex-1 items-center justify-center text-[11.5px] text-txt2">
+            <div className="flex min-h-0 flex-1 items-center justify-center text-xs text-txt2">
               {t("wePackageNone")}
             </div>
           )}
         </>
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <span className="grid size-14 shrink-0 place-items-center rounded-full border border-line bg-[rgb(255_255_255/0.02)] text-txt">
+          <span className="grid size-14 shrink-0 place-items-center rounded-full border border-line bg-[var(--surface-2)] text-txt">
             <WeMark className="w-[30px]" />
           </span>
-          <h2 className="mt-3.5 text-[16.5px] font-semibold text-txt">{t("weQuota")}</h2>
-          <p className="mt-1 text-[13.5px] leading-relaxed text-txt2">{t("weQuotaSub")}</p>
+          <h2 className="mt-4 text-base font-semibold text-txt">{t("weQuota")}</h2>
+          <p className="mt-1 text-sm leading-relaxed text-txt2">{t("weQuotaSub")}</p>
           <button
             type="button"
             onClick={() => setQuotaOpen(true)}
-            className="press mt-4 flex h-10 shrink-0 items-center rounded-[10px] border border-[var(--brand-line)] bg-[var(--brand-bg)] px-5 text-[13.5px] font-medium text-[var(--brand-strong)] transition-colors hover:border-[var(--brand-strong)]"
+            className="press mt-4 flex h-10 shrink-0 items-center rounded-xl border border-[var(--brand-line)] bg-[var(--brand-bg)] px-6 text-sm font-medium text-[var(--brand-strong)] transition-colors hover:border-[var(--brand-strong)]"
           >
             {t("weLink")}
           </button>
-          <p className="mt-3 text-[11.5px] leading-snug text-txt3">{t("weLinkHint")}</p>
+          <p className="mt-3 text-xs leading-snug text-txt3">{t("weLinkHint")}</p>
         </div>
       )}
       <WeQuotaDialog open={quotaOpen} onOpenChange={setQuotaOpen} />

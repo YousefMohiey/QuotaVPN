@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { isTauri } from "@/lib/ipc"
+import { useI18n } from "@/lib/i18n"
 import { AnimatePresence, motion, useReducedMotion, type Variants } from "motion/react"
 import { Sidebar, type Tab } from "@/components/Sidebar"
 import { WindowControls } from "@/components/WindowControls"
@@ -32,6 +33,7 @@ const TAB_ORDER: Record<Tab, number> = {
 }
 
 export default function App() {
+  const { t } = useI18n()
   // The hash is the router: #speed, #settings, #apps. Small, but it
   // makes each screen linkable and lets the preview harness open one cold.
   const [tab, setTab] = useState<Tab>(() => {
@@ -247,12 +249,26 @@ export default function App() {
 
   return (
     <>
-      {/* one theme-tinted ambient light, fixed behind every surface */}
+      {/* flat black base with grain; no ambient gradient */}
       <div className="scene" aria-hidden />
+      <a
+        href="#content"
+        className="skip-link"
+        onClick={(e) => {
+          e.preventDefault()
+          document.getElementById("content")?.focus()
+        }}
+      >
+        {t("skipToContent")}
+      </a>
       <WindowControls />
       <div className="relative z-10 flex h-full">
         <Sidebar tab={tab} onTab={go} />
-        <main id="content" className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden scroll-pb-6">
+        <main
+          id="content"
+          tabIndex={-1}
+          className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden scroll-pb-6 focus:outline-none"
+        >
           {/* Omen rides here, outside the page-slide animation, as ONE image
               with its own real transparency: no cover cropping, no mask
               ramp, no filter, no overlay. Nothing left that can band, seam,
@@ -262,9 +278,9 @@ export default function App() {
               them, so they are never in the way of a page */}
           <div
             aria-hidden
-            className="pointer-events-none sticky top-0 z-20 -mb-12 h-12 bg-gradient-to-b from-[var(--bg)] via-[var(--bg)]/85 to-transparent"
+            className="pointer-events-none sticky top-0 z-20 -mb-12 h-12 bg-[var(--bg)]"
           />
-          <div className="relative mx-auto h-full w-full max-w-[1120px] px-7 pb-5 pt-12">
+          <div className="relative mx-auto h-full w-full max-w-[1120px] px-6 pb-6 pt-12">
             <AnimatePresence mode="popLayout" initial={false} custom={dir}>
               <motion.div
                 key={tab}

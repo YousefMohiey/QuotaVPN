@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils"
 import { Dialog as DialogPrimitive } from "radix-ui"
 
 import { Button } from "@/components/ui/button"
-import { XIcon } from "lucide-react"
+import { XIcon } from "@/components/icons"
 
 function Dialog({
   ...props
@@ -60,7 +60,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "glass-dialog dialog-surface fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-[20px] p-5 text-sm text-popover-foreground outline-none sm:max-w-sm",
+          "glass-dialog dialog-surface fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl p-6 text-sm text-popover-foreground outline-none sm:max-w-sm",
           className
         )}
         {...props}

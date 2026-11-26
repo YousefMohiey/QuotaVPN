@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
-import { Power } from "lucide-react"
+import { Power } from "@/components/icons"
 import { WaitingRing } from "@/components/Waiting"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/lib/i18n"
@@ -57,12 +57,12 @@ export function Dial({
         transition={{ type: "spring", stiffness: 460, damping: 26, mass: 0.7 }}
         style={{ width: size, height: size }}
       className={cn(
-        "relative grid shrink-0 place-items-center rounded-full border bg-[#13161a] shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_22px_48px_rgb(0_0_0/0.5),0_2px_6px_rgb(0_0_0/0.4)] cursor-default select-none transition-[background-color,border-color,color,box-shadow] duration-300",
+        "relative grid shrink-0 place-items-center rounded-full border bg-[var(--panel)] shadow-[inset_0_1px_0_rgb(255_255_255/0.05),0_22px_48px_rgb(0_0_0/0.5),0_2px_6px_rgb(0_0_0/0.4)] cursor-default select-none transition-[background-color,border-color,color,box-shadow] duration-300",
         state === "on"
-          ? "border-[var(--green-line)] bg-[#101713] text-[var(--green)] hover:border-[rgba(95,176,140,0.62)] hover:bg-[#0f1d16]"
+          ? "border-[var(--green-line)] bg-[var(--green-bg)] text-[var(--green)] hover:border-[var(--green)] hover:bg-[var(--green-bg)]"
           : state === "connecting"
             ? "border-[var(--brand-line)] text-brand-strong"
-            : "border-[rgb(255_255_255/0.14)] text-txt hover:border-[var(--brand-line)] hover:bg-[#151a20] [&_svg]:text-brand-strong hover:[&_svg]:text-[var(--brand-strong)]",
+            : "border-[var(--line-strong)] text-txt hover:border-[var(--brand-line)] hover:bg-[var(--panel-hover)] [&_svg]:text-brand-strong hover:[&_svg]:text-[var(--brand-strong)]",
       )}
     >
       <motion.span
@@ -70,20 +70,20 @@ export function Dial({
         className="pointer-events-none absolute inset-0 rounded-full"
         initial={false}
         animate={{
-          boxShadow: state === "on" ? "inset 0 0 48px rgb(40 160 110 / 0.16)" : "inset 0 0 0 rgb(0 0 0 / 0)",
+          boxShadow: state === "on" ? "inset 0 0 48px var(--green-bg)" : "inset 0 0 0 rgb(0 0 0 / 0)",
         }}
         transition={{ duration: 0.5 }}
       />
 
       {state === "connecting" && <WaitingRing />}
       {/* the power over the word, sized to the circle it lives in */}
-      <span className={cn("relative flex flex-col items-center", compact ? "gap-1.5" : "gap-2.5")}>
+      <span className={cn("relative flex flex-col items-center", compact ? "gap-2" : "gap-3")}>
         <Power
           className={cn(compact ? "size-6" : "size-11", "transition-opacity duration-300", state === "connecting" && "opacity-45")}
           strokeWidth={1.6}
           aria-hidden
         />
-        {compact ? null : <span className="font-display text-[17px] font-semibold tracking-[-0.005em]">{label}</span>}
+        {compact ? null : <span className="font-display text-base font-semibold tracking-[-0.005em]">{label}</span>}
       </span>
       </motion.button>
     </div>

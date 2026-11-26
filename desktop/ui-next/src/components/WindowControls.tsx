@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { getCurrentWindow } from "@tauri-apps/api/window"
-import { Copy, Minus, Square, X } from "lucide-react"
+import { Copy, Minus, Square, X } from "@/components/icons"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/lib/i18n"
 import { isTauri } from "@/lib/ipc"
@@ -24,7 +24,7 @@ const EDGES = [
 ] as const
 
 const CAPTION =
-  "grid size-9 place-items-center rounded-[10px] text-txt2 transition-colors hover:bg-white/[0.08] hover:text-txt active:bg-white/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-line)]"
+  "grid size-9 place-items-center rounded-xl text-txt2 transition-colors hover:bg-white/[0.08] hover:text-txt active:bg-white/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-line)]"
 
 export function WindowControls() {
   const { t } = useI18n()
@@ -90,7 +90,7 @@ export function WindowControls() {
           type="button"
           aria-label={t("winClose")}
           title={t("winClose")}
-          className={cn(CAPTION, "hover:bg-[#e5484d]/20 hover:text-[#ff9aa0] active:bg-[#e5484d]/30")}
+          className={cn(CAPTION, "hover:bg-[var(--red-bg)] hover:text-[var(--red)] active:bg-[var(--red-bg)]")}
           onClick={() => void win.close().catch(() => {})}
         >
           <X className="size-4" strokeWidth={2} aria-hidden />
