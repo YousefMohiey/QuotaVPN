@@ -109,6 +109,7 @@ pub fn connect_blocking() -> Result<Value, String> {
     // Changing the server is refused while the engine runs, and a previous
     // connect or a manual run can leave it up. Stop first, then configure.
     let _ = run_raw(&["stop"]);
+    clear_stale_address();
     let modulus = modulus();
     if !modulus.exists() {
         return Err("the LAN server key is missing; reinstall QuotaVPN".into());
@@ -130,6 +131,27 @@ pub fn connect_blocking() -> Result<Value, String> {
     run_raw(&["start"])?;
     let _ = run_json(&["join", NETWORK, "--json"]);
     run_json(&["status", "--json"])
+}
+
+/// A previous engine instance can leave its `26.x` address on the adapter.
+/// OpenRad refuses to start while another interface holds the `26/8`, and its
+/// own stale address counts.
+fn clear_stale_address() {
+    let script = "$ErrorActionPreference='SilentlyContinue'; \
+         Get-NetIPAddress -InterfaceAlias 'OpenRad' -AddressFamily IPv4 | \
+         Where-Object { $_.IPAddress -like '26.*' } | \
+         Remove-NetIPAddress -Confirm:$false";
+    let _ = Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-WindowStyle",
+            "Hidden",
+            "-Command",
+            script,
+        ])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
 }
 
 #[tauri::command]
