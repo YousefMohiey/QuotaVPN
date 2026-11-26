@@ -16,7 +16,7 @@ use std::net::{SocketAddr, UdpSocket};
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
-const DEFAULT_API: &str = "https://quotavpn.duckdns.org:8445";
+pub(crate) const DEFAULT_API: &str = "https://quotavpn.duckdns.org/spaces";
 
 fn api_slot() -> &'static Mutex<String> {
     static API: OnceLock<Mutex<String>> = OnceLock::new();

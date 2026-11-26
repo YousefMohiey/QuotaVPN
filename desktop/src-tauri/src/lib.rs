@@ -4680,14 +4680,13 @@ pub fn run() {
             // Older test builds used QC_SPACES_API. Adopt it once so the app
             // keeps working after the variable is gone, and the address can be
             // changed from the UI instead.
-            if cfg.spaces_api.is_empty() {
-                if let Ok(env) = std::env::var("QC_SPACES_API") {
-                    let clean = env.trim().trim_end_matches('/').to_string();
-                    if !clean.is_empty() {
-                        cfg.spaces_api = clean;
-                        cfg.save();
-                    }
-                }
+            if cfg.spaces_api.is_empty() || cfg.spaces_api == "https://quotavpn.duckdns.org:8445" {
+                let env = std::env::var("QC_SPACES_API")
+                    .ok()
+                    .map(|v| v.trim().trim_end_matches('/').to_string())
+                    .filter(|v| !v.is_empty());
+                cfg.spaces_api = env.unwrap_or_else(|| spaces::DEFAULT_API.to_string());
+                cfg.save();
             }
             spaces::init_api(&cfg);
             *app.state::<State>().0.lock().unwrap() = cfg;

@@ -168,7 +168,7 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
     case "spaces_state":
       return demoSpacesState() as T
     case "spaces_api":
-      return "http://192.168.1.52:8445" as T
+      return "https://quotavpn.duckdns.org/spaces" as T
     case "set_spaces_api":
       return String(args?.url ?? "") as T
     case "space_device_name":

@@ -278,9 +278,9 @@ A single-file Python service, standard library only, SQLite for state. It runs
 on the VPS beside the existing card API. TLS is terminated by the service itself
 with the same certificate as the card API, or by a reverse proxy in front.
 
-Default URL: `https://quotavpn.duckdns.org:8445`. The desktop reads
-`QC_SPACES_API` first, so a developer can point it at a local coordinator over
-HTTP.
+Default URL: `https://quotavpn.duckdns.org/spaces`. The desktop reads the stored
+value first and `QC_SPACES_API` second, so a developer can point it at a local
+coordinator over HTTP.
 
 Entities:
 
