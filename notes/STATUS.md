@@ -153,6 +153,13 @@
 > version parser handles semver pre-releases so a stable 0.7.6 sorts above 0.7.6-exp.1. The old
 > experimental releases 0.7.6 through 0.7.16 were deleted. Notes are in
 > `notes/RELEASE-0.7.6-exp.1.md`.
+>
+> **0.7.6-exp.2, 26 November 2026:** replaces exp.1 and is the only experimental release. The
+> built-in coordinator is now `https://quotavpn.duckdns.org/spaces`; only the dead port 8445
+> value is migrated, and a custom coordinator is left alone. The LAN address seen on the test PC
+> was saved config from local testing, not a code default. The build stamp is written to the
+> engine log at startup, so a shipped binary carries its identity. Stable and the phone stay on
+> 0.7.5. Notes are in `notes/RELEASE-0.7.6-exp.2.md`.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.
