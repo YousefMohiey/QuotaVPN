@@ -1,11 +1,11 @@
 {
     "version":  "0.7.6-exp.5",
-    "build":  "88560c4",
-    "notes":  "Spaces can carry Ethernet: a TAP-Windows6 adapter, a MAC-learning switch with real broadcast and multicast, and an owner switch between IP and Ethernet. Layer 3 is unchanged and still the default. Windows only. The installer is unsigned.",
+    "build":  "4316f17",
+    "notes":  "Spaces can carry Ethernet: a TAP-Windows6 adapter, a MAC-learning switch with real broadcast and multicast, and an owner switch between IP and Ethernet. Layer 3 is unchanged and still the default. Windows only. The installer is unsigned. Known issue: across a real NAT tunnel the layer-2 ping does not complete yet; ARP resolves but the peer\u0027s unicast replies are not accepted consistently. Treat layer 2 as experimental and expect to reproduce that before trusting it.",
     "pub_date":  "2026-11-26T14:47:18Z",
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSU50bm1KK0Z3djhSaFJyOHM2U2xZVXRPdGhLWVhKcS9GMVFuU2ZWZFFNTVpSUmRzbGF6QWR4YTZmeVNqV1dTREE2c1NhQXQ0eVUvNWNoNGE0Tllrd3djPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NzA0MzA2CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjVfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjAuNy42LWV4cC41ClF1L3B0cXB3ZEptOEJpRFl6Wk1GRWVoamo5b2MyN1JGd05WN2xBWmRtZC9OWkxxdmtndGc2WVo2UTQ5YnZjVlBGdkdacGs3UE5OVUtIZXRrZlkxd0FnPT0K",
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSU0wZTNCWDBEamJ0T2tkNGwxbjJ1WHQ3R0NXbk1ZOHV5OHMwN2JKUHhRSDMxSVYzTWhHSnA0UzNsRkhqYndvZG1ZV1NCVXNsWk0zeHBHSzh4MndVRnd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NzA3MjIzCWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjVfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjAuNy42LWV4cC41CjR3Q0dHMnA0Skx3SFlubnZMQlJHQTFVSEJHTlZBclBEbTMwbXpkWEFxanEyekozL0hzRWJCenpteisyL2kxZC9lZEVCUG5IRCszRWtoWFBESm92bEF3PT0K",
                                              "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.6-exp.5/QuotaVPN_0.7.6-exp.5_x64-setup.exe"
                                          }
                   }
