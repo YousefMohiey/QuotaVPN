@@ -19,6 +19,7 @@ pub mod spaces;
 pub mod spaces_path;
 pub mod spaces_stun;
 pub mod spaces_forward;
+pub mod spaces_switch;
 // The LAN control surface drives the PC relay and its ledger. It imports
 // `wpcap` and the Windows capture helpers, so it is Windows-only; Android and
 // Linux never call it. Leaving it ungated is what broke the phone build.
