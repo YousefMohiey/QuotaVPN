@@ -167,6 +167,14 @@
 > joiner now keeps the punched stream and only listens when the punch fails. TCP_NODELAY is set on
 > the direct stream. This is the only experimental release; stable and the phone stay on 0.7.5.
 > Notes are in `notes/RELEASE-0.7.6-exp.3.md`.
+>
+> **0.7.6-exp.4, 26 November 2026:** Spaces now downloads the pinned Wintun driver when it is
+> missing, so a fresh Spaces-only install does not need the main VPN first. The start path checks
+> elevation. Config saves are atomic with a last-good backup, a BOM is tolerated, and
+> `QC_SPACES_API` is no longer adopted. The joiner path was verified against the VPS: punched TCP,
+> Noise handshake, 4 of 4 ping at 49 to 55 ms, repeated with `wintun.dll` deleted. This is the only
+> experimental release; stable and the phone stay on 0.7.5. Notes are in
+> `notes/RELEASE-0.7.6-exp.4.md`.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.
