@@ -2,7 +2,7 @@
 import { Loader2, LogIn, Server, Users } from "lucide-react"
 import { useApp } from "@/state/app"
 import { useI18n } from "@/lib/i18n"
-import { api, type DirectStatus, type SpaceProbe, type SpacesState } from "@/lib/ipc"
+import { api, type OpenRadPeer, type OpenRadStatus, type SpacesState } from "@/lib/ipc"
 import { pushCloser } from "@/lib/navStack"
 import SpacesConsole from "./SpacesConsole"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
@@ -510,15 +510,10 @@ export function Spaces() {
   const [coordOpen, setCoordOpen] = useState(false)
   const [apiBase, setApiBase] = useState("")
   const [confirm, setConfirm] = useState<Confirm | null>(null)
-  const [probe, setProbe] = useState<SpaceProbe | null>(null)
-  const [probeBusy, setProbeBusy] = useState(false)
-  const [probeError, setProbeError] = useState("")
-  const [direct, setDirect] = useState<DirectStatus | null>(null)
-  const [directBusy, setDirectBusy] = useState(false)
-  const [directError, setDirectError] = useState("")
+  const [lan, setLan] = useState<OpenRadStatus | null>(null)
+  const [lanPeers, setLanPeers] = useState<OpenRadPeer[]>([])
   const [lanBusy, setLanBusy] = useState(false)
-  const [lanNote, setLanNote] = useState("")
-  const { t } = useI18n()
+  const [lanError, setLanError] = useState("")
 
   const adopt = useCallback((next: SpacesState) => {
     setState(next)
@@ -603,8 +598,6 @@ export function Spaces() {
 
   useEffect(() => {
     setNote("")
-    setProbe(null)
-    setProbeError("")
   }, [selected])
 
   const activate = async () => {
@@ -622,37 +615,30 @@ export function Spaces() {
     }
   }
 
-  const toggleMode = async () => {
-    if (!space || !space.owner) return
-    setBusy("mode")
-    setError("")
+  const connectLan = async () => {
+    setLanBusy(true)
+    setLanError("")
     try {
-      const next = space.mode === "l2" ? "l3" : "l2"
-      adopt(await api.spaceSetMode(space.id, next))
-      // The adapter type cannot change under a running engine, so stop it and
-      // let the supervisor start the next one with the new mode.
-      await api.spaceDirectStop().catch(() => null)
-      setDirect(await api.spaceDirectStatus().catch(() => null))
+      const status = await api.openradConnect()
+      setLan(status)
+      const peers = await api.openradPeers()
+      setLanPeers(Array.isArray(peers) ? peers : [])
     } catch (e) {
-      setError(messageOf(e))
+      setLanError(messageOf(e))
     } finally {
-      setBusy(null)
+      setLanBusy(false)
     }
   }
 
-  const connectLan = async () => {
+  const stopLan = async () => {
     setLanBusy(true)
-    setLanNote("")
+    setLanError("")
     try {
-      const status = (await api.openradConnect()) as {
-        node_name?: string
-        snapshot?: { vip?: string }
-      }
-      setLanNote(
-        [status?.node_name, status?.snapshot?.vip].filter(Boolean).join(" "),
-      )
+      await api.openradDisconnect()
+      setLan(null)
+      setLanPeers([])
     } catch (e) {
-      setError(messageOf(e))
+      setLanError(messageOf(e))
     } finally {
       setLanBusy(false)
     }
@@ -673,12 +659,23 @@ export function Spaces() {
 
   const members = useMemo(() => {
     if (!space) return []
-    return [...space.members].sort((a, b) => {
-      if (a.self_pc !== b.self_pc) return a.self_pc ? -1 : 1
-      if (a.owner !== b.owner) return a.owner ? -1 : 1
-      if (a.online !== b.online) return a.online ? -1 : 1
-      return a.name.localeCompare(b.name)
-    })
+    const self = space.members.find((m) => m.self_pc)
+    const seenAddress = new Set<string>()
+    return space.members
+      .filter((m) => {
+        // A reset identity can leave the old device name behind as an offline
+        // member. It is this same PC, not another machine on the network.
+        if (!m.self_pc && self && !m.online && m.name === self.name) return false
+        if (seenAddress.has(m.address)) return false
+        seenAddress.add(m.address)
+        return true
+      })
+      .sort((a, b) => {
+        if (a.self_pc !== b.self_pc) return a.self_pc ? -1 : 1
+        if (a.owner !== b.owner) return a.owner ? -1 : 1
+        if (a.online !== b.online) return a.online ? -1 : 1
+        return a.name.localeCompare(b.name)
+      })
   }, [space])
 
   const active = !!state && !!space && state.active === space.id
@@ -697,85 +694,42 @@ export function Spaces() {
     if (wasLive && confirm && confirm.kind !== "kick") toggle()
   }
 
-  const probePeer = useMemo(
-    () =>
-      space?.members.find((m) => !m.self_pc && m.online) ??
-      space?.members.find((m) => !m.self_pc) ??
-      null,
-    [space],
-  )
-
-  const runProbe = async () => {
-    if (!space || !probePeer) return
-    setProbeBusy(true)
-    setProbe(null)
-    setProbeError("")
-    try {
-      setProbe(await api.spaceProbe(space.id, probePeer.id))
-    } catch (e) {
-      setProbeError(messageOf(e))
-    } finally {
-      setProbeBusy(false)
+  // The LAN engine lives outside the space roster. Poll it while this screen
+  // is open, and only ask for peers once the engine is actually connected.
+  useEffect(() => {
+    let alive = true
+    let busy = false
+    const tick = async () => {
+      if (busy) return
+      busy = true
+      try {
+        const status = await api.openradStatus()
+        if (!alive) return
+        setLan(status)
+        if (status.phase === "connected") {
+          const peers = await api.openradPeers()
+          if (alive) setLanPeers(Array.isArray(peers) ? peers : [])
+        } else if (alive) {
+          setLanPeers([])
+        }
+      } catch {
+        if (!alive) return
+        setLan(null)
+        setLanPeers([])
+      } finally {
+        busy = false
+      }
     }
-  }
-
-  const loadDirect = useCallback(async () => {
-    try {
-      setDirect(await api.spaceDirectStatus())
-    } catch {
-      /* the command is absent outside a Windows build */
+    void tick()
+    const id = window.setInterval(() => void tick(), 6000)
+    return () => {
+      alive = false
+      window.clearInterval(id)
     }
   }, [])
 
-  useEffect(() => {
-    void loadDirect()
-  }, [loadDirect])
-
-  useEffect(() => {
-    // The supervisor can start or stop the engine without the screen asking,
-    // so the status is polled even when nothing is running yet.
-    const id = window.setInterval(() => void loadDirect(), 2000)
-    return () => window.clearInterval(id)
-  }, [loadDirect])
-
-  const startDirect = async () => {
-    if (!space || !probePeer) return
-    setDirectBusy(true)
-    setDirectError("")
-    try {
-      setDirect(await api.spaceDirectStart(space.id, probePeer.id))
-    } catch (e) {
-      setDirectError(messageOf(e))
-    } finally {
-      setDirectBusy(false)
-    }
-  }
-
-  const stopDirect = async () => {
-    setDirectBusy(true)
-    setDirectError("")
-    try {
-      setDirect(await api.spaceDirectStop())
-    } catch (e) {
-      setDirectError(messageOf(e))
-    } finally {
-      setDirectBusy(false)
-    }
-  }
-
   return (
     <>
-      <div className="flex items-center gap-3 px-5 pt-3">
-        <button
-          type="button"
-          onClick={() => void connectLan()}
-          disabled={lanBusy}
-          className="press h-9 rounded-[8px] bg-[var(--brand)] px-4 text-[12.5px] font-medium text-white disabled:opacity-50"
-        >
-          {lanBusy ? t("lanConnecting") : t("lanConnect")}
-        </button>
-        {lanNote ? <span className="text-[11px] text-txt3">{lanNote}</span> : null}
-      </div>
       <SpacesConsole
         spaces={state?.spaces ?? []}
         selected={selected}
@@ -784,13 +738,10 @@ export function Spaces() {
         members={members}
         active={active}
         live={live}
-        direct={direct}
-        directBusy={directBusy}
-        directError={directError}
-        probe={probe}
-        probeBusy={probeBusy}
-        probeError={probeError}
-        probePeer={probePeer}
+        lan={lan}
+        lanPeers={lanPeers}
+        lanBusy={lanBusy}
+        lanError={lanError}
         busy={busy}
         error={error}
         note={note}
@@ -798,11 +749,9 @@ export function Spaces() {
         onSelect={setSelected}
         onRefresh={() => void refresh(false)}
         onActivate={() => void activate()}
-        onStart={() => void startDirect()}
-        onStop={() => void stopDirect()}
-        onProbe={() => void runProbe()}
         onRotate={() => void rotate()}
-        onToggleMode={() => void toggleMode()}
+        onLanConnect={() => void connectLan()}
+        onLanStop={() => void stopLan()}
         onRemove={() => setConfirm({ kind: space?.owner ? "delete" : "leave" })}
         onKick={(memberId, name) => setConfirm({ kind: "kick", memberId, name })}
         onCreate={() => setCreateOpen(true)}

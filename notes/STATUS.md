@@ -44,6 +44,17 @@
 > automatic server probe on launch is silent; a connection the user starts says Connecting instead
 > of Working. 0.7.4 remains published; 0.7.3 remains removed.
 >
+> **0.7.6-exp.6 note (26 November 2026):** the Spaces LAN button now starts the bundled
+> OpenRad engine, not the in-house layer-2 switch. One press creates the `OpenRad`
+> TAP-Windows6 adapter, configures the coordination server with the bundled modulus,
+> registers this PC and joins the `QuotaVPN` network. The engine now falls back to public
+> STUN for its UDP mapping when the server does not advertise two UES hosts, so the data
+> path is direct UDP when both NATs allow it; the VPS is only the introduction service and
+> the relay fallback. A Windows PC and a Linux peer on the VPS connected `DirectUdp` at
+> about 49 ms. The Spaces card shows only connected LAN peers, with `Direct` or `Relayed`
+> and RTT, and filters the stale offline identity left by an earlier install. The old
+> direct LAN and probe controls are gone from the screen. Stable stays at 0.7.5.
+>
 > **Spaces (unreleased, 25 November 2026):** the first slice of a private virtual LAN. The desktop
 > has a Spaces screen, the core has the invite/key/endpoint model, and `embed/qc-spaces.py` is the
 > coordinator. The data plane is one WireGuard endpoint inside the existing sing-box session, with

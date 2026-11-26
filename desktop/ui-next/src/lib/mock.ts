@@ -4,7 +4,21 @@
  * Values mirror the shapes in lib.rs; the tunnel "runs" so connected-state
  * screens are reachable with ?vpn=1.
  */
-import type { Card, CardStatus, CmdResult, DirectStatus, LanStatus, Space, SpaceProbe, SpacesState, TrafficState, TunnelState, UpdateInfo } from "./ipc"
+import type {
+  Card,
+  CardStatus,
+  CmdResult,
+  DirectStatus,
+  LanStatus,
+  OpenRadPeer,
+  OpenRadStatus,
+  Space,
+  SpaceProbe,
+  SpacesState,
+  TrafficState,
+  TunnelState,
+  UpdateInfo,
+} from "./ipc"
 
 const cards: Card[] = [
   { name: "Gamerz (playvalorant.com)", uuid: "11111111-1111-4111-8111-111111111111", card_type: "Gamerz", sni: "playvalorant.com", wg_private: "", wg_addr: "", registered: true },
@@ -51,6 +65,35 @@ let demoSpaces: Space[] = EMPTY_SPACES ? [] : [
   },
 ]
 let demoSpaceActive = EMPTY_SPACES ? "" : "K7M2Q9X4"
+let demoLanOn =
+  typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).get("lan") !== "0"
+const demoLanPeers: OpenRadPeer[] = [
+  {
+    rid: "8900903485428369",
+    name: "ALYONA",
+    vip: "26.93.26.18",
+    connected: true,
+    transport: "DirectUdp",
+    rtt_ms: 149.2,
+  },
+  {
+    rid: "6625618752715519",
+    name: "VPS-PEER",
+    vip: "26.237.110.69",
+    connected: true,
+    transport: "Relay",
+    rtt_ms: 48.6,
+  },
+]
+const demoLanStatus = (): OpenRadStatus | null =>
+  demoLanOn
+    ? {
+        node_name: "VERHAFTER-PC",
+        phase: "connected",
+        snapshot: { vip: "26.106.109.37", interface_ready: true },
+      }
+    : null
 let demoDirect: DirectStatus = {
   running: true,
   starting: false,
@@ -168,6 +211,16 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
       } as T
     case "spaces_state":
       return demoSpacesState() as T
+    case "openrad_status":
+      return demoLanStatus() as T
+    case "openrad_peers":
+      return (demoLanOn ? demoLanPeers : []) as T
+    case "openrad_connect":
+      demoLanOn = true
+      return demoLanStatus() as T
+    case "openrad_disconnect":
+      demoLanOn = false
+      return undefined as T
     case "spaces_api":
       return "https://quotavpn.duckdns.org/spaces" as T
     case "set_spaces_api":

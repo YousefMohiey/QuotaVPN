@@ -80,6 +80,29 @@ export type DirectStatus = {
   error: string
 }
 
+/** The OpenRad engine state behind the one-button LAN. */
+export type OpenRadStatus = {
+  node_name?: string
+  rid?: number
+  phase?: string
+  error?: string | null
+  snapshot?: {
+    vip?: string
+    interface_ready?: boolean
+    peers?: Record<string, unknown>
+  }
+}
+
+/** One live LAN peer, already cleaned of stale identities by the backend. */
+export type OpenRadPeer = {
+  rid: string
+  name: string
+  vip: string
+  connected: boolean
+  transport: string | null
+  rtt_ms: number | null
+}
+
 /** Read-only state of one card. `ok` is false when the server refused or the
     PC could not reach it; `message` carries the server's own sentence. */
 export type CardStatus = {
@@ -397,10 +420,10 @@ export const api = {
   spaceRotate: (id: string) => call<SpacesState>("space_rotate", { id }),
   spaceSetMode: (id: string, mode: "l2" | "l3") =>
     call<SpacesState>("space_set_mode", { id, mode }),
-  openradConnect: () => call<unknown>("openrad_connect"),
+  openradConnect: () => call<OpenRadStatus>("openrad_connect"),
   openradDisconnect: () => call<void>("openrad_disconnect"),
-  openradStatus: () => call<unknown>("openrad_status"),
-  openradPeers: () => call<unknown>("openrad_peers"),
+  openradStatus: () => call<OpenRadStatus>("openrad_status"),
+  openradPeers: () => call<OpenRadPeer[]>("openrad_peers"),
   spaceKick: (id: string, memberId: string) =>
     call<SpacesState>("space_kick", { id, memberId }),
   copyToClipboard: (text: string) => call<boolean>("copy_text", { text }),

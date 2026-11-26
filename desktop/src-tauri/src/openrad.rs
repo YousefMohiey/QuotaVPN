@@ -4,7 +4,8 @@
 //! coordination server, registers this PC once, starts the service and joins
 //! the shared network. The user never sees an OpenRad command.
 
-use serde_json::Value;
+use serde_json::{json, Value};
+use std::collections::BTreeMap;
 use std::os::windows::process::CommandExt;
 use std::path::PathBuf;
 use std::process::Command;
@@ -163,9 +164,13 @@ pub async fn openrad_connect() -> Result<Value, String> {
 
 #[tauri::command]
 pub async fn openrad_disconnect() -> Result<(), String> {
-    tauri::async_runtime::spawn_blocking(|| run_raw(&["stop"]).map(|_| ()))
-        .await
-        .map_err(|e| e.to_string())?
+    tauri::async_runtime::spawn_blocking(|| {
+        run_raw(&["stop"])?;
+        clear_stale_address();
+        Ok(())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -175,9 +180,73 @@ pub async fn openrad_status() -> Result<Value, String> {
         .map_err(|e| e.to_string())?
 }
 
+/// A connected roster for the LAN card. The engine also lists identities that
+/// are no longer this PC (an old install with the same device name) and peers
+/// that are offline; neither belongs in the live peer list. RTT is measured
+/// only for connected peers, one small authenticated keepalive each.
 #[tauri::command]
 pub async fn openrad_peers() -> Result<Value, String> {
-    tauri::async_runtime::spawn_blocking(|| run_json(&["peers", "--json"]))
-        .await
-        .map_err(|e| e.to_string())?
+    tauri::async_runtime::spawn_blocking(|| {
+        let status = run_json(&["status", "--json"])?;
+        let own_rid = status.get("rid").and_then(Value::as_u64);
+        let peers = run_json(&["peers", "--json"])?;
+        let mut live: BTreeMap<String, Value> = BTreeMap::new();
+        if let Some(map) = peers.as_object() {
+            for (key, entry) in map {
+                let rid = entry
+                    .pointer("/peer/rid")
+                    .and_then(Value::as_u64)
+                    .or_else(|| key.parse::<u64>().ok())
+                    .unwrap_or(0);
+                if rid == 0 || Some(rid) == own_rid {
+                    continue;
+                }
+                let name = entry
+                    .pointer("/peer/name")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string();
+                let vip = entry
+                    .pointer("/peer/vip")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string();
+                let peer_status = entry
+                    .get("status")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default();
+                // Only a live channel belongs on the card. Offline identities,
+                // including a previous install of this same PC, are not peers.
+                if peer_status != "Connected" {
+                    continue;
+                }
+                let rtt_ms = run_json(&["ping", &rid.to_string(), "--json"])
+                    .ok()
+                    .and_then(|v| v.get("rtt_ms").and_then(Value::as_f64));
+                let row = json!({
+                    "rid": rid.to_string(),
+                    "name": name,
+                    "vip": vip,
+                    "connected": true,
+                    "transport": entry.get("transport").and_then(Value::as_str),
+                    "rtt_ms": rtt_ms,
+                });
+                // A stale duplicate of a live address must not produce two rows.
+                live.insert(vip, row);
+            }
+        }
+        let mut rows: Vec<Value> = live.into_values().collect();
+        rows.sort_by(|a, b| {
+            let live_a = a.get("connected").and_then(Value::as_bool).unwrap_or(false);
+            let live_b = b.get("connected").and_then(Value::as_bool).unwrap_or(false);
+            live_b.cmp(&live_a).then_with(|| {
+                let name_a = a.get("name").and_then(Value::as_str).unwrap_or_default();
+                let name_b = b.get("name").and_then(Value::as_str).unwrap_or_default();
+                name_a.cmp(name_b)
+            })
+        });
+        Ok(Value::Array(rows))
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }

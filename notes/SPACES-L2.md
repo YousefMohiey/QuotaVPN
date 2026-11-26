@@ -375,3 +375,31 @@ name resolution works, the adapter profile and firewall handling are right.
 - No routing tricks over the layer-3 path. Half an L2 network is worse than none.
 - No changes to `wintun.rs` or the main tunnel.
 - No test signing, no Secure Boot changes, no self-signed driver.
+
+## OpenRad data plane (0.7.6-exp.6)
+
+The in-house switch above is no longer the shipping path. `spaces_switch`,
+`tap.rs` and `spaces_direct.rs` stay in the tree, but Spaces starts the pinned
+and patched OpenRad engine from `desktop/src-tauri/openrad/` instead.
+
+`desktop/src-tauri/src/openrad.rs` owns the whole sequence: ensure the adapter
+named exactly `OpenRad` with the bundled `tap/amd64/devcon.exe`, stop a running
+engine, clear a stale `26.x` address, write the server and modulus, init once,
+start, join `QuotaVPN`, then return status. `openrad_peers` returns only live
+peers with transport and RTT, so an old identity and an offline roster member
+cannot look like extra IPs. The commands are `openrad_connect`,
+`openrad_disconnect`, `openrad_status` and `openrad_peers`; `--lan-connect` is
+the headless version.
+
+The engine uses direct UDP, direct TCP, then the relay. Our coordination
+server does not run two UES responders, so the bundled engine was patched to
+fall back to public STUN only for its own NAT mapping. The endpoint is
+advertised through the authenticated session and the peer nonce authenticates
+each punch. The diff is in `tools/openrad-stun-fallback.patch`; the VPS server
+and relay are unchanged and remain the introduction service and fallback.
+
+Proof so far: a Windows PC and a Linux peer on the VPS reached `DirectUdp` at
+about 49 ms with the patched engine, and the same Windows PC and a second home
+PC reached each other with the pre-patch relay. The friend test on the direct
+path and the game matrix are still open. The test network is public; a private
+network with a password is the next security step.

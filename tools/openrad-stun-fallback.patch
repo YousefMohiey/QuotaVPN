@@ -1,0 +1,189 @@
+diff --git a/src/udp.rs b/src/udp.rs
+index b893a27..4781d04 100644
+--- a/src/udp.rs
++++ b/src/udp.rs
+@@ -123,8 +123,14 @@ pub struct Mapping {
+     pub agreement: MappingAgreement,
+ }
+ 
+-/// Query two authenticated hosts concurrently on the same socket and compare
+-/// their observations. A lone answer is used only after the deadline.
++/// Query two hosts concurrently on the same socket and compare their
++/// observations. A lone answer is used only after the deadline.
++///
++/// A self-hosted coordination server does not have to run the UES responders:
++/// when it advertises fewer than two hosts, public STUN is used only to learn
++/// this socket's NAT mapping. The endpoint is still advertised through the
++/// authenticated coordination connection and every punch is authenticated by
++/// the peer nonce, so STUN cannot become a peer path by itself.
+ pub fn discover_mapping(
+     socket: &UdpSocket,
+     hosts: &[std::net::Ipv4Addr],
+@@ -136,7 +142,9 @@ pub fn discover_mapping(
+         .collect::<std::collections::BTreeSet<_>>()
+         .into_iter()
+         .collect();
+-    ensure!(hosts.len() >= 2, "insufficient authenticated UES hosts");
++    if hosts.len() < 2 {
++        return discover_mapping_stun(socket, stop);
++    }
+     let choice = crate::crypto::random(3);
+     let start = choice[0] as usize % hosts.len();
+     let servers = std::array::from_fn(|index| {
+@@ -148,6 +156,156 @@ pub fn discover_mapping(
+     discover_mapping_at(socket, servers, stop, MAPPING_TIMEOUT)
+ }
+ 
++/// Public STUN endpoints used only for mapping discovery when the
++/// coordination server does not advertise two UES responders.
++const STUN_FALLBACK: [(&str, u16); 3] = [
++    ("stun.l.google.com", 19302),
++    ("stun.cloudflare.com", 3478),
++    ("stun.nextcloud.com", 3478),
++];
++
++fn stun_servers() -> Vec<SocketAddr> {
++    use std::net::ToSocketAddrs;
++    let mut servers = Vec::new();
++    for (host, port) in STUN_FALLBACK {
++        if let Ok(addrs) = (host, port).to_socket_addrs() {
++            if let Some(addr) = addrs.into_iter().find(SocketAddr::is_ipv4) {
++                if !servers.contains(&addr) {
++                    servers.push(addr);
++                }
++            }
++        }
++        if servers.len() == 2 {
++            break;
++        }
++    }
++    servers
++}
++
++/// Parse a STUN Binding success response and return its mapped endpoint.
++fn stun_mapped_response(data: &[u8], transaction: &[u8; 12]) -> Result<SocketAddr> {
++    ensure!(
++        data.len() >= 20
++            && u16be(data, 0)? == 0x0101
++            && u32be(data, 4)? == 0x2112_a442
++            && data[8..20] == *transaction,
++        "STUN response correlation/type"
++    );
++    let length = u16be(data, 2)? as usize;
++    ensure!(20 + length <= data.len(), "STUN response length");
++    let mut at = 20;
++    let end = 20 + length;
++    while at < end {
++        ensure!(end - at >= 4, "truncated STUN attribute");
++        let kind = u16be(data, at)?;
++        let len = u16be(data, at + 2)? as usize;
++        at += 4;
++        ensure!(len <= end - at, "truncated STUN value");
++        if kind == 0x0020 || kind == 0x0001 {
++            ensure!(len == 8 && data[at] == 0 && data[at + 1] == 1, "invalid STUN mapped address");
++            let (port, ip) = if kind == 0x0020 {
++                (
++                    u16be(data, at + 2)? ^ 0x2112,
++                    std::net::Ipv4Addr::new(
++                        data[at + 4] ^ 0x21,
++                        data[at + 5] ^ 0x12,
++                        data[at + 6] ^ 0xa4,
++                        data[at + 7] ^ 0x42,
++                    ),
++                )
++            } else {
++                (
++                    u16be(data, at + 2)?,
++                    std::net::Ipv4Addr::new(
++                        data[at + 4],
++                        data[at + 5],
++                        data[at + 6],
++                        data[at + 7],
++                    ),
++                )
++            };
++            ensure!(
++                port != 0 && !ip.is_unspecified() && !ip.is_multicast() && !ip.is_broadcast(),
++                "invalid STUN mapping"
++            );
++            return Ok(SocketAddr::new(ip.into(), port));
++        }
++        at += (len + 3) & !3;
++    }
++    bail!("missing STUN mapped address")
++}
++
++fn discover_mapping_stun(
++    socket: &UdpSocket,
++    stop: &Option<Arc<AtomicBool>>,
++) -> Result<Mapping> {
++    let servers = stun_servers();
++    ensure!(servers.len() >= 2, "no public STUN servers resolved");
++    socket.set_nonblocking(true)?;
++    let transactions: [[u8; 12]; 2] = std::array::from_fn(|_| crate::crypto::random_array());
++    let mut addresses = [None; 2];
++    let started = Instant::now();
++    let until = started + MAPPING_TIMEOUT;
++    let mut sends = 0;
++    let mut data = [0; 2048];
++    loop {
++        ensure!(
++            !stop.as_ref().is_some_and(|s| s.load(Ordering::Relaxed)),
++            "cancelled"
++        );
++        if Instant::now() >= until {
++            return match addresses {
++                [Some(endpoint), None] | [None, Some(endpoint)] => Ok(Mapping {
++                    endpoint,
++                    agreement: MappingAgreement::OneServer,
++                }),
++                _ => bail!("STUN mapping timeout"),
++            };
++        }
++        if MAPPING_RESENDS
++            .get(sends)
++            .is_some_and(|offset| started.elapsed() >= *offset)
++        {
++            for (index, server) in servers.iter().enumerate() {
++                if addresses[index].is_none() {
++                    let mut request = [0; 20];
++                    request[0..2].copy_from_slice(&0x0001u16.to_be_bytes());
++                    request[4..8].copy_from_slice(&0x2112_a442u32.to_be_bytes());
++                    request[8..20].copy_from_slice(&transactions[index]);
++                    send_best_effort(socket.send_to(&request, mapped(*server)))?;
++                }
++            }
++            sends += 1;
++        }
++        match socket.recv_from(&mut data) {
++            Ok((n, _)) => {
++                for index in 0..2 {
++                    if addresses[index].is_none() {
++                        if let Ok(address) = stun_mapped_response(&data[..n], &transactions[index])
++                        {
++                            addresses[index] = Some(address);
++                        }
++                    }
++                }
++                if let [Some(a), Some(b)] = addresses {
++                    return Ok(Mapping {
++                        endpoint: a,
++                        agreement: if a == b {
++                            MappingAgreement::Agree
++                        } else {
++                            MappingAgreement::Varies
++                        },
++                    });
++                }
++            }
++            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
++                std::thread::sleep(Duration::from_millis(5));
++            }
++            Err(e) => return Err(e.into()),
++        }
++    }
++}
++
+ const MAPPING_TIMEOUT: Duration = Duration::from_millis(2500);
+ /// Request offsets from the start of discovery. A lost request or reply is
+ /// resent quickly instead of costing the mapped UDP path for this attempt.
