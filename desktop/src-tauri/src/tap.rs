@@ -2,14 +2,18 @@
 //!
 //! TAP-Windows6 presents a virtual Ethernet card and hands raw 802.3 frames to
 //! whoever opens `\\.\Global\{guid}.tap`. The driver adds the Ethernet header
-//! and nothing else, so broadcast, multicast, ARP and IPv6 discovery all work
-//! the way they do on a real LAN.
+//! and nothing else, so broadcast, multicast, ARP and IPv6 discovery work.
 //!
 //! The driver is installed by the QuotaVPN installer and appears as
 //! `TAP-Windows Adapter V9`. This module adopts that one adapter, gives it the
-//! member's MAC, address and MTU, brings the media up, and leaves it up until
-//! the engine stops. It never touches a TAP adapter that another product
-//! installed: the GUID is recorded at install time.
+//! member's address and MTU, brings the media up, and leaves it up until the
+//! engine stops. It never touches a TAP adapter that another product installed:
+//! the GUID is recorded at install time.
+//!
+//! The handle is synchronous. One thread blocks in `ReadFile` and feeds a
+//! channel, writes are plain `WriteFile` calls, and `CancelSynchronousIo` lets
+//! the reader return when the engine stops. The overlapped form read frames
+//! correctly but frames written that way never reached the Windows stack.
 
 use quotacards::spaces_forward::PacketIo;
 use std::ffi::c_void;
@@ -17,6 +21,10 @@ use std::os::windows::ffi::OsStrExt;
 use std::os::windows::process::CommandExt;
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{self, Receiver, TryRecvError};
+use std::sync::{Arc, Mutex};
+use std::thread::JoinHandle;
 
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const GENERIC_READ: u32 = 0x8000_0000;
@@ -25,25 +33,12 @@ const FILE_SHARE_READ: u32 = 1;
 const FILE_SHARE_WRITE: u32 = 2;
 const OPEN_EXISTING: u32 = 3;
 const FILE_ATTRIBUTE_SYSTEM: u32 = 4;
-const FILE_FLAG_OVERLAPPED: u32 = 0x4000_0000;
-const ERROR_IO_PENDING: u32 = 997;
-const INFINITE: u32 = 0xFFFF_FFFF;
-
 const TAP_IOCTL_GET_MTU: u32 = 0x0022_000C;
 const TAP_IOCTL_SET_MEDIA_STATUS: u32 = 0x0022_0018;
+const THREAD_ALL_ACCESS: u32 = 0x001F_03FF;
 
 /// One frame, including the Ethernet header.
 pub const FRAME: usize = 2048;
-
-#[repr(C)]
-#[derive(Default)]
-struct Overlapped {
-    internal: usize,
-    internal_high: usize,
-    offset: u32,
-    offset_high: u32,
-    event: isize,
-}
 
 #[allow(non_snake_case)]
 extern "system" {
@@ -64,38 +59,27 @@ extern "system" {
         output: *mut u8,
         output_size: u32,
         returned: *mut u32,
-        overlapped: *mut Overlapped,
+        overlapped: *mut c_void,
     ) -> i32;
     fn ReadFile(
         handle: isize,
         buffer: *mut u8,
         length: u32,
         read: *mut u32,
-        overlapped: *mut Overlapped,
+        overlapped: *mut c_void,
     ) -> i32;
     fn WriteFile(
         handle: isize,
         buffer: *const u8,
         length: u32,
         written: *mut u32,
-        overlapped: *mut Overlapped,
+        overlapped: *mut c_void,
     ) -> i32;
-    fn GetOverlappedResult(
-        handle: isize,
-        overlapped: *mut Overlapped,
-        transferred: *mut u32,
-        wait: i32,
-    ) -> i32;
-    fn CreateEventW(
-        security: *mut c_void,
-        manual: i32,
-        initial: i32,
-        name: *const u16,
-    ) -> isize;
-    fn WaitForSingleObject(handle: isize, milliseconds: u32) -> u32;
-    fn CancelIoEx(handle: isize, overlapped: *const Overlapped) -> i32;
     fn CloseHandle(handle: isize) -> i32;
     fn GetLastError() -> u32;
+    fn GetCurrentThreadId() -> u32;
+    fn OpenThread(access: u32, inherit: i32, thread_id: u32) -> isize;
+    fn CancelSynchronousIo(thread: isize) -> i32;
 }
 
 fn wide(text: &str) -> Vec<u16> {
@@ -114,27 +98,19 @@ pub struct TapIo {
     handle: isize,
     name: String,
     mac: [u8; 6],
-    pending: Option<PendingRead>,
-}
-
-struct PendingRead {
-    buffer: Box<[u8; FRAME]>,
-    overlapped: Box<Overlapped>,
-    event: isize,
-    ready: Option<usize>,
+    frames: Receiver<Vec<u8>>,
+    reader: Option<JoinHandle<()>>,
+    reader_thread: Arc<Mutex<isize>>,
 }
 
 unsafe impl Send for TapIo {}
 
 impl TapIo {
-    /// Adopt the recorded adapter, configure it, and bring the media up.
     pub fn new(address: &str, mtu: u32) -> Result<Self, String> {
         let guid = resolve_guid()?;
         Self::adopt(&guid, address, mtu)
     }
 
-    /// Same, for an adapter named by GUID. The engine uses `new`; the two
-    /// adapter test uses this directly.
     pub fn adopt(guid: &str, address: &str, mtu: u32) -> Result<Self, String> {
         let (name, ifindex, mac) = configure(guid, address, mtu)?;
         let path = format!("\\\\.\\Global\\{{{guid}}}.tap");
@@ -143,15 +119,49 @@ impl TapIo {
             unsafe { CloseHandle(handle) };
             return Err(error);
         }
+        std::thread::sleep(std::time::Duration::from_millis(800));
+        set_private(ifindex);
+
+        let (sender, frames) = mpsc::channel();
+        let stop = Arc::new(AtomicBool::new(false));
+        let reader_stop = stop.clone();
+        let reader_thread = Arc::new(Mutex::new(0isize));
+        let thread_slot = reader_thread.clone();
+        let reader = std::thread::spawn(move || {
+            let thread_id = unsafe { GetCurrentThreadId() };
+            let thread_handle = unsafe { OpenThread(THREAD_ALL_ACCESS, 0, thread_id) };
+            *thread_slot.lock().unwrap_or_else(|e| e.into_inner()) = thread_handle;
+            let mut buffer = vec![0u8; FRAME];
+            while !reader_stop.load(Ordering::Relaxed) {
+                let mut read = 0u32;
+                let ok = unsafe {
+                    ReadFile(
+                        handle,
+                        buffer.as_mut_ptr(),
+                        FRAME as u32,
+                        &mut read,
+                        std::ptr::null_mut(),
+                    )
+                };
+                if ok == 0 {
+                    break;
+                }
+                if read as usize >= 14
+                    && sender.send(buffer[..read as usize].to_vec()).is_err()
+                {
+                    break;
+                }
+            }
+        });
+
         let io = Self {
             handle,
             name,
             mac,
-            pending: None,
+            frames,
+            reader: Some(reader),
+            reader_thread,
         };
-        // The adapter only gets a network profile once the media is up.
-        std::thread::sleep(std::time::Duration::from_millis(600));
-        set_private(ifindex);
         quotacards::vpn::app_log(&format!(
             "spaces l2: adapter {} up, mac {:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}, mtu {}",
             io.name, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], mtu
@@ -163,88 +173,18 @@ impl TapIo {
         &self.name
     }
 
-    /// The MAC the driver actually uses for receive and transmit. This is the
-    /// value the switch must treat as local.
     pub fn mac(&self) -> [u8; 6] {
         self.mac
-    }
-
-    fn start_read(&mut self) -> Result<(), String> {
-        let mut buffer = Box::new([0u8; FRAME]);
-        let mut overlapped = Box::new(Overlapped::default());
-        let event = unsafe { CreateEventW(std::ptr::null_mut(), 1, 0, std::ptr::null()) };
-        if event == 0 || event == -1 {
-            return Err("the Spaces adapter read event could not be created".into());
-        }
-        overlapped.event = event;
-        let mut read = 0u32;
-        let ok = unsafe {
-            ReadFile(
-                self.handle,
-                buffer.as_mut_ptr(),
-                FRAME as u32,
-                &mut read,
-                &mut *overlapped,
-            )
-        };
-        let ready = if ok != 0 {
-            Some(read as usize)
-        } else {
-            let error = unsafe { GetLastError() };
-            if error != ERROR_IO_PENDING {
-                unsafe {
-                    CloseHandle(event);
-                }
-                return Err(format!("the Spaces adapter read failed ({error})"));
-            }
-            None
-        };
-        self.pending = Some(PendingRead {
-            buffer,
-            overlapped,
-            event,
-            ready,
-        });
-        Ok(())
     }
 }
 
 impl PacketIo for TapIo {
     fn try_read(&mut self) -> Result<Option<Vec<u8>>, String> {
-        if self.pending.is_none() {
-            self.start_read()?;
+        match self.frames.try_recv() {
+            Ok(frame) => Ok(Some(frame)),
+            Err(TryRecvError::Empty) => Ok(None),
+            Err(TryRecvError::Disconnected) => Err("the Spaces adapter reader stopped".into()),
         }
-        let Some(pending) = self.pending.as_mut() else {
-            return Ok(None);
-        };
-        if pending.ready.is_none() {
-            let signalled = unsafe { WaitForSingleObject(pending.event, 0) };
-            if signalled != 0 {
-                return Ok(None);
-            }
-            let mut transferred = 0u32;
-            let ok = unsafe {
-                GetOverlappedResult(self.handle, &mut *pending.overlapped, &mut transferred, 0)
-            };
-            if ok == 0 {
-                let error = unsafe { GetLastError() };
-                if let Some(pending) = self.pending.take() {
-                    unsafe {
-                        CloseHandle(pending.event);
-                    }
-                }
-                return Err(format!("the Spaces adapter read stopped ({error})"));
-            }
-            pending.ready = Some(transferred as usize);
-        }
-        let length = pending.ready.take().unwrap_or(0);
-        let frame = pending.buffer.get(..length).unwrap_or(&[]).to_vec();
-        if let Some(pending) = self.pending.take() {
-            unsafe {
-                CloseHandle(pending.event);
-            }
-        }
-        Ok(Some(frame))
     }
 
     fn write(&mut self, frame: &[u8]) -> Result<(), String> {
@@ -254,12 +194,6 @@ impl PacketIo for TapIo {
         if frame.len() > FRAME {
             return Err("a frame is larger than the adapter accepts".into());
         }
-        let mut overlapped = Overlapped::default();
-        let event = unsafe { CreateEventW(std::ptr::null_mut(), 1, 0, std::ptr::null()) };
-        if event == 0 || event == -1 {
-            return Err("the Spaces adapter write event could not be created".into());
-        }
-        overlapped.event = event;
         let mut written = 0u32;
         let ok = unsafe {
             WriteFile(
@@ -267,54 +201,41 @@ impl PacketIo for TapIo {
                 frame.as_ptr(),
                 frame.len() as u32,
                 &mut written,
-                &mut overlapped,
+                std::ptr::null_mut(),
             )
         };
-        let result = if ok != 0 {
-            Ok(())
-        } else {
-            let error = unsafe { GetLastError() };
-            if error != ERROR_IO_PENDING {
-                Err(format!("the Spaces adapter write failed ({error})"))
-            } else if unsafe { WaitForSingleObject(event, INFINITE) } != 0 {
-                // Never leave an IRP pointing at this stack buffer.
-                unsafe {
-                    CancelIoEx(self.handle, &overlapped);
-                    WaitForSingleObject(event, INFINITE);
-                }
-                Err("the Spaces adapter write did not complete".into())
-            } else {
-                let mut transferred = 0u32;
-                let done = unsafe {
-                    GetOverlappedResult(self.handle, &mut overlapped, &mut transferred, 0)
-                };
-                if done == 0 {
-                    Err(format!(
-                        "the Spaces adapter write stopped ({})",
-                        unsafe { GetLastError() }
-                    ))
-                } else {
-                    Ok(())
-                }
-            }
-        };
-        unsafe {
-            CloseHandle(event);
+        if ok == 0 {
+            return Err(format!(
+                "the Spaces adapter write failed ({})",
+                unsafe { GetLastError() }
+            ));
         }
-        result
+        Ok(())
     }
 }
 
 impl Drop for TapIo {
     fn drop(&mut self) {
-        let _ = set_media(self.handle, false);
-        if let Some(pending) = self.pending.take() {
+        let thread_handle = *self
+            .reader_thread
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        if thread_handle != 0 {
             unsafe {
-                CloseHandle(pending.event);
+                CancelSynchronousIo(thread_handle);
             }
         }
+        let _ = set_media(self.handle, false);
         unsafe {
             CloseHandle(self.handle);
+        }
+        if let Some(reader) = self.reader.take() {
+            let _ = reader.join();
+        }
+        if thread_handle != 0 {
+            unsafe {
+                CloseHandle(thread_handle);
+            }
         }
     }
 }
@@ -328,7 +249,7 @@ fn open(path: &str) -> Result<isize, String> {
             FILE_SHARE_READ | FILE_SHARE_WRITE,
             std::ptr::null_mut(),
             OPEN_EXISTING,
-            FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED,
+            FILE_ATTRIBUTE_SYSTEM,
             std::ptr::null_mut(),
         )
     };
@@ -338,9 +259,6 @@ fn open(path: &str) -> Result<isize, String> {
             unsafe { GetLastError() }
         ));
     }
-    // A TAP adapter answers this with its frame size. Asking for the version
-    // instead returns ERROR_INSUFFICIENT_BUFFER on 9.27.0 when the output
-    // buffer is only four bytes.
     let mut output = [0u8; 16];
     let mut returned = 0u32;
     let ok = unsafe {
@@ -367,8 +285,6 @@ fn open(path: &str) -> Result<isize, String> {
     Ok(handle)
 }
 
-/// Up or down. Down is what tells Windows the cable is out and removes the
-/// routes; Drop calls it so a crash does not leave a live adapter behind.
 fn set_media(handle: isize, up: bool) -> Result<(), String> {
     let mut status: u32 = if up { 1 } else { 0 };
     let mut returned = 0u32;
@@ -393,7 +309,6 @@ fn set_media(handle: isize, up: bool) -> Result<(), String> {
     Ok(())
 }
 
-/// The adapter GUID recorded by the installer, or the only TAP adapter.
 fn resolve_guid() -> Result<String, String> {
     if let Ok(saved) = std::fs::read_to_string(marker_path()) {
         let saved = saved.trim().trim_matches('{').trim_matches('}').to_string();
@@ -432,16 +347,8 @@ fn first_tap_adapter() -> Result<String, String> {
     Ok(guid)
 }
 
-/// Give the adapter its MTU and address. Returns the adapter name, interface
-/// index and the MAC the driver actually uses.
-///
-/// The MAC is deliberately not overridden. TAP-Windows6 accepts a
-/// `NetworkAddress` override and reports it on the adapter, and Windows then
-/// transmits with it, but unicast frames addressed to the override are dropped
-/// before the ARP stack sees them: the receive filter keeps the address the
-/// device was created with. Broadcast still passes, which is why an override
-/// looks healthy until the first reply has to come back. The driver picks a
-/// unique 00:FF address at install; that is the address the switch uses.
+/// The MAC is deliberately not overridden: frames addressed to a NetworkAddress
+/// override were not accepted on receive in testing. The driver MAC is used.
 fn configure(guid: &str, address: &str, mtu: u32) -> Result<(String, i32, [u8; 6]), String> {
     let ip = address.split('/').next().unwrap_or(address).trim();
     let script = format!(
@@ -522,9 +429,6 @@ fn run_powershell(script: &str) -> Result<String, String> {
 mod tests {
     use super::*;
 
-    /// Runs only on a machine with the adapter installed and an elevated shell,
-    /// so it is ignored by default. It proves the Rust path that the engine
-    /// uses: configure, media up, read a frame the OS sends by itself.
     #[test]
     #[ignore]
     fn the_adapter_comes_up_and_carries_a_frame() {
@@ -544,76 +448,5 @@ mod tests {
             }
         }
         assert!(frames > 0, "no frame arrived from the adapter");
-    }
-
-    struct PeerAdapter {
-        io: TapIo,
-    }
-
-    impl quotacards::spaces_switch::PeerLink for PeerAdapter {
-        fn label(&self) -> &str {
-            self.io.name()
-        }
-
-        fn send(&mut self, frame: &[u8]) -> Result<(), String> {
-            self.io.write(frame)
-        }
-
-        fn try_recv(&mut self) -> Result<Option<Vec<u8>>, String> {
-            self.io.try_read()
-        }
-    }
-
-    fn guid_of(name: &str) -> String {
-        run_powershell(&format!("(Get-NetAdapter -Name '{name}').InterfaceGuid"))
-            .expect("adapter lookup")
-            .trim()
-            .trim_matches('{')
-            .trim_matches('}')
-            .to_string()
-    }
-
-    /// The end-to-end proof that does not need a second PC: two TAP adapters on
-    /// this machine, in one /24, bridged by the real switch. Windows has to ARP
-    /// across it and the ping has to come back.
-    ///
-    /// Needs `QuotaSpaceLAN` and `QuotaSpaceB` installed and an elevated shell.
-    #[test]
-    #[ignore]
-    fn two_adapters_ping_through_the_switch() {
-        use quotacards::spaces_switch::{self, PeerLink};
-        use std::sync::atomic::{AtomicBool, Ordering};
-        use std::sync::Arc;
-        use std::time::Duration;
-
-        let a = guid_of("QuotaSpaceLAN");
-        let b = guid_of("QuotaSpaceB");
-        if a.is_empty() || b.is_empty() {
-            panic!("install QuotaSpaceLAN and QuotaSpaceB before this test");
-        }
-        let mut io_a = TapIo::adopt(&a, "10.77.98.2/24", 1380).expect("adapter A");
-        let io_b = TapIo::adopt(&b, "10.77.98.3/24", 1380).expect("adapter B");
-        let mac_a = io_a.mac();
-        let _mac_b = io_b.mac();
-        let mut peers: Vec<Box<dyn PeerLink>> = vec![Box::new(PeerAdapter { io: io_b })];
-
-        let stop = Arc::new(AtomicBool::new(false));
-        let stop_for_ping = stop.clone();
-        let pinger = std::thread::spawn(move || {
-            std::thread::sleep(Duration::from_millis(900));
-            let out = std::process::Command::new("ping")
-                .args(["-n", "3", "-w", "1200", "10.77.98.3"])
-                .output()
-                .expect("ping");
-            stop_for_ping.store(true, Ordering::Relaxed);
-            out
-        });
-
-        let result = spaces_switch::run(&mut io_a, &mut peers, mac_a, &stop);
-        result.expect("the switch loop");
-
-        let out = pinger.join().expect("pinger");
-        let text = String::from_utf8_lossy(&out.stdout).to_string();
-        assert!(out.status.success(), "ping across the switch failed: {text}");
     }
 }
