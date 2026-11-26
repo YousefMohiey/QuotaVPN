@@ -349,6 +349,12 @@ impl TapIo {
         }
         std::thread::sleep(std::time::Duration::from_millis(3000));
         set_private(ifindex);
+        // Windows Firewall drops inbound ICMP and game traffic on a new
+        // adapter even when the profile is Private. The interface rule is what
+        // lets the peer's replies and LAN broadcasts reach the apps.
+        let _ = run_powershell(&format!(
+            "$n='QuotaVPN Spaces LAN'; if (-not (Get-NetFirewallRule -DisplayName $n -ErrorAction SilentlyContinue)) {{ New-NetFirewallRule -DisplayName $n -Direction Inbound -InterfaceAlias '{name}' -Action Allow -Profile Private | Out-Null }}"
+        ));
 
         let (sender, frames) = mpsc::channel();
         let stop = Arc::new(AtomicBool::new(false));
@@ -605,7 +611,7 @@ mod tests {
         let mut io = TapIo::new("10.77.99.2/24", 1380).expect("the Spaces adapter");
         let sender = [0x02u8, 0x51, 0x56, 0x00, 0x00, 0x09];
         let mut frame = Vec::new();
-        frame.extend_from_slice(&[0xFF; 6]);
+        frame.extend_from_slice(&io.mac());
         frame.extend_from_slice(&sender);
         frame.extend_from_slice(&[0x08, 0x06]);
         frame.extend_from_slice(&[0x00, 0x01, 0x08, 0x00, 0x06, 0x04, 0x00, 0x01]);
@@ -624,5 +630,67 @@ mod tests {
             out.to_uppercase().contains("02-51-56-00-00-09"),
             "windows did not learn the sender: {out}"
         );
+    }
+}
+
+#[cfg(test)]
+mod icmp_tests {
+    use super::*;
+
+    fn checksum(data: &[u8]) -> u16 {
+        let mut sum = 0u32;
+        let mut i = 0;
+        while i + 1 < data.len() {
+            sum += u16::from_be_bytes([data[i], data[i + 1]]) as u32;
+            i += 2;
+        }
+        if i < data.len() {
+            sum += (data[i] as u32) << 8;
+        }
+        while sum >> 16 != 0 {
+            sum = (sum & 0xFFFF) + (sum >> 16);
+        }
+        !(sum as u16)
+    }
+
+    #[test]
+    #[ignore]
+    fn a_crafted_echo_gets_a_windows_reply() {
+        let _ = run_powershell(
+            "New-NetNeighbor -InterfaceAlias 'QuotaSpaceLAN' -IPAddress '10.77.99.9' -LinkLayerAddress '02-51-56-00-00-09' -State Permanent -ErrorAction SilentlyContinue | Out-Null",
+        );
+        let mut io = TapIo::new("10.77.99.2/24", 1380).expect("adapter");
+        std::thread::sleep(std::time::Duration::from_secs(3));
+        let mac = io.mac();
+        let mut ip = vec![0x45, 0x00, 0x00, 0x3c, 0x12, 0x34, 0x00, 0x00, 0x80, 0x01, 0x00, 0x00, 10, 77, 99, 9, 10, 77, 99, 2];
+        let c = checksum(&ip);
+        ip[10..12].copy_from_slice(&c.to_be_bytes());
+        let mut icmp = vec![0x08, 0x00, 0x00, 0x00, 0x12, 0x34, 0x00, 0x01];
+        icmp.extend(std::iter::repeat(b'a').take(32));
+        let c = checksum(&icmp);
+        icmp[2..4].copy_from_slice(&c.to_be_bytes());
+        let mut frame = Vec::new();
+        frame.extend_from_slice(&mac);
+        frame.extend_from_slice(&[0x02, 0x51, 0x56, 0x00, 0x00, 0x09]);
+        frame.extend_from_slice(&[0x08, 0x00]);
+        frame.extend_from_slice(&ip);
+        frame.extend_from_slice(&icmp);
+        io.write(&frame).expect("write");
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+        let mut replied = false;
+        while std::time::Instant::now() < deadline {
+            match io.try_read() {
+                Ok(Some(f)) => {
+                    if f.len() >= 42 && f[12] == 0x08 && f[13] == 0x00 && f[23] == 1 && f[34] == 0 && f[38] == 0x12 && f[39] == 0x34 {
+                        replied = true;
+                        break;
+                    }
+                }
+                Ok(None) => std::thread::sleep(std::time::Duration::from_millis(10)),
+                Err(e) => panic!("read: {e}"),
+            }
+        }
+        let _ = run_powershell("Remove-NetNeighbor -InterfaceAlias 'QuotaSpaceLAN' -IPAddress '10.77.99.9' -Confirm:$false -ErrorAction SilentlyContinue | Out-Null");
+        assert!(replied, "windows did not answer the crafted echo");
     }
 }
