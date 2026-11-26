@@ -41,6 +41,10 @@ networks, the coordinator must be reachable by both; a public host or tunnel is
 required. The direct data path is peer-to-peer; only signaling uses the
 coordinator.
 
+The dev coordinator is plain HTTP. Keep it on a trusted LAN or behind a TLS
+tunnel. Never expose the plain listener to the internet: the invite and bearer
+token travel over it.
+
 ## Limits
 
 - Windows only. The phone has no Spaces screen yet.
