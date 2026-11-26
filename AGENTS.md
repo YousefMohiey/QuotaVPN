@@ -84,9 +84,10 @@ Windows, run from git-bash. The toolchain this project was developed against:
   built exe for the dependency before it publishes.
 - **Version lives in four files**: `desktop/src-tauri/{tauri.conf.json,Cargo.toml}` and
   `android/tauri-app/src-tauri/{tauri.conf.json,Cargo.toml}`. A normal release bumps all four
-  together. The desktop and the phone are both 0.7.5. The phone still compiles the legacy SSH
+  together. The desktop is 0.7.6-exp.6; the phone is 0.7.5. The phone still compiles the legacy SSH
   control plane (`legacy-ssh`) until its own credential migration lands; do not bump the phone
-  to a version that has no tested APK behind it.
+  to a version that has no tested APK behind it. Experimental desktop-only builds may move ahead
+  of the phone; stable releases still ship both at the same version.
 - **Releases**: bump, build the installer and the APK, then publish the GitHub release with the
   updater feed. The feed asset must be named exactly `latest.json`; the app reads
   `releases/latest/download/latest.json`. Ship both platforms at the same version. The feed also
@@ -167,7 +168,17 @@ answer true because there is nothing to install. The release job fails if the bi
 
 ## Current state
 
-**Spaces layer 2 (desktop, 0.7.6-exp.5).** A space can carry Ethernet instead of IP. The adapter is
+**Exp.6 desktop (26 November 2026).** Spaces starts the bundled OpenRad engine for the game LAN
+(`desktop/src-tauri/src/openrad.rs`, `openrad/openrad.exe`, `modulus.bin`). One press creates the
+`OpenRad` TAP adapter, clears a stale `26.x` address, configures the self-hosted server, starts the
+service and joins `QuotaVPN`. The bundled engine was patched to fall back to public STUN for its
+NAT mapping when the server has no UES hosts, so a direct UDP path is used when both NATs allow
+it. A Windows PC and a VPS peer reached `DirectUdp` at about 45 ms; the card shows only connected
+peers with `Direct` or `Relayed` and RTT. The in-house layer-2 switch below stays in the tree but
+is not the shipping LAN path. The window also moved to Manrope and Geist Mono, flat surfaces and
+four themes (obsidian, ember, mint, violet).
+
+**Spaces layer 2 (desktop, superseded).** A space can carry Ethernet instead of IP. The adapter is
 TAP-Windows6 9.27.0, bundled in `desktop/src-tauri/tap` and installed by the NSIS hook; 9.27.0 is
 the floor because 9.26 and earlier carry CVE-2024-1305. It is GPLv2, so the installer ships
 `GPL-2.0.txt` and the driver source tarball. `desktop/src-tauri/src/tap.rs` opens the recorded
@@ -178,7 +189,8 @@ record carries `mode` (`l3` or `l2`) and the coordinator stores it, returns each
 accepts `POST /v1/spaces/{id}/mode`. Layer 3 is still the default, the phone is still 0.7.5, and
 `notes/SPACES-L2.md` holds the audit, the plan and the proofs.
 
-**The latest published release is v0.7.5, Windows and Android.** This tree carries the 0.7.0
+**The latest desktop release is v0.7.6-exp.6 (experimental, Windows); stable is v0.7.5, Windows
+and Android.** This tree carries the 0.7.0
 credential migration (`notes/HANDOFF-2026-11-22.md`): the desktop imports a server-issued `qv1:`
 secret into a DPAPI-sealed per-card store (`qc1:` is still accepted), talks to the card API over
 HTTPS, and no longer compiles the SSH control plane. The phone is 0.7.5 too; its
