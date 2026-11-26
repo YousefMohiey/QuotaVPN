@@ -13,6 +13,7 @@ use quotacards::spaces_path::{self, PathIdentity};
 use serde::Serialize;
 use serde_json::Value;
 use socket2::{Domain, Protocol, Socket, Type};
+use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream, ToSocketAddrs, UdpSocket};
 use std::os::windows::process::CommandExt;
 use std::process::Command;
@@ -197,22 +198,15 @@ pub fn stop_engine(direct: &DirectState) -> DirectStatus {
 /// go on a home router.
 struct TcpGateway {
     listener: TcpListener,
-    port: u16,
+    public: SocketAddr,
     stop: Arc<AtomicBool>,
     helper: JoinHandle<()>,
 }
 
-fn tcp_gateway(host: &str, tls: bool) -> Result<TcpGateway, String> {
-    let remote_port = if tls { 443 } else { 80 };
-    let remote = format!("{host}:{remote_port}");
-    let remote: SocketAddr = remote
-        .to_socket_addrs()
-        .map_err(|e| format!("coordinator address: {e}"))?
-        .next()
-        .ok_or("the coordinator address did not resolve")?;
+fn tcp_gateway() -> Result<TcpGateway, String> {
     let mut last = String::new();
     for port in 51394u16..51420 {
-        match gateway_on(port, remote) {
+        match gateway_on(port) {
             Ok(gateway) => return Ok(gateway),
             Err(e) => last = e,
         }
@@ -220,7 +214,7 @@ fn tcp_gateway(host: &str, tls: bool) -> Result<TcpGateway, String> {
     Err(format!("could not open a TCP listener: {last}"))
 }
 
-fn gateway_on(port: u16, remote: SocketAddr) -> Result<TcpGateway, String> {
+fn gateway_on(port: u16) -> Result<TcpGateway, String> {
     let local = SocketAddr::from((std::net::Ipv4Addr::UNSPECIFIED, port));
     let listener = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP))
         .map_err(|e| format!("tcp listener: {e}"))?;
@@ -238,14 +232,14 @@ fn gateway_on(port: u16, remote: SocketAddr) -> Result<TcpGateway, String> {
         .set_nonblocking(true)
         .map_err(|e| format!("tcp listener: {e}"))?;
 
-    let helper = connect_helper(local, remote)?;
+    let (helper, public) = connect_stun(local)?;
     let stop = Arc::new(AtomicBool::new(false));
     let stop_for = stop.clone();
     let helper = std::thread::spawn(move || {
         let mut current = Some(helper);
         while !stop_for.load(Ordering::Relaxed) {
             if current.is_none() {
-                current = connect_helper(local, remote).ok();
+                current = connect_stun(local).ok().map(|(stream, _)| stream);
             }
             if let Some(stream) = current.as_ref() {
                 let mut probe = [0u8; 1];
@@ -264,23 +258,120 @@ fn gateway_on(port: u16, remote: SocketAddr) -> Result<TcpGateway, String> {
     });
     Ok(TcpGateway {
         listener,
-        port,
+        public,
         stop,
         helper,
     })
 }
 
-fn connect_helper(local: SocketAddr, remote: SocketAddr) -> Result<TcpStream, String> {
+/// Ask a public STUN server over TCP from the listener's local port. The
+/// answer is the real public endpoint of that mapping, which is what the peer
+/// must dial. Radmin's server sees the same port on its control connection.
+fn connect_stun(local: SocketAddr) -> Result<(TcpStream, SocketAddr), String> {
     let sock = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP))
-        .map_err(|e| format!("tcp helper: {e}"))?;
+        .map_err(|e| format!("stun socket: {e}"))?;
     sock.set_reuse_address(true)
-        .map_err(|e| format!("tcp helper: {e}"))?;
+        .map_err(|e| format!("stun socket: {e}"))?;
     sock.bind(&local.into())
-        .map_err(|e| format!("tcp helper on {}: {e}", local.port()))?;
+        .map_err(|e| format!("stun socket on {}: {e}", local.port()))?;
+    let remote: SocketAddr = "stun.nextcloud.com:3478"
+        .to_socket_addrs()
+        .map_err(|e| format!("stun address: {e}"))?
+        .next()
+        .ok_or("the stun address did not resolve")?;
     sock.connect(&remote.into())
-        .map_err(|e| format!("tcp helper connect: {e}"))?;
+        .map_err(|e| format!("stun connect: {e}"))?;
+    let mut stream: TcpStream = sock.into();
+    stream
+        .set_read_timeout(Some(Duration::from_secs(4)))
+        .map_err(|e| format!("stun timeout: {e}"))?;
+    stream
+        .set_write_timeout(Some(Duration::from_secs(4)))
+        .map_err(|e| format!("stun timeout: {e}"))?;
+    let public = tcp_stun(&mut stream)?;
+    Ok((stream, public))
+}
+
+fn tcp_stun(stream: &mut TcpStream) -> Result<SocketAddr, String> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let mut req = [0u8; 20];
+    req[1] = 0x01;
+    req[4..8].copy_from_slice(&0x2112A442u32.to_be_bytes());
+    for i in 0..12 {
+        req[8 + i] = ((now >> ((i % 8) * 8)) & 0xff) as u8;
+    }
+    stream
+        .write_all(&req)
+        .map_err(|e| format!("stun write: {e}"))?;
+    let mut data = [0u8; 2048];
+    let n = stream.read(&mut data).map_err(|e| format!("stun read: {e}"))?;
+    if n < 20 {
+        return Err("the stun answer is short".into());
+    }
+    let mut p = 20;
+    while p + 4 <= n {
+        let at = u16::from_be_bytes([data[p], data[p + 1]]);
+        let al = u16::from_be_bytes([data[p + 2], data[p + 3]]) as usize;
+        if p + 4 + al > n {
+            break;
+        }
+        if at == 0x0020 && al >= 8 {
+            let xport = u16::from_be_bytes([data[p + 6], data[p + 7]]);
+            let port = xport ^ 0x2112;
+            let xaddr = u32::from_be_bytes([
+                data[p + 8],
+                data[p + 9],
+                data[p + 10],
+                data[p + 11],
+            ]);
+            let ip = std::net::Ipv4Addr::from(xaddr ^ 0x2112A442);
+            return Ok(SocketAddr::from((ip, port)));
+        }
+        p += 4 + ((al + 3) & !3);
+    }
+    Err("the stun answer has no mapped address".into())
+}
+
+/// Connect from the listener's local port, so the router sees the same
+/// (local port, peer address) mapping an inbound connection will use. This is
+/// the TCP hole punch Radmin performs.
+fn connect_from(
+    local_port: u16,
+    peer: SocketAddr,
+    timeout: Duration,
+) -> Result<TcpStream, String> {
+    let sock = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP))
+        .map_err(|e| format!("tcp punch: {e}"))?;
+    sock.set_reuse_address(true)
+        .map_err(|e| format!("tcp punch: {e}"))?;
+    sock.bind(&SocketAddr::from((std::net::Ipv4Addr::UNSPECIFIED, local_port)).into())
+        .map_err(|e| format!("tcp punch on {local_port}: {e}"))?;
     sock.set_nonblocking(true)
-        .map_err(|e| format!("tcp helper: {e}"))?;
+        .map_err(|e| format!("tcp punch: {e}"))?;
+    match sock.connect(&peer.into()) {
+        Ok(()) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+            let deadline = Instant::now() + timeout;
+            loop {
+                if Instant::now() >= deadline {
+                    return Err("tcp connect timed out".into());
+                }
+                std::thread::sleep(Duration::from_millis(50));
+                if let Some(err) = sock.take_error().map_err(|e| e.to_string())? {
+                    return Err(format!("tcp connect: {err}"));
+                }
+                if sock.peer_addr().is_ok() {
+                    break;
+                }
+            }
+        }
+        Err(e) => return Err(format!("tcp connect: {e}")),
+    }
+    sock.set_nonblocking(false)
+        .map_err(|e| format!("tcp punch: {e}"))?;
     Ok(sock.into())
 }
 
@@ -332,7 +423,7 @@ pub async fn start(
         }
     }
 
-    let (token, host, tls, path, private_key, self_id, address, space_id, owner) = {
+    let (token, path, private_key, self_id, address, space_id, owner) = {
         let cfg = state.0.lock().unwrap_or_else(|e| e.into_inner());
         let record = cfg
             .spaces
@@ -345,18 +436,8 @@ pub async fn start(
         if record.private_key.is_empty() {
             return Err("this space has no private key; join it again".into());
         }
-        let base = crate::spaces::api_base();
-        let url = reqwest::Url::parse(&base)
-            .map_err(|e| format!("the space server address is invalid: {e}"))?;
-        let host = url
-            .host_str()
-            .ok_or("the space server address has no host")?
-            .to_string();
-        let tls = url.scheme() == "https";
         (
             record.token.clone(),
-            host,
-            tls,
             format!("/v1/spaces/{}/probe", record.id),
             record.private_key.clone(),
             record.member_id.clone(),
@@ -394,8 +475,8 @@ pub async fn start(
     .map_err(|e| e.to_string())?;
     let endpoint =
         stun.map_err(|e| format!("could not discover the public UDP endpoint: {e}"))?;
-    let gateway = tcp_gateway(&host, tls)?;
-    let tcp_endpoint = format!("{}:{}", endpoint.ip(), gateway.port);
+    let gateway = tcp_gateway()?;
+    let tcp_endpoint = gateway.public.to_string();
     let endpoint_path = format!("{path}/{probe_id}/endpoint");
     crate::spaces::call(
         reqwest::Method::POST,
@@ -460,15 +541,29 @@ pub async fn start(
     let engine_space = space_id.clone();
     let TcpGateway {
         listener,
-        port: _,
+        public: _,
         stop: helper_stop,
         helper,
     } = gateway;
     let (path, io) = tauri::async_runtime::spawn_blocking(move || {
         let local = PathIdentity::from_private(&private_key)?;
         let public = spaces_path::decode_public(&peer_public)?;
-        let connect_timeout = Duration::from_secs(10);
+        let local_port = listener
+            .local_addr()
+            .map_err(|e| format!("tcp listener: {e}"))?
+            .port();
+        let connect_timeout = Duration::from_secs(12);
         let stream = if owner {
+            // Punch from the listener port first. The SYN opens this router's
+            // mapping for the peer's address; the peer's own punch and session
+            // then pass. Hold the punch socket while the session is set up.
+            let punch = peer_tcp;
+            std::thread::spawn(move || {
+                if let Ok(stream) = connect_from(local_port, punch, Duration::from_secs(4)) {
+                    std::thread::sleep(Duration::from_secs(12));
+                    drop(stream);
+                }
+            });
             let deadline = Instant::now() + connect_timeout;
             loop {
                 match listener.accept() {
@@ -483,8 +578,18 @@ pub async fn start(
                 }
             }
         } else {
-            TcpStream::connect_timeout(&peer_tcp, connect_timeout)
-                .map_err(|e| format!("tcp connect: {e}"))?
+            // The joining side is the connector. It also sends from the
+            // listener port, so both mappings line up and one SYN gets through.
+            let deadline = Instant::now() + connect_timeout;
+            loop {
+                match connect_from(local_port, peer_tcp, Duration::from_secs(2)) {
+                    Ok(stream) => break stream,
+                    Err(_) if Instant::now() < deadline => {
+                        std::thread::sleep(Duration::from_millis(400));
+                    }
+                    Err(e) => return Err(e),
+                }
+            }
         };
         stream
             .set_nonblocking(false)

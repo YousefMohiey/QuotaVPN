@@ -117,6 +117,13 @@
 > coordinator. The owner listens, the other member connects, and the Noise session runs over
 > framed TCP. The coordinator stores and returns the TCP endpoint. Notes are in
 > `notes/RELEASE-0.7.11.md`.
+>
+> **Experimental 0.7.12, 26 November 2026:** the port test from the VPS showed `51393` and `51394`
+> both closed, so Radmin's TCP was hole-punched, not a forwarded listener. The helper is now a
+> TCP STUN probe (`stun.nextcloud.com:3478`) that discovers the real mapped endpoint from the
+> listener port; the owner punches from that port and accepts, and the joining member connects
+> from its own listener port with retries. This is symmetric TCP hole punching, the same shape as
+> Radmin. Notes are in `notes/RELEASE-0.7.12.md`.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.
