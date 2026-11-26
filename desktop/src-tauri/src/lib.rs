@@ -3103,6 +3103,8 @@ fn newer(latest: &str, current: &str) -> bool {
 /// build.rs), or "dev" when git was not available at build time. The feed
 /// carries the same stamp, which is how a build identifies itself; the
 /// updater no longer offers a build of the version it is already running.
+/// Written to the engine log at startup so a release binary always carries
+/// its identity, including the build stamp test and the release grep.
 #[allow(dead_code)]
 const BUILD_STAMP: &str = env!("QC_BUILD");
 
@@ -4689,6 +4691,7 @@ pub fn run() {
                 cfg.save();
             }
             spaces::init_api(&cfg);
+            vpn::app_log(&format!("build: {BUILD_STAMP}"));
             *app.state::<State>().0.lock().unwrap() = cfg;
             // The space stays connected after the window hides or the Spaces
             // screen is left, the way Radmin's service keeps its network up.
