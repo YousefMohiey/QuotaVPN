@@ -254,6 +254,11 @@ fn link_only(frame: &[u8]) -> bool {
 /// 224.0.2.60 and the subnet broadcast are kept.
 fn local_multicast(frame: &[u8]) -> bool {
     if frame.len() < 34 || frame[12] != 0x08 || frame[13] != 0x00 {
+        // IPv6 multicast (33:33:..) is neighbour discovery, MLD and mDNS; a
+        // LAN game does not use it.
+        if frame[12] == 0x86 && frame[13] == 0xDD && frame[0] == 0x33 && frame[1] == 0x33 {
+            return true;
+        }
         return false;
     }
     let dst = [frame[30], frame[31], frame[32], frame[33]];
@@ -508,6 +513,14 @@ mod tests {
             switch.route(&ip_multicast([224, 0, 2, 60], 3)),
             Route::Flood(vec![0])
         );
+
+        let mut v6 = vec![0u8; 48];
+        v6[0] = 0x33;
+        v6[1] = 0x33;
+        v6[6..12].copy_from_slice(&B);
+        v6[12] = 0x86;
+        v6[13] = 0xDD;
+        assert_eq!(switch.route(&v6), Route::Drop);
     }
 
     #[test]
