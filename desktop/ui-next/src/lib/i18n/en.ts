@@ -605,6 +605,10 @@ export const en = {
   "spacesLocalNote": "Reach them by their space address. The other side must allow the service in Windows Firewall.",
   "spacesTrust": "Traffic is encrypted to the hub. The hub operator can see addresses and volume, not the contents.",
   "spacesSubnet": "Subnet",
-  "spacesDevicePlaceholder": "Yousef-PC",
+  "spacesNeedName": "Enter a space name.",
+  "spacesNeedDevice": "Enter a name for this device.",
+  "spacesNeedBoth": "Enter a space name and a name for this device.",
+  "spacesNeedCode": "Enter a valid invite code, starting with qvs1:.",
+  "spacesDevicePlaceholder": "My PC",
   "spacesOnline": "online",
 } as const

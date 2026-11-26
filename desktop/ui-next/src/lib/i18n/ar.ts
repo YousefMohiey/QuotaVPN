@@ -605,6 +605,10 @@ export const ar = {
   "spacesLocalNote": "استخدم عنوان المساحة للوصول إليهم. يجب أن يسمح الطرف الآخر بالخدمة في جدار حماية ويندوز.",
   "spacesTrust": "تُشفّر الحركة حتى المركز. يمكن لمشغّل المركز رؤية العناوين وحجم البيانات، لا المحتوى.",
   "spacesSubnet": "الشبكة الفرعية",
-  "spacesDevicePlaceholder": "Yousef-PC",
+  "spacesNeedName": "أدخل اسم المساحة.",
+  "spacesNeedDevice": "أدخل اسم هذا الجهاز.",
+  "spacesNeedBoth": "أدخل اسم المساحة واسم هذا الجهاز.",
+  "spacesNeedCode": "أدخل رمز دعوة صالحًا يبدأ بـ qvs1:.",
+  "spacesDevicePlaceholder": "جهازي",
   "spacesOnline": "متصل",
 } as const

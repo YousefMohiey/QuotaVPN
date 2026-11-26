@@ -165,6 +165,8 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
       } as T
     case "spaces_state":
       return demoSpacesState() as T
+    case "space_device_name":
+      return "Preview-PC" as T
     case "space_create": {
       const name = String(args?.name ?? "New space").trim() || "New space"
       const device = String(args?.deviceName ?? "This PC").trim() || "This PC"

@@ -142,13 +142,30 @@ function CreateDialog({
     if (!open) return
     setErr("")
     setPassword("")
-    setDevice(readDevice())
+    const remembered = readDevice()
+    setDevice(remembered)
+    if (!remembered) {
+      void api
+        .spaceDeviceName()
+        .then((n) => {
+          if (n) setDevice((current) => current || n)
+        })
+        .catch(() => {})
+    }
     return pushCloser(() => onOpenChange(false))
   }, [open, onOpenChange])
 
   const submit = async () => {
-    if (!name.trim() || !device.trim()) {
-      setErr(t("spacesName"))
+    const missingName = !name.trim()
+    const missingDevice = !device.trim()
+    if (missingName || missingDevice) {
+      setErr(
+        missingName && missingDevice
+          ? t("spacesNeedBoth")
+          : missingName
+            ? t("spacesNeedName")
+            : t("spacesNeedDevice"),
+      )
       return
     }
     setBusy(true)
@@ -175,7 +192,10 @@ function CreateDialog({
           <Field label={t("spacesName")}>
             <Input
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setErr("")
+                setName(e.target.value)
+              }}
               autoFocus
               maxLength={40}
               dir="auto"
@@ -185,7 +205,10 @@ function CreateDialog({
           <Field label={t("spacesDevice")}>
             <Input
               value={device}
-              onChange={(e) => setDevice(e.target.value)}
+              onChange={(e) => {
+                setErr("")
+                setDevice(e.target.value)
+              }}
               maxLength={40}
               dir="auto"
               placeholder={t("spacesDevicePlaceholder")}
@@ -195,7 +218,10 @@ function CreateDialog({
           <Field label={t("spacesPassword")} hint={t("spacesPasswordHint")}>
             <Input
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setErr("")
+                setPassword(e.target.value)
+              }}
               type="password"
               maxLength={64}
               dir="ltr"
@@ -247,17 +273,26 @@ function JoinDialog({
     if (!open) return
     setErr("")
     setPassword("")
-    setDevice(readDevice())
+    const remembered = readDevice()
+    setDevice(remembered)
+    if (!remembered) {
+      void api
+        .spaceDeviceName()
+        .then((n) => {
+          if (n) setDevice((current) => current || n)
+        })
+        .catch(() => {})
+    }
     return pushCloser(() => onOpenChange(false))
   }, [open, onOpenChange])
 
   const submit = async () => {
     if (!/^qvs1:[0-9a-z]{8}:[0-9a-f]{32}$/i.test(code.trim())) {
-      setErr(t("spacesCodeHint"))
+      setErr(t("spacesNeedCode"))
       return
     }
     if (!device.trim()) {
-      setErr(t("spacesDevice"))
+      setErr(t("spacesNeedDevice"))
       return
     }
     setBusy(true)
@@ -284,7 +319,10 @@ function JoinDialog({
           <Field label={t("spacesCode")} hint={t("spacesCodeHint")}>
             <Input
               value={code}
-              onChange={(e) => setCode(e.target.value)}
+              onChange={(e) => {
+                setErr("")
+                setCode(e.target.value)
+              }}
               autoFocus
               dir="ltr"
               spellCheck={false}
@@ -294,7 +332,10 @@ function JoinDialog({
           <Field label={t("spacesPassword")}>
             <Input
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setErr("")
+                setPassword(e.target.value)
+              }}
               type="password"
               maxLength={64}
               dir="ltr"
@@ -304,7 +345,10 @@ function JoinDialog({
           <Field label={t("spacesDevice")}>
             <Input
               value={device}
-              onChange={(e) => setDevice(e.target.value)}
+              onChange={(e) => {
+                setErr("")
+                setDevice(e.target.value)
+              }}
               maxLength={40}
               dir="auto"
               placeholder={t("spacesDevicePlaceholder")}

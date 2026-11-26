@@ -375,6 +375,7 @@ export const api = {
   setCardSni: (uuid: string, sni: string) => call<CmdResult>("set_card_sni", { uuid, sni }),
   copyCard: (uuid: string) => call<CmdResult>("copy_card", { uuid }),
   spacesState: () => call<SpacesState>("spaces_state"),
+  spaceDeviceName: () => call<string>("space_device_name"),
   spaceCreate: (name: string, password: string, deviceName: string) =>
     call<SpacesState>("space_create", { name, password, deviceName }),
   spaceJoin: (code: string, password: string, deviceName: string) =>

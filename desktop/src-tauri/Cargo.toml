@@ -1,6 +1,6 @@
 [package]
 name = "quotacards-desktop"
-version = "0.7.6"
+version = "0.7.7"
 default-run = "QuotaVPN"
 edition = "2021"
 

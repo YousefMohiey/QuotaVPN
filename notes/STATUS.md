@@ -84,6 +84,12 @@
 > root and `releases/latest` still point at 0.7.5, and the phone stays on 0.7.5. The build uses a
 > plain `0.7.6` version because the app's version parser turns `0.7.6-exp.1` into `0.7.0.1` and
 > would never offer it. Release notes and test steps are in `notes/RELEASE-0.7.6.md`.
+>
+> **Experimental 0.7.7, 26 November 2026:** fixes the Create dialog. The device field now defaults
+> to the Windows computer name instead of an empty box with a placeholder, validation names the
+> missing field and clears on typing, and an unreachable coordinator is reported with its URL.
+> The pre-release carries the signed installer and its own feed; stable stays at 0.7.5. Notes are
+> in `notes/RELEASE-0.7.7.md`.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.

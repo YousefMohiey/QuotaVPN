@@ -37,7 +37,8 @@ pub(crate) async fn call(
     token: Option<&str>,
     body: Option<Value>,
 ) -> Result<Value, String> {
-    let url = format!("{}{}", api_base(), path);
+    let base = api_base();
+    let url = format!("{}{}", base, path);
     let client = http()?;
     let mut req = client.request(method, &url);
     if let Some(token) = token {
@@ -49,7 +50,7 @@ pub(crate) async fn call(
     let response = req
         .send()
         .await
-        .map_err(|e| format!("could not reach the space server: {e}"))?;
+        .map_err(|e| format!("could not reach the space server at {base}: {e}"))?;
     let code = response.status().as_u16();
     let text = response.text().await.unwrap_or_default();
     let value: Value = serde_json::from_str(&text).unwrap_or(Value::Null);
@@ -272,6 +273,18 @@ fn upsert(cfg: &mut AppConfig, record: SpaceRecord) {
 pub fn spaces_state(state: tauri::State<'_, crate::State>) -> SpacesState {
     let cfg = state.0.lock().unwrap_or_else(|e| e.into_inner());
     snapshot(&cfg)
+}
+
+/// The name this PC should offer in a space. The Windows computer name is a
+/// sensible default and saves the user from typing a device name they already
+/// have. The UI only calls this when nothing was remembered.
+#[tauri::command]
+pub fn space_device_name() -> String {
+    std::env::var("COMPUTERNAME")
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty() && s.chars().count() <= 40)
+        .unwrap_or_else(|| "Windows PC".to_string())
 }
 
 #[tauri::command]
