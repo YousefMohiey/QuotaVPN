@@ -147,7 +147,7 @@ impl Switch {
         if link_only(frame) {
             return Route::Drop;
         }
-        if local_multicast(frame) {
+        if local_multicast(frame) || service_udp(frame) {
             return Route::Drop;
         }
         let src = mac(&frame[6..12]);
@@ -196,7 +196,7 @@ impl Switch {
         if frame.len() < HEADER || frame.len() > MAX_FRAME || link_only(frame) {
             return false;
         }
-        if local_multicast(frame) {
+        if local_multicast(frame) || service_udp(frame) {
             return false;
         }
         match self.buckets.get_mut(peer) {
@@ -258,6 +258,26 @@ fn local_multicast(frame: &[u8]) -> bool {
     }
     let dst = [frame[30], frame[31], frame[32], frame[33]];
     (dst[0] == 224 && dst[1] == 0 && dst[2] == 0) || dst == [239, 255, 255, 250]
+}
+
+/// NetBIOS, DHCP, SSDP, mDNS and LLMNR are machine chatter, not game traffic.
+/// Flooding them at a few hundred frames a second is what put three seconds of
+/// queueing in front of the ping replies.
+fn service_udp(frame: &[u8]) -> bool {
+    if frame.len() < 38 || frame[12] != 0x08 || frame[13] != 0x00 || frame[23] != 17 {
+        return false;
+    }
+    let ihl = ((frame[14] & 0x0F) as usize) * 4;
+    let udp = 14 + ihl;
+    if frame.len() < udp + 4 {
+        return false;
+    }
+    let source = u16::from_be_bytes([frame[udp], frame[udp + 1]]);
+    let destination = u16::from_be_bytes([frame[udp + 2], frame[udp + 3]]);
+    matches!(
+        destination,
+        67 | 68 | 137 | 138 | 1900 | 5353 | 5355
+    ) || matches!(source, 67 | 68)
 }
 
 /// FNV-1a over the frame. Only needs to be good enough to spot the same frame
@@ -455,6 +475,25 @@ mod tests {
         out[30..34].copy_from_slice(&dst_ip);
         out[34] = tag;
         out
+    }
+
+    #[test]
+    fn service_udp_noise_is_not_flooded() {
+        let mut switch = Switch::new(A, 1);
+        let mut ssdp = vec![0u8; 42];
+        ssdp[0..6].copy_from_slice(&[0xFF; 6]);
+        ssdp[6..12].copy_from_slice(&B);
+        ssdp[12] = 0x08;
+        ssdp[13] = 0x00;
+        ssdp[14] = 0x45;
+        ssdp[23] = 17;
+        ssdp[34..36].copy_from_slice(&5000u16.to_be_bytes());
+        ssdp[36..38].copy_from_slice(&1900u16.to_be_bytes());
+        assert_eq!(switch.route(&ssdp), Route::Drop);
+
+        let mut game = ssdp.clone();
+        game[36..38].copy_from_slice(&7777u16.to_be_bytes());
+        assert_eq!(switch.route(&game), Route::Flood(vec![0]));
     }
 
     #[test]
