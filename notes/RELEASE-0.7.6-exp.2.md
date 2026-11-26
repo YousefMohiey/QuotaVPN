@@ -52,6 +52,27 @@ Do not reuse a space that was created on a LAN coordinator.
 If the friend's router refuses the outbound connection, the relay is the next
 fallback.
 
+## Smart App Control
+
+The installer and the app are unsigned. Windows 11 Smart App Control blocks
+unsigned apps, and it has no per-app allow.
+
+If Windows says "Smart App Control has blocked this app":
+
+1. Run Windows Update first. Current Windows 11 can switch Smart App Control
+   off and back on. Older builds may need a reset before it can be enabled
+   again.
+2. Open Windows Security, then App & browser control, then Smart App Control
+   settings, and select Off.
+3. Run the installer. If SmartScreen still warns, choose More info, then Run
+   anyway.
+4. Check the installer SHA-256 before running it.
+
+Leave Smart App Control off while using this build. Turning it back on will
+likely block the unsigned app again. A build signed with a certificate from a
+CA in the Microsoft Trusted Root Program is the only way to run with Smart App
+Control on.
+
 ## Notes
 
 - `0.7.6-exp.1` is deleted. This is the only experimental release.
@@ -60,4 +81,6 @@ fallback.
   stable feed is 0.7.5, which is lower, so the check reports up to date. To return
   now, run the 0.7.5 installer. The next stable release, 0.7.6, sorts above
   `0.7.6-exp.2` and will be offered on the Stable channel normally.
+- Installer SHA-256:
+  `3CBFE74955A80C00305038A9D422FC1292AAF7136FC7C8FAFFA73E9C176743D8`
 - The installer is unsigned and will trigger SmartScreen.
