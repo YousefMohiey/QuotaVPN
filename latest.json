@@ -1,12 +1,12 @@
 {
-    "version":  "0.7.6-exp.5",
-    "build":  "977351e",
-    "notes":  "The LAN button now stops any running engine, clears a stale adapter address, reconfigures and connects in one press. One click joins the network; no separate install or commands. Layer 3 is unchanged. Windows only. The installer is unsigned.",
-    "pub_date":  "2026-11-26T14:47:18Z",
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSUtsQXBVbytyeU40RmZRLytIYjU4cWpOQU0xb1VscEcyQ3pZNUY3TDFxM2thSERKc3B0TitwZEJ0cHV3ZkluclZ1VURvanhkUTU4SExBTERoS3NieHdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NzI1Mzc0CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjVfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjAuNy42LWV4cC41ClUyTXVBQ2FuUDQwUnlxVFZtV2dSTHNQSlJsaUVWRjFHSGUyanE2T3R0NW1YTFM0RGV4ZXBYbTYzdnVsa0FRNUdZdnRDeG5tbXRtaENUNjNqZkVZakJ3PT0K",
-                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.6-exp.5/QuotaVPN_0.7.6-exp.5_x64-setup.exe"
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSUxnS3hJZEYyRGFTRUwyU0F1T3M1WGc0YUkyd3NDdlhFY2FLT3pyMWtCZ3l2eUQyTXVMWDJYa0kySjNidENDWDVPcEdrd1VzYlZqSDV4a2xMYnByU0FvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NzI5MDA0CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjZfeDY0LXNldHVwLmV4ZQp0QmVWN0ZXRW1Fd2F3bWR3YUZtKzZUZSt6UWU4N3libXpPc2dQcE5vUTA0RlFVOW1pTEdDQVEyMHZoa2VzeHR1emtKbmpVbW03MUpiN1ArdVBFY21Ddz09Cg==",
+                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.6-exp.6/QuotaVPN_0.7.6-exp.6_x64-setup.exe"
                                          }
-                  }
+                  },
+    "pub_date":  "2026-11-26T21:39:12Z",
+    "build":  "4c17eca",
+    "version":  "0.7.6-exp.6",
+    "notes":  "Spaces is rebuilt around the LAN with live peers, transport and latency, four themes, and a cleaner setup. The bundled engine falls back to public STUN for a direct UDP path when the server has no UES hosts. Windows only. The installer is unsigned."
 }

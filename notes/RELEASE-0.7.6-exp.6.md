@@ -52,3 +52,8 @@ The LAN card shows this PC once, then each live peer with transport and RTT.
 - The game matrix (Warcraft III, Age of Empires II, Terraria, Minecraft,
   OpenTTD, SMB/RDP names) has not run yet.
 - Smart App Control still blocks an unsigned installer. That is unchanged.
+
+## Build
+
+- Build stamp: `4c17eca`
+- Installer SHA-256: `28D3927CFF00CFC74198F59EBE66963C1510210FE33734A10534EA22E1DAE02F`
