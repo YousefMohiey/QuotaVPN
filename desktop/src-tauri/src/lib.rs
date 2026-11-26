@@ -3038,14 +3038,65 @@ async fn speedtest_cli(app: tauri::AppHandle) -> Option<ookla::CliResult> {
         .flatten()
 }
 
-fn newer(latest: &str, current: &str) -> bool {
-    // Numeric dot-part compare, no semver crate needed.
-    let p = |s: &str| {
-        s.split('.')
-            .map(|x| x.parse::<u64>().unwrap_or(0))
-            .collect::<Vec<_>>()
+fn parse_version(text: &str) -> ((u64, u64, u64), Option<Vec<String>>) {
+    let text = text.trim().trim_start_matches(['v', 'V']);
+    let (core, pre) = match text.split_once('-') {
+        Some((core, pre)) => (
+            core,
+            Some(pre.split('.').map(|part| part.to_string()).collect::<Vec<_>>()),
+        ),
+        None => (text, None),
     };
-    p(latest) > p(current)
+    let mut parts = core.split('.').map(|part| {
+        part.chars()
+            .take_while(|c| c.is_ascii_digit())
+            .collect::<String>()
+            .parse::<u64>()
+            .unwrap_or(0)
+    });
+    (
+        (
+            parts.next().unwrap_or(0),
+            parts.next().unwrap_or(0),
+            parts.next().unwrap_or(0),
+        ),
+        pre,
+    )
+}
+
+fn compare_pre(a: &[String], b: &[String]) -> std::cmp::Ordering {
+    for (left, right) in a.iter().zip(b) {
+        let left_num = left.parse::<u64>().ok();
+        let right_num = right.parse::<u64>().ok();
+        let order = match (left_num, right_num) {
+            (Some(l), Some(r)) => l.cmp(&r),
+            (Some(_), None) => std::cmp::Ordering::Less,
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            (None, None) => left.cmp(right),
+        };
+        if order != std::cmp::Ordering::Equal {
+            return order;
+        }
+    }
+    a.len().cmp(&b.len())
+}
+
+fn compare_version(latest: &str, current: &str) -> std::cmp::Ordering {
+    let (latest_core, latest_pre) = parse_version(latest);
+    let (current_core, current_pre) = parse_version(current);
+    match latest_core.cmp(&current_core) {
+        std::cmp::Ordering::Equal => match (latest_pre, current_pre) {
+            (None, None) => std::cmp::Ordering::Equal,
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            (Some(_), None) => std::cmp::Ordering::Less,
+            (Some(a), Some(b)) => compare_pre(&a, &b),
+        },
+        other => other,
+    }
+}
+
+fn newer(latest: &str, current: &str) -> bool {
+    compare_version(latest, current) == std::cmp::Ordering::Greater
 }
 
 /// Short git hash of the build this binary came from (stamped in by
@@ -4853,5 +4904,16 @@ mod tests {
             "unexpected QC_BUILD value: {stamp:?}"
         );
         println!("QC_BUILD = {stamp}");
+    }
+
+    #[test]
+    fn prerelease_sorts_below_the_release() {
+        assert!(super::newer("0.7.6-exp.1", "0.7.5"));
+        assert!(super::newer("0.7.6", "0.7.6-exp.1"));
+        assert!(!super::newer("0.7.6-exp.1", "0.7.6"));
+        assert!(super::newer("0.7.6-exp.2", "0.7.6-exp.1"));
+        assert!(!super::newer("0.7.6-exp.1", "0.7.6-exp.2"));
+        assert!(super::newer("0.7.10", "0.7.9"));
+        assert!(!super::newer("0.7.6", "0.7.6"));
     }
 }

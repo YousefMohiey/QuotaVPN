@@ -147,6 +147,12 @@
 > public 8444 port, this PC connected out, Noise handshake completed, `QuotaSpace8007` came up,
 > `ping 10.77.2.3` returned 4/4 at 97 to 137 ms, and the peer logged four echo frames. The friend
 > test remains. Notes are in `notes/RELEASE-0.7.16.md`.
+>
+> **0.7.6-exp.1, 26 November 2026:** Spaces redesigned as a single network console (rail, orbit,
+> status band, inspector) with motion. The experimental line is now one pre-release of 0.7.6; the
+> version parser handles semver pre-releases so a stable 0.7.6 sorts above 0.7.6-exp.1. The old
+> experimental releases 0.7.6 through 0.7.16 were deleted. Notes are in
+> `notes/RELEASE-0.7.6-exp.1.md`.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.

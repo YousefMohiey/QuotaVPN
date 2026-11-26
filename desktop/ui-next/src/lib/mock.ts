@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Browser fallback so the UI runs (and can be screenshotted) without the
  * Rust engine: `npm run dev` in a plain browser, or the preview harness.
  * Values mirror the shapes in lib.rs; the tunnel "runs" so connected-state
@@ -51,12 +51,12 @@ let demoSpaces: Space[] = EMPTY_SPACES ? [] : [
 ]
 let demoSpaceActive = EMPTY_SPACES ? "" : "K7M2Q9X4"
 let demoDirect: DirectStatus = {
-  running: false,
+  running: true,
   starting: false,
-  space: "",
-  peer: "",
-  address: "",
-  adapter: "",
+  space: "K7M2Q9X4",
+  peer: "Sara-Laptop",
+  address: "10.77.3.7",
+  adapter: "QuotaSpaceK7M2",
   error: "",
 }
 // What the live tunnel actually loaded. Changing the selected space does not
@@ -524,3 +524,4 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
 }
 
 export const mockElapsed = () => Math.round((Date.now() - started) / 1000)
+
