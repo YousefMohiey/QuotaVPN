@@ -160,6 +160,13 @@
 > was saved config from local testing, not a code default. The build stamp is written to the
 > engine log at startup, so a shipped binary carries its identity. Stable and the phone stay on
 > 0.7.5. Notes are in `notes/RELEASE-0.7.6-exp.2.md`.
+>
+> **0.7.6-exp.3, 26 November 2026:** fixes the Windows-to-Windows direct TCP pairing. The joiner
+> used to drop a successful punch, then fail to bind the listener because the punch socket still
+> held the local port (10048); the owner was left sending on the closed connection (10057). The
+> joiner now keeps the punched stream and only listens when the punch fails. TCP_NODELAY is set on
+> the direct stream. This is the only experimental release; stable and the phone stay on 0.7.5.
+> Notes are in `notes/RELEASE-0.7.6-exp.3.md`.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.
