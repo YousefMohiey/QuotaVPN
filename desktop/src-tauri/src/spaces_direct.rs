@@ -216,6 +216,10 @@ fn tcp_gateway() -> Result<TcpGateway, String> {
 
 fn gateway_on(port: u16) -> Result<TcpGateway, String> {
     let local = SocketAddr::from((std::net::Ipv4Addr::UNSPECIFIED, port));
+    // The STUN connection must bind first. On Windows, binding it after the
+    // listener takes the port and the listener disappears from `Listen`, which
+    // is exactly what killed 0.7.12. The connected socket keeps the mapping.
+    let (helper, public) = connect_stun(local)?;
     let listener = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP))
         .map_err(|e| format!("tcp listener: {e}"))?;
     listener
@@ -232,29 +236,16 @@ fn gateway_on(port: u16) -> Result<TcpGateway, String> {
         .set_nonblocking(true)
         .map_err(|e| format!("tcp listener: {e}"))?;
 
-    let (helper, public) = connect_stun(local)?;
     let stop = Arc::new(AtomicBool::new(false));
     let stop_for = stop.clone();
     let helper = std::thread::spawn(move || {
-        let mut current = Some(helper);
+        // Hold the STUN stream. Rebinding here would take the port back from
+        // the listener; the session is established long before the mapping
+        // expires.
         while !stop_for.load(Ordering::Relaxed) {
-            if current.is_none() {
-                current = connect_stun(local).ok().map(|(stream, _)| stream);
-            }
-            if let Some(stream) = current.as_ref() {
-                let mut probe = [0u8; 1];
-                stream.set_nonblocking(true).ok();
-                match stream.peek(&mut probe) {
-                    Ok(0) => current = None,
-                    Ok(_) => {}
-                    Err(e)
-                        if e.kind() == std::io::ErrorKind::WouldBlock
-                            || e.kind() == std::io::ErrorKind::TimedOut => {}
-                    Err(_) => current = None,
-                }
-            }
             std::thread::sleep(Duration::from_millis(800));
         }
+        drop(helper);
     });
     Ok(TcpGateway {
         listener,

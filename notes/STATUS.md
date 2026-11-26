@@ -124,6 +124,11 @@
 > listener port; the owner punches from that port and accepts, and the joining member connects
 > from its own listener port with retries. This is symmetric TCP hole punching, the same shape as
 > Radmin. Notes are in `notes/RELEASE-0.7.12.md`.
+>
+> **Experimental 0.7.13, 26 November 2026:** 0.7.12 bound the STUN helper after the listener, and
+> Windows gave the port to the helper (`Bound` and `Established`, no `Listen`). The order is now
+> STUN first, then the listener, then the punch; the helper holds the STUN stream without
+> rebinding. Notes are in `notes/RELEASE-0.7.13.md`.
 
 Maintained state of record: `notes/HANDOFF.md` (v0.3.2, Sept 21 2026). This page is a
 historical snapshot; where it disagrees with HANDOFF.md, HANDOFF.md wins.
