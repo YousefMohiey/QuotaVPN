@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+﻿import { useCallback, useEffect, useMemo, useState } from "react"
 import { api, type LanSpace, type OpenRadPeer, type OpenRadStatus } from "@/lib/ipc"
 import SpacesConsole from "./SpacesConsole"
 
@@ -104,34 +104,10 @@ export function Spaces() {
     }
   }, [])
 
-  const selectSpace = async (id: string) => {
+  const selectSpace = (id: string) => {
     setSelected(id)
     setLanPeers([])
-    if (lan?.phase !== "connected") return
-    setBusy(true)
-    setError("")
-    try {
-      const status = await api.openradSwitch(id)
-      setLan(status)
-      const peers = await api.openradPeers()
-      setLanPeers(Array.isArray(peers) ? peers : [])
-    } catch (e) {
-      setError(messageOf(e))
-    } finally {
-      setBusy(false)
-    }
   }
-
-  // A restart can leave the engine on the last network while the stored
-  // selection points at another space. Move it once the first status lands.
-  const aligned = useRef(false)
-  useEffect(() => {
-    if (aligned.current) return
-    if (!selectedSpace || !lan || lan.phase !== "connected") return
-    const joined = lan.snapshot?.networks?.[0]?.name ?? ""
-    aligned.current = true
-    if (joined && joined !== selectedSpace.network) void selectSpace(selectedSpace.id)
-  }, [selectedSpace, lan])
 
   const connectLan = async () => {
     if (!selectedSpace) return
@@ -185,20 +161,9 @@ export function Spaces() {
     setError("")
     await api.openradDeleteSpace(space.id)
     const list = await loadSpaces()
-    const fallback = list.find((row) => row.default) ?? list.find((row) => row.id !== space.id) ?? null
-    if (!fallback) return
-    setSelected(fallback.id)
+    const fallback = list.find((row) => row.id !== space.id) ?? null
+    setSelected(fallback?.id ?? "")
     setLanPeers([])
-    if (lan?.phase === "connected") {
-      try {
-        const status = await api.openradSwitch(fallback.id)
-        setLan(status)
-        const peers = await api.openradPeers()
-        setLanPeers(Array.isArray(peers) ? peers : [])
-      } catch (e) {
-        setError(messageOf(e))
-      }
-    }
   }
 
   return (

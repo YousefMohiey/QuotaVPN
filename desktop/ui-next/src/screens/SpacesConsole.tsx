@@ -4,14 +4,11 @@ import {
   Cable,
   Check,
   Copy,
-  Crown,
-  Gamepad2,
   Loader2,
   LogIn,
   Monitor,
   Plus,
   Power,
-  ShieldCheck,
   Trash2,
   X,
 } from "@/components/icons"
@@ -40,19 +37,6 @@ type Props = {
 
 function initial(name: string): string {
   return (name.trim()[0] ?? "?").toUpperCase()
-}
-
-function Chip({ children, mono = false }: { children: React.ReactNode; mono?: boolean }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-2 rounded-lg border border-line bg-[var(--surface-2)] px-3 py-2 text-xs text-txt2",
-        mono && "font-mono",
-      )}
-    >
-      {children}
-    </span>
-  )
 }
 
 function DialogHead({ title, body }: { title: string; body: string }) {
@@ -134,34 +118,18 @@ function LanPanel({
   const { t } = useI18n()
   const calm = useReducedMotion()
   const joinedName = lan?.snapshot?.networks?.[0]?.name ?? ""
-  const sameNetwork = !space || joinedName === space.network
-  const on = lan?.phase === "connected" && sameNetwork
-  const switching = lan?.phase === "connected" && !!space && joinedName !== space.network
+  const on = lan?.phase === "connected" && !!space && joinedName === space.network
   const ready = on && peers.length > 0
   const vip = lan?.snapshot?.vip ?? ""
   const device = lan?.node_name ?? ""
-  const word = switching
-    ? t("lanSpaceSwitching")
-    : on
-      ? peers.length > 0
-        ? t("lanReady")
-        : t("lanWaitPeer")
-      : busy
-        ? t("lanConnectingShort")
-        : error
-          ? t("lanFailed")
-          : t("lanOff")
-  const hint = switching
-    ? t("lanSpaceSwitchingHint")
-    : on
-      ? peers.length > 0
-        ? t("lanReadyHint")
-        : t("lanWaitHint")
-      : busy
-        ? t("lanBusyHint")
-        : error
-          ? t("lanFailedHint")
-          : t("lanOffHint")
+  const word = on
+    ? peers.length > 0
+      ? t("lanConnected")
+      : t("lanWaiting")
+    : busy
+      ? t("lanConnectingShort")
+      : t("lanOff")
+  const hint = on ? (peers.length > 0 ? "" : t("lanWaitHint")) : t("lanOffHint")
   const selfPeer: OpenRadPeer | null = on
     ? {
         rid: "self",
@@ -183,17 +151,18 @@ function LanPanel({
                 "size-1.5 rounded-full",
                 ready
                   ? "bg-[var(--green)]"
-                  : busy || switching
+                  : busy
                     ? "bg-[var(--amber)]"
                     : on
                       ? "bg-[var(--brand-strong)]"
                       : "bg-txt3/50",
               )}
             />
-            {t("lanTitle")}
             {space ? (
-              <span className="font-medium normal-case tracking-normal text-txt2">{space.name}</span>
-            ) : null}
+              <span className="font-semibold normal-case tracking-normal text-txt">{space.name}</span>
+            ) : (
+              t("lanTitle")
+            )}
             {device ? (
               <span className="font-medium normal-case tracking-normal text-txt3/80">{device}</span>
             ) : null}
@@ -213,11 +182,9 @@ function LanPanel({
                 "mt-3 font-display text-3xl font-semibold leading-tight tracking-[-0.03em]",
                 ready
                   ? "text-[var(--green)]"
-                  : on || switching
+                  : on
                     ? "text-brand-strong"
-                    : error
-                      ? "text-[var(--red)]"
-                      : "text-txt",
+                    : "text-txt",
               )}
             >
               {word}
@@ -229,15 +196,8 @@ function LanPanel({
             <p className="mt-2 max-w-[46ch] break-words text-sm leading-relaxed text-[var(--red)]">{error}</p>
           ) : null}
 
-          {on ? (
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <Chip>{device || t("spacesThisPc")}</Chip>
-              <Chip mono>{vip}</Chip>
-            </div>
-          ) : null}
-
           <div className="mt-6 flex flex-wrap items-center gap-3">
-            {lan?.phase === "connected" ? (
+            {on ? (
               <button
                 type="button"
                 onClick={onStop}
@@ -259,12 +219,6 @@ function LanPanel({
               </button>
             )}
           </div>
-          {on ? (
-            <p className="mt-2 flex items-center gap-2 text-xs text-txt3">
-              <ShieldCheck className="size-3.5" aria-hidden />
-              {t("lanTrust")}
-            </p>
-          ) : null}
         </div>
 
         <div className="w-full shrink-0 lg:w-[310px]">
@@ -288,11 +242,7 @@ function LanPanel({
               </div>
             ) : (
               <div className="m-1 grid place-items-center rounded-lg border border-dashed border-line px-4 py-6 text-center">
-                {switching ? (
-                  <Loader2 className="size-5 animate-spin text-txt3" aria-hidden />
-                ) : (
-                  <Cable className="size-5 text-txt3" aria-hidden />
-                )}
+                <Cable className="size-5 text-txt3" aria-hidden />
                 <p className="mt-2 text-xs leading-relaxed text-txt3">{t("lanPeersOff")}</p>
               </div>
             )}
@@ -573,7 +523,6 @@ export default function SpacesConsole(props: Props) {
                   )}
                 />
                 <span className="truncate">{space.name}</span>
-                {space.owner ? <Crown className="size-3 shrink-0 text-[var(--amber)]" aria-hidden /> : null}
               </button>
             )
           })}
@@ -650,51 +599,17 @@ export default function SpacesConsole(props: Props) {
                 {selected.invite}
               </code>
               <p className="mt-2 text-xs leading-relaxed text-txt3">{t("lanSpaceInviteHint")}</p>
-              <div className="mt-3 flex items-center gap-2 text-xs text-txt3">
-                <span className="size-1.5 rounded-full bg-[var(--brand-strong)]" />
-                {selected.owner ? t("spacesOwner") : t("lanSpaceMember")}
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-line bg-[var(--panel)] p-4 shadow-[var(--sh-1)]">
-              <div className="flex items-center gap-2">
-                <Gamepad2 className="size-4 text-brand-strong" aria-hidden />
-                <h2 className="text-sm font-semibold text-txt">{t("lanPlayTitle")}</h2>
-              </div>
-              <ol className="mt-4 grid gap-4">
-                {[
-                  { title: t("lanStepOne"), body: t("lanStepOneBody") },
-                  { title: t("lanStepTwo"), body: t("lanStepTwoBody") },
-                  { title: t("lanStepThree"), body: t("lanStepThreeBody") },
-                ].map((step, index) => (
-                  <li key={step.title} className="flex gap-3">
-                    <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[var(--brand-bg)] font-mono text-xs font-semibold text-brand-strong">
-                      {index + 1}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-txt">{step.title}</p>
-                      <p className="mt-0.5 text-xs leading-relaxed text-txt3">{step.body}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-              <p className="mt-4 border-t border-line pt-4 text-xs leading-relaxed text-txt3">
-                {t("lanPlayGames")}
-              </p>
             </section>
 
             <section className="rounded-2xl border border-line bg-[var(--panel)] p-4">
-              <p className="text-xs leading-relaxed text-txt3">{t("lanSpaceOnly")}</p>
-              {!selected.default ? (
-                <button
-                  type="button"
-                  onClick={() => setRemove(selected)}
-                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-line px-3 py-3 text-sm text-txt3 transition-colors duration-200 hover:border-[var(--red-line)] hover:bg-[var(--red-bg)] hover:text-[var(--red)]"
-                >
-                  <Trash2 className="size-4" aria-hidden />
-                  {selected.owner ? t("lanSpaceDelete") : t("lanSpaceLeave")}
-                </button>
-              ) : null}
+              <button
+                type="button"
+                onClick={() => setRemove(selected)}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-line px-3 py-3 text-sm text-txt3 transition-colors duration-200 hover:border-[var(--red-line)] hover:bg-[var(--red-bg)] hover:text-[var(--red)]"
+              >
+                <Trash2 className="size-4" aria-hidden />
+                {t("lanSpaceRemove")}
+              </button>
             </section>
           </aside>
         </div>

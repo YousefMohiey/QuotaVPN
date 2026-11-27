@@ -7,7 +7,7 @@
 //! previous desktop app untouched.
 
 use quotacards::{
-    config::{AppConfig, Card, LanSpace, DEFAULT_HOST},
+    config::{AppConfig, Card, DEFAULT_HOST},
     vpn,
 };
 use std::sync::Mutex;
@@ -159,8 +159,8 @@ fn initial_config() -> AppConfig {
     // They are no longer shown and must never be attached to a session: an
     // active space puts a second 10.77.x address on the PC beside the LAN's
     // 26.x address, and the game sees the wrong one. Remove the old records
-    // outright and retire the public QuotaVPN default: the baseline space is
-    // private now and is created on the first connect.
+    // outright and retire the public QuotaVPN default. There is no implicit
+    // baseline any more: the user creates the first space.
     if !cfg.spaces.is_empty() || !cfg.active_space.is_empty() || !cfg.tunnel_space.is_empty() {
         cfg.spaces.clear();
         cfg.active_space.clear();
@@ -173,24 +173,16 @@ fn initial_config() -> AppConfig {
     if cfg.lan_spaces.len() != before {
         dirty = true;
     }
-    let bad_primary = cfg.lan_spaces.iter().any(|space| {
-        space.is_default()
-            && (space.network.is_empty()
-                || !space.network.starts_with("qs-")
-                || (space.password.is_empty() && space.password_sealed.is_empty()))
-    });
-    if bad_primary {
+    // The app used to add one QuotaSpace baseline on its own. The user asked
+    // for that to go, so any record carrying the old default flag is dropped
+    // once. Their own spaces stay.
+    let had_default = cfg.lan_spaces.iter().any(|space| space.is_default());
+    if had_default {
         cfg.lan_spaces.retain(|space| !space.is_default());
         dirty = true;
     }
-    if !cfg.lan_spaces.iter().any(LanSpace::is_default) {
-        cfg.lan_spaces.insert(0, LanSpace::default_space());
-        dirty = true;
-    }
     for space in &mut cfg.lan_spaces {
-        if space.is_default() {
-            space.owner = true;
-        } else if !space.provisioned {
+        if !space.provisioned {
             // Records written before the provisioning flag was stored came
             // from a successful create or join, so their network exists.
             space.provisioned = true;
