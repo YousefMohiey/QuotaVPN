@@ -85,7 +85,9 @@ if [ -n "${QC_SIGN_THUMBPRINT:-}" ]; then
     -Installer "$SETUP" -Thumbprint "$QC_SIGN_THUMBPRINT" -IncludeSigned
   # The updater signature is over the final installer bytes. The bundler wrote
   # one before this last Authenticode pass; rewrite it so the feed and the
-  # installer agree.
-  npx --yes @tauri-apps/cli@2 signer sign \
+  # installer agree. Clear the env key so the CLI reads the same path through
+  # -f instead of treating the env value as a second, conflicting key.
+  env -u TAURI_SIGNING_PRIVATE_KEY -u TAURI_SIGNING_PRIVATE_KEY_PASSWORD \
+    npx --yes @tauri-apps/cli@2 signer sign \
     -f "$TAURI_SIGNING_PRIVATE_KEY" -p "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" "$SETUP"
 fi

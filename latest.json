@@ -1,12 +1,12 @@
 {
-    "version":  "0.7.6-exp.8",
-    "notes":  "Private QuotaSpace spaces: each space is its own network, the baseline is private, old public QuotaVPN is retired, space passwords are DPAPI-sealed, switching cannot mix spaces, and the card restore keeps Connect and Valorant working. QuotaVPN.exe and QuotaSpace.exe are signed with the local YousefMohiey certificate. Windows experimental build; the phone stays at 0.7.5.",
-    "pub_date":  "2026-11-27T21:33:05Z",
+    "version":  "0.7.6-exp.9",
+    "notes":  "Spaces is simpler: no automatic default space, no auto-connect, and the button says Connect. Create the first space, press Connect, and share its invite. The old default network and records are gone. Private spaces, sealed passwords, manual switching, and the YousefMohiey signature remain. Windows experimental build; the phone stays at 0.7.5.",
+    "pub_date":  "2026-11-27T21:51:10Z",
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSUFhdTZDWGlDL1EzbVFRMFgzbEdtMmJqbVZpT2M3SHFxclcrUXVoQ3RGVDBYaWxTU01SKzFVZXBxY2MraTJaUFh4V1VheGFLU29udWNhTU02a2FLd1EwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1ODE1MTc4CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjhfeDY0LXNldHVwLmV4ZQorZUxCMEhQdE1WRERFNUMvb0V1eFRlc1NwVmFsZkttdThlSWZGZENlZmVFRDR6SWdiblN3SElwSWYwSmlMYWxqejMzaERUMjA2M0pEc0xHZ1BEYUpEdz09Cg==",
-                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.6-exp.8/QuotaVPN_0.7.6-exp.8_x64-setup.exe"
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSUNydnJsUWhES3JQV3N1bHZ6cGd3eEZYaCtQajNkQ2J1RUZXM1M3VjBVcXRnMGdaektnMFh6anFzVjlLUldhUHpRcUV2MDFDcEtjL09OQTdVYS9XTUFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1ODE2MjY0CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjlfeDY0LXNldHVwLmV4ZQptL1ZHME42YmNienJZOXlINW1BVVV3QXlYSDZrNXFBWi92dWVBM0Y4d0RhOExOR1R5a3d4NXhCUjhlTkswVXhneElQY1lma2dreUs2cjY0dDhWeGlCQT09Cg==",
+                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.6-exp.9/QuotaVPN_0.7.6-exp.9_x64-setup.exe"
                                          }
                   },
-    "build":  "bbf61b5"
+    "build":  "9f55b5c"
 }
