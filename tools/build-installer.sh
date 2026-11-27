@@ -70,10 +70,22 @@ npx --yes @tauri-apps/cli@2 build "${CONFIG_ARGS[@]}" "$@"
 
 # The bundler signs the app binary and the installer. The payload DLLs and the
 # bundled LAN engine have to be signed here, and the installer is signed again
-# once they are in place. Only runs when a certificate is set.
+# once they are in place. A test session can leave the engine running, and
+# signtool cannot sign a locked file, so ask it to stop first. Only runs when a
+# certificate is set.
 if [ -n "${QC_SIGN_THUMBPRINT:-}" ]; then
   VERSION="$(node -p "require('./src-tauri/tauri.conf.json').version")"
   SETUP="$(pwd)/src-tauri/target/release/bundle/nsis/QuotaVPN_${VERSION}_x64-setup.exe"
+  ENGINE="$(pwd)/src-tauri/target/release/openrad/QuotaSpace.exe"
+  if [ -x "$ENGINE" ]; then
+    "$ENGINE" stop >/dev/null 2>&1 || true
+    sleep 1
+  fi
   powershell -NoProfile -ExecutionPolicy Bypass -File "$(pwd)/../tools/sign-release.ps1" \
     -Installer "$SETUP" -Thumbprint "$QC_SIGN_THUMBPRINT" -IncludeSigned
+  # The updater signature is over the final installer bytes. The bundler wrote
+  # one before this last Authenticode pass; rewrite it so the feed and the
+  # installer agree.
+  npx --yes @tauri-apps/cli@2 signer sign \
+    -f "$TAURI_SIGNING_PRIVATE_KEY" -p "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" "$SETUP"
 fi
