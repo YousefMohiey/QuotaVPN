@@ -25,9 +25,17 @@ $appPath = if ([IO.Path]::IsPathRooted($AppDir)) { $AppDir } else { Join-Path $r
 if (-not (Test-Path -LiteralPath $appPath)) { throw "missing app directory: $appPath" }
 
 $targets = @()
-$targets += Get-ChildItem $appPath -Filter *.exe -File -ErrorAction SilentlyContinue
+$targets += Get-ChildItem $appPath -Filter *.exe -File -ErrorAction SilentlyContinue |
+  Where-Object { $_.Name -notin @("QuotaVPN-mcp.exe", "QuotaVPN-normal-backup.exe") }
 $targets += Get-ChildItem $appPath -Filter *.dll -File -ErrorAction SilentlyContinue |
   Where-Object { $_.Name -ne "wintun.dll" }
+# The bundled LAN engine lives in its own folder and is launched as the
+# QuotaSpace process, so it carries the same publisher as the app. The old
+# name is kept for a tree that has not been renamed yet.
+foreach ($name in @("QuotaSpace.exe", "openrad.exe")) {
+  $engine = Join-Path $appPath "openrad\$name"
+  if (Test-Path -LiteralPath $engine) { $targets += Get-Item -LiteralPath $engine }
+}
 
 if ($Installer) {
   $installerPath = if ([IO.Path]::IsPathRooted($Installer)) { $Installer } else { Join-Path $root $Installer }

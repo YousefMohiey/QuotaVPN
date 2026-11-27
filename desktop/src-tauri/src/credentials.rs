@@ -6,6 +6,7 @@
 //! secret: the whole map is sealed with `CryptProtectData` for the current
 //! Windows user before it reaches disk.
 
+use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
 use quotacards::{
     config::{AppConfig, Card, DEFAULT_HOST},
     qvreg,
@@ -231,6 +232,55 @@ pub fn has(uuid: &str) -> bool {
     load().map(|map| map.contains_key(&uuid)).unwrap_or(false)
 }
 
+/// Seal arbitrary text for this Windows user. The QuotaSpace network password
+/// uses the same DPAPI protection as the card credentials, so a copied profile
+/// cannot hand someone a working invite.
+pub fn seal_text(text: &str) -> Result<String, String> {
+    let sealed = dpapi::protect(text.as_bytes()).ok_or("the value could not be sealed")?;
+    Ok(B64.encode(sealed))
+}
+
+pub fn open_text(text: &str) -> Result<String, String> {
+    let sealed = B64
+        .decode(text)
+        .map_err(|_| "the sealed value is damaged".to_string())?;
+    let plain = dpapi::unprotect(&sealed)
+        .ok_or("the sealed value could not be opened for this Windows user")?;
+    String::from_utf8(plain).map_err(|_| "the sealed value is not text".to_string())
+}
+
+/// Put a card back in the profile when its sealed credential survived but the
+/// card list did not. This is the honest recovery for a config that was reset
+/// or rewritten from a stale state: the credential is the part that cannot be
+/// recreated without the provider, so the card it belongs to must not vanish
+/// from the UI with it. The type and domain are the defaults import uses; the
+/// preset switch rewrites the domain on the first press anyway.
+fn merge_known_cards(cfg: &mut AppConfig, known: Vec<String>) -> usize {
+    let mut added = 0;
+    for uuid in known {
+        if cfg.cards.iter().any(|card| card.uuid == uuid) {
+            continue;
+        }
+        cfg.cards.push(Card {
+            name: "Gamerz".into(),
+            uuid,
+            card_type: "Gamerz".into(),
+            sni: "ea.com".into(),
+            wg_private: String::new(),
+            wg_addr: String::new(),
+            registered: false,
+        });
+        added += 1;
+    }
+    added
+}
+
+/// Restore every card the sealed store still knows. Returns how many were
+/// added so the caller can persist the healed profile once.
+pub fn restore_missing_cards(cfg: &mut AppConfig) -> usize {
+    merge_known_cards(cfg, uuids())
+}
+
 pub fn secret_for(uuid: &str) -> Result<Vec<u8>, String> {
     let uuid = qvreg::canonical_uuid(uuid).ok_or("that card id is malformed")?;
     let map = load()?;
@@ -412,4 +462,55 @@ pub fn selftest() -> Result<(), String> {
         return Err("DPAPI returned a different value".into());
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const UUID: &str = "04886278-28b2-42a1-ac66-186aa09e43e5";
+
+    #[test]
+    fn a_sealed_card_survives_an_empty_profile() {
+        let mut cfg = AppConfig::default();
+        assert_eq!(merge_known_cards(&mut cfg, vec![UUID.to_string()]), 1);
+        assert_eq!(cfg.cards.len(), 1);
+        assert_eq!(cfg.cards[0].uuid, UUID);
+        assert_eq!(cfg.cards[0].card_type, "Gamerz");
+        assert_eq!(cfg.cards[0].sni, "ea.com");
+        assert!(!cfg.cards[0].registered);
+    }
+
+    #[test]
+    fn restoring_twice_keeps_one_row_per_card() {
+        let mut cfg = AppConfig::default();
+        merge_known_cards(&mut cfg, vec![UUID.to_string()]);
+        assert_eq!(merge_known_cards(&mut cfg, vec![UUID.to_string()]), 0);
+        assert_eq!(cfg.cards.len(), 1);
+    }
+
+    #[test]
+    fn a_live_profile_keeps_its_own_card_fields() {
+        let mut cfg = AppConfig::default();
+        cfg.cards.push(Card {
+            name: "Streamerz".into(),
+            uuid: UUID.to_string(),
+            card_type: "Streamerz".into(),
+            sni: "youtube.com".into(),
+            wg_private: String::new(),
+            wg_addr: String::new(),
+            registered: true,
+        });
+        assert_eq!(merge_known_cards(&mut cfg, vec![UUID.to_string()]), 0);
+        assert_eq!(cfg.cards[0].name, "Streamerz");
+        assert_eq!(cfg.cards[0].sni, "youtube.com");
+    }
+
+    #[test]
+    fn a_quota_space_password_round_trips_through_dpapi() {
+        let plain = "0e597d25a1274188a3508d21";
+        let sealed = seal_text(plain).expect("seal the space password");
+        assert_ne!(sealed, plain);
+        assert_eq!(open_text(&sealed).expect("open the space password"), plain);
+    }
 }

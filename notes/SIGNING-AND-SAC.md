@@ -32,7 +32,7 @@ Three more facts that shape the answer:
 | --- | --- | --- | --- | --- | --- |
 | Turn SAC off | 0 | Unknown | off | yes | Working fix today, reversible |
 | Self-signed cert | 0 | CN of our cert | still blocks | cosmetic | UAC name, AV heuristics, dev testing |
-| WDAC supplement | 0 | whatever | SAC stays on but ignored the policy | tested, no | Deploys fine, never authorized |
+| WDAC supplement | 0 | whatever | SAC stays on, supplement allows | yes here | Per PC, by file name, unofficial |
 | Public OV cert | 99 USD and up | verified name | allows | yes | The durable answer |
 | SignPath Foundation | 0 | SignPath Foundation | allows | if accepted | Won't take this project right now |
 
@@ -69,56 +69,71 @@ work.
 ## Route B: local certificate (cosmetic, useful for testing)
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools/make-test-cert.ps1
+powershell -ExecutionPolicy Bypass -File tools/make-test-cert.ps1 -Publisher "YousefMohiey" `
+  -PfxPath C:\Tools\yousef-codesign.pfx -CerPath C:\Tools\yousef-codesign.cer
 powershell -ExecutionPolicy Bypass -File tools/sign-release.ps1 -Thumbprint <printed thumbprint>
 ```
 
 `make-test-cert.ps1` creates a 3 year self-signed code-signing certificate, keeps
 the PFX and its password in `C:\Tools` (never in the repo), exports the public
-`.cer`, and installs the root into `LocalMachine\Root` here. `sign-release.ps1`
-signs every payload binary and verifies the result; the PFX path is only needed
-on a machine where the certificate is not in the store.
+`.cer`, and installs the root and the Trusted Publisher entry in the local machine
+stores. `sign-release.ps1` signs every payload binary, including
+`openrad\QuotaSpace.exe`, and verifies the result; the PFX path is only needed on a
+machine where the certificate is not in the store.
 
-To make a second PC show the name in UAC, import `C:\Tools\qc-testsign.cer` into
-Trusted Root there. SAC still blocks the app on that PC.
+This tree uses `CN=YousefMohiey` at `C:\Tools\yousef-codesign.pfx`, thumbprint
+`BAC8A3DA8C882AA63293B311A0ED4E7117F21A18`. `tools/build-installer.sh` looks that
+certificate up by subject when `QC_SIGN_THUMBPRINT` is unset, so a local installer
+signs both `QuotaVPN.exe` and `QuotaSpace.exe` without extra setup. The version
+resource carries `CompanyName = YousefMohiey` as well, which is what the Windows
+Firewall prompt prints next to the file name.
 
-The publisher text is the certificate CN. `make-test-cert.ps1 -Publisher "Some
-Name"` changes it. It is free text, so any name can be printed, but the chain
-still ends at a root only our PCs trust.
+To make a second PC show the name in UAC and the firewall prompt, import
+`C:\Tools\yousef-codesign.cer` into Trusted Root and Trusted Publishers there. SAC
+still blocks the app on that PC.
 
-## Route C: WDAC supplement, tested and inert
+The publisher text is the certificate CN and the PE company name. It is free text,
+so any name can be printed, but the chain still ends at a root only our PCs trust.
 
-Attempted, deployed, and measured on this PC on 26 November 2026. Short version:
-the supplement installs and signs correctly, but Smart App Control never
-authorizes it, so it allows nothing. Microsoft's SAC base policy carries no
-`SupplementalPolicySigners` section, and there is no supported way to add our
-signer to it, so a policy of ours sits outside its circle of trust.
+## Route C: WDAC supplement
 
-What did work, and is kept in `tools/sac/`:
+This one is real, and it is what "even if not legit" looks like: keep SAC in
+enforcement, attach an extra App Control policy that lets the QuotaVPN payload
+run, and let SAC keep blocking everything else.
 
-- `quotavpn-supplemental.xml` compiles, and `citool -up` accepts it against the
-  real SAC base policy ID.
-- Policy signing needs the Code Integrity content type `1.3.6.1.4.1.311.79.1`.
-  With the `311.10.3.12` EKU OID as the content type, `citool` accepts the file
-  and reports success, but the policy stays unsigned. That cost an hour.
-- A policy signed by a locally rooted certificate is only authorized after a
-  reboot, so the trust anchors are read at boot.
-- `Tools/sac/deploy-supplemental.ps1` does compile, sign and deploy in one step.
+The mechanism exists on this build. The active SAC base policy IDs are
+`{0283AC0F-...}` (enforce) and `{1283AC0F-...}` (evaluation), and Windows
+already attaches its own supplemental policies to both (the Flight and Test
+supplements, `Is Authorized: true` under `citool -lp`). The shipped policy file
+at `%windir%\schemas\CodeIntegrity\ExamplePolicies\SmartAppControl.xml` carries
+`Enabled:Unsigned System Integrity Policy` and `Enabled:Allow Supplemental
+Policies`, so a supplement can attach and unsigned supplements are tolerated.
 
-What did not work: after the reboot, `citool -lp` reads
-`Is Authorized: false`, `Is Currently Enforced: false`, with a signed policy and
-an unsigned one. Under enforcement mode, an unsigned binary named exactly
-`QuotaVPN.exe` is still blocked with "An Application Control policy has blocked
-this file", while the installed copy only runs because the Intelligent Security
-Graph knows it.
+`tools/sac/quotavpn-supplemental.xml` is that supplement. It allows the payload
+by file name in both signing scenarios and can only add allows, so it cannot
+block anything.
 
-So the supplement is documentation-grade, not a fix. Making SAC plus an
-exception actually work means deploying the example policy under
-`%windir%\schemas\CodeIntegrity\ExamplePolicies\SmartAppControl.xml` as our own
-base policy (minus `Enabled:Conditional Windows Lockdown Policy`, which Microsoft
-documents as mandatory) and appending the allow rules to that. That is a real
-project: signed policy, per-PC deployment, and it replaces SAC rather than
-extending it.
+Deploy (elevated):
+
+```powershell
+citool.exe -up tools\sac\quotavpn-supplemental.xml
+citool.exe -lp    # ours must show Is Authorized: true
+```
+
+Remove:
+
+```powershell
+citool.exe -rp {7C1D2C40-9C2B-4F0E-9E1B-51F0C7A6D001}
+```
+
+Costs and caveats: the policy is unsigned and lives at machine scope, so any
+administrator can replace it. The rules are by file name, so another program
+called `QuotaVPN.exe` is allowed too. Microsoft can rebuild the SAC policy on a
+Windows update and drop the supplement; re-deploying fixes it. Per PC, not
+per app store download.
+
+Status: schema validation passes, deployment and the enforce-mode block test are
+recorded at the end of this note.
 
 ## Route D: a real certificate later
 
@@ -157,9 +172,3 @@ stays as delivered.
 with the Code Signing EKU and a DigiCert timestamp on a copy of `QuotaVPN.exe`,
 and `signtool verify /pa` returned zero warnings and zero errors with the root
 installed.
-
-Under enforcement mode on this PC, both an unsigned copy and a copy signed with
-the test certificate were blocked with "An Application Control policy has
-blocked this file". Only the already installed copy ran, on its Intelligent
-Security Graph reputation. That is the width of what a self-signed certificate
-buys: no SAC help, and a name in UAC on PCs where the root is installed.

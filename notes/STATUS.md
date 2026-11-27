@@ -45,20 +45,34 @@
 > of Working. 0.7.4 remains published; 0.7.3 remains removed.
 >
 > **0.7.6-exp.7 note (27 November 2026):** the Spaces LAN button now starts the bundled
-> OpenRad engine, not the in-house layer-2 switch. One press creates the `OpenRad`
-> TAP-Windows6 adapter, configures the coordination server with the bundled modulus,
-> registers this PC and joins the `QuotaVPN` network. The engine now falls back to public
-> STUN for its UDP mapping when the server does not advertise two UES hosts, so the data
-> path is direct UDP when both NATs allow it; the VPS is only the introduction service and
-> the relay fallback. A Windows PC and a Linux peer on the VPS connected `DirectUdp` at
-> about 49 ms. The Spaces card shows only connected LAN peers, with `Direct` or `Relayed`
-> and RTT, and filters the stale offline identity left by an earlier install. The old
-> direct LAN and probe controls are gone from the screen. The window now uses Manrope
-> and Geist Mono over the approved flat dark surfaces, and four themes (Obsidian,
-> Ember, Mint and Violet) are chosen from Settings > Appearance or the swatches at the
-> foot of the rail. Spaces is a LAN-first layout: a space chip row, a wide LAN card,
-> a space card for the invite and members, and a play-together rail. Stable stays at
-> 0.7.5.
+> QuotaSpace engine, not the in-house layer-2 switch. One press creates the
+> `QuotaSpace` TAP-Windows6 adapter, configures the coordination server with the bundled
+> modulus, registers this PC and joins the selected space's private network. The engine now falls back
+> to public STUN for its UDP mapping when the server does not advertise two UES hosts, so
+> the data path is direct UDP when both NATs allow it; the VPS is only the introduction
+> service and the relay fallback. A Windows PC and a Linux peer on the VPS connected
+> `DirectUdp` at about 48 ms, and a second Windows PC at about 76 ms. The Spaces card
+> shows only connected LAN peers, with `Direct` or `Relayed` and RTT, and filters the
+> stale offline identity left by an earlier install. The old layer-3 space chips, space
+> cards and coordinator are gone. Spaces is now a row of QuotaSpace spaces, the selected
+> space's LAN card, its invite code and the play steps. Each space is its own OpenRad
+> private network and the engine joins only the selected one, so peers and broadcasts
+> never mix between spaces. The baseline `QuotaSpace` is private too: its `qs-...`
+> network is created on the first connect. The old public `QuotaVPN` network has been
+> deleted from the server and the unit no longer passes `--public "QuotaVPN"`; existing
+> peers move by pasting the new invite. The self-hosted server is
+> patched to keep a private network after its last member leaves and to promote the
+> oldest remaining member when the admin switches away; upstream deletes it on last
+> leave and refuses the admin's leave, both of which break switching. The patch is
+> documented in `notes/OPENRAD-SERVER-PATCH.md`. The window now
+> uses Manrope and Geist Mono over the approved flat dark surfaces, and four themes
+> (Obsidian, Ember, Mint and Violet) are chosen from Settings > Appearance or the
+> swatches at the foot of the rail. The Windows app and the bundled engine are signed with the local
+> `CN=YousefMohiey` certificate, and UAC and the firewall prompt show that publisher once
+> the certificate is trusted. A profile that loses its card rows while the DPAPI store
+> still holds the credential now restores the card at launch and on a state refresh, which
+> is what had left both the main Connect and the Valorant plate answering "no card".
+> Stable stays at 0.7.5.
 >
 > **Spaces (unreleased, 25 November 2026):** the first slice of a private virtual LAN. The desktop
 > has a Spaces screen, the core has the invite/key/endpoint model, and `embed/qc-spaces.py` is the

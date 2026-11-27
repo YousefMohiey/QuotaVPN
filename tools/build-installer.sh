@@ -40,8 +40,12 @@ cd desktop
 # certificate as it appears in the Windows certificate store (SimplySign and
 # every cloud HSM client present the certificate there). The bundler then
 # signs the app binary and the installer. QC_SIGN_TIMESTAMP overrides the
-# timestamp authority. With the variable unset the build is unchanged.
+# timestamp authority. With the variable unset the build looks for the local
+# YousefMohiey certificate, which is the publisher this project ships under.
 CONFIG_ARGS=()
+if [ -z "${QC_SIGN_THUMBPRINT:-}" ]; then
+  QC_SIGN_THUMBPRINT="$(powershell -NoProfile -Command "(Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert | Where-Object { \$_.Subject -eq 'CN=YousefMohiey' -and \$_.NotAfter -gt (Get-Date) } | Sort-Object NotAfter -Descending | Select-Object -First 1).Thumbprint" | tr -d '\r' | xargs)"
+fi
 if [ -n "${QC_SIGN_THUMBPRINT:-}" ]; then
   TS="${QC_SIGN_TIMESTAMP:-http://timestamp.digicert.com}"
   TMPCFG="$(pwd)/sign-config.json"
@@ -59,15 +63,14 @@ JSON
   CONFIG_ARGS=(--config "$(cygpath -w "$TMPCFG" 2>/dev/null || echo "$TMPCFG")")
   echo "signing with certificate ${QC_SIGN_THUMBPRINT}"
 else
-  echo "building unsigned (set QC_SIGN_THUMBPRINT to sign)"
+  echo "building unsigned (no YousefMohiey certificate and QC_SIGN_THUMBPRINT is unset)"
 fi
 
 npx --yes @tauri-apps/cli@2 build "${CONFIG_ARGS[@]}" "$@"
 
-# The bundler signs the app binary and the installer. The payload DLLs have to
-# be signed here, and the installer is signed again once they are in place,
-# because a changed payload invalidates nothing on the installer but the order
-# keeps the shipped pair consistent. Only runs when a certificate is set.
+# The bundler signs the app binary and the installer. The payload DLLs and the
+# bundled LAN engine have to be signed here, and the installer is signed again
+# once they are in place. Only runs when a certificate is set.
 if [ -n "${QC_SIGN_THUMBPRINT:-}" ]; then
   VERSION="$(node -p "require('./src-tauri/tauri.conf.json').version")"
   SETUP="$(pwd)/src-tauri/target/release/bundle/nsis/QuotaVPN_${VERSION}_x64-setup.exe"

@@ -1,4 +1,4 @@
-# QuotaVPN - notes for coding agents
+﻿# QuotaVPN - notes for coding agents
 
 The long-form handoff (system map, flows, code map, build and release, traps) is in
 `notes/HANDOFF.md`. Read it before changing anything structural.
@@ -86,7 +86,7 @@ Windows, run from git-bash. The toolchain this project was developed against:
   built exe for the dependency before it publishes.
 - **Version lives in four files**: `desktop/src-tauri/{tauri.conf.json,Cargo.toml}` and
   `android/tauri-app/src-tauri/{tauri.conf.json,Cargo.toml}`. A normal release bumps all four
-  together. The desktop is 0.7.6-exp.7; the phone is 0.7.5. The phone still compiles the legacy SSH
+  together. The desktop is 0.7.6-exp.8; the phone is 0.7.5. The phone still compiles the legacy SSH
   control plane (`legacy-ssh`) until its own credential migration lands; do not bump the phone
   to a version that has no tested APK behind it. Experimental desktop-only builds may move ahead
   of the phone; stable releases still ship both at the same version.
@@ -170,15 +170,26 @@ answer true because there is nothing to install. The release job fails if the bi
 
 ## Current state
 
-**Exp.7 desktop (27 November 2026).** Spaces starts the bundled OpenRad engine for the game LAN
-(`desktop/src-tauri/src/openrad.rs`, `openrad/openrad.exe`, `modulus.bin`). One press creates the
-`OpenRad` TAP adapter, clears a stale `26.x` address, configures the self-hosted server, starts the
-service and joins `QuotaVPN`. The bundled engine was patched to fall back to public STUN for its
-NAT mapping when the server has no UES hosts, so a direct UDP path is used when both NATs allow
-it. A Windows PC and a VPS peer reached `DirectUdp` at about 45 ms; the card shows only connected
-peers with `Direct` or `Relayed` and RTT. The in-house layer-2 switch below stays in the tree but
-is not the shipping LAN path. The window also moved to Manrope and Geist Mono, flat surfaces and
-four themes (obsidian, ember, mint, violet), Phosphor icons at one weight, and the full approved dark surface set.
+**Exp.7 desktop (27 November 2026).** Spaces starts the bundled QuotaSpace engine for the game LAN
+(`desktop/src-tauri/src/openrad.rs`, `openrad/QuotaSpace.exe`, `modulus.bin`). One press creates the
+`QuotaSpace` TAP adapter, clears a stale `26.x` address, configures the self-hosted server, starts the
+service and joins the selected space's private network. The bundled engine was patched to fall back
+to public STUN for its NAT mapping when the server has no UES hosts, so a direct UDP path is used
+when both NATs allow it. A Windows PC and a VPS peer reached `DirectUdp` at about 45 ms; the card
+shows only connected peers with `Direct` or `Relayed` and RTT. Spaces is a row of QuotaSpace space
+chips, the selected space's LAN card, its invite code and the play steps. The old layer-3 spaces and
+the coordinator are gone. Each space is its own OpenRad private network and the engine joins only the
+selected one, so peers and broadcasts never mix between spaces. The baseline `QuotaSpace` is private
+too: its `qs-...` network is created on the first connect and the code that used to map it to the
+public `QuotaVPN` network is gone. The public network has been deleted from the server and the unit
+no longer passes `--public "QuotaVPN"`; existing peers move by pasting the new invite. The
+self-hosted server is patched to keep a private network after its last member leaves and to promote
+the oldest remaining member when the admin switches away; see `notes/OPENRAD-SERVER-PATCH.md`. The
+in-house layer-2 switch below stays in the tree but is not the shipping LAN path. The window also
+moved to Manrope and Geist Mono, flat surfaces and four themes (obsidian, ember, mint, violet),
+Phosphor icons at one weight, and the full approved dark surface set. The Windows app and the bundled
+engine are signed with the local `CN=YousefMohiey` certificate, so UAC and the firewall prompt show
+that publisher once the certificate is trusted on the PC.
 
 **Spaces layer 2 (desktop, superseded).** A space can carry Ethernet instead of IP. The adapter is
 TAP-Windows6 9.27.0, bundled in `desktop/src-tauri/tap` and installed by the NSIS hook; 9.27.0 is
@@ -191,14 +202,15 @@ record carries `mode` (`l3` or `l2`) and the coordinator stores it, returns each
 accepts `POST /v1/spaces/{id}/mode`. Layer 3 is still the default, the phone is still 0.7.5, and
 `notes/SPACES-L2.md` holds the audit, the plan and the proofs.
 
-**The latest desktop release is v0.7.6-exp.7 (experimental, Windows); stable is v0.7.5, Windows
+**The latest desktop release is v0.7.6-exp.8 (experimental, Windows); stable is v0.7.5, Windows
 and Android.** This tree carries the 0.7.0
 credential migration (`notes/HANDOFF-2026-11-22.md`): the desktop imports a server-issued `qv1:`
 secret into a DPAPI-sealed per-card store (`qc1:` is still accepted), talks to the card API over
 HTTPS, and no longer compiles the SSH control plane. The phone is 0.7.5 too; its
-`server.rs`/`ssh.rs` path is still behind `legacy-ssh`. The release carries the Windows setup
-`QuotaVPN_0.7.5_x64-setup.exe` and the phone APK `QuotaVPN-mobile-signed.apk` (the name the phone
-updater looks for). The standalone `QuotaVPN.exe` is not uploaded as a release asset.
+`server.rs`/`ssh.rs` path is still behind `legacy-ssh`. The exp.8 release carries the Windows setup
+`QuotaVPN_0.7.6-exp.8_x64-setup.exe`; the stable 0.7.5 release carries the phone APK
+`QuotaVPN-mobile-signed.apk` (the name the phone updater looks for). The standalone `QuotaVPN.exe`
+is not uploaded as a release asset.
 
 0.7.4 restored the phone UI that shipped before the rejected 0.7.3 rebuild. 0.7.5 is the motion
 and interaction pass on that same layout: a sliding active pill in the bottom bar, a short page

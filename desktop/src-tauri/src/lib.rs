@@ -7,7 +7,7 @@
 //! previous desktop app untouched.
 
 use quotacards::{
-    config::{AppConfig, Card, DEFAULT_HOST},
+    config::{AppConfig, Card, LanSpace, DEFAULT_HOST},
     vpn,
 };
 use std::sync::Mutex;
@@ -155,6 +155,68 @@ fn initial_config() -> AppConfig {
             dirty = true;
         }
     }
+    // The old layer-3 spaces are superseded by the bundled QuotaSpace LAN.
+    // They are no longer shown and must never be attached to a session: an
+    // active space puts a second 10.77.x address on the PC beside the LAN's
+    // 26.x address, and the game sees the wrong one. Remove the old records
+    // outright and retire the public QuotaVPN default: the baseline space is
+    // private now and is created on the first connect.
+    if !cfg.spaces.is_empty() || !cfg.active_space.is_empty() || !cfg.tunnel_space.is_empty() {
+        cfg.spaces.clear();
+        cfg.active_space.clear();
+        cfg.tunnel_space.clear();
+        dirty = true;
+    }
+    let before = cfg.lan_spaces.len();
+    cfg.lan_spaces
+        .retain(|space| space.network != quotacards::config::LEGACY_NETWORK);
+    if cfg.lan_spaces.len() != before {
+        dirty = true;
+    }
+    let bad_primary = cfg.lan_spaces.iter().any(|space| {
+        space.is_default()
+            && (space.network.is_empty()
+                || !space.network.starts_with("qs-")
+                || (space.password.is_empty() && space.password_sealed.is_empty()))
+    });
+    if bad_primary {
+        cfg.lan_spaces.retain(|space| !space.is_default());
+        dirty = true;
+    }
+    if !cfg.lan_spaces.iter().any(LanSpace::is_default) {
+        cfg.lan_spaces.insert(0, LanSpace::default_space());
+        dirty = true;
+    }
+    for space in &mut cfg.lan_spaces {
+        if space.is_default() {
+            space.owner = true;
+        } else if !space.provisioned {
+            // Records written before the provisioning flag was stored came
+            // from a successful create or join, so their network exists.
+            space.provisioned = true;
+            dirty = true;
+        }
+        if !space.password.is_empty() {
+            // Move a plaintext network password into the same DPAPI seal the
+            // card credentials use. The invite is rebuilt from the unsealed
+            // value when the Spaces page asks for it.
+            if let Ok(sealed) = credentials::seal_text(&space.password) {
+                space.password_sealed = sealed;
+                space.password.clear();
+                dirty = true;
+            }
+        }
+    }
+    #[cfg(windows)]
+    openrad::clear_legacy_space_address();
+    // A sealed credential outlives a profile rewrite. If the card list lost its
+    // rows while the store kept the secrets, put the cards back before the UI
+    // reads state; otherwise Connect answers "no card" while the server still
+    // has an active card for this PC.
+    if credentials::restore_missing_cards(&mut cfg) > 0 {
+        vpn::app_log("profile: restored cards from the sealed credential store");
+        dirty = true;
+    }
     // Owner delivery path: a profile beside the exe or in the config folder
     // imports the customer's card silently, so the customer never pastes.
     match credentials::import_profile(&mut cfg) {
@@ -176,7 +238,10 @@ fn initial_config() -> AppConfig {
 /// engine and TUN, then stops the engine. Run once cold and twice warm.
 fn bench_connect(voice: bool) -> Result<(), String> {
     AppConfig::migrate_dirs();
-    let cfg = AppConfig::load();
+    let mut cfg = AppConfig::load();
+    if credentials::restore_missing_cards(&mut cfg) > 0 {
+        cfg.save();
+    }
     let card = cfg.cards.first().ok_or("no card on this PC")?;
     if cfg.server_ip.is_empty() {
         return Err("no server configured".into());
@@ -235,7 +300,15 @@ fn bench_connect(voice: bool) -> Result<(), String> {
 
 #[tauri::command]
 fn get_state(app: tauri::AppHandle, state: tauri::State<State>) -> UiState {
-    let mut st = snapshot(&state.0.lock().unwrap());
+    let mut cfg = state.0.lock().unwrap();
+    // A running window can outlive a profile rewrite. The sealed store is the
+    // part the provider cannot recreate, so heal an empty card list here too,
+    // not only at launch; the next refresh then has a card to connect with.
+    if cfg.cards.is_empty() && credentials::restore_missing_cards(&mut cfg) > 0 {
+        vpn::app_log("profile: restored cards on a state refresh");
+        cfg.save();
+    }
+    let mut st = snapshot(&cfg);
     // The running build's own version: the sidebar shows it without waiting
     // for a network round trip to GitHub.
     st.version = app.package_info().version.to_string();
@@ -3901,6 +3974,11 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         openrad::openrad_disconnect,
         openrad::openrad_status,
         openrad::openrad_peers,
+        openrad::openrad_spaces,
+        openrad::openrad_switch,
+        openrad::openrad_create_space,
+        openrad::openrad_join_space,
+        openrad::openrad_delete_space,
         spaces_direct::space_direct_start,
         spaces_direct::space_direct_stop,
         spaces_direct::space_direct_status,
@@ -4001,6 +4079,11 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync +
         openrad::openrad_disconnect,
         openrad::openrad_status,
         openrad::openrad_peers,
+        openrad::openrad_spaces,
+        openrad::openrad_switch,
+        openrad::openrad_create_space,
+        openrad::openrad_join_space,
+        openrad::openrad_delete_space,
         resolve_host,
         check_update,
         apply_update,
@@ -4138,7 +4221,7 @@ pub fn run() {
     // Headless automation path: bring the bundled OpenRad LAN up and exit.
     // The Spaces screen calls the same function through the Tauri command.
     if std::env::args().any(|a| a == "--lan-connect") {
-        match openrad::connect_blocking() {
+        match openrad::configured_space(None).and_then(|space| openrad::connect_blocking(&space)) {
             Ok(status) => println!("LAN {}", status),
             Err(error) => {
                 eprintln!("LAN error: {error}");

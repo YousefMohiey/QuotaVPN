@@ -90,6 +90,7 @@ export type OpenRadStatus = {
     vip?: string
     interface_ready?: boolean
     peers?: Record<string, unknown>
+    networks?: Array<{ name: string; network_id: string }>
   }
 }
 
@@ -101,6 +102,18 @@ export type OpenRadPeer = {
   connected: boolean
   transport: string | null
   rtt_ms: number | null
+}
+
+/** One QuotaSpace space. Each is its own OpenRad network, so its peers and
+    broadcast domain are isolated from every other space. The password never
+    reaches the UI; the invite code carries it to the other PC. */
+export type LanSpace = {
+  id: string
+  name: string
+  network: string
+  owner: boolean
+  default: boolean
+  invite: string
 }
 
 /** Read-only state of one card. `ok` is false when the server refused or the
@@ -420,10 +433,16 @@ export const api = {
   spaceRotate: (id: string) => call<SpacesState>("space_rotate", { id }),
   spaceSetMode: (id: string, mode: "l2" | "l3") =>
     call<SpacesState>("space_set_mode", { id, mode }),
-  openradConnect: () => call<OpenRadStatus>("openrad_connect"),
+  openradConnect: (spaceId?: string) =>
+    call<OpenRadStatus>("openrad_connect", { spaceId: spaceId ?? null }),
+  openradSwitch: (spaceId: string) => call<OpenRadStatus>("openrad_switch", { spaceId }),
   openradDisconnect: () => call<void>("openrad_disconnect"),
   openradStatus: () => call<OpenRadStatus>("openrad_status"),
   openradPeers: () => call<OpenRadPeer[]>("openrad_peers"),
+  openradSpaces: () => call<LanSpace[]>("openrad_spaces"),
+  openradCreateSpace: (name: string) => call<LanSpace>("openrad_create_space", { name }),
+  openradJoinSpace: (invite: string) => call<LanSpace>("openrad_join_space", { invite }),
+  openradDeleteSpace: (id: string) => call<void>("openrad_delete_space", { id }),
   spaceKick: (id: string, memberId: string) =>
     call<SpacesState>("space_kick", { id, memberId }),
   copyToClipboard: (text: string) => call<boolean>("copy_text", { text }),

@@ -1,3 +1,4 @@
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -8,6 +9,9 @@ include!(concat!(env!("OUT_DIR"), "/embed.rs"));
 pub const DEFAULT_HOST: &str = "quotavpn.duckdns.org";
 pub const DEFAULT_USER: &str = "ubuntu";
 pub const DEFAULT_PORT: u16 = 22;
+/// The public OpenRad network that shipped before spaces became private. It is
+/// only used to recognize and retire the old default; new defaults are private.
+pub const LEGACY_NETWORK: &str = "QuotaVPN";
 
 /// App config - lives in the OS config dir (works for every user, no fixed
 /// paths hard-coded into the program).
@@ -54,6 +58,10 @@ pub struct AppConfig {
     /// key and the coordinator token; the UI snapshot never reads them.
     #[serde(default)]
     pub spaces: Vec<crate::spaces::SpaceRecord>,
+    /// QuotaSpace LAN networks. Each record is its own OpenRad network, so its
+    /// peers and broadcast domain are isolated from every other record.
+    #[serde(default)]
+    pub lan_spaces: Vec<LanSpace>,
     /// Which space the engine should attach on the next connect. Empty means
     /// none. A space is attached at session start, not live, so changing this
     /// takes effect on the next tunnel.
@@ -99,6 +107,138 @@ impl Card {
         } else {
             format!("{} - {}", self.name, self.sni)
         }
+    }
+}
+
+/// One isolated QuotaSpace LAN. `network` is the OpenRad network name on the
+/// coordination server; `password` is the network password for a private one.
+/// The id is the network name, which is unique, so two records can never point
+/// at the same network. `primary` marks the one baseline space the app always
+/// keeps; `provisioned` is false until the first connect has created the
+/// network on the server.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct LanSpace {
+    pub id: String,
+    pub name: String,
+    pub network: String,
+    #[serde(default)]
+    pub password: String,
+    #[serde(default)]
+    pub password_sealed: String,
+    #[serde(default)]
+    pub owner: bool,
+    #[serde(default, rename = "default")]
+    pub primary: bool,
+    #[serde(default)]
+    pub provisioned: bool,
+}
+
+fn encode_name(text: &str) -> String {
+    URL_SAFE_NO_PAD.encode(text.as_bytes())
+}
+
+fn decode_name(text: &str) -> Option<String> {
+    URL_SAFE_NO_PAD
+        .decode(text)
+        .ok()
+        .and_then(|bytes| String::from_utf8(bytes).ok())
+}
+
+fn valid_network(network: &str) -> bool {
+    !network.is_empty()
+        && network.len() <= 48
+        && network
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+}
+
+fn valid_password(password: &str) -> bool {
+    password.len() <= 64 && password.bytes().all(|b| b.is_ascii_alphanumeric())
+}
+
+impl LanSpace {
+    pub fn is_default(&self) -> bool {
+        self.primary
+    }
+
+    /// The line another PC pastes to join this exact network. The name is
+    /// base64 encoded so spaces in it, Arabic, or punctuation cannot break the
+    /// field separators. A legacy public network has an empty password and the
+    /// code still ends with a colon; new default and private spaces always
+    /// carry one.
+    pub fn invite(&self) -> String {
+        format!(
+            "qspace1:{}:{}:{}",
+            encode_name(&self.name),
+            self.network,
+            self.password
+        )
+    }
+
+    /// A new private network for a space the user created. The network name is
+    /// generated, so two spaces never collide even when their display names
+    /// do. The creator owns the network and can delete it for everyone.
+    pub fn new(name: &str) -> Self {
+        let network = format!(
+            "qs-{}",
+            &uuid::Uuid::new_v4().simple().to_string()[..12]
+        );
+        let password = uuid::Uuid::new_v4().simple().to_string()[..24].to_string();
+        Self {
+            id: network.clone(),
+            name: name.trim().to_string(),
+            network,
+            password,
+            password_sealed: String::new(),
+            owner: true,
+            primary: false,
+            provisioned: false,
+        }
+    }
+
+    pub fn from_invite(text: &str) -> Result<Self, String> {
+        // The longest valid code is well under 200 characters. Cap before any
+        // base64 decode so a huge paste cannot allocate the app to a halt.
+        if text.len() > 512 {
+            return Err("that invite code is too long".into());
+        }
+        let mut parts = text.trim().splitn(4, ':');
+        if parts.next() != Some("qspace1") {
+            return Err("that invite code is not a QuotaSpace code".into());
+        }
+        let name = parts
+            .next()
+            .and_then(decode_name)
+            .map(|name| name.trim().to_string())
+            .filter(|name| !name.is_empty() && name.chars().count() <= 40)
+            .ok_or("that invite code has no valid space name")?;
+        let network = parts.next().unwrap_or_default().to_string();
+        if !valid_network(&network) {
+            return Err("that invite code has no valid network".into());
+        }
+        let password = parts.next().unwrap_or_default().to_string();
+        if !valid_password(&password) {
+            return Err("that invite code has no valid password".into());
+        }
+        Ok(Self {
+            id: network.clone(),
+            name,
+            network,
+            password,
+            password_sealed: String::new(),
+            owner: false,
+            primary: false,
+            provisioned: false,
+        })
+    }
+
+    /// The baseline space, private from the first run. The network is created
+    /// on the first connect, because the app has no server session at startup.
+    pub fn default_space() -> Self {
+        let mut space = Self::new("QuotaSpace");
+        space.primary = true;
+        space.provisioned = false;
+        space
     }
 }
 
@@ -220,12 +360,56 @@ impl AppConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::AppConfig;
+    use super::{AppConfig, LanSpace};
 
     #[test]
     fn a_bom_does_not_reset_the_config() {
         let text = serde_json::to_string(&AppConfig::default()).expect("config json");
         let with_bom = format!("\u{feff}{text}");
         assert!(AppConfig::parse(&with_bom).is_some());
+    }
+
+    #[test]
+    fn an_invite_round_trips_a_name_with_spaces_and_arabic() {
+        let space = LanSpace {
+            id: "qs-abc123".into(),
+            name: "ليلة واركرافت 3".into(),
+            network: "qs-abc123".into(),
+            password: "a1b2c3d4e5f60718".into(),
+            password_sealed: String::new(),
+            owner: true,
+            primary: false,
+            provisioned: true,
+        };
+        let parsed = LanSpace::from_invite(&space.invite()).expect("invite parses");
+        assert_eq!(parsed.name, space.name);
+        assert_eq!(parsed.network, space.network);
+        assert_eq!(parsed.password, space.password);
+        assert_eq!(parsed.id, space.network);
+        assert!(!parsed.owner);
+        assert!(!parsed.primary);
+    }
+
+    #[test]
+    fn the_default_space_is_private_and_waits_for_its_first_connect() {
+        let space = LanSpace::default_space();
+        assert!(space.is_default());
+        assert!(!space.provisioned);
+        assert!(!space.password.is_empty());
+        assert!(space.network.starts_with("qs-"));
+        let parsed = LanSpace::from_invite(&space.invite()).expect("default invite parses");
+        assert_eq!(parsed.network, space.network);
+        assert_eq!(parsed.name, "QuotaSpace");
+        assert_eq!(parsed.password, space.password);
+        assert!(!parsed.primary);
+    }
+
+    #[test]
+    fn a_bad_invite_is_refused() {
+        assert!(LanSpace::from_invite("qvs1:whatever").is_err());
+        assert!(LanSpace::from_invite("qspace1:zz:QuotaVPN:").is_err());
+        assert!(LanSpace::from_invite("qspace1:51736b:bad network:pass").is_err());
+        assert!(LanSpace::from_invite("qspace1:51736b:QuotaVPN:bad pass").is_err());
+        assert!(LanSpace::from_invite(&"qspace1:".repeat(100)).is_err());
     }
 }
