@@ -1,12 +1,12 @@
 {
     "version":  "0.7.6-exp.10",
-    "notes":  "Seven full colour presets change the surfaces, lines, text and accent together. Appearance lives in Settings with theme cards, a primary colour picker and an interface font picker; the rail swatches are gone. The in-app Q mark follows the theme. Bundled Manrope and Archivo plus the installed Windows fonts are available, and the choice persists. Windows experimental build; the phone stays at 0.7.5.",
-    "pub_date":  "2026-11-28T07:23:06Z",
+    "notes":  "Seven full colour presets change the surfaces, lines, text and accent together. Appearance lives in Settings with theme cards, a primary colour picker and an interface font picker; the rail swatches are gone. The in-app Q mark follows the theme, and button labels follow the accent luminance so a light primary stays readable. Bundled Manrope and Archivo plus the installed Windows fonts are available, and the choice persists. Windows experimental build; the phone stays at 0.7.5.",
+    "pub_date":  "2026-11-28T07:28:32Z",
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSU14WjBmR0dRamxLMjN4cm16Y2JpS29USTR6WkhEZ2ovOEQ2elA1ayt6ellkbEZGWjVMcHY3MThZdUYwU1pOTEEyUlZzbWZuSVN3ejJGcGZ3bURkZmdrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1ODUwNDU1CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjEwX3g2NC1zZXR1cC5leGUKVHA0THdOY05abGUyY0x3WmZrbTJlZmdzQXJoejRnVy9Ib2hIL284c3ZIeEw4VzViTGRHeVNHdVFGblpjRjhuNzM0MHpIOExOU2kwV29EcWltOUZsQ0E9PQo=",
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSUFZUkJoZVMwMGlUSXVESGkzODh5dkp3OFQwQ3pSOW5QRU1VRXpnRGovajYrTER6dm5iYmVhU202QXBXOXR6Qm1naXJWRnBuV2Z5VnhkUmF3M2taY2dFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1ODUwNzg4CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjEwX3g2NC1zZXR1cC5leGUKdHZma0YwSmw2SngwOHFTL3ZDdTJhU09jMksxR0QvWGMwS0VXWEtja0xlQk16N0pnMzZLS1VvK0NIcXJsQlBJWWhMNkFDSXlwRjZlNzBxcjQ4ZmUzRFE9PQo=",
                                              "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.6-exp.10/QuotaVPN_0.7.6-exp.10_x64-setup.exe"
                                          }
                   },
-    "build":  "d917da8"
+    "build":  "f82deaa"
 }
