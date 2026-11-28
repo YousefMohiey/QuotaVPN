@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { motion, useReducedMotion } from "motion/react"
-import { Building2, ChevronDown, ChevronRight, Copy, Gamepad2, Globe, LayoutGrid, Link2, MapPin, Tv } from "@/components/icons"
+import { Building2, ChevronDown, ChevronRight, Copy, Gamepad2, Globe, LayoutGrid, Link2, Loader2, MapPin, Tv } from "@/components/icons"
 import { useGeo, useServerAddr } from "@/components/Hero"
 import { Dial, type DialState } from "@/components/Dial"
 import { WeQuotaCard } from "@/components/WeQuotaCard"
@@ -204,7 +204,11 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
             ) : null}
           </div>
 
-          <div className="grid w-full max-w-[440px] shrink-0 grid-cols-2 gap-3" role="group" aria-label={t("setupTitle")}>
+          <div
+            className="relative grid w-full max-w-[440px] shrink-0 grid-cols-2 gap-1 rounded-2xl border border-line bg-white/[0.03] p-1"
+            role="group"
+            aria-label={t("setupTitle")}
+          >
             {(["Gamerz", "Streamerz"] as const).map((kind: PresetKind) => {
               // The button is a preset, not the active card: show the domain
               // that preset selects. The live domain is in the cell below.
@@ -225,7 +229,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     void ensurePresetCard(kind).finally(() => setCreating(null))
                   }}
                   className={cn(
-                    "press group/preset relative flex min-h-0 min-w-0 items-center gap-3 overflow-hidden rounded-xl px-3 py-3 text-start transition-colors duration-150 disabled:cursor-wait disabled:opacity-70",
+                    "press group/preset relative flex min-h-0 min-w-0 items-center gap-3 overflow-hidden rounded-xl px-3 py-2.5 text-start transition-colors duration-200 disabled:cursor-default disabled:opacity-70",
                     isActive ? "text-txt" : "text-txt2 hover:bg-white/[0.03] hover:text-txt",
                   )}
                 >
@@ -234,17 +238,25 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                       layoutId="profile-ring"
                       aria-hidden
                       className="absolute inset-0 rounded-xl bg-[var(--brand-bg)] shadow-[inset_0_0_0_1px_var(--brand-line)]"
-                      transition={calm ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 40 }}
+                      transition={calm ? { duration: 0 } : { type: "spring", stiffness: 430, damping: 38, mass: 0.7 }}
                     />
                   ) : null}
-                  <span
+                  <motion.span
                     className={cn(
-                      "relative grid size-8 shrink-0 place-items-center rounded-lg bg-white/[0.04] transition-colors duration-150 group-hover/preset:bg-white/[0.07]",
-                      isActive ? "text-brand-strong" : "text-txt3 group-hover/preset:text-brand-strong",
+                      "relative grid size-8 shrink-0 place-items-center rounded-lg transition-colors duration-200",
+                      isActive
+                        ? "bg-white/[0.06] text-brand-strong"
+                        : "bg-white/[0.04] text-txt3 group-hover/preset:text-brand-strong",
                     )}
+                    animate={calm ? undefined : { scale: isActive ? 1.08 : 1 }}
+                    transition={{ type: "spring", stiffness: 420, damping: 30 }}
                   >
-                    <Icon className="size-4" aria-hidden />
-                  </span>
+                    {creating === kind ? (
+                      <Loader2 className="size-4 animate-spin" aria-hidden />
+                    ) : (
+                      <Icon className="size-4" aria-hidden />
+                    )}
+                  </motion.span>
                   <span className="relative min-w-0 flex-1">
                     <span className="block truncate text-xs font-medium">{t(kind === "Gamerz" ? "kindGamerz" : "kindStreamerz")}</span>
                     <span className="mt-0.5 block truncate font-mono text-xs text-txt2" dir="auto">{sni}</span>
@@ -290,78 +302,85 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
       </div>
 
       <section className="grid shrink-0 grid-cols-[1fr_1fr_1.4fr] overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)] shadow-[inset_0_1px_0_var(--line)]">
-        {cells.slice(0, 3).map((c, i) => (
-          <div
-            key={c.id}
-            className={cn(
-              "group/cell flex min-w-0 flex-col justify-center gap-2 px-6 py-4",
-              i < 2 && "border-e border-line",
-              c.onClick && "transition-colors duration-200 hover:bg-[var(--surface-2)]",
-            )}
-          >
-            <span className="flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.1em] text-txt2">
-              {c.icon ? (
-                <c.icon
-                  className={cn(
-                    "size-3.5 shrink-0 text-txt3",
-                    c.onClick && "transition-colors duration-200 group-hover/cell:text-brand-strong",
-                  )}
-                  aria-hidden
-                />
-              ) : null}
-              <span className={cn("truncate", c.onClick && "transition-colors duration-200 group-hover/cell:text-txt")}>
-                {c.label}
+        {cells.slice(0, 3).map((c, i) => {
+          const custom = c.id === "domain" && customOpen
+          const clickable = !!c.onClick && !custom
+          const content = (
+            <>
+              <span className="flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.1em] text-txt2">
+                {c.icon ? (
+                  <c.icon
+                    className={cn(
+                      "size-3.5 shrink-0 text-txt3",
+                      c.onClick && "transition-colors duration-200 group-hover/cell:text-brand-strong",
+                    )}
+                    aria-hidden
+                  />
+                ) : null}
+                <span className={cn("truncate", c.onClick && "transition-colors duration-200 group-hover/cell:text-txt")}>
+                  {c.label}
+                </span>
               </span>
-            </span>
-            {c.id === "domain" && customOpen ? (
-              <div className="flex w-full min-w-0 items-center gap-2">
-                <Input
-                  autoFocus
-                  value={customVal}
-                  onChange={(e) => setCustomVal(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") void submitCustom()
-                    if (e.key === "Escape") setCustomOpen(false)
-                  }}
-                  placeholder="example.com"
-                  aria-label={t("domainSni")}
-                  className="h-8 min-w-0 rounded-lg border-line bg-[var(--surface-2)] px-2 text-xs"
-                />
-                <Button size="sm" className="h-8 shrink-0 rounded-lg px-3 text-xs" disabled={domainBusy || !customVal.trim()} onClick={() => void submitCustom()}>
-                  {t("apply")}
-                </Button>
-              </div>
-            ) : c.onClick ? (
-              <button
-                type="button"
-                onClick={c.onClick}
-                aria-busy={c.id === "domain" ? domainBusy : undefined}
-                className="press flex min-w-0 items-center justify-between gap-2 text-start text-txt transition-colors duration-150"
-              >
-                {c.body}
-                {c.chevron === "down" ? (
-                  <ChevronDown
-                    className="size-5 shrink-0 text-txt2 transition-[color,translate] duration-200 group-hover/cell:translate-y-0.5 group-hover/cell:text-brand-strong"
-                    strokeWidth={2.2}
-                    aria-hidden
+              {custom ? (
+                <div className="flex w-full min-w-0 items-center gap-2">
+                  <Input
+                    autoFocus
+                    value={customVal}
+                    onChange={(e) => setCustomVal(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void submitCustom()
+                      if (e.key === "Escape") setCustomOpen(false)
+                    }}
+                    placeholder="example.com"
+                    aria-label={t("domainSni")}
+                    className="h-8 min-w-0 rounded-lg border-line bg-[var(--surface-2)] px-2 text-xs"
                   />
-                ) : (
-                  <ChevronRight
-                    className="size-5 shrink-0 text-txt2 transition-[color,translate] duration-200 group-hover/cell:translate-x-0.5 group-hover/cell:text-brand-strong"
-                    strokeWidth={2.2}
-                    aria-hidden
-                  />
-                )}
-              </button>
-            ) : (
-              <span className="flex min-w-0">{c.body}</span>
-            )}
-            {c.id === "domain" && domainErr ? (
-              <span className="truncate text-xs text-[var(--red)]" role="alert">{domainErr}</span>
-            ) : null}
-
-          </div>
-        ))}
+                  <Button size="sm" className="h-8 shrink-0 rounded-lg px-3 text-xs" disabled={domainBusy || !customVal.trim()} onClick={() => void submitCustom()}>
+                    {t("apply")}
+                  </Button>
+                </div>
+              ) : (
+                <span className="flex min-w-0 items-center justify-between gap-2 text-txt">
+                  <span className="flex min-w-0">{c.body}</span>
+                  {c.chevron === "down" ? (
+                    <ChevronDown
+                      className="size-5 shrink-0 text-txt2 transition-[color,translate] duration-200 group-hover/cell:translate-y-0.5 group-hover/cell:text-brand-strong"
+                      strokeWidth={2.2}
+                      aria-hidden
+                    />
+                  ) : c.chevron === "right" ? (
+                    <ChevronRight
+                      className="size-5 shrink-0 text-txt2 transition-[color,translate] duration-200 group-hover/cell:translate-x-0.5 group-hover/cell:text-brand-strong"
+                      strokeWidth={2.2}
+                      aria-hidden
+                    />
+                  ) : null}
+                </span>
+              )}
+              {c.id === "domain" && domainErr ? (
+                <span className="truncate text-xs text-[var(--red)]" role="alert">{domainErr}</span>
+              ) : null}
+            </>
+          )
+          const classes = cn(
+            "group/cell flex min-w-0 flex-col justify-center gap-2 px-6 py-4 text-start",
+            i < 2 && "border-e border-line",
+            clickable && "press w-full transition-colors duration-200 hover:bg-[var(--surface-2)]",
+          )
+          return clickable ? (
+            <button
+              key={c.id}
+              type="button"
+              onClick={c.onClick}
+              aria-busy={c.id === "domain" ? domainBusy : undefined}
+              className={classes}
+            >
+              {content}
+            </button>
+          ) : (
+            <div key={c.id} className={classes}>{content}</div>
+          )
+        })}
       </section>
 
       <PickerDialog

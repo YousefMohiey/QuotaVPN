@@ -59,7 +59,7 @@ export function WeQuotaCard() {
                   onClick={() => void quotaRefresh(true)}
                   aria-label={t("weRefresh")}
                   disabled={quota.phase === "busy"}
-                  className="press group grid size-7 shrink-0 place-items-center rounded-full text-txt3 transition-colors hover:text-brand-strong disabled:cursor-wait"
+                  className="press group grid size-7 shrink-0 place-items-center rounded-full text-txt3 transition-colors hover:text-brand-strong disabled:cursor-default"
                 >
                   {quota.phase === "busy" ? (
                     <Loader2 className="size-3.5 animate-spin" aria-hidden />

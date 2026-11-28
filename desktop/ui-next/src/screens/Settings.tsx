@@ -476,7 +476,7 @@ export function Settings() {
                 type="button"
                 onClick={() => void checkUpdates()}
                 disabled={checking}
-                className="press flex h-10 items-center gap-2 whitespace-nowrap rounded-lg border border-line bg-white/[0.03] px-4 text-sm text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-wait"
+                className="press flex h-10 items-center gap-2 whitespace-nowrap rounded-lg border border-line bg-white/[0.03] px-4 text-sm text-txt transition-colors hover:border-[var(--brand-line)] disabled:cursor-default"
               >
                 {checking ? <Loader2 className="size-3 animate-spin" aria-hidden /> : <RefreshCw className="size-3" aria-hidden />}
                 {checking ? t("upChecking") : t("upCheck")}
@@ -486,7 +486,7 @@ export function Settings() {
                   type="button"
                   onClick={() => void applyUpdate()}
                   disabled={installing}
-                  className="press flex h-10 items-center whitespace-nowrap rounded-lg bg-[var(--brand)] px-4 text-sm font-medium text-[var(--on-brand)] transition-[filter] hover:brightness-110 disabled:cursor-wait"
+                  className="press flex h-10 items-center whitespace-nowrap rounded-lg bg-[var(--brand)] px-4 text-sm font-medium text-[var(--on-brand)] transition-[filter] hover:brightness-110 disabled:cursor-default"
                 >
                   {installing ? (updatePct !== null ? `${updatePct}%` : t("upInstalling")) : t("upGet")}
                 </button>

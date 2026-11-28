@@ -637,6 +637,9 @@ export function Speed() {
   // The dial reads throughput only; during ping the needle rests at zero.
   const dialValue = unit === "ms" ? 0 : value
   const dialIcon = phase === "ping" ? Activity : phase === "download" ? ArrowDown : phase === "upload" ? ArrowUp : Gauge
+  const phaseLabel =
+    phase === "ping" ? t("pingTitle") : phase === "download" ? t("chDown") : phase === "upload" ? t("chUp") : ""
+  const BarIcon = dialIcon
   const srv = picked ?? CLOUDFLARE
   const sponsor = srv.label.includes(" · ") ? srv.label.split(" · ")[0].trim() : srv.label
   const hostText = srv.id === "cloudflare" ? "speed.cloudflare.com" : srv.host
@@ -696,25 +699,39 @@ export function Speed() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={calm ? { opacity: 0 } : { opacity: 0, y: -4 }}
                   transition={{ duration: calm ? 0 : 0.16, ease: [0.22, 1, 0.36, 1] }}
-                  className="flex w-full max-w-[372px] items-center gap-3 rounded-xl border border-line bg-white/[0.03] py-2 pe-1.5 ps-3"
+                  className="relative flex w-full max-w-[560px] items-center gap-4 overflow-hidden rounded-2xl border border-line bg-white/[0.03] px-4 py-3"
                 >
-                  <span className="relative grid size-2 shrink-0 place-items-center">
-                    <span className="absolute size-2 rounded-full bg-brand-strong opacity-50 motion-safe:animate-ping" aria-hidden />
-                    <span className="size-1.5 rounded-full bg-brand-strong" aria-hidden />
+                  <span className="relative grid size-10 shrink-0 place-items-center rounded-full bg-[var(--brand-bg)] text-brand-strong">
+                    <span className="absolute inset-0 rounded-full border border-[var(--brand-line)]/60 motion-safe:animate-ping" aria-hidden />
+                    <BarIcon className="relative size-4" strokeWidth={1.8} aria-hidden />
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-xs text-txt2">
-                    <span className="font-medium text-brand-strong">{t("measuring")}</span>
-                    <span className="text-txt3"> · </span>
-                    {hint || t("speedTag")}
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-strong">
+                      <span className="size-1.5 rounded-full bg-brand-strong" aria-hidden />
+                      {t("measuring")}
+                      <span className="text-txt3">/</span>
+                      {phaseLabel}
+                    </span>
+                    <span className="mt-1 block truncate text-xs text-txt2">{hint || t("speedTag")}</span>
                   </span>
                   <button
                     type="button"
                     onClick={stop}
-                    className="press flex h-8 shrink-0 items-center gap-2 rounded-lg border border-[var(--red-line)] bg-[var(--red-bg)] px-3 text-xs font-medium text-[var(--red)] transition-colors hover:bg-[var(--red-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/50"
+                    aria-label={t("stop")}
+                    title={t("stop")}
+                    className="press group/stop relative grid size-11 shrink-0 place-items-center rounded-full border border-[var(--red-line)] bg-[var(--red-bg)] text-[var(--red)] transition-colors hover:border-[var(--red)] hover:bg-[var(--red-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--red-line)]"
                   >
-                    <span className="size-2 rounded-sm bg-[var(--red)]" aria-hidden />
-                    {t("stop")}
+                    <span className="absolute inset-0 rounded-full border border-[var(--red-line)] opacity-40 motion-safe:animate-ping" aria-hidden />
+                    <span className="relative size-3 rounded-[2px] bg-[var(--red)]" aria-hidden />
                   </button>
+                  {!calm ? (
+                    <motion.span
+                      aria-hidden
+                      className="absolute inset-x-0 bottom-0 h-[2px] w-1/3 bg-[var(--brand)]"
+                      animate={{ x: ["-100%", "300%"] }}
+                      transition={{ duration: 1.9, repeat: Infinity, ease: "linear" }}
+                    />
+                  ) : null}
                 </motion.div>
               ) : (
                 <motion.div
@@ -805,48 +822,51 @@ export function Speed() {
 
       {/* where the run is pointed, who hosts it, what you are on */}
       <section className="grid shrink-0 grid-cols-3 overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
-        <div className="group/server flex min-w-0 flex-col justify-center gap-2 px-6 py-4 transition-colors duration-200 hover:bg-[var(--surface-2)]">
-          <span className="flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.1em] text-txt2">
-            <Server
-              className="size-4 shrink-0 text-txt3 transition-colors duration-200 group-hover/server:text-brand-strong"
-              strokeWidth={1.8}
-              aria-hidden
-            />
-            <span className="truncate transition-colors duration-200 group-hover/server:text-txt">{t("selServer")}</span>
-          </span>
-          <div className="flex min-w-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setPickOpen(true)}
-              disabled={running}
-              aria-label={t("pickServer")}
-              className="press group flex min-w-0 flex-1 items-center gap-2 text-start text-txt transition-colors disabled:cursor-not-allowed"
-            >
-              <span className="min-w-0 flex-1 truncate text-sm" dir="auto">
-                {picking ? t("findingServer") : srv.label}
-              </span>
-              <ChevronDown
-                className="size-5 shrink-0 text-txt2 transition-[color,translate] duration-200 group-hover:translate-y-0.5 group-hover:text-brand-strong"
-                strokeWidth={2.2}
+        <div className="group/server relative flex min-w-0 flex-col justify-center gap-2 px-6 py-4 transition-colors duration-200 hover:bg-[var(--surface-2)]">
+          <button
+            type="button"
+            onClick={() => setPickOpen(true)}
+            disabled={running}
+            aria-label={t("pickServer")}
+            className="absolute inset-0 z-0 rounded-[var(--r-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--brand-line)] disabled:cursor-default"
+          />
+          <div className="pointer-events-none relative z-0 flex min-w-0 flex-col justify-center gap-2">
+            <span className="flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.1em] text-txt2">
+              <Server
+                className="size-4 shrink-0 text-txt3 transition-colors duration-200 group-hover/server:text-brand-strong"
+                strokeWidth={1.8}
                 aria-hidden
               />
-            </button>
-            <button
-              type="button"
-              onClick={() => void refreshAll()}
-              disabled={refreshing}
-              aria-label={t("refresh")}
-              title={t("refresh")}
-              className="press group grid size-8 shrink-0 place-items-center rounded-full text-txt3 transition-colors hover:text-brand-strong disabled:cursor-wait"
-            >
-              {refreshing ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden />
-              ) : (
-                <RefreshCw className="size-4 transition-transform duration-300 group-hover:rotate-90" aria-hidden />
-              )}
-            </button>
+              <span className="truncate transition-colors duration-200 group-hover/server:text-txt">{t("selServer")}</span>
+            </span>
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="flex min-w-0 flex-1 items-center gap-2 text-start text-txt">
+                <span className="min-w-0 flex-1 truncate text-sm" dir="auto">
+                  {picking ? t("findingServer") : srv.label}
+                </span>
+                <ChevronDown
+                  className="size-5 shrink-0 text-txt2 transition-[color,translate] duration-200 group-hover/server:translate-y-0.5 group-hover/server:text-brand-strong"
+                  strokeWidth={2.2}
+                  aria-hidden
+                />
+              </span>
+              <button
+                type="button"
+                onClick={() => void refreshAll()}
+                disabled={refreshing}
+                aria-label={t("refresh")}
+                title={t("refresh")}
+                className="press group pointer-events-auto relative z-10 grid size-8 shrink-0 place-items-center rounded-full text-txt3 transition-colors hover:text-brand-strong disabled:cursor-default"
+              >
+                {refreshing ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : (
+                  <RefreshCw className="size-4 transition-transform duration-300 group-hover:rotate-90" aria-hidden />
+                )}
+              </button>
+            </div>
+            <span className="truncate text-xs text-txt3" dir="auto">{srv.detail || srv.host}</span>
           </div>
-          <span className="truncate text-xs text-txt3" dir="auto">{srv.detail || srv.host}</span>
         </div>
 
         <div className="group/host flex min-w-0 flex-col justify-center gap-2 border-s border-line px-6 py-4 transition-colors duration-200 hover:bg-[var(--surface-2)]">

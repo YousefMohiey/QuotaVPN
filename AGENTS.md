@@ -90,7 +90,7 @@ Windows, run from git-bash. The toolchain this project was developed against:
   built exe for the dependency before it publishes.
 - **Version lives in four files**: `desktop/src-tauri/{tauri.conf.json,Cargo.toml}` and
   `android/tauri-app/src-tauri/{tauri.conf.json,Cargo.toml}`. A normal release bumps all four
-  together. The desktop is 0.7.6-exp.13; the phone is 0.7.5. The phone still compiles the legacy SSH
+  together. The desktop is 0.7.6-exp.14; the phone is 0.7.5. The phone still compiles the legacy SSH
   control plane (`legacy-ssh`) until its own credential migration lands; do not bump the phone
   to a version that has no tested APK behind it. Experimental desktop-only builds may move ahead
   of the phone; stable releases still ship both at the same version.
@@ -207,13 +207,13 @@ record carries `mode` (`l3` or `l2`) and the coordinator stores it, returns each
 accepts `POST /v1/spaces/{id}/mode`. Layer 3 is still the default, the phone is still 0.7.5, and
 `notes/SPACES-L2.md` holds the audit, the plan and the proofs.
 
-**The latest desktop release is v0.7.6-exp.13 (experimental, Windows); stable is v0.7.5, Windows
+**The latest desktop release is v0.7.6-exp.14 (experimental, Windows); stable is v0.7.5, Windows
 and Android.** This tree carries the 0.7.0
 credential migration (`notes/HANDOFF-2026-11-22.md`): the desktop imports a server-issued `qv1:`
 secret into a DPAPI-sealed per-card store (`qc1:` is still accepted), talks to the card API over
 HTTPS, and no longer compiles the SSH control plane. The phone is 0.7.5 too; its
-`server.rs`/`ssh.rs` path is still behind `legacy-ssh`. The exp.13 release carries the Windows setup
-`QuotaVPN_0.7.6-exp.13_x64-setup.exe`; the stable 0.7.5 release carries the phone APK
+`server.rs`/`ssh.rs` path is still behind `legacy-ssh`. The exp.14 release carries the Windows setup
+`QuotaVPN_0.7.6-exp.14_x64-setup.exe`; the stable 0.7.5 release carries the phone APK
 `QuotaVPN-mobile-signed.apk` (the name the phone updater looks for). The standalone `QuotaVPN.exe`
 is not uploaded as a release asset.
 
@@ -239,6 +239,15 @@ own; the new space waits for Connect. If the selected space disappears, the page
 instead of jumping to another one. The owner Remove dialog offers Leave space as the primary action
 and Delete space as the explicit destructive one. A Disconnect now shows `left` in the server log
 and the network survives with zero members.
+
+**Exp.14 console polish (28 November 2026).** Gamerz and Streamerz are one joined switch now: the
+selected pill slides between the two with a softer spring and a small icon pop, and the clicked
+preset shows an inline spinner instead of a wait cursor. The Home Server and App Routing cells are
+whole-card buttons; the custom-domain input keeps its own card while open. The Speed dial is a slim
+270-degree track with one lit arc, a reading dot, five labels and the live number in the centre; the
+needle and the nine crowded labels are gone. The measuring strip is a full-width bar with a round
+stop button at the far right and a thin progress line. The whole Speed server card opens the picker,
+while the refresh icon stays separate; no refresh control changes the mouse cursor.
 
 0.7.4 restored the phone UI that shipped before the rejected 0.7.3 rebuild. 0.7.5 is the motion
 and interaction pass on that same layout: a sliding active pill in the bottom bar, a short page
