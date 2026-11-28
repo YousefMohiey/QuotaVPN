@@ -1,12 +1,12 @@
 {
-    "version":  "0.7.6-exp.15",
-    "notes":  "The Connection Type card now fills its width, so Standard, Hysteria2 and WireGuard are all visible. The Gamerz/Streamerz switch is slower and smoother. The Speed dial is a car cluster again: dark face, tick ring, lit arc, tapered needle, five labels and a digital capsule under the hub. The full-width measuring bar and round Stop button remain, as do the whole-card targets and normal refresh cursors. Windows experimental build; the phone stays at 0.7.5.",
-    "pub_date":  "2026-11-28T15:49:42Z",
+    "version":  "0.7.6-exp.16",
+    "notes":  "The Speed dial now follows Speedtest by Ookla: a 270 degree arc, the nine labels from 0 to 1000, a translucent tapered needle and a small hub. Passed labels brighten, the arc uses the theme accent in a gradient, and the idle state is the thin theme-gradient ring around GO. Gamerz/Streamerz now moves with a slower 0.5 second ease-out tween. The Connection Type card, whole-card targets and space fixes remain. Windows experimental build; the phone stays at 0.7.5.",
+    "pub_date":  "2026-11-28T16:07:25Z",
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSUZ0bHZQdkpTME94Mkc1T1MrNG44WXhZRWUzcXowY1NIaGRvTWF5NDhWQ2xhVS9nbUhHeloyNFFBb2RaampGTHFYV2FYTW9WU1JtNzF5MGZ2Wk9NaFFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1ODgwOTI4CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjE1X3g2NC1zZXR1cC5leGUKeFV5OWhVWWc5MURKcTZRcldIai9NSWpnT1gxNldNejVYTDFEcjdyK0F6eU91cEJpR2JjdSs2ZHE4d2xsQ2szNzBicU5MdlFPWmxxN0RGeGVNYzk4QVE9PQo=",
-                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.6-exp.15/QuotaVPN_0.7.6-exp.15_x64-setup.exe"
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSUtzdHY5VnFOd0dwSjY0aWtDSXZkOWRWQkw2TGJyazdJVjNUV1BuNkNKUGgzdm9Mci9ycmsya0VmR0tqMTErZVhVSTFDRGpmSGQ1Z1VIc1l4eTZCTVFJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1ODgxOTg5CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjE2X3g2NC1zZXR1cC5leGUKOUdvcDVsOHhuRnUzQ2xyYzB0Z2RNaVRXZ1RlNUJGbkhFZEt3VUpRK2VMM082YTNrdjhWRjdCRlo0QzVkQktnUWdpVmtCZHdMTndKd2xOSHhkUXNNQ3c9PQo=",
+                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.6-exp.16/QuotaVPN_0.7.6-exp.16_x64-setup.exe"
                                          }
                   },
-    "build":  "8f18010"
+    "build":  "b76f7c5"
 }
