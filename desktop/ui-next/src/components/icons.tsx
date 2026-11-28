@@ -41,6 +41,7 @@ import {
   Minus as PhMinus,
   MonitorPlay as PhMonitorPlay,
   Palette as PhPalette,
+  PaintBrush as PhPaintBrush,
   Play as PhPlay,
   Plus as PhPlus,
   Plugs as PhPlugs,
@@ -56,6 +57,7 @@ import {
   SquaresFour as PhSquaresFour,
   Stack as PhStack,
   Television as PhTelevision,
+  TextAa as PhTextAa,
   Trash as PhTrash,
   Translate as PhTranslate,
   UserMinus as PhUserMinus,
@@ -118,6 +120,7 @@ export const Minus = icon(PhMinus)
 export const Monitor = icon(PhDesktop)
 export const MonitorPlay = icon(PhMonitorPlay)
 export const Palette = icon(PhPalette)
+export const PaintBrush = icon(PhPaintBrush)
 export const Phone = icon(PhDeviceMobile)
 export const Play = icon(PhPlay)
 export const Plus = icon(PhPlus)
@@ -137,6 +140,7 @@ export const Square = icon(PhSquare)
 export const Tablet = icon(PhDeviceTablet)
 export const Trash2 = icon(PhTrash)
 export const Tv = icon(PhTelevision)
+export const TextAa = icon(PhTextAa)
 export const Unlock = icon(PhLockOpen)
 export const UserMinus = icon(PhUserMinus)
 export const Users = icon(PhUsersThree)

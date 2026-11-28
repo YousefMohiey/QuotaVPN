@@ -92,12 +92,79 @@
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
+/* The bundled interface faces: Inter, Geist, IBM Plex Sans and JetBrains Mono.
+   They keep Cairo in every stack for Arabic and the flag face for flags. */
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/inter-latin.woff2") format("woff2");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/inter-latin-ext.woff2") format("woff2");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/geist-latin.woff2") format("woff2");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/geist-latin-ext.woff2") format("woff2");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("/fonts/ibm-plex-sans-latin.woff2") format("woff2");
+  font-weight: 100 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("/fonts/ibm-plex-sans-latin-ext.woff2") format("woff2");
+  font-weight: 100 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/jetbrains-mono-latin.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/jetbrains-mono-latin-ext.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
   color-scheme: dark;
 
-  /* Serein is the default. Surfaces use the approved dark steps only:
+  /* Quota is the default. Surfaces use the approved dark steps only:
      #000000, #181818, #1F1F1F, #272727. The structure is carried by
      hairlines and one accent, never by a wash of gradients. */
   --bg: #000000;
@@ -126,17 +193,17 @@
   --on-brand: #ffffff;
 
   --green: #4cc38a;
-  --green-bg: rgb(76 195 138 / 0.12);
-  --green-line: rgb(76 195 138 / 0.32);
+  --green-bg: color-mix(in srgb, var(--green) 12%, transparent);
+  --green-line: color-mix(in srgb, var(--green) 32%, transparent);
   --amber: #e0a458;
-  --amber-bg: rgb(224 164 88 / 0.12);
-  --amber-line: rgb(224 164 88 / 0.32);
+  --amber-bg: color-mix(in srgb, var(--amber) 12%, transparent);
+  --amber-line: color-mix(in srgb, var(--amber) 32%, transparent);
   --red: #e06c75;
-  --red-bg: rgb(224 108 117 / 0.12);
-  --red-line: rgb(224 108 117 / 0.32);
+  --red-bg: color-mix(in srgb, var(--red) 12%, transparent);
+  --red-line: color-mix(in srgb, var(--red) 32%, transparent);
 
   /* The interface face is a user choice; the data face stays monospace. */
-  --font-ui: "Manrope", "Segoe UI Variable Text", "Segoe UI", system-ui, "Cairo", "Twemoji Country Flags", sans-serif;
+  --font-ui: "Inter", "Segoe UI", system-ui, "Cairo", "Twemoji Country Flags", sans-serif;
 
   /* Shape, elevation, motion. The curve decelerates into place; color and
      opacity are the only fast properties. */
@@ -171,100 +238,137 @@
   --radius: 0.75rem;
 }
 
-[data-theme="eclipse"] {
-  --bg: #060a12;
-  --side: #080d17;
-  --panel: #101827;
-  --panel-hover: #152033;
-  --field: #162033;
-  --surface-2: #111b2b;
-  --surface-3: #1a2638;
-  --line: rgb(148 163 184 / 0.14);
-  --line-strong: rgb(148 163 184 / 0.22);
-  --txt: #eef4ff;
-  --txt2: #a9b8d0;
-  --txt3: #7484a0;
-  --brand-base: #3b82f6;
+[data-theme="catppuccin"] {
+  --bg: #11111b;
+  --side: #181825;
+  --panel: #1e1e2e;
+  --panel-hover: #313244;
+  --field: #313244;
+  --surface-2: #313244;
+  --surface-3: #45475a;
+  --line: rgb(205 214 244 / 0.1);
+  --line-strong: rgb(205 214 244 / 0.18);
+  --txt: #cdd6f4;
+  --txt2: #bac2de;
+  --txt3: #9399b2;
+  --brand-base: #89b4fa;
+  --green: #a6e3a1;
+  --amber: #f9e2af;
+  --red: #f38ba8;
 }
 
-[data-theme="slate"] {
-  --bg: #0b0d10;
-  --side: #0e1115;
-  --panel: #161a20;
-  --panel-hover: #1d222a;
-  --field: #1d222a;
-  --surface-2: #1a1f26;
-  --surface-3: #252b34;
-  --line: rgb(255 255 255 / 0.09);
-  --line-strong: rgb(255 255 255 / 0.16);
-  --txt: #f0f2f5;
-  --txt2: #aab2bd;
-  --txt3: #78818e;
-  --brand-base: #7d93b2;
+[data-theme="tokyo-night"] {
+  --bg: #16161e;
+  --side: #1a1b26;
+  --panel: #1f2335;
+  --panel-hover: #292e42;
+  --field: #292e42;
+  --surface-2: #292e42;
+  --surface-3: #3b4261;
+  --line: rgb(192 202 245 / 0.1);
+  --line-strong: rgb(192 202 245 / 0.18);
+  --txt: #c0caf5;
+  --txt2: #a9b1d6;
+  --txt3: #737aa2;
+  --brand-base: #7aa2f7;
+  --green: #9ece6a;
+  --amber: #e0af68;
+  --red: #f7768e;
 }
 
-[data-theme="nightfall"] {
-  --bg: #08070d;
-  --side: #0b0a12;
-  --panel: #14121f;
-  --panel-hover: #1b1828;
-  --field: #1c192a;
-  --surface-2: #181524;
-  --surface-3: #241f36;
-  --line: rgb(196 181 253 / 0.13);
-  --line-strong: rgb(196 181 253 / 0.2);
-  --txt: #f4f0ff;
-  --txt2: #b9afd6;
-  --txt3: #857a9f;
-  --brand-base: #8b70f5;
+[data-theme="nord"] {
+  --bg: #2e3440;
+  --side: #2e3440;
+  --panel: #3b4252;
+  --panel-hover: #434c5e;
+  --field: #434c5e;
+  --surface-2: #434c5e;
+  --surface-3: #4c566a;
+  --line: rgb(216 222 233 / 0.1);
+  --line-strong: rgb(216 222 233 / 0.18);
+  --txt: #eceff4;
+  --txt2: #d8dee9;
+  --txt3: #9aa5b8;
+  --brand-base: #88c0d0;
+  --green: #a3be8c;
+  --amber: #ebcb8b;
+  --red: #bf616a;
 }
 
-[data-theme="ember"] {
-  --bg: #0c0907;
-  --side: #100c09;
-  --panel: #1a1410;
-  --panel-hover: #221a14;
-  --field: #241b15;
-  --surface-2: #1f1712;
-  --surface-3: #2b2119;
-  --line: rgb(255 214 170 / 0.11);
-  --line-strong: rgb(255 214 170 / 0.18);
-  --txt: #fbf3ec;
-  --txt2: #c7b3a3;
-  --txt3: #927d6c;
-  --brand-base: #e87a43;
+[data-theme="dracula"] {
+  --bg: #1e1f29;
+  --side: #21222c;
+  --panel: #282a36;
+  --panel-hover: #343746;
+  --field: #343746;
+  --surface-2: #343746;
+  --surface-3: #44475a;
+  --line: rgb(248 248 242 / 0.09);
+  --line-strong: rgb(248 248 242 / 0.16);
+  --txt: #f8f8f2;
+  --txt2: #c5c5c0;
+  --txt3: #8a8fa8;
+  --brand-base: #bd93f9;
+  --green: #50fa7b;
+  --amber: #f1fa8c;
+  --red: #ff5555;
 }
 
-[data-theme="verdant"] {
-  --bg: #060b0a;
-  --side: #08100e;
-  --panel: #0f1a17;
-  --panel-hover: #14221e;
-  --field: #16251f;
-  --surface-2: #12201c;
-  --surface-3: #1b2c26;
-  --line: rgb(167 243 208 / 0.11);
-  --line-strong: rgb(167 243 208 / 0.18);
-  --txt: #eefbf6;
-  --txt2: #a7c4b8;
-  --txt3: #6f8e82;
-  --brand-base: #17b3a6;
+[data-theme="gruvbox"] {
+  --bg: #1d2021;
+  --side: #282828;
+  --panel: #32302f;
+  --panel-hover: #3c3836;
+  --field: #3c3836;
+  --surface-2: #3c3836;
+  --surface-3: #504945;
+  --line: rgb(235 219 178 / 0.1);
+  --line-strong: rgb(235 219 178 / 0.18);
+  --txt: #ebdbb2;
+  --txt2: #d5c4a1;
+  --txt3: #a89984;
+  --brand-base: #fe8019;
+  --green: #b8bb26;
+  --amber: #fabd2f;
+  --red: #fb4934;
 }
 
-[data-theme="afterglow"] {
-  --bg: #0d070b;
-  --side: #11090f;
-  --panel: #1c1118;
-  --panel-hover: #25161f;
-  --field: #291820;
-  --surface-2: #22141c;
-  --surface-3: #2f1d27;
-  --line: rgb(251 207 232 / 0.12);
-  --line-strong: rgb(251 207 232 / 0.19);
-  --txt: #fff1f7;
-  --txt2: #d3afc2;
-  --txt3: #9c7689;
-  --brand-base: #f472b6;
+[data-theme="rose-pine"] {
+  --bg: #191724;
+  --side: #1f1d2e;
+  --panel: #26233a;
+  --panel-hover: #403d52;
+  --field: #403d52;
+  --surface-2: #403d52;
+  --surface-3: #524f67;
+  --line: rgb(224 222 244 / 0.1);
+  --line-strong: rgb(224 222 244 / 0.18);
+  --txt: #e0def4;
+  --txt2: #b6b1c9;
+  --txt3: #908caa;
+  --brand-base: #ebbcba;
+  --green: #9ccfd8;
+  --amber: #f6c177;
+  --red: #eb6f92;
+}
+
+[data-theme="one-dark"] {
+  --bg: #1b1d23;
+  --side: #21252b;
+  --panel: #282c34;
+  --panel-hover: #2f343d;
+  --field: #2f343d;
+  --surface-2: #2f343d;
+  --surface-3: #3a3f4b;
+  --line: rgb(171 178 191 / 0.1);
+  --line-strong: rgb(171 178 191 / 0.18);
+  --txt: #d7dae0;
+  --txt2: #abb2bf;
+  --txt3: #7f848e;
+  --brand-base: #61afef;
+  --green: #98c379;
+  --amber: #e5c07b;
+  --red: #e06c75;
 }
 
 @theme inline {

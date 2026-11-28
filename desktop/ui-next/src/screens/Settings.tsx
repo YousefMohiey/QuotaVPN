@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
-import { ChevronDown, Download, Languages, Loader2, MonitorPlay, Palette, RefreshCw, ShieldOff } from "@/components/icons"
+import { Check, ChevronDown, Download, Languages, Loader2, MonitorPlay, Palette, PaintBrush, RefreshCw, ShieldOff, TextAa } from "@/components/icons"
 import { Toggle } from "@/components/Toggle"
 import { Segmented } from "@/components/Segmented"
 import { Tip } from "@/components/Tip"
@@ -239,65 +239,65 @@ export function Settings() {
   return (
     <div className="flex w-full flex-col pb-6">
       <Section label={t("setAppearanceGroup")}>
-        <div className="rounded-xl border border-line bg-[var(--panel)] p-5">
-          <div className="flex items-start gap-3">
-            <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong">
-              <Palette className="size-4" aria-hidden />
-            </span>
-            <div className="min-w-0">
-              <h3 className="text-sm font-medium text-txt">{t("themeTitle")}</h3>
-              <p className="mt-0.5 text-xs leading-relaxed text-txt2">{t("themeBody")}</p>
-            </div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {themes.map((option) => {
-              const active = option.id === theme
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setTheme(option.id)}
-                  aria-pressed={active}
-                  aria-label={t(option.labelKey)}
-                  className={cn(
-                    "group rounded-xl border p-1.5 text-start transition-colors duration-200",
-                    active
-                      ? "border-[var(--brand-line)] bg-[var(--brand-bg)]"
-                      : "border-line hover:bg-[var(--surface-2)]",
-                  )}
-                >
-                  <span
-                    className="block overflow-hidden rounded-lg border border-white/10 p-2"
-                    style={{ background: option.surface }}
+        <div className="flex items-start gap-4 border-b border-line py-5 max-[760px]:flex-col max-[760px]:gap-y-3">
+          <span className="grid size-10 shrink-0 place-items-center text-txt2">
+            <Palette className="size-6" strokeWidth={1.7} aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base font-medium text-txt">{t("themeTitle")}</h3>
+            <p className="mt-1 text-sm leading-relaxed text-txt2">{t("themeBody")}</p>
+            <div className="mt-4 grid grid-cols-4 gap-x-2 gap-y-4 sm:grid-cols-8">
+              {themes.map((option) => {
+                const active = option.id === theme
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setTheme(option.id)}
+                    aria-pressed={active}
+                    aria-label={t(option.labelKey)}
+                    className="group flex min-w-0 flex-col items-center gap-2 focus-visible:outline-none"
                   >
+                    <span className="relative">
+                      <span
+                        className={cn(
+                          "grid size-12 grid-cols-2 grid-rows-2 overflow-hidden rounded-full border border-line transition-transform duration-200 group-hover:scale-105",
+                          active && "ring-2 ring-[var(--brand)] ring-offset-2 ring-offset-[var(--bg)]",
+                        )}
+                        aria-hidden
+                      >
+                        <span style={{ background: option.preview.bg }} />
+                        <span style={{ background: option.preview.panel }} />
+                        <span style={{ background: option.preview.text }} />
+                        <span style={{ background: option.accent }} />
+                      </span>
+                      {active ? (
+                        <span className="absolute -bottom-0.5 -end-0.5 grid size-4 place-items-center rounded-full bg-[var(--brand)] text-[var(--on-brand)] ring-2 ring-[var(--bg)]">
+                          <Check className="size-2.5" aria-hidden />
+                        </span>
+                      ) : null}
+                    </span>
                     <span
-                      className="block h-2 w-9 rounded-full"
-                      style={{ background: option.accent }}
-                    />
-                    <span className="mt-2 block h-1.5 w-14 rounded-full bg-white/25" />
-                    <span className="mt-1 block h-1.5 w-9 rounded-full bg-white/15" />
-                  </span>
-                  <span
-                    className={cn(
-                      "mt-1.5 flex items-center gap-1.5 px-1 text-xs",
-                      active ? "text-txt" : "text-txt3",
-                    )}
-                  >
-                    <span className="truncate">{t(option.labelKey)}</span>
-                    {active ? <span className="size-1.5 shrink-0 rounded-full bg-[var(--brand)]" /> : null}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-4">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-txt">{t("accentTitle")}</p>
-              <p className="mt-0.5 text-xs leading-relaxed text-txt3">{t("accentBody")}</p>
+                      className={cn(
+                        "w-full truncate text-center text-[11px] leading-tight",
+                        active ? "font-medium text-txt" : "text-txt2",
+                      )}
+                    >
+                      {t(option.labelKey)}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
-            <div className="flex shrink-0 items-center gap-2">
+          </div>
+        </div>
+
+        <Row
+          icon={PaintBrush}
+          title={t("accentTitle")}
+          body={t("accentBody")}
+          control={
+            <div className="flex items-center gap-3">
               <span className="font-mono text-xs text-txt2">{accent.toUpperCase()}</span>
               <label
                 className="relative size-9 cursor-pointer overflow-hidden rounded-lg border border-line"
@@ -312,25 +312,26 @@ export function Settings() {
                 />
               </label>
             </div>
-          </div>
+          }
+        />
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-4">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-txt">{t("fontTitle")}</p>
-              <p className="mt-0.5 text-xs leading-relaxed text-txt3">{t("fontBody")}</p>
-            </div>
+        <Row
+          icon={TextAa}
+          title={t("fontTitle")}
+          body={t("fontBody")}
+          control={
             <button
               type="button"
               onClick={() => setFontOpen(true)}
-              className="flex h-10 min-w-[190px] max-w-full items-center justify-between gap-3 rounded-lg border border-line bg-[var(--surface-2)] px-3 text-sm text-txt transition-colors duration-200 hover:border-[var(--brand-line)]"
+              className="flex h-10 w-[220px] max-w-full items-center justify-between gap-3 rounded-lg border border-line bg-[var(--surface-2)] px-3 text-sm text-txt transition-colors duration-200 hover:border-[var(--brand-line)]"
             >
               <span className="truncate" style={{ fontFamily: currentFont.stack }}>
                 {currentFont.label}
               </span>
               <ChevronDown className="size-4 shrink-0 text-txt3" aria-hidden />
             </button>
-          </div>
-        </div>
+          }
+        />
       </Section>
 
       <Section label={t("setAppGroup")} gap>
@@ -502,7 +503,7 @@ export function Settings() {
         open={fontOpen}
         onOpenChange={setFontOpen}
         title={t("fontTitle")}
-        search={t("sheetSearch")}
+        search={t("fontSearch")}
         items={fontItems}
         value={font}
         onPick={setFont}

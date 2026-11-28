@@ -31,7 +31,8 @@ export function Toggle({
       <span
         aria-hidden
         className={cn(
-          "absolute top-1/2 left-[3px] size-[20px] -translate-y-1/2 rounded-full bg-white transition-[translate] duration-200",
+          "absolute top-1/2 left-[3px] size-[20px] -translate-y-1/2 rounded-full transition-[translate] duration-200",
+          on ? "bg-[var(--on-brand)]" : "bg-white",
           on ? "translate-x-[21px]" : "translate-x-0",
         )}
       />

@@ -65,17 +65,18 @@ Windows, run from git-bash. The toolchain this project was developed against:
   before hand-rolling an animation, check Motion. Do not add another UI library.
 - **No dropdown menus.** Choices use the searchable list picker (`components/PickerDialog.tsx`)
   with a check on the current value.
-- **Theme**: Serein uses the approved flat dark steps (`#000000`, `#181818`, `#1F1F1F`,
-  `#272727`); the other presets use tinted equivalents of the same steps. No background gradients
-  (`index.css` tokens, `.scene` grain only); `.glass*` is for dialogs and popovers, not every pane.
-  Seven full palettes (Serein, Eclipse, Slate, Nightfall, Ember, Verdant, Afterglow) live in
+- **Theme**: Quota uses the approved flat dark steps (`#000000`, `#181818`, `#1F1F1F`,
+  `#272727`); Catppuccin, Tokyo Night, Nord, Dracula, Gruvbox, Rosé Pine and One Dark use their
+  official dark palettes. No background gradients (`index.css` tokens, `.scene` grain only);
+  `.glass*` is for dialogs and popovers, not every pane. Eight palettes live in
   `src/state/theme.tsx` and `index.css`; they change surfaces, text, lines and accent together,
-  not just the accent. They are chosen in Settings > Appearance only, never in the rail. A custom
-  primary colour can override the preset accent, and the in-app `QuotaMark` follows it. The
-  interface font is a user choice from the bundled Manrope/Archivo and the installed Windows faces;
-  Geist Mono stays for addresses and latency. No italics. Phosphor is the only icon set, at the
-  regular weight. Keep `backdrop-filter` free of the `-webkit-` twin: Vite's minifier keeps only
-  that one and Chromium then ignores it, killing the blur.
+  not just the accent. They are chosen in Settings > Appearance only, never in the rail. The
+  picker is a row of palette orbs, not fake mini-windows. A custom primary colour can override
+  the preset accent, and the real in-app icon follows it. The interface font is a user choice
+  from Inter, Geist, Manrope, IBM Plex Sans, Archivo, JetBrains Mono and the installed Windows
+  faces; Inter is the default, Geist Mono stays for addresses and latency. No italics. Phosphor
+  is the only icon set, at the regular weight. Keep `backdrop-filter` free of the `-webkit-` twin:
+  Vite's minifier keeps only that one and Chromium then ignores it, killing the blur.
 - **All user-visible strings go through `src/lib/i18n/{en,ar}.ts`** (formal Modern Standard Arabic,
   RTL). Never mirror the layout in Arabic, only the text direction.
 - **Never emit em-dashes** in code, UI strings, or docs. Plain hyphens only. The user treats
@@ -89,7 +90,7 @@ Windows, run from git-bash. The toolchain this project was developed against:
   built exe for the dependency before it publishes.
 - **Version lives in four files**: `desktop/src-tauri/{tauri.conf.json,Cargo.toml}` and
   `android/tauri-app/src-tauri/{tauri.conf.json,Cargo.toml}`. A normal release bumps all four
-  together. The desktop is 0.7.6-exp.11; the phone is 0.7.5. The phone still compiles the legacy SSH
+  together. The desktop is 0.7.6-exp.12; the phone is 0.7.5. The phone still compiles the legacy SSH
   control plane (`legacy-ssh`) until its own credential migration lands; do not bump the phone
   to a version that has no tested APK behind it. Experimental desktop-only builds may move ahead
   of the phone; stable releases still ship both at the same version.
@@ -206,25 +207,28 @@ record carries `mode` (`l3` or `l2`) and the coordinator stores it, returns each
 accepts `POST /v1/spaces/{id}/mode`. Layer 3 is still the default, the phone is still 0.7.5, and
 `notes/SPACES-L2.md` holds the audit, the plan and the proofs.
 
-**The latest desktop release is v0.7.6-exp.11 (experimental, Windows); stable is v0.7.5, Windows
+**The latest desktop release is v0.7.6-exp.12 (experimental, Windows); stable is v0.7.5, Windows
 and Android.** This tree carries the 0.7.0
 credential migration (`notes/HANDOFF-2026-11-22.md`): the desktop imports a server-issued `qv1:`
 secret into a DPAPI-sealed per-card store (`qc1:` is still accepted), talks to the card API over
 HTTPS, and no longer compiles the SSH control plane. The phone is 0.7.5 too; its
-`server.rs`/`ssh.rs` path is still behind `legacy-ssh`. The exp.11 release carries the Windows setup
-`QuotaVPN_0.7.6-exp.11_x64-setup.exe`; the stable 0.7.5 release carries the phone APK
+`server.rs`/`ssh.rs` path is still behind `legacy-ssh`. The exp.12 release carries the Windows setup
+`QuotaVPN_0.7.6-exp.12_x64-setup.exe`; the stable 0.7.5 release carries the phone APK
 `QuotaVPN-mobile-signed.apk` (the name the phone updater looks for). The standalone `QuotaVPN.exe`
 is not uploaded as a release asset.
 
-**Exp.11 appearance (28 November 2026).** Seven full palettes replace the four accent-only themes.
-Each preset moves the surfaces, hairlines, text and accent together, and Serein keeps the approved
-flat dark steps. Appearance is Settings only: a theme grid, a primary colour picker and an
-interface font picker. The rail swatches are gone. The in-app icon is the shipping PNG, unchanged:
-a canvas pass recolours only the royal-blue tail to the active accent, so the black tile, the white
-Q, the shading and the anti-aliased rim stay as drawn. The Windows icon and tray asset stay static.
-Button labels follow the accent's luminance, so a light primary keeps black text. Fonts are Manrope,
-Archivo and the installed Windows faces, saved under `qc-font`; Geist Mono stays on numbers. Old
-theme values migrate (`obsidian` to Serein, `mint` to Verdant, `violet` to Nightfall).
+**Exp.12 appearance (28 November 2026).** The palette set is now Quota plus the most-used editor
+themes: Catppuccin, Tokyo Night, Nord, Dracula, Gruvbox, Rosé Pine and One Dark. Quota is the
+default and keeps the approved flat dark steps; each editor palette uses its official colours
+mapped onto the same surface steps. Appearance is Settings only: a row of palette orbs, a primary
+colour picker and an interface font picker. The rail swatches are gone, and the old preview
+cards are replaced by the orbs. The interface font defaults to Inter; Geist, Manrope, IBM Plex
+Sans, Archivo and JetBrains Mono are bundled alongside it, and the installed Windows faces remain.
+The in-app icon is the shipping PNG, unchanged: a canvas pass recolours only the royal-blue tail
+to the active accent. The Windows icon and tray asset stay static. Button labels follow the
+accent, so pale presets use black text and the deep Quota blue keeps white. Theme values migrate
+(`serein`/`obsidian` to Quota, `eclipse` to Tokyo Night, `slate` to Nord, `nightfall`/`violet` to
+Dracula, `ember` to Gruvbox, `verdant`/`mint` to Catppuccin, `afterglow` to Rosé Pine).
 
 0.7.4 restored the phone UI that shipped before the rejected 0.7.3 rebuild. 0.7.5 is the motion
 and interaction pass on that same layout: a sliding active pill in the bottom bar, a short page

@@ -10,31 +10,73 @@ import {
 import type { StrKey } from "@/lib/i18n"
 
 export type ThemeId =
-  | "serein"
-  | "eclipse"
-  | "slate"
-  | "nightfall"
-  | "ember"
-  | "verdant"
-  | "afterglow"
+  | "quota"
+  | "catppuccin"
+  | "tokyo-night"
+  | "nord"
+  | "dracula"
+  | "gruvbox"
+  | "rose-pine"
+  | "one-dark"
 
 export type ThemeMeta = {
   id: ThemeId
   labelKey: StrKey
   accent: string
-  surface: string
+  preview: { bg: string; panel: string; text: string }
 }
 
-/** Seven complete palettes. Each one changes the surfaces, lines, text and
-    accent together; the old four only moved the accent. */
+/** The eight palettes. Quota is the branded flat dark; the rest are the
+    palettes developers already live in, adapted to the same surface steps. */
 export const THEMES: ThemeMeta[] = [
-  { id: "serein", labelKey: "themeSerein", accent: "#1a72e8", surface: "#000000" },
-  { id: "eclipse", labelKey: "themeEclipse", accent: "#3b82f6", surface: "#0a1220" },
-  { id: "slate", labelKey: "themeSlate", accent: "#7d93b2", surface: "#12161c" },
-  { id: "nightfall", labelKey: "themeNightfall", accent: "#8b70f5", surface: "#14121f" },
-  { id: "ember", labelKey: "themeEmber", accent: "#e87a43", surface: "#1a1410" },
-  { id: "verdant", labelKey: "themeVerdant", accent: "#17b3a6", surface: "#0f1a17" },
-  { id: "afterglow", labelKey: "themeAfterglow", accent: "#f472b6", surface: "#1c1118" },
+  {
+    id: "quota",
+    labelKey: "themeQuota",
+    accent: "#1a72e8",
+    preview: { bg: "#000000", panel: "#181818", text: "#fafafa" },
+  },
+  {
+    id: "catppuccin",
+    labelKey: "themeCatppuccin",
+    accent: "#89b4fa",
+    preview: { bg: "#11111b", panel: "#1e1e2e", text: "#cdd6f4" },
+  },
+  {
+    id: "tokyo-night",
+    labelKey: "themeTokyoNight",
+    accent: "#7aa2f7",
+    preview: { bg: "#16161e", panel: "#1f2335", text: "#c0caf5" },
+  },
+  {
+    id: "nord",
+    labelKey: "themeNord",
+    accent: "#88c0d0",
+    preview: { bg: "#2e3440", panel: "#3b4252", text: "#eceff4" },
+  },
+  {
+    id: "dracula",
+    labelKey: "themeDracula",
+    accent: "#bd93f9",
+    preview: { bg: "#1e1f29", panel: "#282a36", text: "#f8f8f2" },
+  },
+  {
+    id: "gruvbox",
+    labelKey: "themeGruvbox",
+    accent: "#fe8019",
+    preview: { bg: "#1d2021", panel: "#32302f", text: "#ebdbb2" },
+  },
+  {
+    id: "rose-pine",
+    labelKey: "themeRosePine",
+    accent: "#ebbcba",
+    preview: { bg: "#191724", panel: "#26233a", text: "#e0def4" },
+  },
+  {
+    id: "one-dark",
+    labelKey: "themeOneDark",
+    accent: "#61afef",
+    preview: { bg: "#1b1d23", panel: "#282c34", text: "#d7dae0" },
+  },
 ]
 
 export type FontMeta = {
@@ -44,78 +86,100 @@ export type FontMeta = {
   bundled?: boolean
 }
 
-/** Fonts that ship with Windows plus the two bundled families. The stack
-    keeps Cairo and the flag face as fallbacks so Arabic and flags never
-    disappear. */
+/** The bundled faces are the ones the interface was designed against; the
+    installed Windows faces remain for anyone who wants their own machine. */
 const LATIN = '"Segoe UI", system-ui, "Cairo", "Twemoji Country Flags", sans-serif'
 export const FONTS: FontMeta[] = [
+  { id: "inter", label: "Inter", stack: `"Inter", ${LATIN}`, bundled: true },
+  { id: "geist", label: "Geist", stack: `"Geist", "Inter", ${LATIN}`, bundled: true },
   { id: "manrope", label: "Manrope", stack: `"Manrope", ${LATIN}`, bundled: true },
+  { id: "ibm-plex", label: "IBM Plex Sans", stack: `"IBM Plex Sans", "Inter", ${LATIN}`, bundled: true },
   { id: "archivo", label: "Archivo", stack: `"Archivo", ${LATIN}`, bundled: true },
+  {
+    id: "jetbrains",
+    label: "JetBrains Mono",
+    stack: '"JetBrains Mono", "Geist Mono", ui-monospace, monospace',
+    bundled: true,
+  },
+  {
+    id: "segoe-display",
+    label: "Segoe UI Variable",
+    stack: `"Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", ${LATIN}`,
+  },
   { id: "segoe", label: "Segoe UI", stack: `"Segoe UI Variable Text", "Segoe UI", ${LATIN}` },
-  { id: "segoe-display", label: "Segoe UI Variable", stack: `"Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", ${LATIN}` },
-  { id: "arial", label: "Arial", stack: `"Arial", ${LATIN}` },
-  { id: "arial-black", label: "Arial Black", stack: `"Arial Black", "Arial", ${LATIN}` },
   { id: "calibri", label: "Calibri", stack: `"Calibri", ${LATIN}` },
-  { id: "cambria", label: "Cambria", stack: `"Cambria", "Georgia", ${LATIN}` },
   { id: "candara", label: "Candara", stack: `"Candara", ${LATIN}` },
   { id: "corbel", label: "Corbel", stack: `"Corbel", ${LATIN}` },
-  { id: "constantia", label: "Constantia", stack: `"Constantia", "Cambria", "Georgia", ${LATIN}` },
-  { id: "georgia", label: "Georgia", stack: `"Georgia", ${LATIN}` },
-  { id: "palatino", label: "Palatino Linotype", stack: `"Palatino Linotype", "Georgia", ${LATIN}` },
   { id: "tahoma", label: "Tahoma", stack: `"Tahoma", ${LATIN}` },
   { id: "trebuchet", label: "Trebuchet MS", stack: `"Trebuchet MS", ${LATIN}` },
   { id: "verdana", label: "Verdana", stack: `"Verdana", ${LATIN}` },
-  { id: "franklin", label: "Franklin Gothic", stack: `"Franklin Gothic Medium", "Arial", ${LATIN}` },
+  { id: "arial", label: "Arial", stack: `"Arial", ${LATIN}` },
+  { id: "georgia", label: "Georgia", stack: `"Georgia", ${LATIN}` },
+  { id: "cambria", label: "Cambria", stack: `"Cambria", "Georgia", ${LATIN}` },
+  { id: "palatino", label: "Palatino Linotype", stack: `"Palatino Linotype", "Georgia", ${LATIN}` },
   { id: "bahnschrift", label: "Bahnschrift", stack: `"Bahnschrift", ${LATIN}` },
   { id: "lucida", label: "Lucida Sans", stack: `"Lucida Sans Unicode", "Lucida Sans", ${LATIN}` },
-  { id: "ebrima", label: "Ebrima", stack: `"Ebrima", ${LATIN}` },
-  { id: "inkfree", label: "Ink Free", stack: `"Ink Free", "Segoe Print", ${LATIN}` },
-  { id: "segoe-print", label: "Segoe Print", stack: `"Segoe Print", "Ink Free", ${LATIN}` },
-  { id: "segoe-script", label: "Segoe Script", stack: `"Segoe Script", "Segoe Print", ${LATIN}` },
-  { id: "comic", label: "Comic Sans MS", stack: `"Comic Sans MS", ${LATIN}` },
-  { id: "impact", label: "Impact", stack: `"Impact", "Arial Black", ${LATIN}` },
-  { id: "cascadia", label: "Cascadia Code", stack: `"Cascadia Code", "Consolas", "Geist Mono", ui-monospace, monospace` },
-  { id: "consolas", label: "Consolas", stack: `"Consolas", "Geist Mono", ui-monospace, monospace` },
+  {
+    id: "cascadia",
+    label: "Cascadia Code",
+    stack: '"Cascadia Code", "Geist Mono", ui-monospace, monospace',
+  },
+  { id: "consolas", label: "Consolas", stack: '"Consolas", "Geist Mono", ui-monospace, monospace' },
 ]
 
 const KEY = "qc-theme"
 const FONT_KEY = "qc-font"
 const ACCENT_KEY = "qc-accent"
 
+/** The old accent-only themes and the first full set migrate onto the new
+    palettes instead of snapping back to the default. */
 const LEGACY: Record<string, ThemeId> = {
-  obsidian: "serein",
-  ember: "ember",
-  mint: "verdant",
-  violet: "nightfall",
+  obsidian: "quota",
+  serein: "quota",
+  eclipse: "tokyo-night",
+  slate: "nord",
+  nightfall: "dracula",
+  violet: "dracula",
+  ember: "gruvbox",
+  verdant: "catppuccin",
+  mint: "catppuccin",
+  afterglow: "rose-pine",
 }
 
 function isTheme(value: string | null | undefined): value is ThemeId {
   return THEMES.some((theme) => theme.id === value)
 }
 
+function resolveTheme(value: string | null | undefined): ThemeId | null {
+  if (!value) return null
+  if (isTheme(value)) return value
+  return LEGACY[value] ?? null
+}
+
 function initialTheme(): ThemeId {
-  if (typeof window === "undefined") return "serein"
+  if (typeof window === "undefined") return "quota"
   try {
     const query = new URLSearchParams(window.location.search).get("theme")
-    if (query && isTheme(query)) return query
+    const fromQuery = resolveTheme(query)
+    if (fromQuery) return fromQuery
     const saved = localStorage.getItem(KEY)
-    if (saved && isTheme(saved)) return saved
-    if (saved && LEGACY[saved]) return LEGACY[saved]
+    const fromSaved = resolveTheme(saved)
+    if (fromSaved) return fromSaved
   } catch {
     /* private mode */
   }
-  return "serein"
+  return "quota"
 }
 
 function initialFont(): string {
-  if (typeof window === "undefined") return "manrope"
+  if (typeof window === "undefined") return "inter"
   try {
     const saved = localStorage.getItem(FONT_KEY)
     if (saved && FONTS.some((font) => font.id === saved)) return saved
   } catch {
     /* private mode */
   }
-  return "manrope"
+  return "inter"
 }
 
 function normalizeAccent(value: string): string | null {
@@ -134,7 +198,8 @@ function initialAccent(): string | null {
   }
 }
 
-/** Black on a light accent, white on a dark one. */
+/** Black or white, whichever reads better on the accent. The deep brand blue
+    and the red keep white; the pale presets take black. */
 function readableOn(hex: string): string {
   const clean = hex.replace("#", "")
   const r = parseInt(clean.slice(0, 2), 16) / 255
@@ -142,7 +207,7 @@ function readableOn(hex: string): string {
   const b = parseInt(clean.slice(4, 6), 16) / 255
   const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
   const luminance = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
-  return luminance > 0.52 ? "#0b0d10" : "#ffffff"
+  return luminance > 0.25 ? "#0b0d10" : "#ffffff"
 }
 
 type ThemeValue = {
