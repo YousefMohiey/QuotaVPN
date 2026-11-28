@@ -117,7 +117,7 @@ export function WeQuotaDialog({
                 type="button"
                 onClick={() => void link(code.trim())}
                 disabled={busy || !code.trim()}
-                className="flex h-10 flex-1 items-center justify-center rounded-xl bg-[var(--brand)] px-4 text-sm font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
+                className="flex h-10 flex-1 items-center justify-center rounded-xl bg-[var(--brand)] px-4 text-sm font-medium text-[var(--on-brand)] transition-[filter] hover:brightness-110 disabled:cursor-wait"
               >
                 {t("weConfirm")}
               </button>
@@ -126,7 +126,7 @@ export function WeQuotaDialog({
                 type="button"
                 onClick={() => void link("")}
                 disabled={busy || !number.trim()}
-                className="flex h-10 flex-1 items-center justify-center rounded-xl bg-[var(--brand)] px-4 text-sm font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
+                className="flex h-10 flex-1 items-center justify-center rounded-xl bg-[var(--brand)] px-4 text-sm font-medium text-[var(--on-brand)] transition-[filter] hover:brightness-110 disabled:cursor-wait"
               >
                 {t("weLink")}
               </button>

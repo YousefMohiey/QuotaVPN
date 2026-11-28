@@ -118,7 +118,7 @@ function WeQuotaRows() {
             <button
               type="button"
               onClick={() => setQuotaOpen(true)}
-              className="press flex h-10 items-center rounded-lg bg-[var(--brand)] px-6 text-sm font-medium text-white transition-[filter] hover:brightness-110"
+              className="press flex h-10 items-center rounded-lg bg-[var(--brand)] px-6 text-sm font-medium text-[var(--on-brand)] transition-[filter] hover:brightness-110"
             >
               {t("weLink")}
             </button>
@@ -464,7 +464,7 @@ export function Settings() {
                   type="button"
                   onClick={() => void applyUpdate()}
                   disabled={installing}
-                  className="press flex h-10 items-center whitespace-nowrap rounded-lg bg-[var(--brand)] px-4 text-sm font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-wait"
+                  className="press flex h-10 items-center whitespace-nowrap rounded-lg bg-[var(--brand)] px-4 text-sm font-medium text-[var(--on-brand)] transition-[filter] hover:brightness-110 disabled:cursor-wait"
                 >
                   {installing ? (updatePct !== null ? `${updatePct}%` : t("upInstalling")) : t("upGet")}
                 </button>

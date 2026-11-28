@@ -15,6 +15,8 @@ Windows experimental build. The phone stays at 0.7.5.
   with the current value shown next to each control.
 - A custom primary colour overrides the preset accent without changing the
   preset surfaces. Picking a different preset returns it to that preset's accent.
+  Button labels switch between black and white from the accent's luminance, so a
+  light primary stays readable.
 - The in-app Q mark now follows the theme: the ring uses the text colour and the
   tail uses the primary colour. The Windows icon and tray asset stay static.
 - Old saved values map to the new presets: obsidian to Serein, mint to Verdant,

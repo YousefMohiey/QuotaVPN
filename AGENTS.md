@@ -220,7 +220,8 @@ is not uploaded as a release asset.
 Each preset moves the surfaces, hairlines, text and accent together, and Serein keeps the approved
 flat dark steps. Appearance is Settings only: a theme grid, a primary colour picker and an
 interface font picker. The rail swatches are gone. The in-app Q mark is an SVG whose tail follows
-the accent; the Windows icon and tray asset stay static. Fonts are Manrope, Archivo and the
+the accent; the Windows icon and tray asset stay static. Button labels follow the accent's
+luminance, so a light primary keeps black text. Fonts are Manrope, Archivo and the
 installed Windows faces, saved under `qc-font`; Geist Mono stays on numbers. Old theme values
 migrate (`obsidian` to Serein, `mint` to Verdant, `violet` to Nightfall).
 

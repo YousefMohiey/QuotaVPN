@@ -323,7 +323,7 @@ function NewSpaceDialog({
             type="button"
             onClick={() => void submit()}
             disabled={busy}
-            className="press flex h-9 items-center gap-2 rounded-lg bg-[var(--brand)] px-4 text-sm font-medium text-white hover:brightness-110 disabled:opacity-60"
+            className="press flex h-9 items-center gap-2 rounded-lg bg-[var(--brand)] px-4 text-sm font-medium text-[var(--on-brand)] hover:brightness-110 disabled:opacity-60"
           >
             {busy ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : <Plus className="size-3.5" aria-hidden />}
             {busy ? t("lanSpaceCreating") : t("lanSpaceCreate")}
@@ -403,7 +403,7 @@ function JoinSpaceDialog({
             type="button"
             onClick={() => void submit()}
             disabled={busy}
-            className="press flex h-9 items-center gap-2 rounded-lg bg-[var(--brand)] px-4 text-sm font-medium text-white hover:brightness-110 disabled:opacity-60"
+            className="press flex h-9 items-center gap-2 rounded-lg bg-[var(--brand)] px-4 text-sm font-medium text-[var(--on-brand)] hover:brightness-110 disabled:opacity-60"
           >
             {busy ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : <LogIn className="size-3.5" aria-hidden />}
             {busy ? t("lanSpaceJoining") : t("lanSpaceJoinAction")}

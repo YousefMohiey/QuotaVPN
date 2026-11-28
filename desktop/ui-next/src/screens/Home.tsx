@@ -180,7 +180,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                 <span className="text-xs leading-snug text-txt2">{t("tunnelSetupBody")}</span>
                 <Button
                   size="sm"
-                  className="h-8 rounded-lg bg-[var(--brand)] px-3 text-xs font-medium text-white"
+                  className="h-8 rounded-lg bg-[var(--brand)] px-3 text-xs font-medium text-[var(--on-brand)]"
                   disabled={settingUp}
                   onClick={() => {
                     void (async () => {

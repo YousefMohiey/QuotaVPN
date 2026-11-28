@@ -310,7 +310,7 @@ export function SpeedHistory({ onOpenResult, onOpenSpeed }: { onOpenResult: (at:
                 type="button"
                 disabled={picked.length === 0}
                 onClick={() => setPending({ kind: "many" })}
-                className="press flex h-8 items-center gap-2 rounded-full bg-[var(--brand)] px-4 text-xs font-medium text-white transition-[filter] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                className="press flex h-8 items-center gap-2 rounded-full bg-[var(--brand)] px-4 text-xs font-medium text-[var(--on-brand)] transition-[filter] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Trash2 className="size-3.5" aria-hidden />
                 {t("delete")}
