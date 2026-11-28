@@ -679,10 +679,7 @@ export function Speed() {
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] overflow-hidden rounded-[var(--r-card)] border border-line bg-[var(--panel)]">
         <section className="flex min-h-0 flex-col items-center justify-center gap-4 px-6 py-6">
           <SpeedDial
-            display={fmt(value, unit)}
             value={dialValue}
-            unit={unit}
-            icon={dialIcon}
             phase={phase}
             runId={runId}
             onStart={() => void run("all")}

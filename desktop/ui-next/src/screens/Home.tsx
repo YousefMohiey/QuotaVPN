@@ -238,7 +238,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                       layoutId="profile-ring"
                       aria-hidden
                       className="absolute inset-0 rounded-xl bg-[var(--brand-bg)] shadow-[inset_0_0_0_1px_var(--brand-line)]"
-                      transition={calm ? { duration: 0 } : { type: "spring", stiffness: 230, damping: 30, mass: 0.9 }}
+                      transition={calm ? { duration: 0 } : { type: "tween", duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                     />
                   ) : null}
                   <motion.span
@@ -249,7 +249,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                         : "bg-white/[0.04] text-txt3 group-hover/preset:text-brand-strong",
                     )}
                     animate={calm ? undefined : { scale: isActive ? 1.07 : 1 }}
-                    transition={{ type: "spring", stiffness: 280, damping: 26 }}
+                    transition={{ type: "tween", duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                   >
                     {creating === kind ? (
                       <Loader2 className="size-4 animate-spin" aria-hidden />

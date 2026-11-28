@@ -90,7 +90,7 @@ Windows, run from git-bash. The toolchain this project was developed against:
   built exe for the dependency before it publishes.
 - **Version lives in four files**: `desktop/src-tauri/{tauri.conf.json,Cargo.toml}` and
   `android/tauri-app/src-tauri/{tauri.conf.json,Cargo.toml}`. A normal release bumps all four
-  together. The desktop is 0.7.6-exp.15; the phone is 0.7.5. The phone still compiles the legacy SSH
+  together. The desktop is 0.7.6-exp.16; the phone is 0.7.5. The phone still compiles the legacy SSH
   control plane (`legacy-ssh`) until its own credential migration lands; do not bump the phone
   to a version that has no tested APK behind it. Experimental desktop-only builds may move ahead
   of the phone; stable releases still ship both at the same version.
@@ -207,13 +207,13 @@ record carries `mode` (`l3` or `l2`) and the coordinator stores it, returns each
 accepts `POST /v1/spaces/{id}/mode`. Layer 3 is still the default, the phone is still 0.7.5, and
 `notes/SPACES-L2.md` holds the audit, the plan and the proofs.
 
-**The latest desktop release is v0.7.6-exp.15 (experimental, Windows); stable is v0.7.5, Windows
+**The latest desktop release is v0.7.6-exp.16 (experimental, Windows); stable is v0.7.5, Windows
 and Android.** This tree carries the 0.7.0
 credential migration (`notes/HANDOFF-2026-11-22.md`): the desktop imports a server-issued `qv1:`
 secret into a DPAPI-sealed per-card store (`qc1:` is still accepted), talks to the card API over
 HTTPS, and no longer compiles the SSH control plane. The phone is 0.7.5 too; its
-`server.rs`/`ssh.rs` path is still behind `legacy-ssh`. The exp.15 release carries the Windows setup
-`QuotaVPN_0.7.6-exp.15_x64-setup.exe`; the stable 0.7.5 release carries the phone APK
+`server.rs`/`ssh.rs` path is still behind `legacy-ssh`. The exp.16 release carries the Windows setup
+`QuotaVPN_0.7.6-exp.16_x64-setup.exe`; the stable 0.7.5 release carries the phone APK
 `QuotaVPN-mobile-signed.apk` (the name the phone updater looks for). The standalone `QuotaVPN.exe`
 is not uploaded as a release asset.
 
@@ -254,6 +254,12 @@ Standard, Hysteria2 and WireGuard are all visible. The Gamerz/Streamerz switch u
 softer spring and a gentler icon pop. The Speed dial is a car cluster again: a dark face, a fine
 outer tick ring, a lit arc, a tapered needle, five labels and a small digital capsule under the
 hub. The exp.14 slim ring is gone; the full-width stop bar and round Stop button stay.
+
+**Exp.16 Speedtest dial (28 November 2026).** The Speed dial now copies Speedtest by Ookla: a
+270-degree 23px arc, the nine labels from 0 to 1000, a translucent tapered needle and a small hub.
+Passed labels brighten, the arc uses the theme accent in a gradient, and the idle state is the thin
+theme-gradient ring around GO. Live numbers stay in the reading rail; the measuring bar and Stop
+button remain. The Gamerz/Streamerz pill uses a 0.5 second ease-out tween instead of a spring.
 
 0.7.4 restored the phone UI that shipped before the rejected 0.7.3 rebuild. 0.7.5 is the motion
 and interaction pass on that same layout: a sliding active pill in the bottom bar, a short page
