@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react"
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { api, type LanSpace, type OpenRadPeer, type OpenRadStatus } from "@/lib/ipc"
 import SpacesConsole from "./SpacesConsole"
 
@@ -28,17 +28,26 @@ export function Spaces() {
   const [error, setError] = useState("")
 
   const selectedSpace = useMemo(
-    () => spaces.find((space) => space.id === selected) ?? spaces[0] ?? null,
+    () => spaces.find((space) => space.id === selected) ?? null,
     [spaces, selected],
   )
+  const selectedRef = useRef(selectedSpace)
+  useEffect(() => {
+    selectedRef.current = selectedSpace
+  }, [selectedSpace])
 
   const loadSpaces = useCallback(async (): Promise<LanSpace[]> => {
     const list = await api.openradSpaces()
     setSpaces(list)
     setSelected((current) => {
       if (list.some((space) => space.id === current)) return current
-      const fallback = list.find((space) => space.default) ?? list[0]
-      return fallback?.id ?? ""
+      // Only a fresh profile picks a space to show. If the selected space was
+      // removed, stay unselected instead of silently moving to another one.
+      if (!current) {
+        const first = list.find((space) => space.default) ?? list[0]
+        return first?.id ?? ""
+      }
+      return ""
     })
     return list
   }, [])
@@ -48,9 +57,9 @@ export function Spaces() {
   }, [loadSpaces])
 
   useEffect(() => {
-    if (!selected) return
     try {
-      localStorage.setItem(SPACE_KEY, selected)
+      if (selected) localStorage.setItem(SPACE_KEY, selected)
+      else localStorage.removeItem(SPACE_KEY)
     } catch {
       /* private mode */
     }
@@ -83,6 +92,13 @@ export function Spaces() {
         if (!alive) return
         setLan(status)
         if (status.phase === "connected") {
+          const joined = status.snapshot?.networks?.[0]?.name
+          const current = selectedRef.current
+          if (current && joined === current.network) {
+            // The engine is on the space the user picked. Any banner left from
+            // a previous switch is stale now.
+            setError((value) => (value ? "" : value))
+          }
           const peers = await api.openradPeers()
           if (alive) setLanPeers(Array.isArray(peers) ? peers : [])
         } else if (alive) {
@@ -106,6 +122,7 @@ export function Spaces() {
 
   const selectSpace = (id: string) => {
     setSelected(id)
+    setError("")
     setLanPeers([])
   }
 
@@ -114,7 +131,14 @@ export function Spaces() {
     setBusy(true)
     setError("")
     try {
-      const status = await api.openradConnect(selectedSpace.id)
+      const joinedName = lan?.snapshot?.networks?.[0]?.name ?? ""
+      // Switching while connected has its own command: it leaves the current
+      // space first, then joins the selected one, without stopping the engine
+      // or surfacing an error for a normal switch.
+      const status =
+        lan?.phase === "connected" && joinedName !== selectedSpace.network
+          ? await api.openradSwitch(selectedSpace.id)
+          : await api.openradConnect(selectedSpace.id)
       setLan(status)
       const peers = await api.openradPeers()
       setLanPeers(Array.isArray(peers) ? peers : [])
@@ -160,10 +184,17 @@ export function Spaces() {
   const removeSpace = async (space: LanSpace) => {
     setError("")
     await api.openradDeleteSpace(space.id)
-    const list = await loadSpaces()
-    const fallback = list.find((row) => row.id !== space.id) ?? null
-    setSelected(fallback?.id ?? "")
+    await loadSpaces()
     setLanPeers([])
+    await refreshLan()
+  }
+
+  const leaveSpace = async (space: LanSpace) => {
+    setError("")
+    await api.openradLeaveSpace(space.id)
+    await loadSpaces()
+    setLanPeers([])
+    await refreshLan()
   }
 
   return (
@@ -179,6 +210,7 @@ export function Spaces() {
       onStop={() => void stopLan()}
       onCreate={createSpace}
       onJoin={joinSpace}
+      onLeave={leaveSpace}
       onRemove={removeSpace}
       onErrorClear={() => setError("")}
     />

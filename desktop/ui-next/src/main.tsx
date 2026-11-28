@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { I18nProvider } from "@/lib/i18n"
 import { AppStateProvider } from "@/state/app"
 import { ThemeProvider } from "@/state/theme"
+import { ScaleProvider } from "@/state/scale"
 import App from "./App"
 import "./index.css"
 
@@ -21,13 +22,15 @@ createRoot(document.getElementById("root")!).render(
         consulted here. */}
     <MotionConfig reducedMotion="never">
       <ThemeProvider>
-        <I18nProvider>
-          <AppStateProvider>
-            <TooltipProvider>
-              <App />
-            </TooltipProvider>
-          </AppStateProvider>
-        </I18nProvider>
+        <ScaleProvider>
+          <I18nProvider>
+            <AppStateProvider>
+              <TooltipProvider>
+                <App />
+              </TooltipProvider>
+            </AppStateProvider>
+          </I18nProvider>
+        </ScaleProvider>
       </ThemeProvider>
     </MotionConfig>
   </StrictMode>,

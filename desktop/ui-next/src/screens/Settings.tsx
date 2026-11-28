@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
-import { Check, ChevronDown, Download, Languages, Loader2, MonitorPlay, Palette, PaintBrush, RefreshCw, ShieldOff, TextAa } from "@/components/icons"
+import { Check, ChevronDown, Download, ArrowsOutSimple, Languages, Loader2, MonitorPlay, Palette, PaintBrush, RefreshCw, ShieldOff, TextAa } from "@/components/icons"
 import { Toggle } from "@/components/Toggle"
 import { Segmented } from "@/components/Segmented"
 import { Tip } from "@/components/Tip"
 import { PickerDialog, type PickerItem } from "@/components/PickerDialog"
 import { useApp } from "@/state/app"
 import { useTheme } from "@/state/theme"
+import { useScale } from "@/state/scale"
 import { fmtQuota, quotaLogout, quotaRefresh, useQuota } from "@/state/quota"
 import { WeQuotaDialog } from "@/components/WeQuotaDialog"
 import { WeMark } from "@/components/WeMark"
@@ -155,6 +156,7 @@ export function Settings() {
 
   const { t, lang, setLang } = useI18n()
   const { theme, setTheme, themes, font, setFont, fonts, accent, setAccent } = useTheme()
+  const { scale, setScale, scales } = useScale()
   const [fontOpen, setFontOpen] = useState(false)
   const currentFont = fonts.find((entry) => entry.id === font) ?? fonts[0]
   const fontItems: PickerItem[] = fonts.map((entry) => ({
@@ -330,6 +332,25 @@ export function Settings() {
               </span>
               <ChevronDown className="size-4 shrink-0 text-txt3" aria-hidden />
             </button>
+          }
+        />
+
+        <Row
+          icon={ArrowsOutSimple}
+          title={t("scaleTitle")}
+          body={t("scaleBody")}
+          control={
+            <Segmented
+              boxed
+              className="h-10 w-[330px]"
+              id="scale"
+              value={String(scale)}
+              options={scales.map((value) => ({
+                value: String(value),
+                label: `${Math.round(value * 100)}%`,
+              }))}
+              onChange={(value) => setScale(Number(value))}
+            />
           }
         />
       </Section>

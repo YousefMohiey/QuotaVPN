@@ -185,6 +185,23 @@ fn leave_others(network: &str) {
     }
 }
 
+/// Leave every attached network and give the engine a moment to drop them.
+/// A graceful leave is what lets the patched server promote a remaining member
+/// and keep the space alive; a bare stop only marks this PC offline and leaves
+/// an offline admin behind. Failures are ignored here because the caller can
+/// still stop the engine as the last resort.
+fn leave_all() {
+    for (_, name) in joined_networks() {
+        let _ = run_json(&["leave", name.as_str(), "--json"]);
+    }
+    for _ in 0..15 {
+        if joined_networks().is_empty() {
+            return;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+}
+
 /// Keep the engine's diagnostics from growing without bound. The daemon is
 /// stopped before this runs, so renaming an open log is safe.
 fn trim_logs() {
@@ -214,6 +231,10 @@ fn trim_logs() {
 /// caller then joins exactly one space network.
 fn prepare_engine() -> Result<(), String> {
     ensure_adapter()?;
+    // A previous session may still be attached. Leave it before stopping so
+    // the server can promote another member instead of keeping an offline
+    // admin on a network nobody can manage.
+    leave_all();
     let _ = run_raw(&["stop"]);
     trim_logs();
     clear_stale_address();
@@ -275,15 +296,31 @@ fn join_or_create(space: &LanSpace) -> Result<(), String> {
     } else {
         join_network(space)?;
     }
+    // The engine's network list trails a successful join by a beat. Wait for
+    // the target and for the old space to clear instead of reporting a failed
+    // switch while the engine is already on the new network.
+    for _ in 0..25 {
+        let joined = joined_networks();
+        let target = joined.iter().any(|(_, name)| name == &space.network);
+        let others: Vec<String> = joined
+            .iter()
+            .filter(|(_, name)| name != &space.network)
+            .map(|(_, name)| name.clone())
+            .collect();
+        if target && others.is_empty() {
+            return Ok(());
+        }
+        for name in &others {
+            let _ = run_json(&["leave", name.as_str(), "--json"]);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
     let joined = joined_networks();
     if !joined.iter().any(|(_, name)| name == &space.network) {
         return Err("the space did not attach to the LAN engine".into());
     }
-    if joined.iter().any(|(_, name)| name != &space.network) {
-        let _ = run_raw(&["stop"]);
-        return Err("more than one space is attached; the LAN was stopped".into());
-    }
-    Ok(())
+    let _ = run_raw(&["stop"]);
+    Err("more than one space is attached; the LAN was stopped".into())
 }
 
 pub fn connect_blocking(space: &LanSpace) -> Result<Value, String> {
@@ -293,13 +330,27 @@ pub fn connect_blocking(space: &LanSpace) -> Result<Value, String> {
     run_json(&["status", "--json"])
 }
 
+/// Leave the current space before stopping. The server's leave path promotes a
+/// remaining member and keeps the network; stopping first would only mark this
+/// PC offline and leave the space with an admin who is no longer there.
+fn disconnect_blocking() -> Result<(), String> {
+    leave_all();
+    run_raw(&["stop"])?;
+    clear_stale_address();
+    Ok(())
+}
+
 pub fn switch_blocking(space: &LanSpace) -> Result<Value, String> {
     let status = run_json(&["status", "--json"]).unwrap_or(Value::Null);
     let connected = status.get("phase").and_then(Value::as_str) == Some("connected");
     if !connected {
         return connect_blocking(space);
     }
-    leave_check(&space.network)?;
+    if leave_check(&space.network).is_err() {
+        // The old network would not detach. A clean stop and fresh join is
+        // better than leaving two spaces in one forwarding table.
+        return connect_blocking(space);
+    }
     join_or_create(space)?;
     run_json(&["status", "--json"])
 }
@@ -507,9 +558,16 @@ pub async fn openrad_connect(
 ) -> Result<Value, String> {
     let space = space_from_state(&state, space_id.as_deref())?;
     let target = space.clone();
-    let result = tauri::async_runtime::spawn_blocking(move || connect_blocking(&space))
-        .await
-        .map_err(|e| e.to_string())?;
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        let status = run_json(&["status", "--json"]).unwrap_or(Value::Null);
+        if status.get("phase").and_then(Value::as_str) == Some("connected") {
+            switch_blocking(&space)
+        } else {
+            connect_blocking(&space)
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?;
     if result.is_ok() {
         mark_provisioned(&state, &target);
         sync_space_role(&state, &target);
@@ -554,12 +612,23 @@ pub async fn openrad_create_space(
     space.provisioned = true;
     // Start the engine without joining the baseline first, then create the
     // requested network. A failed create leaves no local record and no orphan.
-    tauri::async_runtime::spawn_blocking(move || {
+    let was_in_space = tauri::async_runtime::spawn_blocking(move || -> Result<bool, String> {
         let status = run_json(&["status", "--json"]).unwrap_or(Value::Null);
-        if status.get("phase").and_then(Value::as_str) != Some("connected") {
+        let in_space = status.get("phase").and_then(Value::as_str) == Some("connected")
+            && !joined_networks().is_empty();
+        if in_space {
+            // Leave the current space before the create call joins the new one.
+            // Two joined networks would share one forwarding table, and the
+            // engine's reconnect could otherwise attach the old space again.
+            leave_all();
+            if !joined_networks().is_empty() {
+                prepare_engine()?;
+            }
+        } else {
             prepare_engine()?;
         }
-        create_network(&created)
+        create_network(&created)?;
+        Ok(in_space)
     })
     .await
     .map_err(|e| e.to_string())??;
@@ -574,10 +643,28 @@ pub async fn openrad_create_space(
         }
         cfg.save();
     }
+    if !was_in_space {
+        // The network exists now, but the user only created or joined it. Do
+        // not connect on their behalf; leave the space disconnected until they
+        // press Connect on its card.
+        tauri::async_runtime::spawn_blocking(|| {
+            leave_all();
+            let _ = run_raw(&["stop"]);
+            clear_stale_address();
+        })
+        .await
+        .map_err(|e| e.to_string())?;
+        return Ok(view(&space));
+    }
     let switch = space.clone();
     let result = tauri::async_runtime::spawn_blocking(move || {
+        if !joined_networks()
+            .iter()
+            .any(|(_, name)| name == &switch.network)
+        {
+            join_or_create(&switch)?;
+        }
         leave_check(&switch.network)?;
-        join_or_create(&switch)?;
         run_json(&["status", "--json"])
     })
     .await
@@ -612,12 +699,26 @@ pub async fn openrad_join_space(
     seal_space(&mut saved)?;
     saved.provisioned = true;
     let join = space.clone();
-    tauri::async_runtime::spawn_blocking(move || {
+    let was_in_space = tauri::async_runtime::spawn_blocking(move || -> Result<bool, String> {
+        if joined_networks()
+            .iter()
+            .any(|(_, name)| name == &join.network)
+        {
+            return Ok(true);
+        }
         let status = run_json(&["status", "--json"]).unwrap_or(Value::Null);
-        if status.get("phase").and_then(Value::as_str) != Some("connected") {
+        let in_space = status.get("phase").and_then(Value::as_str) == Some("connected")
+            && !joined_networks().is_empty();
+        if in_space {
+            leave_all();
+            if !joined_networks().is_empty() {
+                prepare_engine()?;
+            }
+        } else {
             prepare_engine()?;
         }
-        join_network(&join)
+        join_network(&join)?;
+        Ok(in_space)
     })
     .await
     .map_err(|e| e.to_string())??;
@@ -631,10 +732,28 @@ pub async fn openrad_join_space(
         }
         cfg.save();
     }
+    if !was_in_space {
+        // The network exists now, but the user only created or joined it. Do
+        // not connect on their behalf; leave the space disconnected until they
+        // press Connect on its card.
+        tauri::async_runtime::spawn_blocking(|| {
+            leave_all();
+            let _ = run_raw(&["stop"]);
+            clear_stale_address();
+        })
+        .await
+        .map_err(|e| e.to_string())?;
+        return Ok(view(&space));
+    }
     let switch = space.clone();
     let result = tauri::async_runtime::spawn_blocking(move || {
+        if !joined_networks()
+            .iter()
+            .any(|(_, name)| name == &switch.network)
+        {
+            join_or_create(&switch)?;
+        }
         leave_check(&switch.network)?;
-        join_or_create(&switch)?;
         run_json(&["status", "--json"])
     })
     .await
@@ -705,14 +824,64 @@ pub async fn openrad_delete_space(
 }
 
 #[tauri::command]
-pub async fn openrad_disconnect() -> Result<(), String> {
-    tauri::async_runtime::spawn_blocking(|| {
-        run_raw(&["stop"])?;
-        clear_stale_address();
+pub async fn openrad_leave_space(
+    state: tauri::State<'_, crate::State>,
+    id: String,
+) -> Result<(), String> {
+    let space = {
+        let cfg = state.0.lock().unwrap();
+        cfg.lan_spaces
+            .iter()
+            .find(|space| space.id == id)
+            .cloned()
+            .ok_or_else(|| "that QuotaSpace space is not configured".to_string())?
+    };
+    let space = unseal_space(space)?;
+    if space.is_default() {
+        return Err("the default space cannot be removed".into());
+    }
+    let result = tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
+        // Only touch the engine when this is the space it is carrying. Leaving
+        // a different space must not drop the connection the user is on.
+        if joined_networks()
+            .iter()
+            .any(|(_, name)| name == &space.network)
+        {
+            let _ = run_json(&["leave", space.network.as_str(), "--json"]);
+            for _ in 0..20 {
+                if !joined_networks()
+                    .iter()
+                    .any(|(_, name)| name == &space.network)
+                {
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
+            // This PC is leaving the space either way. If the server did not
+            // acknowledge the leave, stopping is still better than leaving a
+            // hidden connection that the removed card can no longer manage.
+            let _ = run_raw(&["stop"]);
+            clear_stale_address();
+        }
         Ok(())
     })
     .await
-    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())?;
+    // The network belongs to the space, not to this PC. Forgetting the local
+    // record never deletes it for the other members; the invite can restore it.
+    {
+        let mut cfg = state.0.lock().unwrap();
+        cfg.lan_spaces.retain(|row| row.id != id);
+        cfg.save();
+    }
+    result
+}
+
+#[tauri::command]
+pub async fn openrad_disconnect() -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(disconnect_blocking)
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]

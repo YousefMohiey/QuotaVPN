@@ -31,6 +31,7 @@ type Props = {
   onStop: () => void
   onCreate: (name: string) => Promise<void>
   onJoin: (invite: string) => Promise<void>
+  onLeave: (space: LanSpace) => Promise<void>
   onRemove: (space: LanSpace) => Promise<void>
   onErrorClear: () => void
 }
@@ -417,58 +418,73 @@ function JoinSpaceDialog({
 function RemoveSpaceDialog({
   space,
   onClose,
-  onConfirm,
+  onLeave,
+  onDelete,
 }: {
   space: LanSpace | null
   onClose: () => void
-  onConfirm: (space: LanSpace) => Promise<void>
+  onLeave: (space: LanSpace) => Promise<void>
+  onDelete: (space: LanSpace) => Promise<void>
 }) {
   const { t } = useI18n()
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState<"leave" | "delete" | null>(null)
   const [error, setError] = useState("")
 
   const title = t("lanSpaceRemoveTitle")
-  const body = space?.owner ? t("lanSpaceDeleteBody") : t("lanSpaceLeaveBody")
+  const body = space?.owner ? t("lanSpaceOwnerLeaveBody") : t("lanSpaceLeaveBody")
 
-  const go = async () => {
+  const run = async (action: "leave" | "delete") => {
     if (!space) return
-    setBusy(true)
+    setBusy(action)
     setError("")
     try {
-      await onConfirm(space)
+      if (action === "leave") await onLeave(space)
+      else await onDelete(space)
       onClose()
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
-      setBusy(false)
+      setBusy(null)
     }
   }
 
   return (
     <Dialog open={!!space} onOpenChange={(open) => (!open ? onClose() : undefined)}>
-      <DialogContent className="max-w-[400px] p-6">
+      <DialogContent className="max-w-[480px] p-6">
         <DialogTitle className="text-base font-semibold tracking-[-0.01em]">{title}</DialogTitle>
         <p className="text-sm leading-relaxed text-txt2">{body}</p>
         {space ? (
           <p className="truncate font-mono text-xs text-txt3">{space.name}</p>
         ) : null}
         {error ? <p className="text-xs leading-snug text-[var(--red)]">{error}</p> : null}
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="press h-9 rounded-lg border border-line px-4 text-sm text-txt2 hover:text-txt"
+            disabled={!!busy}
+            className="press h-9 rounded-lg border border-line px-4 text-sm text-txt2 hover:text-txt disabled:opacity-50"
           >
             {t("cancel")}
           </button>
+          {space?.owner ? (
+            <button
+              type="button"
+              onClick={() => void run("delete")}
+              disabled={!!busy}
+              className="press flex h-9 items-center gap-2 rounded-lg border border-[var(--red-line)] px-4 text-sm font-medium text-[var(--red)] hover:bg-[var(--red-bg)] disabled:opacity-50"
+            >
+              {busy === "delete" ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : <Trash2 className="size-3.5" aria-hidden />}
+              {t("lanSpaceDelete")}
+            </button>
+          ) : null}
           <button
             type="button"
-            onClick={() => void go()}
-            disabled={busy}
-            className="press flex h-9 items-center gap-2 rounded-lg bg-[var(--red)] px-4 text-sm font-medium text-white hover:brightness-110 disabled:opacity-60"
+            onClick={() => void run("leave")}
+            disabled={!!busy}
+            className="press flex h-9 items-center gap-2 rounded-lg bg-[var(--brand)] px-4 text-sm font-medium text-[var(--on-brand)] hover:brightness-110 disabled:opacity-50"
           >
-            {busy ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : <Trash2 className="size-3.5" aria-hidden />}
-            {busy ? t("lanSpaceDeleting") : space?.owner ? t("lanSpaceDelete") : t("lanSpaceLeave")}
+            {busy === "leave" ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : <LogIn className="size-3.5 rotate-180" aria-hidden />}
+            {t("lanSpaceLeave")}
           </button>
         </div>
       </DialogContent>
@@ -561,15 +577,19 @@ export default function SpacesConsole(props: Props) {
 
       {!selected ? (
         <section className="grid place-items-center rounded-2xl border border-line bg-[var(--panel)] px-8 py-16 text-center">
-          <p className="text-sm text-txt2">{t("lanSpaceNoSpaces")}</p>
-          <button
-            type="button"
-            onClick={() => setNewOpen(true)}
-            className="mt-4 flex h-10 items-center gap-2 rounded-xl bg-[var(--brand)] px-4 text-sm font-semibold text-[var(--on-brand)]"
-          >
-            <Plus className="size-4" aria-hidden />
-            {t("lanNewSpace")}
-          </button>
+          <p className="text-sm text-txt2">
+            {props.spaces.length ? t("lanSpacePick") : t("lanSpaceNoSpaces")}
+          </p>
+          {props.spaces.length === 0 ? (
+            <button
+              type="button"
+              onClick={() => setNewOpen(true)}
+              className="mt-4 flex h-10 items-center gap-2 rounded-xl bg-[var(--brand)] px-4 text-sm font-semibold text-[var(--on-brand)]"
+            >
+              <Plus className="size-4" aria-hidden />
+              {t("lanNewSpace")}
+            </button>
+          ) : null}
         </section>
       ) : (
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -617,7 +637,12 @@ export default function SpacesConsole(props: Props) {
 
       <NewSpaceDialog open={newOpen} onOpenChange={setNewOpen} onCreate={props.onCreate} />
       <JoinSpaceDialog open={joinOpen} onOpenChange={setJoinOpen} onJoin={props.onJoin} />
-      <RemoveSpaceDialog space={remove} onClose={() => setRemove(null)} onConfirm={props.onRemove} />
+      <RemoveSpaceDialog
+        space={remove}
+        onClose={() => setRemove(null)}
+        onLeave={props.onLeave}
+        onDelete={props.onRemove}
+      />
     </div>
   )
 }

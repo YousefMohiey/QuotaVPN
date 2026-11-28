@@ -443,6 +443,7 @@ export const api = {
   openradCreateSpace: (name: string) => call<LanSpace>("openrad_create_space", { name }),
   openradJoinSpace: (invite: string) => call<LanSpace>("openrad_join_space", { invite }),
   openradDeleteSpace: (id: string) => call<void>("openrad_delete_space", { id }),
+  openradLeaveSpace: (id: string) => call<void>("openrad_leave_space", { id }),
   spaceKick: (id: string, memberId: string) =>
     call<SpacesState>("space_kick", { id, memberId }),
   copyToClipboard: (text: string) => call<boolean>("copy_text", { text }),

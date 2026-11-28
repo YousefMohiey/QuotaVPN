@@ -8,6 +8,7 @@ import {
   ArrowLeft as PhArrowLeft,
   ArrowUp as PhArrowUp,
   ArrowsClockwise as PhArrowsClockwise,
+  ArrowsOutSimple as PhArrowsOutSimple,
   Broadcast as PhBroadcast,
   Buildings as PhBuildings,
   CaretDown as PhCaretDown,
@@ -83,6 +84,7 @@ function icon(Component: ComponentType<PhosphorIconProps>) {
 
 export const Activity = icon(PhPulse)
 export const ArrowDown = icon(PhArrowDown)
+export const ArrowsOutSimple = icon(PhArrowsOutSimple)
 export const ArrowDownToLine = icon(PhDownloadSimple)
 export const ArrowLeft = icon(PhArrowLeft)
 export const ArrowUp = icon(PhArrowUp)

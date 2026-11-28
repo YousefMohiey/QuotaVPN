@@ -224,6 +224,9 @@ export async function mockCall<T>(cmd: string, args?: Record<string, unknown>): 
     case "openrad_disconnect":
       demoLanOn = false
       return undefined as T
+    case "openrad_leave_space":
+    case "openrad_delete_space":
+      return undefined as T
     case "spaces_api":
       return "https://quotavpn.duckdns.org/spaces" as T
     case "set_spaces_api":
