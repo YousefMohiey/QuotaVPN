@@ -1,13 +1,13 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { ArrowDownToLine, Gauge, History as HistoryIcon, Home as HomeIcon, Settings as SettingsIcon, Users, Wifi } from "@/components/icons"
 import type { ComponentType } from "react"
+import { QuotaMark } from "@/components/QuotaMark"
 import { ValorantMark } from "@/components/ValorantMark"
 import { cn } from "@/lib/utils"
 import { useEffect, useState } from "react"
 import { useI18n, type StrKey } from "@/lib/i18n"
 import { api } from "@/lib/ipc"
 import { useApp } from "@/state/app"
-import { useTheme } from "@/state/theme"
 
 export type Tab = "home" | "speed" | "voice" | "history" | "result" | "apps" | "network" | "spaces" | "settings"
 
@@ -28,7 +28,6 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
   const { t } = useI18n()
   const calm = useReducedMotion()
   const { version, update, updateState } = useApp()
-  const { theme, setTheme, themes } = useTheme()
   // The tunnel exists on Linux; the network scanner, the speed test and the
   // voice helper do not. Leave their doors out rather than open them onto
   // a page that cannot work.
@@ -52,7 +51,7 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
       {/* identity: mark, wordmark, build number on one line */}
       <div className="px-4 pb-4 pt-6">
         <div className="flex items-center gap-3">
-          <img src="./icon.png" alt="" aria-hidden className="size-11 shrink-0" />
+          <QuotaMark className="size-11 shrink-0" />
           <div className="min-w-0 flex-1">
             <div className="truncate font-display text-lg font-semibold tracking-[-0.01em] text-txt">
               QuotaVPN
@@ -115,34 +114,6 @@ export function Sidebar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
           </button>
         ))}
       </nav>
-
-      {/* the live state sits in the hero; the rail keeps the places and the
-          one control that changes the whole room */}
-      <div className="mt-auto px-4 pb-6 pt-6">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-xs font-medium text-txt3">{t("theme")}</span>
-          <div className="flex items-center gap-2" role="group" aria-label={t("theme")}>
-            {themes.map((option) => {
-              const active = option.id === theme
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setTheme(option.id)}
-                  aria-label={t(option.labelKey)}
-                  aria-pressed={active}
-                  title={t(option.labelKey)}
-                  className={cn(
-                    "size-6 rounded-full border border-white/20 transition-transform duration-200 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--side)]",
-                    active && "ring-2 ring-[var(--brand-strong)] ring-offset-2 ring-offset-[var(--side)]",
-                  )}
-                  style={{ background: option.accent }}
-                />
-              )
-            })}
-          </div>
-        </div>
-      </div>
     </aside>
   )
 }

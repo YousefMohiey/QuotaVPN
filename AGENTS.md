@@ -65,14 +65,17 @@ Windows, run from git-bash. The toolchain this project was developed against:
   before hand-rolling an animation, check Motion. Do not add another UI library.
 - **No dropdown menus.** Choices use the searchable list picker (`components/PickerDialog.tsx`)
   with a check on the current value.
-- **Theme**: flat approved dark surfaces (`#000000`, `#181818`, `#1F1F1F`, `#272727`) with no
-  background gradients (`index.css` tokens, `.scene` grain only); `.glass*` is for dialogs and
-  popovers, not every pane. Four accent themes (obsidian, ember, mint, violet) come from
-  `src/state/theme.tsx` and are chosen in Settings > Appearance or from the swatches at the foot
-  of the rail. One primary typeface, Manrope, plus Geist Mono for addresses and latency; no Inter,
-  no Roboto, no italics. Phosphor is the only icon set, at the regular weight. Keep
-  `backdrop-filter` free of the `-webkit-` twin: Vite's minifier keeps only that one and Chromium
-  then ignores it, killing the blur.
+- **Theme**: Serein uses the approved flat dark steps (`#000000`, `#181818`, `#1F1F1F`,
+  `#272727`); the other presets use tinted equivalents of the same steps. No background gradients
+  (`index.css` tokens, `.scene` grain only); `.glass*` is for dialogs and popovers, not every pane.
+  Seven full palettes (Serein, Eclipse, Slate, Nightfall, Ember, Verdant, Afterglow) live in
+  `src/state/theme.tsx` and `index.css`; they change surfaces, text, lines and accent together,
+  not just the accent. They are chosen in Settings > Appearance only, never in the rail. A custom
+  primary colour can override the preset accent, and the in-app `QuotaMark` follows it. The
+  interface font is a user choice from the bundled Manrope/Archivo and the installed Windows faces;
+  Geist Mono stays for addresses and latency. No italics. Phosphor is the only icon set, at the
+  regular weight. Keep `backdrop-filter` free of the `-webkit-` twin: Vite's minifier keeps only
+  that one and Chromium then ignores it, killing the blur.
 - **All user-visible strings go through `src/lib/i18n/{en,ar}.ts`** (formal Modern Standard Arabic,
   RTL). Never mirror the layout in Arabic, only the text direction.
 - **Never emit em-dashes** in code, UI strings, or docs. Plain hyphens only. The user treats
@@ -186,8 +189,9 @@ no longer passes `--public "QuotaVPN"`; existing peers move by pasting the new i
 self-hosted server is patched to keep a private network after its last member leaves and to promote
 the oldest remaining member when the admin switches away; see `notes/OPENRAD-SERVER-PATCH.md`. The
 in-house layer-2 switch below stays in the tree but is not the shipping LAN path. The window also
-moved to Manrope and Geist Mono, flat surfaces and four themes (obsidian, ember, mint, violet),
-Phosphor icons at one weight, and the full approved dark surface set. The Windows app and the bundled
+moved to Manrope with a user font picker, Geist Mono for data, flat surfaces, seven full palettes
+(Serein, Eclipse, Slate, Nightfall, Ember, Verdant, Afterglow), Phosphor icons at one weight, and
+the full approved dark surface set. The Windows app and the bundled
 engine are signed with the local `CN=YousefMohiey` certificate, so UAC and the firewall prompt show
 that publisher once the certificate is trusted on the PC.
 

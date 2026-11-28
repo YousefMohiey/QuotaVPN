@@ -97,9 +97,9 @@
 :root {
   color-scheme: dark;
 
-  /* Obsidian is the default. Surfaces use the approved dark steps only:
-     #000000, #181818, #1F1F1F, #272727, #313131. The structure is carried
-     by hairlines and one accent, never by a wash of gradients. */
+  /* Serein is the default. Surfaces use the approved dark steps only:
+     #000000, #181818, #1F1F1F, #272727. The structure is carried by
+     hairlines and one accent, never by a wash of gradients. */
   --bg: #000000;
   --side: #000000;
   --panel: #181818;
@@ -115,13 +115,14 @@
   --txt2: #b3b3b3;
   --txt3: #8a8a8a;
 
-  --brand: #4e6fe8;
-  --brand-vivid: #6c8bff;
-  --brand-strong: #9db2ff;
-  --brand-bg: rgb(78 111 232 / 0.12);
-  --brand-mid: rgb(78 111 232 / 0.45);
-  --brand-line: rgb(78 111 232 / 0.36);
-  --brand-glow: rgb(78 111 232 / 0.24);
+  --brand-base: #1a72e8;
+  --brand: var(--brand-base);
+  --brand-vivid: color-mix(in srgb, var(--brand-base) 72%, white);
+  --brand-strong: color-mix(in srgb, var(--brand-base) 45%, white);
+  --brand-bg: color-mix(in srgb, var(--brand-base) 14%, transparent);
+  --brand-mid: color-mix(in srgb, var(--brand-base) 48%, transparent);
+  --brand-line: color-mix(in srgb, var(--brand-base) 38%, transparent);
+  --brand-glow: color-mix(in srgb, var(--brand-base) 25%, transparent);
   --on-brand: #ffffff;
 
   --green: #4cc38a;
@@ -133,6 +134,9 @@
   --red: #e06c75;
   --red-bg: rgb(224 108 117 / 0.12);
   --red-line: rgb(224 108 117 / 0.32);
+
+  /* The interface face is a user choice; the data face stays monospace. */
+  --font-ui: "Manrope", "Segoe UI Variable Text", "Segoe UI", system-ui, "Cairo", "Twemoji Country Flags", sans-serif;
 
   /* Shape, elevation, motion. The curve decelerates into place; color and
      opacity are the only fast properties. */
@@ -167,39 +171,105 @@
   --radius: 0.75rem;
 }
 
+[data-theme="eclipse"] {
+  --bg: #060a12;
+  --side: #080d17;
+  --panel: #101827;
+  --panel-hover: #152033;
+  --field: #162033;
+  --surface-2: #111b2b;
+  --surface-3: #1a2638;
+  --line: rgb(148 163 184 / 0.14);
+  --line-strong: rgb(148 163 184 / 0.22);
+  --txt: #eef4ff;
+  --txt2: #a9b8d0;
+  --txt3: #7484a0;
+  --brand-base: #3b82f6;
+}
+
+[data-theme="slate"] {
+  --bg: #0b0d10;
+  --side: #0e1115;
+  --panel: #161a20;
+  --panel-hover: #1d222a;
+  --field: #1d222a;
+  --surface-2: #1a1f26;
+  --surface-3: #252b34;
+  --line: rgb(255 255 255 / 0.09);
+  --line-strong: rgb(255 255 255 / 0.16);
+  --txt: #f0f2f5;
+  --txt2: #aab2bd;
+  --txt3: #78818e;
+  --brand-base: #7d93b2;
+}
+
+[data-theme="nightfall"] {
+  --bg: #08070d;
+  --side: #0b0a12;
+  --panel: #14121f;
+  --panel-hover: #1b1828;
+  --field: #1c192a;
+  --surface-2: #181524;
+  --surface-3: #241f36;
+  --line: rgb(196 181 253 / 0.13);
+  --line-strong: rgb(196 181 253 / 0.2);
+  --txt: #f4f0ff;
+  --txt2: #b9afd6;
+  --txt3: #857a9f;
+  --brand-base: #8b70f5;
+}
+
 [data-theme="ember"] {
-  --brand: #b85325;
-  --brand-vivid: #d9662f;
-  --brand-strong: #ffb08a;
-  --brand-bg: rgb(184 83 37 / 0.14);
-  --brand-mid: rgb(184 83 37 / 0.46);
-  --brand-line: rgb(184 83 37 / 0.38);
-  --brand-glow: rgb(184 83 37 / 0.22);
+  --bg: #0c0907;
+  --side: #100c09;
+  --panel: #1a1410;
+  --panel-hover: #221a14;
+  --field: #241b15;
+  --surface-2: #1f1712;
+  --surface-3: #2b2119;
+  --line: rgb(255 214 170 / 0.11);
+  --line-strong: rgb(255 214 170 / 0.18);
+  --txt: #fbf3ec;
+  --txt2: #c7b3a3;
+  --txt3: #927d6c;
+  --brand-base: #e87a43;
 }
 
-[data-theme="mint"] {
-  --brand: #0b7c74;
-  --brand-vivid: #12a89a;
-  --brand-strong: #7be8dc;
-  --brand-bg: rgb(11 124 116 / 0.14);
-  --brand-mid: rgb(11 124 116 / 0.46);
-  --brand-line: rgb(11 124 116 / 0.38);
-  --brand-glow: rgb(11 124 116 / 0.2);
+[data-theme="verdant"] {
+  --bg: #060b0a;
+  --side: #08100e;
+  --panel: #0f1a17;
+  --panel-hover: #14221e;
+  --field: #16251f;
+  --surface-2: #12201c;
+  --surface-3: #1b2c26;
+  --line: rgb(167 243 208 / 0.11);
+  --line-strong: rgb(167 243 208 / 0.18);
+  --txt: #eefbf6;
+  --txt2: #a7c4b8;
+  --txt3: #6f8e82;
+  --brand-base: #17b3a6;
 }
 
-[data-theme="violet"] {
-  --brand: #6e51d9;
-  --brand-vivid: #8b70f5;
-  --brand-strong: #c3b2ff;
-  --brand-bg: rgb(110 81 217 / 0.16);
-  --brand-mid: rgb(110 81 217 / 0.48);
-  --brand-line: rgb(110 81 217 / 0.4);
-  --brand-glow: rgb(110 81 217 / 0.24);
+[data-theme="afterglow"] {
+  --bg: #0d070b;
+  --side: #11090f;
+  --panel: #1c1118;
+  --panel-hover: #25161f;
+  --field: #291820;
+  --surface-2: #22141c;
+  --surface-3: #2f1d27;
+  --line: rgb(251 207 232 / 0.12);
+  --line-strong: rgb(251 207 232 / 0.19);
+  --txt: #fff1f7;
+  --txt2: #d3afc2;
+  --txt3: #9c7689;
+  --brand-base: #f472b6;
 }
 
 @theme inline {
-  --font-sans: "Manrope", "Segoe UI Variable Text", "Segoe UI", system-ui, "Cairo", "Twemoji Country Flags", sans-serif;
-  --font-display: "Manrope", "Segoe UI Variable Display", "Segoe UI", system-ui, "Cairo", sans-serif;
+  --font-sans: var(--font-ui);
+  --font-display: var(--font-ui);
   --font-mono: "Geist Mono", "Cascadia Mono", ui-monospace, "Consolas", "SFMono-Regular", monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -264,6 +334,7 @@
     @apply text-foreground antialiased;
     background: var(--bg);
     margin: 0;
+    font-family: var(--font-ui);
     font-size: 14px;
     line-height: 1.5;
     font-variant-numeric: tabular-nums;

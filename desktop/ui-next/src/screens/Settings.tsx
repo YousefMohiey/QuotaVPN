@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
-import { Download, Languages, Loader2, MonitorPlay, Palette, RefreshCw, ShieldOff } from "@/components/icons"
+import { ChevronDown, Download, Languages, Loader2, MonitorPlay, Palette, RefreshCw, ShieldOff } from "@/components/icons"
 import { Toggle } from "@/components/Toggle"
 import { Segmented } from "@/components/Segmented"
 import { Tip } from "@/components/Tip"
+import { PickerDialog, type PickerItem } from "@/components/PickerDialog"
 import { useApp } from "@/state/app"
 import { useTheme } from "@/state/theme"
 import { fmtQuota, quotaLogout, quotaRefresh, useQuota } from "@/state/quota"
@@ -153,7 +154,15 @@ export function Settings() {
   }, [])
 
   const { t, lang, setLang } = useI18n()
-  const { theme, setTheme, themes } = useTheme()
+  const { theme, setTheme, themes, font, setFont, fonts, accent, setAccent } = useTheme()
+  const [fontOpen, setFontOpen] = useState(false)
+  const currentFont = fonts.find((entry) => entry.id === font) ?? fonts[0]
+  const fontItems: PickerItem[] = fonts.map((entry) => ({
+    value: entry.id,
+    label: entry.label,
+    sub: entry.bundled ? t("fontBundled") : t("fontSystem"),
+    style: { fontFamily: entry.stack },
+  }))
   const { update, updateState, updateError, checkUpdates, applyUpdate, updatePct, version, updateChannel, setUpdateChannel } =
     useApp()
   const [startup, setStartup] = useState(() => {
@@ -230,41 +239,98 @@ export function Settings() {
   return (
     <div className="flex w-full flex-col pb-6">
       <Section label={t("setAppearanceGroup")}>
-        <Row
-          icon={Palette}
-          title={t("themeTitle")}
-          body={t("themeBody")}
-          control={
-            <div className="flex items-center gap-3">
-              {themes.map((option) => {
-                const active = option.id === theme
-                return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => setTheme(option.id)}
-                    aria-pressed={active}
-                    aria-label={t(option.labelKey)}
-                    className="group flex min-w-12 flex-col items-center gap-2"
+        <div className="rounded-xl border border-line bg-[var(--panel)] p-5">
+          <div className="flex items-start gap-3">
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-[var(--brand-line)] bg-[var(--brand-bg)] text-brand-strong">
+              <Palette className="size-4" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <h3 className="text-sm font-medium text-txt">{t("themeTitle")}</h3>
+              <p className="mt-0.5 text-xs leading-relaxed text-txt2">{t("themeBody")}</p>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {themes.map((option) => {
+              const active = option.id === theme
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setTheme(option.id)}
+                  aria-pressed={active}
+                  aria-label={t(option.labelKey)}
+                  className={cn(
+                    "group rounded-xl border p-1.5 text-start transition-colors duration-200",
+                    active
+                      ? "border-[var(--brand-line)] bg-[var(--brand-bg)]"
+                      : "border-line hover:bg-[var(--surface-2)]",
+                  )}
+                >
+                  <span
+                    className="block overflow-hidden rounded-lg border border-white/10 p-2"
+                    style={{ background: option.surface }}
                   >
                     <span
-                      className={cn(
-                        "grid size-8 place-items-center rounded-full border transition-transform duration-200 group-hover:scale-105",
-                        active ? "border-white/60" : "border-white/15",
-                      )}
+                      className="block h-2 w-9 rounded-full"
                       style={{ background: option.accent }}
-                    >
-                      {active ? <span className="size-2 rounded-full bg-white" /> : null}
-                    </span>
-                    <span className={cn("text-xs", active ? "text-txt" : "text-txt3")}>
-                      {t(option.labelKey)}
-                    </span>
-                  </button>
-                )
-              })}
+                    />
+                    <span className="mt-2 block h-1.5 w-14 rounded-full bg-white/25" />
+                    <span className="mt-1 block h-1.5 w-9 rounded-full bg-white/15" />
+                  </span>
+                  <span
+                    className={cn(
+                      "mt-1.5 flex items-center gap-1.5 px-1 text-xs",
+                      active ? "text-txt" : "text-txt3",
+                    )}
+                  >
+                    <span className="truncate">{t(option.labelKey)}</span>
+                    {active ? <span className="size-1.5 shrink-0 rounded-full bg-[var(--brand)]" /> : null}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-txt">{t("accentTitle")}</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-txt3">{t("accentBody")}</p>
             </div>
-          }
-        />
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="font-mono text-xs text-txt2">{accent.toUpperCase()}</span>
+              <label
+                className="relative size-9 cursor-pointer overflow-hidden rounded-lg border border-line"
+                style={{ background: accent }}
+              >
+                <input
+                  type="color"
+                  value={accent}
+                  onChange={(e) => setAccent(e.target.value)}
+                  aria-label={t("accentTitle")}
+                  className="absolute inset-0 size-full cursor-pointer opacity-0"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-txt">{t("fontTitle")}</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-txt3">{t("fontBody")}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFontOpen(true)}
+              className="flex h-10 min-w-[190px] max-w-full items-center justify-between gap-3 rounded-lg border border-line bg-[var(--surface-2)] px-3 text-sm text-txt transition-colors duration-200 hover:border-[var(--brand-line)]"
+            >
+              <span className="truncate" style={{ fontFamily: currentFont.stack }}>
+                {currentFont.label}
+              </span>
+              <ChevronDown className="size-4 shrink-0 text-txt3" aria-hidden />
+            </button>
+          </div>
+        </div>
       </Section>
 
       <Section label={t("setAppGroup")} gap>
@@ -431,6 +497,16 @@ export function Settings() {
           }
         />
       </Section>
+
+      <PickerDialog
+        open={fontOpen}
+        onOpenChange={setFontOpen}
+        title={t("fontTitle")}
+        search={t("sheetSearch")}
+        items={fontItems}
+        value={font}
+        onPick={setFont}
+      />
     </div>
   )
 }

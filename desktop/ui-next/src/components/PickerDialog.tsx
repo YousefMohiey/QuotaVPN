@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react"
 import { Check, Search } from "@/components/icons"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { pushCloser } from "@/lib/navStack"
 
-export type PickerItem = { value: string; label: string; sub?: string }
+export type PickerItem = { value: string; label: string; sub?: string; style?: CSSProperties }
 
 /**
  * The list picker from the 0.2.x sheets: search on top, plain rows, a check on
@@ -88,7 +88,7 @@ export function PickerDialog({
                 )}
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-sm text-txt" dir="auto">
+                  <span className="block truncate text-sm text-txt" dir="auto" style={it.style}>
                     {it.label}
                   </span>
                   {it.sub && (
