@@ -1,12 +1,12 @@
 {
-    "version":  "0.7.6-exp.12",
-    "notes":  "Quota is the default theme, with Catppuccin, Tokyo Night, Nord, Dracula, Gruvbox, Rosé Pine and One Dark beside it. Each palette changes every surface, line, text colour and accent. Appearance is a flat row of palette orbs, a primary colour picker and an interface font picker. Inter is the default font; Geist, Manrope, IBM Plex Sans, Archivo and JetBrains Mono are bundled. The real icon and the readable button labels remain. Windows experimental build; the phone stays at 0.7.5.",
-    "pub_date":  "2026-11-28T09:08:41Z",
+    "version":  "0.7.6-exp.13",
+    "notes":  "Appearance has an Interface scale row at 90, 100, 110, 125 and 150 percent, saved across restarts. Spaces now leave cleanly when the owner disconnects, so the network stays up and another member can take over. Switching spaces leaves the current one first and joins the selected one without the red attach error. Creating or joining a space while disconnected no longer connects on its own, a removed selection no longer jumps to another space, and the owner Remove dialog offers Leave space before Delete space. Windows experimental build; the phone stays at 0.7.5.",
+    "pub_date":  "2026-11-28T14:41:49Z",
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSUZXUUVzYThqZi9qdjJzSHhPM3dKQkpDd2c4THJIQUQrNzRqSmNzMmpCc21rRTErbC9TYmxpTHd4YkpvV0RQSG1WZDRiYTFRQWFzODRqR2NZT1MwMVFRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1ODU2ODE4CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjEyX3g2NC1zZXR1cC5leGUKNlo5dzl5VEt1Z1BUSEMwa3lSWmlHNytTRWtLOTNkUFlHd1drTnlEMHdUTzBETXBOMkFEKzBDYlNFazZ6NC8yUWlldjBLVkRMSERmaWpnaTBnV25JRFE9PQo=",
-                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.6-exp.12/QuotaVPN_0.7.6-exp.12_x64-setup.exe"
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSUJKbWdnS25xUTBFbnVYU1ZsaTVGZzFQTTZXQTUvOFNmcVBOeHJyZkxjQnRRaFh3Q1hJcGZuUTBvcmhicTJodnVneVNXQ0FQSDhSUW4xVWY5MjlyV0EwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1ODc2ODQ5CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjEzX3g2NC1zZXR1cC5leGUKemRQMGVQU1VrdktUaTVKakV5clNMSGt1enRpd01jYkJlL1YrNjBCZFoyRkhaNDBiODMya05CSDlxbFpPbi9QR0dUSlNGZ25jTXJLaVdZRml0N0s2Qmc9PQo=",
+                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.6-exp.13/QuotaVPN_0.7.6-exp.13_x64-setup.exe"
                                          }
                   },
-    "build":  "1e57bc4"
+    "build":  "280a8c6"
 }
