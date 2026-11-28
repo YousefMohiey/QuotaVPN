@@ -1,12 +1,12 @@
 {
-    "version":  "0.7.6-exp.13",
-    "notes":  "Appearance has an Interface scale row at 90, 100, 110, 125 and 150 percent, saved across restarts. Spaces now leave cleanly when the owner disconnects, so the network stays up and another member can take over. Switching spaces leaves the current one first and joins the selected one without the red attach error. Creating or joining a space while disconnected no longer connects on its own, a removed selection no longer jumps to another space, and the owner Remove dialog offers Leave space before Delete space. Windows experimental build; the phone stays at 0.7.5.",
-    "pub_date":  "2026-11-28T14:41:49Z",
+    "version":  "0.7.6-exp.14",
+    "notes":  "Gamerz and Streamerz are one joined switch with a sliding highlight, a small icon pop and an inline spinner. The Speed gauge is a slim arc with a reading dot, five labels and the live number in the centre, the needle is gone, and the measuring strip is a full-width bar with a round stop button at the far right. The whole Home Server/App Routing cells and the Speed server card are clickable, and refresh controls no longer change the mouse cursor. Windows experimental build; the phone stays at 0.7.5.",
+    "pub_date":  "2026-11-28T15:29:14Z",
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSUJKbWdnS25xUTBFbnVYU1ZsaTVGZzFQTTZXQTUvOFNmcVBOeHJyZkxjQnRRaFh3Q1hJcGZuUTBvcmhicTJodnVneVNXQ0FQSDhSUW4xVWY5MjlyV0EwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1ODc2ODQ5CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjEzX3g2NC1zZXR1cC5leGUKemRQMGVQU1VrdktUaTVKakV5clNMSGt1enRpd01jYkJlL1YrNjBCZFoyRkhaNDBiODMya05CSDlxbFpPbi9QR0dUSlNGZ25jTXJLaVdZRml0N0s2Qmc9PQo=",
-                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.6-exp.13/QuotaVPN_0.7.6-exp.13_x64-setup.exe"
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSU53eW1HNUlCZmxpWVJTTG9tbGM4YkQ2clptYisycjdVQ3NWUlFYcklPbHcrQUdKeDlaWWhRQy91d1U3R0FnTUxMck5iamxyeWZVNkF0RGlSNnpzcGdnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1ODc5Njk5CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjE0X3g2NC1zZXR1cC5leGUKd0NLU0JoY0FjSHJKOUdPM3lMZitWSDZibHZuNGV5ZGtMWXIvVWk4M2xsZGJ5d3o4RUlMVHBpZkRNS1krUUhUMUtoOHhCbHpFY3hFeVQ1cVk5OHdYQWc9PQo=",
+                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.6-exp.14/QuotaVPN_0.7.6-exp.14_x64-setup.exe"
                                          }
                   },
-    "build":  "280a8c6"
+    "build":  "df4d557"
 }
