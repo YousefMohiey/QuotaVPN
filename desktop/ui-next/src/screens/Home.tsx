@@ -229,7 +229,7 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                     void ensurePresetCard(kind).finally(() => setCreating(null))
                   }}
                   className={cn(
-                    "press group/preset relative flex min-h-0 min-w-0 items-center gap-3 overflow-hidden rounded-xl px-3 py-2.5 text-start transition-colors duration-200 disabled:cursor-default disabled:opacity-70",
+                    "press group/preset relative flex min-h-0 min-w-0 items-center gap-3 overflow-hidden rounded-xl px-3 py-2.5 text-start transition-colors duration-300 disabled:cursor-default disabled:opacity-70",
                     isActive ? "text-txt" : "text-txt2 hover:bg-white/[0.03] hover:text-txt",
                   )}
                 >
@@ -238,18 +238,18 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                       layoutId="profile-ring"
                       aria-hidden
                       className="absolute inset-0 rounded-xl bg-[var(--brand-bg)] shadow-[inset_0_0_0_1px_var(--brand-line)]"
-                      transition={calm ? { duration: 0 } : { type: "spring", stiffness: 430, damping: 38, mass: 0.7 }}
+                      transition={calm ? { duration: 0 } : { type: "spring", stiffness: 230, damping: 30, mass: 0.9 }}
                     />
                   ) : null}
                   <motion.span
                     className={cn(
-                      "relative grid size-8 shrink-0 place-items-center rounded-lg transition-colors duration-200",
+                      "relative grid size-8 shrink-0 place-items-center rounded-lg transition-colors duration-300",
                       isActive
                         ? "bg-white/[0.06] text-brand-strong"
                         : "bg-white/[0.04] text-txt3 group-hover/preset:text-brand-strong",
                     )}
-                    animate={calm ? undefined : { scale: isActive ? 1.08 : 1 }}
-                    transition={{ type: "spring", stiffness: 420, damping: 30 }}
+                    animate={calm ? undefined : { scale: isActive ? 1.07 : 1 }}
+                    transition={{ type: "spring", stiffness: 280, damping: 26 }}
                   >
                     {creating === kind ? (
                       <Loader2 className="size-4 animate-spin" aria-hidden />
@@ -340,8 +340,8 @@ export function Home({ onOpenApps }: { onOpenApps: () => void }) {
                   </Button>
                 </div>
               ) : (
-                <span className="flex min-w-0 items-center justify-between gap-2 text-txt">
-                  <span className="flex min-w-0">{c.body}</span>
+                <span className="flex w-full min-w-0 items-center justify-between gap-2 text-txt">
+                  <span className="flex min-w-0 flex-1">{c.body}</span>
                   {c.chevron === "down" ? (
                     <ChevronDown
                       className="size-5 shrink-0 text-txt2 transition-[color,translate] duration-200 group-hover/cell:translate-y-0.5 group-hover/cell:text-brand-strong"
