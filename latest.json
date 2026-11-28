@@ -1,12 +1,12 @@
 {
-    "version":  "0.7.6-exp.9",
-    "notes":  "Spaces is simpler: no automatic default space, no auto-connect, and the button says Connect. Create the first space, press Connect, and share its invite. The old default network and records are gone. Private spaces, sealed passwords, manual switching, and the YousefMohiey signature remain. Windows experimental build; the phone stays at 0.7.5.",
-    "pub_date":  "2026-11-27T21:51:10Z",
+    "version":  "0.7.6-exp.10",
+    "notes":  "Seven full colour presets change the surfaces, lines, text and accent together. Appearance lives in Settings with theme cards, a primary colour picker and an interface font picker; the rail swatches are gone. The in-app Q mark follows the theme. Bundled Manrope and Archivo plus the installed Windows fonts are available, and the choice persists. Windows experimental build; the phone stays at 0.7.5.",
+    "pub_date":  "2026-11-28T07:23:06Z",
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSUNydnJsUWhES3JQV3N1bHZ6cGd3eEZYaCtQajNkQ2J1RUZXM1M3VjBVcXRnMGdaektnMFh6anFzVjlLUldhUHpRcUV2MDFDcEtjL09OQTdVYS9XTUFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1ODE2MjY0CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjlfeDY0LXNldHVwLmV4ZQptL1ZHME42YmNienJZOXlINW1BVVV3QXlYSDZrNXFBWi92dWVBM0Y4d0RhOExOR1R5a3d4NXhCUjhlTkswVXhneElQY1lma2dreUs2cjY0dDhWeGlCQT09Cg==",
-                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.6-exp.9/QuotaVPN_0.7.6-exp.9_x64-setup.exe"
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSU14WjBmR0dRamxLMjN4cm16Y2JpS29USTR6WkhEZ2ovOEQ2elA1ayt6ellkbEZGWjVMcHY3MThZdUYwU1pOTEEyUlZzbWZuSVN3ejJGcGZ3bURkZmdrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1ODUwNDU1CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjEwX3g2NC1zZXR1cC5leGUKVHA0THdOY05abGUyY0x3WmZrbTJlZmdzQXJoejRnVy9Ib2hIL284c3ZIeEw4VzViTGRHeVNHdVFGblpjRjhuNzM0MHpIOExOU2kwV29EcWltOUZsQ0E9PQo=",
+                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.6-exp.10/QuotaVPN_0.7.6-exp.10_x64-setup.exe"
                                          }
                   },
-    "build":  "9f55b5c"
+    "build":  "d917da8"
 }

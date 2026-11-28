@@ -89,7 +89,7 @@ Windows, run from git-bash. The toolchain this project was developed against:
   built exe for the dependency before it publishes.
 - **Version lives in four files**: `desktop/src-tauri/{tauri.conf.json,Cargo.toml}` and
   `android/tauri-app/src-tauri/{tauri.conf.json,Cargo.toml}`. A normal release bumps all four
-  together. The desktop is 0.7.6-exp.9; the phone is 0.7.5. The phone still compiles the legacy SSH
+  together. The desktop is 0.7.6-exp.10; the phone is 0.7.5. The phone still compiles the legacy SSH
   control plane (`legacy-ssh`) until its own credential migration lands; do not bump the phone
   to a version that has no tested APK behind it. Experimental desktop-only builds may move ahead
   of the phone; stable releases still ship both at the same version.
@@ -206,15 +206,23 @@ record carries `mode` (`l3` or `l2`) and the coordinator stores it, returns each
 accepts `POST /v1/spaces/{id}/mode`. Layer 3 is still the default, the phone is still 0.7.5, and
 `notes/SPACES-L2.md` holds the audit, the plan and the proofs.
 
-**The latest desktop release is v0.7.6-exp.9 (experimental, Windows); stable is v0.7.5, Windows
+**The latest desktop release is v0.7.6-exp.10 (experimental, Windows); stable is v0.7.5, Windows
 and Android.** This tree carries the 0.7.0
 credential migration (`notes/HANDOFF-2026-11-22.md`): the desktop imports a server-issued `qv1:`
 secret into a DPAPI-sealed per-card store (`qc1:` is still accepted), talks to the card API over
 HTTPS, and no longer compiles the SSH control plane. The phone is 0.7.5 too; its
-`server.rs`/`ssh.rs` path is still behind `legacy-ssh`. The exp.9 release carries the Windows setup
-`QuotaVPN_0.7.6-exp.9_x64-setup.exe`; the stable 0.7.5 release carries the phone APK
+`server.rs`/`ssh.rs` path is still behind `legacy-ssh`. The exp.10 release carries the Windows setup
+`QuotaVPN_0.7.6-exp.10_x64-setup.exe`; the stable 0.7.5 release carries the phone APK
 `QuotaVPN-mobile-signed.apk` (the name the phone updater looks for). The standalone `QuotaVPN.exe`
 is not uploaded as a release asset.
+
+**Exp.10 appearance (28 November 2026).** Seven full palettes replace the four accent-only themes.
+Each preset moves the surfaces, hairlines, text and accent together, and Serein keeps the approved
+flat dark steps. Appearance is Settings only: a theme grid, a primary colour picker and an
+interface font picker. The rail swatches are gone. The in-app Q mark is an SVG whose tail follows
+the accent; the Windows icon and tray asset stay static. Fonts are Manrope, Archivo and the
+installed Windows faces, saved under `qc-font`; Geist Mono stays on numbers. Old theme values
+migrate (`obsidian` to Serein, `mint` to Verdant, `violet` to Nightfall).
 
 0.7.4 restored the phone UI that shipped before the rejected 0.7.3 rebuild. 0.7.5 is the motion
 and interaction pass on that same layout: a sliding active pill in the bottom bar, a short page
