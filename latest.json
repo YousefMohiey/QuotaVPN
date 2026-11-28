@@ -1,12 +1,12 @@
 {
-    "version":  "0.7.6-exp.11",
-    "notes":  "The rail shows the shipping QuotaVPN icon again. Only its royal-blue tail is recoloured, so the black tile, the white Q, the shading and the anti-aliased rim stay exactly as drawn. The tail follows all seven presets and a custom primary colour. Everything from exp.10 remains: full palettes, Appearance in Settings only, the interface font picker and readable button labels. Windows experimental build; the phone stays at 0.7.5.",
-    "pub_date":  "2026-11-28T08:14:12Z",
+    "version":  "0.7.6-exp.12",
+    "notes":  "Quota is the default theme, with Catppuccin, Tokyo Night, Nord, Dracula, Gruvbox, Rosé Pine and One Dark beside it. Each palette changes every surface, line, text colour and accent. Appearance is a flat row of palette orbs, a primary colour picker and an interface font picker. Inter is the default font; Geist, Manrope, IBM Plex Sans, Archivo and JetBrains Mono are bundled. The real icon and the readable button labels remain. Windows experimental build; the phone stays at 0.7.5.",
+    "pub_date":  "2026-11-28T09:08:41Z",
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSVBFRWduQ0dXMEVlVStpRUYxT1ZVTEtlUlJSVGNpaDlSYWdNWURhRDdsQUs2aU9SMHY4YUJ6MWVkTGpuaDh3QzIxV1pKYUpteWErUGZaVjJ4RGRleWc0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1ODUzNTY0CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjExX3g2NC1zZXR1cC5leGUKdlF3K0NJeDlIRHRDZkVEc0VpN0FZekdIdGovdDBpQndMWHd6VXdJTGR6WjN2N2hFaVFhQlRCbjl1NDRoeE5Fcm1JdStSUmZBN2VNeCtENnVLRHR2RHc9PQo=",
-                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.6-exp.11/QuotaVPN_0.7.6-exp.11_x64-setup.exe"
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK0Z6RStkSjZGSUZXUUVzYThqZi9qdjJzSHhPM3dKQkpDd2c4THJIQUQrNzRqSmNzMmpCc21rRTErbC9TYmxpTHd4YkpvV0RQSG1WZDRiYTFRQWFzODRqR2NZT1MwMVFRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1ODU2ODE4CWZpbGU6UXVvdGFWUE5fMC43LjYtZXhwLjEyX3g2NC1zZXR1cC5leGUKNlo5dzl5VEt1Z1BUSEMwa3lSWmlHNytTRWtLOTNkUFlHd1drTnlEMHdUTzBETXBOMkFEKzBDYlNFazZ6NC8yUWlldjBLVkRMSERmaWpnaTBnV25JRFE9PQo=",
+                                             "url":  "https://github.com/YousefMohiey/QuotaVPN/releases/download/v0.7.6-exp.12/QuotaVPN_0.7.6-exp.12_x64-setup.exe"
                                          }
                   },
-    "build":  "6103dcb"
+    "build":  "1e57bc4"
 }
